@@ -23,6 +23,31 @@ However, upon review during gap-closing, OpenClaw served only as a runtime loop 
 - Agent orchestration, session management, heartbeat, and chat interface are built natively in Python
 - No TypeScript runtime dependency
 
+## Alternatives considered
+
+**A. Continue OpenClaw stripdown (the original plan in product brief v1.1.0).** Rejected. The stripdown was defined at the documentation level, not the codebase level, and had no clear exit criterion — flagged as R1 (High likelihood / High impact) in the gap analysis. Trading an unbounded TypeScript-adaptation task for a bounded Python rebuild is the whole point of this ADR.
+
+**B. Adopt a Python-native agent framework (LangGraph, CrewAI, Claude Agent SDK).** Rejected for v0.1. Each reintroduces a dependency of the same class we are trying to escape from OpenClaw, with opinionated orchestration models that do not cleanly fit CONSTRUCT's four-category storage + inbox + heartbeat architecture. v0.1 runtime needs (one main agent + four sub-agents, heartbeat loop, subprocess handoffs, file-based state) are modest enough that hand-rolled Python is clearer, more reviewable for Claude Code as dev agent, and keeps the `views/` + `inbox/` contracts framework-agnostic. Revisit for v0.2 if orchestration complexity grows (branching workflows, stateful multi-turn tool-use, durable task queues).
+
+**C. Greenfield Python-first (chosen).** Single runtime, known-bounded rebuild, clean OSS onboarding (`pip install construct`), aligned with Claude Code as primary development agent (gap analysis §3.6.1), and a clean invariant: *Python = product, JS = UI build tool only.*
+
+## Replacements for dropped OpenClaw capabilities
+
+Closes gap analysis §3.3.4 (LLM routing decision owed) and names the specific substitute for each dropped runtime capability:
+
+| Dropped (OpenClaw) | Replacement | Notes |
+|--------------------|-------------|-------|
+| OC-LLM-01 multi-provider abstraction | **LiteLLM** | Covers Anthropic / OpenAI / Google / Mistral / Ollama in one interface. Supersedes the §6 "deferred option" framing — promote to default. Integration measured in hours. |
+| CON-LLM-04 task → model routing | Thin YAML config layer over LiteLLM (`config/model-routing.yaml`) | Custom logic ~100–200 lines; LiteLLM handles provider plumbing. |
+| OC-RT-01 session management | Hand-rolled Python session class | v0.1 needs are modest (one active agent + fresh sub-agent per delegation). Framework overkill. |
+| OC-RT-02 sub-agent spawning | Python subprocess (or in-process with fresh context) | Mirrors OpenClaw's `sessions_spawn` semantics with a plain OS primitive. |
+| OC-RT-03 heartbeat scheduler | `apscheduler` or a minimal asyncio loop | Standard Python tooling; no custom runtime. |
+| OC-COM-01 terminal chat | Python REPL (`prompt_toolkit` / `rich`) | Standard. |
+| OC-COM-02 WebChat (browser) | FastAPI + WebSocket | Same server that serves the built React UI. |
+| OC-SKL-01 skill system | Markdown `SKILL.md` files loaded by a Python workflow engine (BMAD-pattern, already decided in capability matching §6.1.5) | Pattern-level adoption — no framework dependency. |
+| OC-FS-02 git auto-commit | Python subprocess wrapper around `git` on heartbeat | Straightforward. |
+| — | `log/events.jsonl` append-only event logger | New capability; replaces the implicit OpenClaw logging surface. |
+
 ## Repo structure (Option D from gap-closing discussion)
 
 ```
@@ -60,6 +85,24 @@ construct/
 - Lose OpenClaw's existing chat infrastructure and plugin system
 - Lose OpenClaw's Telegram bot integration (must rebuild for v0.2)
 
+### Reversal cost / path dependence
+
+This is a **one-way decision at low cost now, high cost later** — recorded here so future revisits are honest about the asymmetry.
+
+- **Reversing now (pre-implementation):** cheap. Nothing in the active MABSTRUCT workspace depends on this ADR except the unbuilt stripdown task.
+- **Reversing at v0.2+ (re-adopt OpenClaw or another runtime):** expensive. Requires rewriting the Python server layer (session, heartbeat, chat WebSocket, sub-agent invocation) around the new runtime.
+
+**Mitigation — keep the load-bearing contracts framework-agnostic** so a future runtime swap (OpenClaw, LangGraph, CrewAI, HIVE, or a successor) touches only the runtime layer, not the product:
+
+- `SKILL.md` workflow format (BMAD-inspired, pattern-level — already decided)
+- `views/` JSON schemas (UI-facing, runtime-independent)
+- `inbox/` write-back schema (UI → agent, runtime-independent)
+- Knowledge card schema + `connections.json` (source of truth, runtime-independent)
+- `config/model-routing.yaml` (routes abstract over whichever LLM layer is used)
+- `log/events.jsonl` event schema (observability, runtime-independent)
+
+If these contracts stay stable, a runtime swap remains possible even if costly. If they drift into Python-specific assumptions, this decision becomes one-way in practice as well as on paper. Treat schema stability as an architectural principle, not a nice-to-have.
+
 ### Cascading changes to product brief
 - §5 Option C rationale: no longer applies. Architecture is now "Python-native, local-first"
 - §6 "Core Runtime — OpenClaw (Stripped)": replaced with native Python runtime
@@ -67,8 +110,28 @@ construct/
 - §6 "Command System": Python CLI + WebSocket commands, not OpenClaw plugins/skills
 - §10 Step 5 "Strip OpenClaw": replaced with "Build CONSTRUCT core runtime"
 - §10 Step 6 "BMAD workflows": unchanged — SKILL.md definitions are framework-agnostic
-- Capability matching matrix: all "✅ CARRY from OpenClaw" items become "🆕 BUILD (native Python)" — but many are simpler to build than to strip
+- Capability matching matrix: the original 22 CARRY items do **not** all become BUILD. Most are markdown/governance/documentation artifacts unaffected by the runtime choice and still carry over unchanged (see "What carries over from MABSTRUCT" below). The actual v0.1 *runtime* work introduced by this ADR is bounded and listed immediately below.
 - OpenCode, HIVE evaluations in §6: still valid as future options but no longer needed for v0.1
+
+### v0.1 runtime BUILD list (re-scoped)
+
+Rough effort estimates (focused-day ranges) so the total rebuild cost is legible:
+
+| Item | Estimate | Notes |
+|------|----------|-------|
+| Session / bootstrap framework | 1–2 days | Agent session lifecycle, context loading, shutdown. |
+| Sub-agent invocation | ~1 day | Fresh subprocess or in-process context, file-based handoff. |
+| Heartbeat scheduler | ~0.5 day | `apscheduler` or asyncio loop + task registry. |
+| LLM routing middleware | 0.5–1 day | LiteLLM integration + `model-routing.yaml` parser. |
+| Terminal chat REPL | ~0.5 day | `prompt_toolkit` / `rich`. |
+| WebChat server | 1–2 days | FastAPI + WebSocket + session binding. |
+| Git auto-commit wrapper | ~0.5 day | Subprocess around `git add/commit/push` on heartbeat. |
+| Event logger (`log/events.jsonl`) | ~0.5 day | Append-only writer used by all agents. |
+| **Total v0.1 runtime rebuild** | **~6–10 focused days** | Comparable to — and better-bounded than — the original OpenClaw stripdown estimate. |
+
+**Unchanged by this ADR** (already accounted for in the capability-matching matrix as BUILD/ADAPT regardless of runtime): SQLite + FTS5 indexer, DB rebuild command, orphan detection, path/bridge queries, React UI components (graph, card detail, domain config, agent status, activity timeline), inbox write-back, response loop, file watching, views/ heartbeat step.
+
+**Still deferred post-v0.1** (unchanged from capability matching v0.1.1): crash recovery, cost tracking, graceful degradation, Telegram bridge, ChromaDB embeddings, export pipeline.
 
 ### What carries over from MABSTRUCT (unchanged)
 - SOUL/IDENTITY/EVOLUTION governance model (markdown documents, not code)
