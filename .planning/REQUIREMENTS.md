@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WORK-03 | Phase 1 | Pending |
 | WORK-04 | Phase 3 | Pending |
 | CARD-01 | Phase 1 | Pending |
-| CARD-02 | Phase 2 | Pending |
+| CARD-02 | Phase 3 | Pending |
 | CARD-03 | Phase 1 | Pending |
 | CARD-04 | Phase 1 | Pending |
 | INDX-01 | Phase 2 | Pending |

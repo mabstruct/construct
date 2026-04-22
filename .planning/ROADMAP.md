@@ -37,20 +37,20 @@ Plans:
 - [ ] 01-04-PLAN.md — Ship guided `construct init`, `construct validate`, and `construct status` over shared services.
 
 ### Phase 2: Rebuildable Retrieval & Graph Health
-**Goal**: Users can rebuild disposable read/query layers from canonical files and inspect the resulting search and graph state.
+**Goal**: Users can rebuild disposable read/query layers from canonical files and inspect the resulting search and graph state via file artifacts in `db/`.
 **Depends on**: Phase 1
-**Requirements**: CARD-02, INDX-01, INDX-02, GRAPH-01, GRAPH-02
+**Requirements**: INDX-01, INDX-02, GRAPH-01, GRAPH-02
 **Success Criteria** (what must be TRUE):
-  1. User can add a lightweight seed from a URL, title, question, or hunch and receive a structured card draft that fits the canonical workspace model.
-  2. User can delete rebuildable index state, run a rebuild, and recover a working SQLite + FTS5 index from source-of-truth files.
-  3. User can search cards and references with full-text queries and get accurate results from the rebuilt index.
-  4. User can inspect graph size, connectivity, components, and graph health signals such as orphan cards, stale cards, and bridge nodes.
+  1. User can delete rebuildable index state, run a rebuild, and recover a working SQLite + FTS5 index from source-of-truth files.
+  2. The FTS5 index supports accurate full-text queries across cards and references, verified programmatically; user-facing search surface is deferred to Phase 3.
+  3. User can inspect graph size, connectivity, components, and graph health signals such as orphan cards, stale cards, and bridge nodes via file artifacts in `db/`.
+  4. The graph engine faithfully preserves canonical connection semantics, including typed parallel edges between the same card pair.
 **Plans**: TBD
 
 ### Phase 3: Runtime & Command Surface
 **Goal**: Users can run CONSTRUCT as a local orchestrator with auditable events, configurable routing, and safe session recovery.
 **Depends on**: Phase 2
-**Requirements**: RUNT-01, RUNT-02, RUNT-03, RUNT-04, CHAT-01, WORK-04
+**Requirements**: RUNT-01, RUNT-02, RUNT-03, RUNT-04, CHAT-01, WORK-04, CARD-02
 **Success Criteria** (what must be TRUE):
   1. User can start and stop a local CONSTRUCT session cleanly and see orchestrator, curator, and researcher runtime state initialize without corrupting workspace files.
   2. User can use chat or command flows to inspect domain status, ask for graph gaps, and steer local CONSTRUCT actions from one shared command surface.
