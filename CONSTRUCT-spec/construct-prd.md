@@ -360,6 +360,7 @@ Each layer feeds the one above it. L4 is a research-frontier problem — the sys
 - Search pattern historization UI
 - Landscape diff view
 - Basic Telegram bridge
+- **MCP server + portable SKILL.md skill pack** (first integration cut — see §8) — covers opencode, Anthropic skills/subagents, GSD
 
 ### Ships in v0.3
 
@@ -368,12 +369,15 @@ Each layer feeds the one above it. L4 is a research-frontier problem — the sys
 - Hosted web dashboard
 - Team features (multi-user, shared graph, roles)
 - Embedding-based similarity for 500+ node graphs
+- **BMAD-METHOD adapter** (YAML agent module + marketplace listing — see §8)
 
 ---
 
 ## 7. Stack Candidates Under Evaluation
 
 These are documented but not adopted for v0.1. Evaluate when specific pain points emerge.
+
+> **Note on framing:** This section asks *should CONSTRUCT depend on these stacks?* §8 covers the inverse question — *should CONSTRUCT ship as a drop-in inside these stacks?* The two questions are independent; opencode and BMAD appear in both sections in different roles.
 
 ### OpenCode — Terminal-Native AI Agent UI
 
@@ -405,7 +409,76 @@ See [capability matching §6.1](construct-capability-matching.md) for the full e
 
 ---
 
-## 8. Architecture Diagram
+## 8. External Framework Integration (v0.2 / v0.3)
+
+CONSTRUCT's primary deployment is as a self-contained system (chat + React UI + CLI). A secondary deployment target — planned for v0.2 / v0.3 — is as an installable adapter inside the major external agent frameworks: **opencode**, **Anthropic skills/subagents**, **GSD (get-shit-done)**, and **BMAD-METHOD**.
+
+This section captures the integration intent, the per-framework adapter shape, and most importantly the **forward-compatibility constraints v0.1 must respect** so this future work does not require a re-architecture.
+
+### 8.1 Intent
+
+CONSTRUCT exposes its capabilities through a framework-agnostic interface (MCP) and ships a portable skill pack. Reference adapters ship for opencode, Anthropic skills/subagents, GSD, and BMAD. The core remains independently runnable. **CONSTRUCT's semantic memory remains the canonical store regardless of which host framework consumes it.**
+
+### 8.2 The Convergence We Exploit
+
+`SKILL.md` (a folder containing `SKILL.md` with YAML frontmatter, plus optional `scripts/`, `references/`, `assets/`) has emerged as the de facto cross-framework skill format. opencode, Anthropic skills/subagents, and GSD all consume the same file format — they differ only in discovery paths (`.opencode/skills/`, `.claude/skills/`, etc.).
+
+This means **one CONSTRUCT skill pack covers three of four targets** with only path/install differences. BMAD-METHOD is the outlier — it uses its own `.agent.yaml` source format compiled to markdown, with a module-based marketplace.
+
+### 8.3 Per-Framework Adapter Shape
+
+| Framework | Distribution | Integration mechanism |
+|-----------|--------------|------------------------|
+| opencode | npm package + `opencode.json` block | SKILL.md skills dropped into `.opencode/skills/`; MCP server registered in `mcp` key |
+| Anthropic skills/subagents | SKILL.md drop-in to `.claude/skills/` | Same skill files; MCP server registered separately |
+| GSD (get-shit-done) | `agent_skills` injection via npm install | Same SKILL.md files; MCP deferred until GSD adds support (their issue #382) |
+| BMAD-METHOD | YAML `.agent.yaml` + `module.yaml`, published to bmad-plugins-marketplace | MCP bridged via `bmad-mcp-server` pattern; CONSTRUCT positioned as a "Research Analyst" persona |
+
+### 8.4 Memory Model Decision
+
+Each host framework has its own memory model: BMAD has per-agent sidecars (`_bmad/_memory/`), GSD has a `.planning/` directory of state files, opencode leaves memory to plugins, Anthropic skills get memory via subagent context.
+
+**Decision:** CONSTRUCT's semantic memory is the canonical store, exposed via MCP tools (`memory.read`, `memory.write`, `memory.query`). Each host framework's native memory location is treated as a *projection* — pointer files that defer to CONSTRUCT for actual content. This respects each framework's UX (a BMAD user can still browse `_bmad/_memory/`) without forking the source of truth.
+
+### 8.5 v0.1 Forward-Compatibility Constraints
+
+To keep the v0.2 / v0.3 integration cheap, v0.1 must respect these constraints. None of these are new design directions — they sharpen choices §3 and §4 already make. Documenting them here as constraints prevents drift.
+
+| Constraint | Why |
+|------------|-----|
+| **Capabilities exposed through a stable internal Python API**, not buried in chat/CLI handlers | The future MCP server is a thin wrapper around this API. If every entry point lives inside chat/CLI code, the wrap step becomes a refactor. |
+| **`workflows/` SKILL.md definitions stay format-compatible with the open SKILL.md spec** — folder + `SKILL.md` + YAML frontmatter, no CONSTRUCT-only frontmatter keys without a `construct.*` namespace prefix | These files become the basis of the cross-framework skill pack. Namespacing CONSTRUCT-specific keys lets them round-trip through other frameworks without conflict. |
+| **Memory access is mediated, not direct** — no CONSTRUCT-internal code reads `cards/` files directly; everything goes through a memory/storage interface | The future MCP `memory.*` tools wrap the same interface. Direct file access would mean MCP callers and in-process callers see different things. |
+| **Every CLI / chat command is a thin shell over a programmatic callable** | If `/synthesize <topic>` only exists as a chat command, an external BMAD or opencode agent calling `construct.synthesize(topic)` has no entry point. |
+| **HITL responses are addressable by ID, not implicit on the chat session** | Inbox actions (§4) already follow this pattern; extend it so external frameworks can submit HITL questions and poll/await responses without needing an interactive chat surface. |
+
+### 8.6 Workflow Alignment Opportunities (Positioning)
+
+Two of the target frameworks have native workflow models that CONSTRUCT's research-curation loop maps onto, suggesting stronger positioning than "generic plugin":
+
+- **GSD's six-phase workflow** (Initialize → Discuss → Plan → Execute → Verify → Complete) maps onto CONSTRUCT as: ingest → view-proposals → curation → publication, with HITL adaptation as the Verify phase. CONSTRUCT can ship as a *research-workflow specialization* rather than a generic skill bundle.
+- **BMAD's persona/handoff model** has a natural slot for CONSTRUCT as a **Research Analyst** persona that decomposes inquiry into curation tasks for downstream agents (PM, architect, dev).
+
+These are positioning notes for the v0.2 / v0.3 spec work; not v0.1 constraints.
+
+### 8.7 Out of Scope for v0.1
+
+- Building any of the four adapters
+- Publishing to bmad-plugins-marketplace, npm, or any skill registry
+- The MCP server itself (only its forward-compatibility footprint, per §8.5)
+- Adapter test suites and host-framework CI
+
+### 8.8 Open Questions (deferred to v0.2 spec)
+
+1. **MCP transport** — stdio (subprocess) vs. local HTTP? Most clients prefer stdio; HTTP is friendlier for the BMAD bridge.
+2. **Auth** — does the v2.0 cloud layer change MCP auth requirements? Local-only stdio sidesteps the question for v0.2.
+3. **License compatibility** — how does the chosen CONSTRUCT license (Apache-2.0 proposed, §12) interact with each target framework's distribution model?
+4. **Resource exposure** — should `publish/` outputs be exposed as MCP *resources* (not just memory tools) so downstream agents can consume curated articles directly?
+5. **Capability negotiation** — when CONSTRUCT v0.4 adds a new MCP tool, how do older adapters degrade gracefully?
+
+---
+
+## 9. Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -452,7 +525,7 @@ See [capability matching §6.1](construct-capability-matching.md) for the full e
 
 ---
 
-## 9. Optional Cloud Layer (v2.0)
+## 10. Optional Cloud Layer (v2.0)
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
@@ -462,7 +535,7 @@ See [capability matching §6.1](construct-capability-matching.md) for the full e
 
 ---
 
-## 10. Deferred Stack Decisions
+## 11. Deferred Stack Decisions
 
 | Trigger | Then evaluate |
 |---------|---------------|
@@ -472,7 +545,7 @@ See [capability matching §6.1](construct-capability-matching.md) for the full e
 
 ---
 
-## 11. Open Technical Questions
+## 12. Open Technical Questions
 
 1. **Views heartbeat granularity:** How often does the heartbeat rebuild `views/`? 5s / 30s / on-demand? Trade-off: UI responsiveness vs. CPU. Default: 30s debounced.
 
