@@ -29,7 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can complete guided domain setup and see domain scope, taxonomy seeds, source priorities, and research seeds written into the workspace without hand-editing application code.
   3. User can create or edit markdown knowledge cards that validate against the canonical schema, and malformed cards or config files show clear validation errors.
   4. User can inspect the workspace and confirm markdown/YAML files are the canonical state while future indexes and UI artifacts remain derived and rebuildable.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Bootstrap the Python package, CLI shell, and test harness for workspace tooling.
+- [ ] 01-02-PLAN.md — Lock canonical workspace, card, connection, routing, and governance schema contracts.
+- [ ] 01-03-PLAN.md — Implement workspace loading and strict validation with clear errors and warnings.
+- [ ] 01-04-PLAN.md — Ship guided `construct init`, `construct validate`, and `construct status` over shared services.
 
 ### Phase 2: Rebuildable Retrieval & Graph Health
 **Goal**: Users can rebuild disposable read/query layers from canonical files and inspect the resulting search and graph state.
@@ -45,7 +50,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### Phase 3: Runtime & Command Surface
 **Goal**: Users can run CONSTRUCT as a local orchestrator with auditable events, configurable routing, and safe session recovery.
 **Depends on**: Phase 2
-**Requirements**: RUNT-01, RUNT-02, RUNT-03, RUNT-04, CHAT-01
+**Requirements**: RUNT-01, RUNT-02, RUNT-03, RUNT-04, CHAT-01, WORK-04
 **Success Criteria** (what must be TRUE):
   1. User can start and stop a local CONSTRUCT session cleanly and see orchestrator, curator, and researcher runtime state initialize without corrupting workspace files.
   2. User can use chat or command flows to inspect domain status, ask for graph gaps, and steer local CONSTRUCT actions from one shared command surface.
@@ -83,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Workspace & Canonical Data Foundation | 0/TBD | Not started | - |
+| 1. Workspace & Canonical Data Foundation | 0/4 | Ready to execute | - |
 | 2. Rebuildable Retrieval & Graph Health | 0/TBD | Not started | - |
 | 3. Runtime & Command Surface | 0/TBD | Not started | - |
 | 4. Governed Research & Curation Loops | 0/TBD | Not started | - |

@@ -2,7 +2,7 @@
 
 **Created:** 2026-04-22
 **Ambiguity score:** 0.09 (gate: <= 0.20)
-**Requirements:** 6 locked
+**Requirements:** 7 locked
 
 ## Goal
 
@@ -11,6 +11,8 @@ CONSTRUCT provides a local terminal chat REPL that starts the runtime session, a
 ## Background
 
 The codebase today contains only Phase 1 workspace tooling: a Typer CLI with `construct init`, `construct validate`, and `construct status`, plus shared services for workspace initialization and validation. The current input model is low-level and fielded: `src/construct/cli.py` prompts directly for values like taxonomy seeds, source priorities, and research seeds, including comma-separated entry for list fields. There is no runtime session model, no orchestrator/curator/researcher lifecycle, no REPL, no chat handler, no event stream with IDs, and no recovery flow for interrupted conversations. Phase 3 is triggered by this gap between the intended product interaction model in the specs and the current bootstrap-only CLI.
+
+Phase 3 also widens the NL-first interaction model to cover workspace bootstrap itself. `construct init` (Phase 1, structured field prompts) remains the deterministic fallback path, while the REPL adds a natural-language bootstrap flow that captures the same canonical inputs (slug, display name, scope, taxonomy seeds, source priorities, research seeds) through clarification instead of fielded entry.
 
 ## Requirements
 
@@ -44,17 +46,22 @@ The codebase today contains only Phase 1 workspace tooling: a Typer CLI with `co
    - Target: If the REPL is interrupted while waiting on a clarification or confirmation needed to finish a supported action, the next REPL start can restore that pending step and continue safely.
    - Acceptance: Interrupting a REPL flow during a pending clarification or confirmation, then restarting the REPL, restores the pending step without corrupting canonical state or requiring the user to restart from scratch.
 
+7. **Natural-language workspace bootstrap**: The REPL must support bootstrapping a new workspace through the same NL + clarification + structured-confirmation flow used for other intents, with `construct init` retained as the structured fallback.
+   - Current: Workspace bootstrap is only available through `construct init`, which prompts field-by-field (including comma-separated list entry) and writes canonical files immediately after collection.
+   - Target: A user can initiate workspace creation from the REPL using a natural-language request (e.g., "set up a new workspace for my research on X"), the system derives what it can from the request, asks only for missing or ambiguous canonical inputs (slug, display name, scope, taxonomy seeds, source priorities, research seeds), shows a structured summary, and writes the workspace only after explicit confirmation.
+   - Acceptance: A user can create a new workspace end-to-end from the REPL without being forced into field-by-field entry; the resulting workspace is schema-valid and indistinguishable from one produced by `construct init`; declining the pre-write confirmation leaves the target path unchanged; `construct init` continues to work unchanged as the structured fallback.
+
 ## Boundaries
 
 **In scope:**
 - A terminal chat REPL as the primary Phase 3 user-facing interface
 - Runtime session start/stop behavior owned by the REPL
-- Natural-language-first handling for domain setup, status/inspection, and gap-check interactions
+- Natural-language-first handling for workspace bootstrap, domain setup, status/inspection, and gap-check interactions
 - Step-by-step clarification for missing or ambiguous fields only
 - Plain-language plus structured pre-write confirmation summaries
 - Human-readable runtime replies with referenceable event or interaction IDs
 - Safe resume of pending clarification/confirmation after interruption
-- Structured input as a fallback or advanced-mode path only
+- Structured input as a fallback or advanced-mode path only, with `construct init` preserved as the structured workspace-bootstrap fallback
 
 **Out of scope:**
 - Browser-based chat UI — browser interaction belongs to Phase 5
@@ -77,12 +84,13 @@ The codebase today contains only Phase 1 workspace tooling: a Typer CLI with `co
 
 - [ ] A terminal REPL command exists and starts a local runtime session when launched.
 - [ ] Exiting the REPL stops the runtime cleanly without leaving partial canonical writes.
-- [ ] Supported natural-language requests include domain setup, status/inspection, and gap checks.
+- [ ] Supported natural-language requests include workspace bootstrap, domain setup, status/inspection, and gap checks.
 - [ ] The REPL asks only for missing or ambiguous fields during a write-capable flow.
 - [ ] Before any canonical write, the REPL shows a plain-language summary plus structured fields and waits for explicit confirmation.
 - [ ] Declining confirmation leaves canonical files unchanged.
 - [ ] At least one inspection/status response includes a referenceable event or interaction ID.
 - [ ] Interrupting a pending clarification or confirmation can be resumed safely on the next REPL start.
+- [ ] A user can create a schema-valid workspace end-to-end through the REPL NL bootstrap flow without field-by-field entry, and `construct init` still works unchanged as the structured fallback.
 
 ## Ambiguity Report
 

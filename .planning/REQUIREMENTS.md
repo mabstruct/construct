@@ -12,6 +12,7 @@ Requirements for the initial release. Each maps to exactly one roadmap phase.
 - [ ] **WORK-01**: User can run `construct init <path>` to create a valid local workspace with the canonical directories and config files defined by the spec.
 - [ ] **WORK-02**: User can configure frontier, workhorse, and lightweight model routing through workspace config without changing application code.
 - [ ] **WORK-03**: User can initialize at least one knowledge domain through a guided setup flow that captures scope, taxonomy seeds, source priorities, and research seeds.
+- [ ] **WORK-04**: User can bootstrap a new workspace through a natural-language + clarification flow in the runtime REPL, with `construct init` retained as the structured fallback.
 
 ### Knowledge Cards And Storage
 
@@ -95,6 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WORK-01 | Phase 1 | Pending |
 | WORK-02 | Phase 1 | Pending |
 | WORK-03 | Phase 1 | Pending |
+| WORK-04 | Phase 3 | Pending |
 | CARD-01 | Phase 1 | Pending |
 | CARD-02 | Phase 2 | Pending |
 | CARD-03 | Phase 1 | Pending |
@@ -118,8 +120,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-02 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
+- v1 requirements: 25 total
+- Mapped to phases: 25
 - Unmapped: 0 ✓
 
 ---
