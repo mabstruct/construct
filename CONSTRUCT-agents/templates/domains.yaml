@@ -1,0 +1,20 @@
+# Domain taxonomy definitions
+# Written by human (via domain-init workflow or manual edit)
+# Read by all agents and skills
+
+domains: {}
+  # Example:
+  # intelligent-spatial-worlds:
+  #   name: "Intelligent Spatial Worlds"
+  #   description: "AI systems that reason about and act in physical/spatial environments"
+  #   status: active
+  #   created: 2026-04-22
+  #   content_categories:
+  #     - foundation-models
+  #     - spatial-reasoning
+  #     - reinforcement-learning
+  #   source_priorities:
+  #     - "peer-reviewed (arXiv, top venues)"
+  #     - "technical reports (Google, DeepMind, Meta)"
+  #     - "expert blogs"
+  #   cross_domain_links: []

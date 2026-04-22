@@ -1,0 +1,36 @@
+# LLM provider and task-tier routing
+# Used for hybrid setups where some tasks go to API, others to local models
+# When running pure-Claude, this serves as documentation of cognitive tier assignments
+
+providers:
+  frontier:
+    provider: anthropic
+    model: claude-sonnet-4-6
+    api_key_env: ANTHROPIC_API_KEY
+  workhorse:
+    provider: anthropic
+    model: claude-haiku-3
+    api_key_env: ANTHROPIC_API_KEY
+  lightweight:
+    provider: ollama
+    model: llama3.2:8b
+
+# Which cognitive tier each task requires
+routing:
+  research_ingestion: lightweight      # extraction, formatting
+  card_formatting: lightweight         # YAML generation
+  source_evaluation: workhorse         # relevance scoring
+  taxonomy_tagging: workhorse          # category classification
+  duplicate_detection: workhorse       # similarity assessment
+  connection_typing: workhorse         # edge relation selection
+  cross_domain_ideation: frontier      # structural parallel detection
+  synthesis_drafting: frontier         # long-form generation
+  co_authorship: frontier              # collaborative writing
+  gap_analysis: frontier               # graph-wide reasoning
+  domain_init_interview: frontier      # interactive dialog
+  chat_conversation: frontier          # conversational reasoning
+
+fallback_chain:
+  - frontier
+  - workhorse
+  - lightweight

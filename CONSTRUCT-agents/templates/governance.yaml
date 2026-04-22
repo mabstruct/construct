@@ -1,0 +1,28 @@
+# CONSTRUCT governance thresholds
+# Controls Curator promotion rules, decay, quality gates, and cycle cadence
+
+# Promotion rules
+promotion:
+  seed_to_growing_confidence: 2        # confidence >= this
+  seed_to_growing_min_connections: 1   # connections >= this
+  growing_to_mature_confidence: 3      # confidence >= this
+  growing_to_mature_source_tier: 2     # source_tier <= this
+  growing_to_mature_min_connections: 2 # connections >= this
+  require_human_approval: false        # if true, flag instead of auto-promote
+
+# Decay rules
+decay:
+  decay_window_days: 28                # unreferenced days before flagging
+  auto_archive_on_decay: false         # archive automatically or just flag
+
+# Quality gates
+quality:
+  orphan_tolerance_days: 7             # grace period for zero-connection cards
+  min_sources_for_promotion: 1         # requires >= this many sources
+
+# Research thresholds
+research:
+  relevance_threshold: 0.3             # minimum score to ingest a ref
+  card_creation_threshold: 0.6         # minimum score to draft a seed card
+  max_papers_per_cycle: 50             # cap on ingested papers per cycle
+  lookback_days_initial: 90            # first-run search window

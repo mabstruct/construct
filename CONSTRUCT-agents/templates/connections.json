@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "updated": null,
+  "connection_types": [
+    "supports",
+    "contradicts",
+    "extends",
+    "parallels",
+    "requires",
+    "enables",
+    "challenges",
+    "inspires",
+    "gap-for"
+  ],
+  "connections": []
+}

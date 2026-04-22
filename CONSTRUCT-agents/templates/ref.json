@@ -1,0 +1,18 @@
+{
+  "id": "{kebab-case-id}",
+  "title": "{Paper/Article Title}",
+  "authors": ["{Author A}", "{Author B}"],
+  "year": 2026,
+  "venue": "{Journal, Conference, or Site}",
+  "url": "{source URL}",
+  "abstract": "{abstract or summary text}",
+  "relevance_score": 0.0,
+  "key_findings": ["{finding 1}", "{finding 2}"],
+  "content_categories": ["{category1}"],
+  "source_tier": 5,
+  "extraction_status": "complete",
+  "ingested_date": "{YYYY-MM-DD}",
+  "domain": "{domain-id}",
+  "search_cluster": "{cluster-id}",
+  "cards_generated": []
+}
