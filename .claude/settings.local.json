@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gsd-sdk query *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Skill(gsd-spec-phase)"
+    ]
+  }
+}
