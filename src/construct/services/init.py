@@ -10,7 +10,7 @@ import shutil
 from ruamel.yaml import YAML
 
 
-TEMPLATE_DIR = Path(__file__).resolve().parents[3] / "templates" / "workspace"
+TEMPLATE_DIR = Path(__file__).resolve().parents[3] / "CONSTRUCT-agents" / "templates"
 
 
 @dataclass(frozen=True)
