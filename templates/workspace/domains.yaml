@@ -1,0 +1,7 @@
+domains:
+  example-domain:
+    name: "Example Domain"
+    path: "domains/example-domain/domain.yaml"
+    description: "Example registry entry for a CONSTRUCT workspace"
+    status: active
+    created: 2026-04-22

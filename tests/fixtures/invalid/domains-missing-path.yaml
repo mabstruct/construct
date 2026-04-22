@@ -1,0 +1,7 @@
+domains:
+  example-domain:
+    name: "Example Domain"
+    path: "domains/example-domain/domain.yaml"
+    description: "Points to a file that is intentionally missing"
+    status: active
+    created: 2026-04-22
