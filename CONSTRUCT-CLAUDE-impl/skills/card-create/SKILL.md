@@ -20,9 +20,9 @@
 
 Gather or determine:
 - **title** — concise, descriptive
-- **epistemic_type** — classify using `references/epistemic-types.md`
-- **confidence** — using `references/confidence-levels.md`
-- **source_tier** — using `references/source-tiers.md`
+- **epistemic_type** — classify using `.construct/references/epistemic-types.md`
+- **confidence** — using `.construct/references/confidence-levels.md`
+- **source_tier** — using `.construct/references/source-tiers.md`
 - **domains** — which domain(s) this belongs to (must exist in `domains.yaml`)
 - **content_categories** — from the domain's taxonomy
 - **summary** — 1–3 paragraphs: what is this and why it matters

@@ -21,7 +21,9 @@ Instead of building a Python backend with FastAPI, SQLite, and NetworkX, we conf
 | Cross-domain ideation | Frontier reasoning |
 | Synthesis / co-authorship | Long-form generation from context |
 
-## Directory Structure
+## Source Structure
+
+This is the development source. For deployment, the setup script assembles a self-contained directory.
 
 ```
 CONSTRUCT-CLAUDE-impl/
@@ -33,9 +35,13 @@ CONSTRUCT-CLAUDE-impl/
 │   └── researcher.md              # Researcher — knowledge acquisition
 │
 ├── skills/                        # Executable skill definitions
-│   ├── workspace-init/SKILL.md    # Initialize a CONSTRUCT workspace
+│   ├── workspace-init/SKILL.md    # Initialize a domain workspace (subdirectory)
 │   ├── domain-init/SKILL.md       # Domain initialization interview
+│   ├── domain-manage/SKILL.md     # Pause, resume, archive domains
 │   ├── card-create/SKILL.md       # Create a knowledge card
+│   ├── card-edit/SKILL.md         # Edit existing card metadata/content
+│   ├── card-archive/SKILL.md      # Archive card with supersedes handling
+│   ├── card-connect/SKILL.md      # Manage connections between cards
 │   ├── card-evaluate/SKILL.md     # Evaluate card for promotion
 │   ├── research-cycle/SKILL.md    # Run a web research cycle
 │   ├── curation-cycle/SKILL.md    # Run graph maintenance
@@ -43,7 +49,8 @@ CONSTRUCT-CLAUDE-impl/
 │   ├── synthesis/SKILL.md         # Draft output from graph state
 │   ├── graph-status/SKILL.md      # Report graph health
 │   ├── search-adjust/SKILL.md     # Adjust search patterns
-│   └── bridge-detect/SKILL.md     # Cross-domain bridge detection
+│   ├── bridge-detect/SKILL.md     # Cross-domain bridge detection
+│   └── workspace-validate/SKILL.md # 5-layer workspace integrity audit
 │
 ├── workflows/                     # Multi-skill orchestration sequences
 │   ├── cold-start.md              # Full workspace setup (J1)
@@ -61,52 +68,52 @@ CONSTRUCT-CLAUDE-impl/
     ├── card.md                    # Knowledge card template
     ├── domains.yaml               # Domain taxonomy template
     ├── governance.yaml            # Governance thresholds template
-    ├── model-routing.yaml         # LLM routing template (for hybrid use)
+    ├── model-routing.yaml         # LLM routing template
     ├── search-seeds.json          # Search pattern template
     ├── connections.json           # Empty graph edge list
-    └── digest.md                  # Research cycle digest template
+    ├── digest.md                  # Research cycle digest template
+    ├── ref.json                   # Reference entry template
+    └── publish.md                 # Publishable output template
 ```
 
 ## Installation
 
+### Quick Setup (recommended)
+
+Run the setup script from the repository root:
+
+```bash
+./setup-construct.sh ~/my-construct
+```
+
+This creates a self-contained directory:
+
+```
+~/my-construct/
+├── AGENTS.md              # Claude reads this → becomes CONSTRUCT
+└── .construct/            # Agent infrastructure (hidden)
+    ├── agents/
+    ├── skills/
+    ├── workflows/
+    ├── references/
+    └── templates/
+```
+
+Then open `~/my-construct/` in Claude (Desktop, Code, or claude.ai project) and start working.
+
 ### Prerequisites
 
 - A Claude subscription (Pro, Max, Team, or Enterprise) — needed for artifacts, persistent storage, and MCP connectors
-- Claude Desktop app (macOS/Windows) or access to claude.ai
-- A local directory for your knowledge workspace (e.g., `~/construct-workspace/`)
+- Claude Desktop app (macOS/Windows), Claude Code, or access to claude.ai
+- The setup script (`setup-construct.sh`) from this repository
 
-### Step 1: Copy agent configuration
+### Verify Setup
 
-Copy the entire `CONSTRUCT-CLAUDE-impl/` directory into your Claude configuration location:
-
-```bash
-# macOS — Claude Desktop
-cp -r CONSTRUCT-CLAUDE-impl/ ~/.claude/
-
-# Alternative: symlink to keep config in your repo
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/AGENTS.md" ~/.claude/AGENTS.md
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/agents" ~/.claude/agents
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/skills" ~/.claude/skills
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/workflows" ~/.claude/workflows
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/references" ~/.claude/references
-ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/templates" ~/.claude/templates
-```
-
-### Step 2: Verify configuration
-
-Start a new Claude conversation and say:
+Start a new Claude conversation in your CONSTRUCT directory and say:
 
 > "What is your identity?"
 
-Claude should respond as **CONSTRUCT** — referencing knowledge architecture, epistemic governance, and the Watson principle. If Claude responds generically, the `AGENTS.md` file is not being picked up — check the file path.
-
-### Step 3: Point Claude at a workspace directory
-
-Tell Claude where your workspace lives:
-
-> "My workspace is at ~/construct-workspace"
-
-Or, if using Claude Desktop with project directories, open the workspace folder directly.
+Claude should respond as **CONSTRUCT** — referencing knowledge architecture, epistemic governance, and the Watson principle. If Claude responds generically, the `AGENTS.md` file is not being picked up.
 
 ---
 
@@ -114,49 +121,65 @@ Or, if using Claude Desktop with project directories, open the workspace folder 
 
 ### Cold start (first time)
 
-Initialize your workspace and first domain in one go:
+Initialize your first domain workspace:
 
-> "Initialize a CONSTRUCT workspace and set up a domain for [your topic]"
+> "Initialize cosmology"
 
-This runs the `cold-start` workflow, which:
-1. Creates the workspace directory structure (`cards/`, `refs/`, `connections.json`, etc.)
-2. Populates `governance.yaml` and `model-routing.yaml` from templates
-3. Interviews you about your first knowledge domain (goals, boundaries, seed questions)
+This runs workspace-init → domain-init, which:
+1. Creates `cosmology/` subdirectory with full workspace structure
+2. Populates `governance.yaml` from `.construct/templates/`
+3. Interviews you about the domain (goals, key topics, sources, seed questions)
 4. Writes `domains.yaml` and `search-seeds.json`
-5. Runs an initial research cycle — producing seed cards and a digest
+5. Optionally runs an initial research cycle
 
-After cold start, you should see:
+After cold start, your directory looks like:
 ```
-workspace/
-├── cards/           # 3–10 seed cards from initial research
-├── refs/            # Source references for those cards
-├── connections.json # Initial connections between cards
-├── domains.yaml     # Your first domain configured
-├── governance.yaml  # Default curation thresholds
-├── search-seeds.json
-├── digests/         # First research digest
-└── log/events.jsonl # Audit trail of all operations
+my-construct/
+├── AGENTS.md
+├── .construct/              # Agent infrastructure (unchanged)
+└── cosmology/               # Your first domain workspace
+    ├── cards/               # 3–10 seed cards from initial research
+    ├── refs/                # Source references
+    ├── connections.json     # Initial connections
+    ├── domains.yaml         # Domain configured
+    ├── governance.yaml      # Default thresholds
+    ├── search-seeds.json    # Search patterns
+    ├── digests/             # First research digest
+    └── log/events.jsonl     # Audit trail
+```
+
+### Adding more domains
+
+> "Initialize climate-policy"
+
+Creates a sibling subdirectory. Each domain workspace is self-contained:
+```
+my-construct/
+├── .construct/
+├── cosmology/
+├── climate-policy/
+└── ...
 ```
 
 ### Daily use
 
 **Research a topic:**
-> "Research the latest developments in [topic]"
+> "Research the latest developments in cosmology"
 
-Claude switches to Researcher role, runs web search, extracts findings, creates cards with source references, and produces a digest.
+Claude identifies the `cosmology/` workspace, switches to Researcher role, runs web search, creates cards, and produces a digest.
 
 **Check graph status:**
-> "How's my knowledge graph looking?"
+> "How's the cosmology graph looking?"
 
-Returns card counts by domain and lifecycle state, connection statistics, confidence distribution, and flags any issues.
+Returns card counts by lifecycle state, connection statistics, confidence distribution, and flags any issues.
 
 **Curate the graph:**
-> "Run curation"
+> "Run curation on cosmology"
 
-Claude switches to Curator role: validates card integrity, checks for confidence decay on aging cards, promotes strong seeds, flags orphans, and reports what changed.
+Claude switches to Curator role: validates card integrity, checks for confidence decay, promotes strong seeds, flags orphans, and reports changes.
 
 **Find gaps:**
-> "What gaps do you see in [domain]?"
+> "What gaps do you see in cosmology?"
 
 Analyzes coverage, identifies missing connections, and suggests research directions.
 
@@ -178,19 +201,19 @@ Claude analyzes the relationship, proposes a typed connection (supports, contrad
 Claude reads relevant cards, propagates confidence metadata into the draft, and produces a structured output in `publish/` with source attribution.
 
 **Explore cross-domain bridges:**
-> "What surprising connections exist between [domain A] and [domain B]?"
+> "What surprising connections exist between cosmology and climate-policy?"
 
-Claude runs bridge detection, identifying structural parallels and shared concepts across domains.
+Claude runs bridge detection across two domain workspaces, identifying structural parallels and shared concepts.
 
 ### Domain management
 
 **Add a new domain:**
-> "I want to start tracking [new topic]"
+> "Initialize [new-topic]"
 
-Runs the domain initialization interview — asks about scope, boundaries, seed questions, and configures search patterns.
+Creates a new subdirectory, runs the domain initialization interview.
 
 **Pause a domain:**
-> "Pause research on [domain]"
+> "Pause research on cosmology"
 
 Marks the domain as paused — curation continues but no new research cycles run.
 

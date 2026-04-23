@@ -1,12 +1,19 @@
 # Skill: Domain Initialization
 
-**Trigger:** User says "add a domain", "initialize domain", "new research domain", or similar.
+**Trigger:** User says "add a domain", "initialize domain", "new research domain", or similar. Also chained from `workspace-init`.
 **Agent:** CONSTRUCT (orchestrator)
-**Produces:** Updated `domains.yaml`, initial `search-seeds.json` entries
+**Produces:** Populated `domains.yaml`, `search-seeds.json` in the domain workspace subdirectory
 
 ---
 
 ## Procedure
+
+### Step 0: Locate Domain Workspace
+
+If chained from workspace-init → the domain workspace subdirectory is already known.
+Otherwise → ask the user which workspace to configure (list existing subdirectories).
+
+All file operations below are relative to the domain workspace subdirectory (e.g., `cosmology/`).
 
 ### Step 1: Scope Interview
 
@@ -93,11 +100,11 @@ Create 2–5 clusters based on interview depth. Core topic cluster gets highest 
 
 ### Step 5: Create Digests Directory
 
-Create `digests/{domain-id}/` directory.
+Create `digests/{domain-id}/` directory inside the domain workspace subdirectory.
 
 ### Step 6: Log & Confirm
 
-Log to `events.jsonl`:
+Log to `log/events.jsonl` (inside the domain workspace subdirectory):
 ```json
 {"event": "domain.init", "timestamp": "{ISO-8601}", "domain": "{domain-id}", "categories_count": {N}, "seed_clusters": {N}}
 ```

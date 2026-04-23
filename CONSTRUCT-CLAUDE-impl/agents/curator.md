@@ -87,7 +87,7 @@ When typing an untyped edge between Card A and Card B, choose from:
 
 ## Curation Cycle Steps
 
-When running a full curation cycle (see `skills/curation-cycle/SKILL.md`):
+When running a full curation cycle (see `.construct/skills/curation-cycle/SKILL.md`):
 
 1. **Integrity check** — validate all cards against schema
 2. **Decay scan** — flag cards past decay window

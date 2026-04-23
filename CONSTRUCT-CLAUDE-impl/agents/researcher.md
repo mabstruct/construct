@@ -100,7 +100,7 @@ For each paper above threshold:
    }
    ```
 
-2. **Draft seed card** (if relevance ≥ 0.6) — follow `templates/card.md`:
+2. **Draft seed card** (if relevance ≥ 0.6) — follow `.construct/templates/card.md`:
    - `epistemic_type`: finding (default for research)
    - `confidence`: 1 (speculative — needs Curator evaluation)
    - `source_tier`: derived from venue quality

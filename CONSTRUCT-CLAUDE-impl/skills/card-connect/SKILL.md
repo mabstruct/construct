@@ -27,11 +27,11 @@
 
 ### Step 3: For ADD — Determine Relation Type
 
-If user specified a type → validate against `references/connection-types.md`.
+If user specified a type → validate against `.construct/references/connection-types.md`.
 
 If not specified → propose a type:
 1. Read both cards' summaries
-2. Assess the relationship using the decision flow from `references/connection-types.md`
+2. Assess the relationship using the decision flow from `.construct/references/connection-types.md`
 3. Propose:
    > "I'd suggest '{relation}': {reasoning}. Confirm, or specify a different type?"
 

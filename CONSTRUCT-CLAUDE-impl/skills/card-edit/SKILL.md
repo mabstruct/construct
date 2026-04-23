@@ -25,7 +25,7 @@ Parse what the user wants to change:
 |------------|---------------|-----------|
 | Confidence | `confidence` | Integer 1–5 |
 | Source tier | `source_tier` | Integer 1–5 |
-| Epistemic type | `epistemic_type` | Valid enum (see `references/epistemic-types.md`) |
+| Epistemic type | `epistemic_type` | Valid enum (see `.construct/references/epistemic-types.md`) |
 | Lifecycle | `lifecycle` | Valid enum: seed / growing / mature / archived |
 | Domain | `domains` | Must exist in `domains.yaml` |
 | Categories | `content_categories` | Must exist in domain's taxonomy |

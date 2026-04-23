@@ -20,7 +20,7 @@ Read all `cards/*.md` files and validate each against the card schema:
 **Value validation:**
 - `confidence` is integer 1–5
 - `source_tier` is integer 1–5
-- `epistemic_type` is valid enum (see `references/epistemic-types.md`)
+- `epistemic_type` is valid enum (see `.construct/references/epistemic-types.md`)
 - `lifecycle` is valid enum: seed | growing | mature | archived
 - `domains` entries exist in `domains.yaml`
 
@@ -71,7 +71,7 @@ Invoke `card-evaluate` skill logic:
 **Type untyped edges:**
 - Scan `connections.json` for edges where `type` is null or empty
 - For each, read both cards' summaries
-- Propose a relation type (see `references/connection-types.md`)
+- Propose a relation type (see `.construct/references/connection-types.md`)
 - Update `connections.json` with proposed type
 
 **Cross-domain bridge detection:**

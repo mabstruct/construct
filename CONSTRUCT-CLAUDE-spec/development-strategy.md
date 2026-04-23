@@ -146,11 +146,13 @@ Unlike the Python approach (8 phases of code), the Claude-native approach is con
 - All skill validation checklists pass
 - README is self-sufficient
 
-**Estimated effort:** Partially done (README exists; consistency review needed)
+**Estimated effort:** Done (README exists; consistency review and deployment test completed 2026-04-25)
 
 ---
 
 ## 4. Current Status
+
+**v0.1 — Complete (2026-04-25)**
 
 | Phase | Status | Remaining |
 |-------|--------|-----------|
@@ -159,7 +161,23 @@ Unlike the Python approach (8 phases of code), the Claude-native approach is con
 | Phase 2 | ✅ Complete | — |
 | Phase 3 | ✅ Complete | — |
 | Phase 4 | ✅ Complete | — |
-| Phase 5 | 🟡 Partial | Consistency review, deployment test |
+| Phase 5 | ✅ Complete | — |
+
+### v0.1 Verification Summary
+
+| Criterion | Status |
+|-----------|--------|
+| J1 (cold-start) end-to-end | ✅ All 3 domains |
+| J2 (daily-cycle) end-to-end | ✅ Philosophy-of-mind ran 2 full cycles |
+| J3 (co-authorship) end-to-end | ✅ Cosmology publish flow complete |
+| Workspace validation (5 layers) | ✅ All 3 domains validated; drift fix applied |
+| Every skill invoked at least once | ✅ 16/17 invoked; `card-archive` deferred to v0.2 |
+| Config sync (impl ↔ deployment) | ✅ 100% — all 38 files identical |
+| events.jsonl records all actions | ✅ 691 events across 3 domains |
+
+**Workspace at close:** 75 cards, 125 connections, 90 refs, 3 digests, 3 curation reports, 1 published article across 3 domains (cosmology, philosophy-of-mind, philosophy-of-physics).
+
+**Next:** [v0.2 — Live Views (prd-v02-live-views.md)](prd-v02-live-views.md)
 
 ---
 

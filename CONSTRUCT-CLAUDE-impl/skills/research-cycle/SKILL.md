@@ -64,7 +64,7 @@ For each novel result:
 2. **Score relevance** (0.0–1.0):
    - Read the domain description from `domains.yaml`
    - Assess: How directly does this advance the domain's core questions?
-   - Use the rubric in `agents/researcher.md`
+   - Use the rubric in `.construct/agents/researcher.md`
 
 3. **Classify content categories**:
    - Map to the domain's `content_categories` from `domains.yaml`
