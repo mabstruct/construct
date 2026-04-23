@@ -4,7 +4,7 @@
 **Date:** 2026-04-23
 **Status:** Active
 **Role:** Automated knowledge acquisition from external sources
-**Implementation:** `CONSTRUCT-agents/agents/researcher.md` + `CONSTRUCT-agents/skills/research-cycle/SKILL.md`
+**Implementation:** `CONSTRUCT-CLAUDE-impl/agents/researcher.md` + `CONSTRUCT-CLAUDE-impl/skills/research-cycle/SKILL.md`
 
 ---
 

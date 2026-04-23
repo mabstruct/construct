@@ -2,43 +2,37 @@
 
 ## Project
 
-CONSTRUCT is an open-source, local-first, agent-powered personal knowledge system. The knowledge graph is the central product artifact, with markdown and YAML as canonical state and SQLite, NetworkX, and `views/` as rebuildable projections.
+CONSTRUCT is a local-first, agent-powered personal knowledge system. You systematically collect, curate, connect, and compound knowledge across domains — and produce high-quality outputs as derived views of accumulated knowledge.
 
-Current planning state:
-- Project context: `.planning/PROJECT.md`
-- Requirements: `.planning/REQUIREMENTS.md`
-- Roadmap: `.planning/ROADMAP.md`
-- State: `.planning/STATE.md`
-- Research context: `.planning/research/`
+**Active approach:** Claude-native agent configuration (`CONSTRUCT-CLAUDE-impl/`)
+**Active spec:** `CONSTRUCT-CLAUDE-spec/`
+**Dormant approach:** Python implementation (`src/`, `tests/`, `CONSTRUCT-spec/`) — on hold, may resume for cloud/MCP path
 
-Current focus:
-- Phase 1: Workspace & Canonical Data Foundation
+## Current Focus
+
+Testing and validating the Claude-native agent system:
+- Agent identity, skills, workflows, templates, and references in `CONSTRUCT-CLAUDE-impl/`
+- Specification documents in `CONSTRUCT-CLAUDE-spec/`
 
 ## Workflow
 
 When working in this repository:
-- Read `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`, and `.planning/STATE.md` before making roadmap-aligned changes.
-- Keep the project Python-first, local-first, and markdown-canonical.
+- Read `CONSTRUCT-CLAUDE-spec/README_FIRST.md` for spec navigation.
+- Read `CONSTRUCT-CLAUDE-impl/AGENTS.md` for the full agent identity and behavior rules.
 - Treat markdown and YAML workspace files as the source of truth.
-- Treat SQLite indexes, NetworkX graphs, and `views/` outputs as derived and rebuildable.
-- Prefer phased work that preserves rebuildability, auditable agent behavior, and a UI that reads `views/` rather than raw source files.
+- Skills are markdown procedures — iterate by editing text.
+- Templates in `CONSTRUCT-CLAUDE-impl/templates/` are the single source for workspace file formats (shared by both approaches).
 
-## Technology Stack
+## Key Principles
 
-Recommended implementation stack for v0.1:
-- Python 3.12+ backend
-- FastAPI + Uvicorn server/runtime surface
-- Pydantic v2 for schemas and validation
-- SQLite + FTS5 for indexing and search
-- NetworkX for derived graph operations
-- HTTPX for provider and research API access
-- React 19 + TypeScript + Vite for the browser UI
-- Zustand for UI state
-- D3 for graph visualization
+- **Claude is the runtime.** No Python backend needed for v0.1.
+- **Markdown is canonical.** Cards, connections, configs are files.
+- **Everything else is derived.** SQLite, views, digests are rebuildable.
+- **Epistemic governance is non-negotiable.** Every claim has confidence, source tier, type, and lifecycle.
 
 ## Guardrails
 
 - Do not introduce cloud-first, multi-user, or auth-heavy architecture into v0.1.
-- Do not let `db/`, `views/`, or transient runtime state become canonical.
-- Do not let the browser UI write directly to source-of-truth workspace files.
-- Keep runtime capabilities accessible through stable Python callables so future integrations remain possible.
+- Do not modify files under `src/`, `tests/`, or `CONSTRUCT-spec/` unless explicitly resuming the Python approach.
+- Do not let GSD `.planning/` state drive agent-native work — it tracks the Python approach only.
+- Keep the knowledge model and workspace format shared between both approaches.

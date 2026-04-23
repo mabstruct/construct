@@ -6,12 +6,12 @@
 
 ---
 
-## 1. Solution Artifacts (`CONSTRUCT-agents/`)
+## 1. Solution Artifacts (`CONSTRUCT-CLAUDE-impl/`)
 
 The complete CONSTRUCT system as Claude configuration:
 
 ```
-CONSTRUCT-agents/
+CONSTRUCT-CLAUDE-impl/
 ├── README.md                          # Deployment guide and overview
 ├── AGENTS.md                          # Root agent identity (CONSTRUCT orchestrator)
 │
@@ -63,12 +63,12 @@ CONSTRUCT-agents/
 
 ---
 
-## 2. Specification Artifacts (`CONSTRUCT-agent-system-spec/`)
+## 2. Specification Artifacts (`CONSTRUCT-CLAUDE-spec/`)
 
 Design documentation for the Claude-native approach:
 
 ```
-CONSTRUCT-agent-system-spec/
+CONSTRUCT-CLAUDE-spec/
 ├── README_FIRST.md                    # Navigation guide
 ├── product-brief.md                   # Product vision
 ├── prd.md                             # Technical requirements
@@ -133,7 +133,7 @@ The workspace created by `workspace-init` and populated by skills:
 | `views/` | ✅ (heartbeat) | ❌ (not needed) | No React UI |
 | `inbox/` | ✅ (UI writeback) | ❌ (not needed) | No async action queue |
 | `model-routing.yaml` | ✅ (controls routing) | 🟡 (informational) | Claude handles all tasks |
-| `workflows/` | ✅ (SKILL.md files) | ❌ (in config, not workspace) | Skills live in CONSTRUCT-agents/ |
+| `workflows/` | ✅ (SKILL.md files) | ❌ (in config, not workspace) | Skills live in CONSTRUCT-CLAUDE-impl/ |
 
 **The shared subset is sufficient for workspace portability.** A workspace created by the Claude-native approach can be consumed by a future Python-approach tool (adding indexing, UI, etc.).
 
@@ -141,14 +141,14 @@ The workspace created by `workspace-init` and populated by skills:
 
 ## 4. Deployment Target
 
-The entire `CONSTRUCT-agents/` directory is self-contained. Deployment:
+The entire `CONSTRUCT-CLAUDE-impl/` directory is self-contained. Deployment:
 
 ```bash
 # Copy to Claude's configuration directory
-cp -r CONSTRUCT-agents/ ~/.claude/CONSTRUCT/
+cp -r CONSTRUCT-CLAUDE-impl/ ~/.claude/CONSTRUCT/
 
 # Or symlink for development
-ln -s $(pwd)/CONSTRUCT-agents ~/.claude/CONSTRUCT
+ln -s $(pwd)/CONSTRUCT-CLAUDE-impl ~/.claude/CONSTRUCT
 ```
 
 The exact deployment location depends on the Claude surface:

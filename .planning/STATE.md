@@ -1,11 +1,36 @@
 # Project State
 
+## Strategic Pause — Python Approach
+
+**Date:** 2026-04-23
+**Decision:** Paused the Python implementation in favor of the Claude-native agent approach.
+**Rationale:** Claude-native configuration delivers a usable CONSTRUCT system in days vs. months of Python development. The knowledge model, workspace format, and epistemic governance are identical — only the runtime changes.
+**Resume condition:** When cloud deployment, MCP server integration, or custom UI requirements justify a programmatic layer.
+
+See: `CONSTRUCT-CLAUDE-spec/adrs/adr-0001-claude-native-approach.md` for the full decision record.
+
+### What was completed (Python track)
+- Full specification suite in `CONSTRUCT-spec/` (17 documents)
+- Phase 1 partial implementation: workspace init, validation, CLI (`src/construct/`)
+- Pydantic schemas for cards, configs, workspace structure
+- Unit and integration tests
+
+### What is now active
+- Claude-native agent configuration: `CONSTRUCT-CLAUDE-impl/`
+- Claude-native specification: `CONSTRUCT-CLAUDE-spec/`
+
+---
+
+## GSD State (Frozen)
+
+The GSD planning state below reflects the Python approach and is frozen as of 2026-04-23. Do not update unless resuming the Python track.
+
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** The knowledge graph must become an active, persistent, agent-maintained system that compounds over time instead of a passive note store.
-**Current focus:** Phase 1 - Workspace & Canonical Data Foundation
+**Last active focus:** Phase 1 - Workspace & Canonical Data Foundation (paused)
 
 ## Current Position
 

@@ -4,7 +4,7 @@
 **Date:** 2026-04-23
 **Status:** Active
 **Role:** Knowledge graph maintenance, quality gates, lifecycle management
-**Implementation:** `CONSTRUCT-agents/agents/curator.md` + `CONSTRUCT-agents/skills/curation-cycle/SKILL.md`
+**Implementation:** `CONSTRUCT-CLAUDE-impl/agents/curator.md` + `CONSTRUCT-CLAUDE-impl/skills/curation-cycle/SKILL.md`
 
 ---
 

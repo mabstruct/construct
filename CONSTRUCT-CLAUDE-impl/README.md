@@ -24,7 +24,7 @@ Instead of building a Python backend with FastAPI, SQLite, and NetworkX, we conf
 ## Directory Structure
 
 ```
-CONSTRUCT-agents/
+CONSTRUCT-CLAUDE-impl/
 ├── README.md                      # This file
 ├── AGENTS.md                      # Root agent identity (CONSTRUCT orchestrator)
 │
@@ -77,19 +77,19 @@ CONSTRUCT-agents/
 
 ### Step 1: Copy agent configuration
 
-Copy the entire `CONSTRUCT-agents/` directory into your Claude configuration location:
+Copy the entire `CONSTRUCT-CLAUDE-impl/` directory into your Claude configuration location:
 
 ```bash
 # macOS — Claude Desktop
-cp -r CONSTRUCT-agents/ ~/.claude/
+cp -r CONSTRUCT-CLAUDE-impl/ ~/.claude/
 
 # Alternative: symlink to keep config in your repo
-ln -s "$(pwd)/CONSTRUCT-agents/AGENTS.md" ~/.claude/AGENTS.md
-ln -s "$(pwd)/CONSTRUCT-agents/agents" ~/.claude/agents
-ln -s "$(pwd)/CONSTRUCT-agents/skills" ~/.claude/skills
-ln -s "$(pwd)/CONSTRUCT-agents/workflows" ~/.claude/workflows
-ln -s "$(pwd)/CONSTRUCT-agents/references" ~/.claude/references
-ln -s "$(pwd)/CONSTRUCT-agents/templates" ~/.claude/templates
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/AGENTS.md" ~/.claude/AGENTS.md
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/agents" ~/.claude/agents
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/skills" ~/.claude/skills
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/workflows" ~/.claude/workflows
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/references" ~/.claude/references
+ln -s "$(pwd)/CONSTRUCT-CLAUDE-impl/templates" ~/.claude/templates
 ```
 
 ### Step 2: Verify configuration

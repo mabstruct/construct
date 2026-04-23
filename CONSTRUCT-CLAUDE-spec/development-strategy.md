@@ -136,7 +136,7 @@ Unlike the Python approach (8 phases of code), the Claude-native approach is con
 **Goal:** Ready for deployment and sharing.
 
 **What:**
-- `CONSTRUCT-agents/README.md` — deployment guide
+- `CONSTRUCT-CLAUDE-impl/README.md` — deployment guide
 - Validate all skills against updated schemas
 - Ensure all cross-references between skills, agents, and references are consistent
 - Test portability: verify config works on different Claude surfaces

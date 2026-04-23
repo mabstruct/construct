@@ -12,7 +12,7 @@
 ### Steps
 
 1. **Configure Claude**
-   - Copy `CONSTRUCT-agents/` directory to Claude's configuration location
+   - Copy `CONSTRUCT-CLAUDE-impl/` directory to Claude's configuration location
    - Point Claude at a workspace directory (e.g., `~/my-research`)
 
 2. **Initialize workspace**

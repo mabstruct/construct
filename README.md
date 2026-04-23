@@ -2,139 +2,49 @@
 
 Local-first, agent-powered personal knowledge system.
 
-Current repo status: Phase 1 foundation is in progress. Right now the working CLI supports:
+CONSTRUCT systematically collects, curates, connects, and compounds knowledge across domains — and produces high-quality outputs as derived views of accumulated knowledge.
 
-- `construct init <path>`
-- `construct validate <path>`
-- `construct status <path>`
+## Two Implementation Approaches
 
-## Requirements
+### Claude-Native (Active)
 
-- Python 3.11+
+CONSTRUCT implemented as Claude agent configuration — skills, workflows, templates, and reference tables. Claude IS the runtime. No code to build.
 
-## Install
+- **Configuration:** [`CONSTRUCT-CLAUDE-impl/`](CONSTRUCT-CLAUDE-impl/) — agent identity, 16 skills, 3 workflows, templates, references
+- **Specification:** [`CONSTRUCT-CLAUDE-spec/`](CONSTRUCT-CLAUDE-spec/) — PRD, agent specs, data schemas, validation strategy
+- **Getting started:** See [`CONSTRUCT-CLAUDE-impl/README.md`](CONSTRUCT-CLAUDE-impl/README.md) for installation and usage
 
-Create a virtual environment and install the package in editable mode:
+### Python (Dormant)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+CONSTRUCT implemented as a Python application — FastAPI, SQLite, Pydantic, React UI. Phase 1 foundation completed, then paused in favor of the Claude-native approach.
+
+- **Specification:** [`CONSTRUCT-spec/`](CONSTRUCT-spec/) — full spec suite (PRD, agent specs, data schemas, SQLite schema, test strategy)
+- **Code:** [`src/construct/`](src/construct/) — schemas, services, CLI (`construct init`, `construct validate`, `construct status`)
+- **Tests:** [`tests/`](tests/) — unit and integration tests
+- **Planning:** [`.planning/`](.planning/) — GSD project state (paused at Phase 1)
+
+The Python approach may resume later for cloud deployment, MCP server integration, or a custom UI layer. Both approaches share the same knowledge model and workspace format.
+
+## Knowledge Model
+
+Both approaches share:
+- **10 epistemic types** — finding, claim, concept, method, paper, theme, gap, provocation, question, connection
+- **Confidence 1–5** — speculative → foundational
+- **Source tiers 1–5** — peer-reviewed → unverified
+- **Lifecycle** — seed → growing → mature → archived
+- **9 connection types** — supports, contradicts, extends, refines, instantiates, enables, parallels, questions, co-occurs
+
+## Repository Structure
+
 ```
-
-If `python3` is not available, use your local Python 3.11+ executable instead.
-
-## Quick Start
-
-Initialize a new workspace:
-
-```bash
-construct init ~/my-construct-workspace
+construct/
+├── CONSTRUCT-CLAUDE-impl/         # ACTIVE — Claude agent configuration
+├── CONSTRUCT-CLAUDE-spec/         # ACTIVE — Claude-native specification
+├── CONSTRUCT-spec/                # DORMANT — Python specification
+├── src/construct/                 # DORMANT — Python implementation
+├── tests/                         # DORMANT — Python tests
+├── .planning/                     # DORMANT — GSD project state (Python track)
+├── AGENTS.md                      # Repository-level agent instructions
+├── README.md                      # This file
+└── pyproject.toml                 # Python build config
 ```
-
-The CLI will prompt for the essential domain inputs:
-
-- Domain slug
-- Display name
-- Scope/description
-- Taxonomy seeds
-- Source priorities
-- Research seeds
-
-Notes:
-
-- taxonomy seeds become canonical `content_categories`, so they must be kebab-case
-- the CLI now normalizes the domain slug to kebab-case automatically
-- the CLI now normalizes spaces and punctuation for taxonomy seeds automatically
-- example: `quantum gravity, string theory` becomes `quantum-gravity, string-theory`
-
-Example session:
-
-```text
-$ construct init ~/my-construct-workspace
-Domain slug (spaces will be normalized to kebab-case): climate policy
-Display name: Climate Policy
-Scope/description: Research on climate adaptation policy and implementation
-Taxonomy seeds (comma-separated; spaces will be normalized to kebab-case): adaptation finance, loss and damage, national plans
-Source priorities (comma-separated): peer-reviewed papers, policy briefs, institutional reports
-Research seeds (comma-separated): climate adaptation policy, adaptation finance
-Initialized CONSTRUCT workspace at /Users/you/my-construct-workspace
-```
-
-## What Gets Created
-
-`construct init` currently creates the full workspace scaffold up front.
-
-Canonical paths:
-
-- `cards/`
-- `domains.yaml`
-- `domains/<domain-slug>/domain.yaml`
-- `connections.json`
-- `governance.yaml`
-- `model-routing.yaml`
-- `refs/`
-- `workflows/`
-- `log/events.jsonl`
-
-Support paths:
-
-- `inbox/`
-- `digests/`
-- `publish/`
-
-Derived paths:
-
-- `db/`
-- `views/`
-
-## Validate a Workspace
-
-Run:
-
-```bash
-construct validate ~/my-construct-workspace
-```
-
-Behavior:
-
-- hard structural problems are reported as `ERROR`
-- softer issues are reported as `WARNING`
-- the command exits non-zero only when errors are present
-
-## Inspect Workspace Status
-
-Run:
-
-```bash
-construct status ~/my-construct-workspace
-```
-
-This prints whether each known path is:
-
-- `Canonical`
-- `Support`
-- `Derived`
-
-and whether it is present or missing.
-
-## Development
-
-Run tests:
-
-```bash
-pytest -q
-```
-
-Targeted examples:
-
-```bash
-pytest tests/unit -q
-pytest tests/integration/test_init_cli.py -q
-```
-
-## Notes
-
-- `db/` and `views/` are rebuildable and non-canonical.
-- Domain data currently uses per-domain folders plus a root `domains.yaml` registry.
-- This README describes the code that exists now, not the full long-term product vision.

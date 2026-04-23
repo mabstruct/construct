@@ -13,7 +13,7 @@ This is the **product specification workspace** for the Claude-native implementa
 
 **Key difference:** Instead of building a Python backend (FastAPI, SQLite, NetworkX, React), this approach configures Claude to BE the CONSTRUCT system. Claude's native capabilities — dialog, web search, file management, reasoning, session memory — replace the custom runtime entirely.
 
-The solution artifacts (agent definitions, skills, workflows, templates) live in `CONSTRUCT-agents/`.
+The solution artifacts (agent definitions, skills, workflows, templates) live in `CONSTRUCT-CLAUDE-impl/`.
 
 ---
 
@@ -66,7 +66,7 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 |----------|----------------|
 | [development-strategy.md](development-strategy.md) | Phased configuration plan, exit criteria |
 | [process.md](process.md) | How we build and evolve the agent configuration |
-| [config-topology.md](config-topology.md) | Directory layout of `CONSTRUCT-agents/` |
+| [config-topology.md](config-topology.md) | Directory layout of `CONSTRUCT-CLAUDE-impl/` |
 
 ### Decisions
 

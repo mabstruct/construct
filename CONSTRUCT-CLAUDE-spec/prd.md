@@ -79,7 +79,7 @@ workspace/
 
 ### Workspace Initialization
 
-The `workspace-init` skill creates this structure from templates in `CONSTRUCT-agents/templates/`.
+The `workspace-init` skill creates this structure from templates in `CONSTRUCT-CLAUDE-impl/templates/`.
 
 ---
 
@@ -90,7 +90,7 @@ CONSTRUCT is delivered as a directory of configuration files:
 ### 3.1 Configuration Layers
 
 ```
-CONSTRUCT-agents/
+CONSTRUCT-CLAUDE-impl/
 ├── AGENTS.md                 # Layer 1: Identity — who CONSTRUCT is
 ├── agents/                   # Layer 2: Roles — specialized modes
 ├── skills/                   # Layer 3: Procedures — what to do step-by-step
@@ -121,7 +121,7 @@ File format templates for workspace artifacts. Ensure structural consistency acr
 
 To deploy CONSTRUCT:
 
-1. Copy `CONSTRUCT-agents/` to Claude's configuration directory
+1. Copy `CONSTRUCT-CLAUDE-impl/` to Claude's configuration directory
 2. Point Claude at a workspace directory
 3. Start a conversation
 
@@ -270,8 +270,8 @@ Detailed specs in `agent-spec-construct.md`, `agent-spec-researcher.md`, `agent-
 The two approaches are **complementary, not competing**:
 
 ```
-CONSTRUCT-agent-system-spec/   ←  This approach
-CONSTRUCT-agents/              ←  Solution artifacts (config files)
+CONSTRUCT-CLAUDE-spec/   ←  This approach
+CONSTRUCT-CLAUDE-impl/              ←  Solution artifacts (config files)
                                    Deployed to: ~/.claude/
 
 CONSTRUCT-spec/                ←  Python approach (original)

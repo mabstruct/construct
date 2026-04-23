@@ -4,7 +4,7 @@
 **Date:** 2026-04-23
 **Status:** Active
 **Role:** Orchestrator, thinking partner, co-author
-**Implementation:** `CONSTRUCT-agents/AGENTS.md`
+**Implementation:** `CONSTRUCT-CLAUDE-impl/AGENTS.md`
 
 ---
 

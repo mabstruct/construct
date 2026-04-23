@@ -21,8 +21,8 @@ Unlike the Python approach where changes go through branches → PRs → CI → 
 
 | Artifact | Git-tracked | How it changes |
 |----------|------------|----------------|
-| `CONSTRUCT-agents/` | Yes | Edit config files directly |
-| `CONSTRUCT-agent-system-spec/` | Yes | Update specs when design changes |
+| `CONSTRUCT-CLAUDE-impl/` | Yes | Edit config files directly |
+| `CONSTRUCT-CLAUDE-spec/` | Yes | Update specs when design changes |
 | Test workspaces | No (gitignored) | Created fresh for validation |
 
 ### 1.3 Change Process
@@ -31,8 +31,8 @@ Unlike the Python approach where changes go through branches → PRs → CI → 
 - Edit directly, test, commit
 
 **Behavioral changes** (new skill, modified routing, new agent role):
-1. Update the relevant spec in `CONSTRUCT-agent-system-spec/`
-2. Implement the change in `CONSTRUCT-agents/`
+1. Update the relevant spec in `CONSTRUCT-CLAUDE-spec/`
+2. Implement the change in `CONSTRUCT-CLAUDE-impl/`
 3. Test by running affected skills against a workspace
 4. Validate workspace integrity
 5. Commit spec + config together
@@ -111,8 +111,8 @@ refactor: split curation-cycle step 5 into connection-maintenance sub-steps
 
 ## 5. Documentation Guidelines
 
-- Specs in `CONSTRUCT-agent-system-spec/` describe WHAT and WHY
-- Config in `CONSTRUCT-agents/` describes HOW (procedurally)
+- Specs in `CONSTRUCT-CLAUDE-spec/` describe WHAT and WHY
+- Config in `CONSTRUCT-CLAUDE-impl/` describes HOW (procedurally)
 - No duplication — specs reference config, config references specs
 - Keep skills self-contained — a skill reader shouldn't need to read 3 other files to understand the procedure
 
