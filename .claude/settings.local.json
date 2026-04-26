@@ -4,7 +4,19 @@
       "Bash(gsd-sdk query *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Skill(gsd-spec-phase)"
+      "Skill(gsd-spec-phase)",
+      "Bash(cp /Users/mab/dev/mabstruct/construct/my-construct/.construct/templates/connections.json /Users/mab/dev/mabstruct/construct/my-construct/cosmology/connections.json)",
+      "Bash(cp /Users/mab/dev/mabstruct/construct/my-construct/.construct/templates/governance.yaml /Users/mab/dev/mabstruct/construct/my-construct/cosmology/governance.yaml)",
+      "Bash(cp /Users/mab/dev/mabstruct/construct/my-construct/.construct/templates/search-seeds.json /Users/mab/dev/mabstruct/construct/my-construct/cosmology/search-seeds.json)",
+      "WebSearch",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.nature.com)",
+      "WebFetch(domain:www.quantamagazine.org)",
+      "Bash(python3 -c 'import json; json.load\\(open\\('\\\\''__TRACKED_VAR__'\\\\''\\)\\)')",
+      "Bash(awk -F': ' '{gsub\\(\",\",\"\",$2\\); v=$2+0; if\\(v>=0.9\\) print \">= 0.9\"; else if\\(v>=0.7\\) print \"0.7-0.89\"; else if\\(v>=0.5\\) print \"0.5-0.69\"; else if\\(v>=0.3\\) print \"0.3-0.49\"; else print \"<0.3\"}')",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('connections.json'\\)\\); print\\('total:', len\\(d['connections']\\)\\)\")",
+      "Bash(python3 *)",
+      "Bash(awk *)"
     ]
   }
 }
