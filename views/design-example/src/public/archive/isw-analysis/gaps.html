@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis - Research Gaps</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0B1120;
+            color: #E5E7EB;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(139, 92, 246, 0.1));
+            border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #9CA3AF;
+            margin-bottom: 1rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #06B6D4;
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-color: #06B6D4;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem 2rem;
+        }
+
+        /* Section styles */
+        section {
+            margin-bottom: 3rem;
+        }
+
+        section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #E5E7EB;
+            border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+            padding-bottom: 1rem;
+        }
+
+        /* Card grid */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: #111827;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(6, 182, 212, 0.1);
+        }
+
+        /* Card title */
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card p {
+            color: #D1D5DB;
+            font-size: 0.95rem;
+        }
+
+        /* Accent indicators */
+        .checkmark {
+            color: #10B981;
+            font-weight: bold;
+        }
+
+        .critical-accent {
+            border-left: 4px solid #EF4444;
+        }
+
+        .critical-accent .accent-indicator {
+            color: #EF4444;
+            font-weight: bold;
+        }
+
+        .important-accent {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .important-accent .accent-indicator {
+            color: #F59E0B;
+            font-weight: bold;
+        }
+
+        /* Progress section */
+        .progress-container {
+            background-color: #111827;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .progress-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #9CA3AF;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-container {
+            background-color: rgba(107, 114, 128, 0.2);
+            height: 30px;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            display: flex;
+            border-radius: 6px;
+        }
+
+        .progress-closed {
+            background: linear-gradient(90deg, #10B981, #059669);
+            width: 10%;
+        }
+
+        .progress-critical {
+            background: linear-gradient(90deg, #EF4444, #DC2626);
+            width: 50%;
+        }
+
+        .progress-important {
+            background: linear-gradient(90deg, #F59E0B, #D97706);
+            width: 40%;
+        }
+
+        .progress-legend {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .legend-closed {
+            background: #10B981;
+        }
+
+        .legend-critical {
+            background: #EF4444;
+        }
+
+        .legend-important {
+            background: #F59E0B;
+        }
+
+        /* Table */
+        .table-wrapper {
+            background-color: #111827;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #06B6D4;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(107, 114, 128, 0.2);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(6, 182, 212, 0.05);
+        }
+
+        .metric-change {
+            color: #10B981;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #111827;
+            border-top: 1px solid rgba(107, 114, 128, 0.3);
+            padding: 2rem;
+            margin-top: 4rem;
+            text-align: center;
+            color: #6B7280;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #06B6D4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            section h2 {
+                font-size: 1.4rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+        }
+
+        /* Two-column layout for readability on larger screens */
+        @media (min-width: 1024px) {
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>ISW Analysis</h1>
+            <p class="subtitle">ISW research status</p>
+            <a href="index.html" class="back-link">← Back to Overview</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Section 1: Closed Gaps -->
+        <section>
+            <h2>Closed Gaps (since v1)</h2>
+            <div class="card-grid">
+                <div class="card">
+                    <h3><span class="checkmark">✓</span> Manipulation / Grasping</h3>
+                    <p>Partially addressed through Hierarchical VL Planning for humanoid manipulation and 3D-Grounded VL Framework for task planning.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Critical Open Gaps -->
+        <section>
+            <h2>Critical Open Gaps 🔴</h2>
+            <div class="card-grid">
+                <div class="card critical-accent">
+                    <h3><span class="accent-indicator">●</span> Intent-to-Action Pipeline</h3>
+                    <p>The new research focus. No dedicated papers yet. v2 pattern should address this. Status: <strong>Primary research target</strong>.</p>
+                </div>
+                <div class="card critical-accent">
+                    <h3><span class="accent-indicator">●</span> Multi-Robot Coordination</h3>
+                    <p>No coverage of swarm/fleet/multi-robot systems. Critical gap in embodied AI ecosystem.</p>
+                </div>
+                <div class="card critical-accent">
+                    <h3><span class="accent-indicator">●</span> Safety & Ethics of Embodied AI</h3>
+                    <p>Still absent from corpus. Essential for real-world deployment and research integrity.</p>
+                </div>
+                <div class="card critical-accent">
+                    <h3><span class="accent-indicator">●</span> Outdoor Environments</h3>
+                    <p>Entirely indoor-focused. Need coverage of outdoor navigation, weather resistance, and environmental variability.</p>
+                </div>
+                <div class="card critical-accent">
+                    <h3><span class="accent-indicator">●</span> Hardware / Sensors</h3>
+                    <p>No sensor-specific papers. Missing hardware constraints, sensor fusion, and device-specific optimizations.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Important Open Gaps -->
+        <section>
+            <h2>Important Open Gaps 🟡</h2>
+            <div class="card-grid">
+                <div class="card important-accent">
+                    <h3><span class="accent-indicator">●</span> Affordance Reasoning</h3>
+                    <p>How robots understand what actions are possible given physical state. Added as wildcard in v2.</p>
+                </div>
+                <div class="card important-accent">
+                    <h3><span class="accent-indicator">●</span> Sim-to-Real Transfer</h3>
+                    <p>Mentioned in several papers but no dedicated coverage of domain gap problem and transfer learning strategies.</p>
+                </div>
+                <div class="card important-accent">
+                    <h3><span class="accent-indicator">●</span> Human Intent Disambiguation</h3>
+                    <p>What happens when instruction is ambiguous? Intent clarification dialogue and multi-turn reasoning.</p>
+                </div>
+                <div class="card important-accent">
+                    <h3><span class="accent-indicator">●</span> Failure Recovery</h3>
+                    <p>What does the robot do when action fails? Replanning, error detection, and graceful degradation strategies.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Gap Coverage Progress -->
+        <section>
+            <h2>Gap Coverage Progress</h2>
+            <div class="progress-container">
+                <div class="progress-stats">
+                    <div class="stat">
+                        <div class="stat-number">10</div>
+                        <div class="stat-label">Total Gaps</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">1</div>
+                        <div class="stat-label">Closed (10%)</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">5</div>
+                        <div class="stat-label">Critical (50%)</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">4</div>
+                        <div class="stat-label">Important (40%)</div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-closed"></div>
+                        <div class="progress-critical"></div>
+                        <div class="progress-important"></div>
+                    </div>
+                </div>
+
+                <div class="progress-legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-closed"></div>
+                        <span>Closed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-critical"></div>
+                        <span>Critical</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-important"></div>
+                        <span>Important</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: v1 → v2 Changes Summary -->
+        <section>
+            <h2>v1 → v2 Changes Summary</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dimension</th>
+                            <th>v1 (Feb 20)</th>
+                            <th>v2 (Mar 1)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Corpus size</td>
+                            <td>22</td>
+                            <td>63 <span class="metric-change">(+186%)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Clusters</td>
+                            <td>8</td>
+                            <td>9 <span class="metric-change">(+intent-to-action)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Dominant cluster</td>
+                            <td>Embodied AI (4)</td>
+                            <td>Embodied AI (28)</td>
+                        </tr>
+                        <tr>
+                            <td>Weakest cluster</td>
+                            <td>Vision-Language (1)</td>
+                            <td>Robot Navigation (1)</td>
+                        </tr>
+                        <tr>
+                            <td>Key theme</td>
+                            <td>Foundation model era</td>
+                            <td>World model convergence + language as interface</td>
+                        </tr>
+                        <tr>
+                            <td>Gaps closed</td>
+                            <td>—</td>
+                            <td>Manipulation (partial)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>CONSTRUCT — autonomous agentic research engine — <a href="https://mabstruct.ai">mabstruct.ai</a></p>
+    </footer>
+</body>
+</html>

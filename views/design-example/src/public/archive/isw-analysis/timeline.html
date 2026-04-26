@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis - Timeline</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0B1120;
+            color: #e5e7eb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, rgba(11, 17, 32, 0.8), rgba(17, 24, 39, 0.8));
+            border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header-content h1 {
+            font-size: 2.5rem;
+            color: #06B6D4;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header-content p {
+            font-size: 1.1rem;
+            color: #a1a5b4;
+        }
+
+        nav {
+            padding: 1rem 2rem;
+            background-color: rgba(17, 24, 39, 0.5);
+            border-bottom: 1px solid rgba(6, 182, 212, 0.15);
+        }
+
+        nav a {
+            color: #06B6D4;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #8B5CF6;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        section h2 {
+            font-size: 1.8rem;
+            color: #06B6D4;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+        }
+
+        /* Section 1: Search Pattern Evolution Timeline */
+        .timeline-container {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 30px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #06B6D4, #8B5CF6, #F97316);
+        }
+
+        .timeline-event {
+            margin-bottom: 2rem;
+            padding-left: 100px;
+            position: relative;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 15px;
+            top: 5px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid #0B1120;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .timeline-dot.human-steering {
+            background-color: #F97316;
+            color: white;
+        }
+
+        .timeline-dot.positive {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .timeline-dot.drift-review {
+            background-color: #8B5CF6;
+            color: white;
+        }
+
+        .timeline-dot.direction {
+            background-color: #06B6D4;
+            color: white;
+        }
+
+        .timeline-card {
+            background-color: #111827;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-card:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            background-color: rgba(17, 24, 39, 0.8);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+
+        .timeline-date {
+            font-size: 0.9rem;
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-version {
+            font-size: 1.3rem;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .timeline-content {
+            color: #d1d5db;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .change-list {
+            list-style: none;
+            margin-top: 1rem;
+            padding-left: 1rem;
+        }
+
+        .change-list li {
+            color: #a1a5b4;
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .change-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #06B6D4;
+        }
+
+        /* Section 2: Publication Year Distribution */
+        .publication-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .publication-item {
+            background-color: #111827;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .publication-item:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+
+        .pub-category {
+            font-size: 1rem;
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .stacked-bar {
+            display: flex;
+            height: 40px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.2);
+            margin-bottom: 0.75rem;
+        }
+
+        .bar-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .bar-segment:hover {
+            opacity: 0.8;
+        }
+
+        .year-2006 { background-color: #0369a1; }
+        .year-2017 { background-color: #0ea5e9; }
+        .year-2019 { background-color: #06b6d4; }
+        .year-2021 { background-color: #14b8a6; }
+        .year-2022 { background-color: #10b981; }
+        .year-2023 { background-color: #84cc16; }
+        .year-2024 { background-color: #f97316; }
+        .year-2025 { background-color: #ec4899; }
+        .year-2026 { background-color: #8b5cf6; }
+
+        .year-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+
+        /* Section 3: Human Feedback Events */
+        .feedback-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feedback-card {
+            background-color: #111827;
+            border-left: 4px solid #06B6D4;
+            border-radius: 6px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-card.steering {
+            border-left-color: #F97316;
+        }
+
+        .feedback-card.positive {
+            border-left-color: #10b981;
+        }
+
+        .feedback-card.drift-review {
+            border-left-color: #8B5CF6;
+        }
+
+        .feedback-date {
+            font-size: 0.9rem;
+            color: #a1a5b4;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-type {
+            display: inline-block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .feedback-type.steering {
+            background-color: rgba(249, 115, 22, 0.2);
+            color: #F97316;
+        }
+
+        .feedback-type.positive {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .feedback-type.drift-review {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #8B5CF6;
+        }
+
+        .feedback-content {
+            color: #d1d5db;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background-color: rgba(17, 24, 39, 0.5);
+            border-top: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 2rem;
+            text-align: center;
+            color: #6b7280;
+            margin-top: auto;
+        }
+
+        footer p {
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 2rem 1rem;
+            }
+
+            .header-content h1 {
+                font-size: 1.8rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .timeline-container::before {
+                left: 15px;
+            }
+
+            .timeline-dot {
+                left: 4px;
+                width: 24px;
+                height: 24px;
+                font-size: 0.65rem;
+            }
+
+            .timeline-event {
+                padding-left: 70px;
+            }
+
+            .publication-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feedback-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>ISW Analysis</h1>
+            <p>ISW research status</p>
+        </div>
+    </header>
+
+    <nav>
+        <a href="index.html">← Back to Overview</a>
+    </nav>
+
+    <main>
+        <!-- Section 1: Search Pattern Evolution -->
+        <section>
+            <h2>Search Pattern Evolution (v1 → v6)</h2>
+            <div class="timeline-container">
+                <!-- v1 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot direction">v1</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">February 24, 2026</div>
+                        <div class="timeline-version">v1: Initial Foundation</div>
+                        <div class="timeline-content">
+                            Established baseline search pattern with 8 core clusters, 3 terms each, uniform weight distribution.
+                            <ul class="change-list">
+                                <li>8 clusters, 3 terms per cluster</li>
+                                <li>Uniform weights across all terms</li>
+                                <li>3 wildcard patterns</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v2 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot human-steering">v2</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">March 1, 2026</div>
+                        <div class="timeline-version">v2: Action Layer Focus</div>
+                        <div class="timeline-content">
+                            Added intent-to-action cluster (weight 1.5) and strategically boosted robotics & AI terms while de-emphasizing foundational work.
+                            <ul class="change-list">
+                                <li>Added intent-to-action cluster (1.5)</li>
+                                <li>Boosted: robot-learning, embodied-ai, vision-language → 1.5</li>
+                                <li>De-emphasized: perception-detection (0.7), foundations (0.5)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v3 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot positive">v3</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">March 4, 2026</div>
+                        <div class="timeline-version">v3: Causal Models Exploration</div>
+                        <div class="timeline-content">
+                            Human chose to explore causal world models. Elevated this cluster to primary focus with weight 2.0, robot-learning to 2.0.
+                            <ul class="change-list">
+                                <li>Added causal-world-models (2.0) - new primary focus</li>
+                                <li>Boosted robot-learning → 2.0</li>
+                                <li>Causal systems became central to architecture</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v4 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot drift-review">v4</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">March 9, 2026</div>
+                        <div class="timeline-version">v4: Drift Detection & Adjustment</div>
+                        <div class="timeline-content">
+                            Added indoor-world-model (1.8) for spatial grounding. Drift review identified causal dominating results (28%) with ~40% duplication.
+                            <ul class="change-list">
+                                <li>Added indoor-world-model (1.8)</li>
+                                <li>Reduced causal weight 2.0 → 1.5</li>
+                                <li>Detected drift: 28% causal dominance, ~40% duplication</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v5 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot human-steering">v5</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">March 9, 2026</div>
+                        <div class="timeline-version">v5: Middleware & Spatial RAG</div>
+                        <div class="timeline-content">
+                            Added agentic middleware and spatial RAG for robotics with OpenClaw focus. Expanded depth across embodied systems.
+                            <ul class="change-list">
+                                <li>Added agentic-robot-middleware (1.8)</li>
+                                <li>Added spatial-rag-robotics (1.5)</li>
+                                <li>OpenClaw integration focus</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v6 -->
+                <div class="timeline-event">
+                    <div class="timeline-dot human-steering">v6</div>
+                    <div class="timeline-card">
+                        <div class="timeline-date">March 14, 2026</div>
+                        <div class="timeline-version">v6: Intent-to-Action Primary</div>
+                        <div class="timeline-content">
+                            Elevated intent-to-action to primary focus (weight 2.0). Expanded search term coverage from 3→8 terms per cluster for deeper exploration.
+                            <ul class="change-list">
+                                <li>Boosted intent-to-action → 2.0 (primary focus)</li>
+                                <li>Expanded terms per cluster: 3 → 8</li>
+                                <li>Increased search depth across all clusters</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Publication Year Distribution -->
+        <section>
+            <h2>Publication Year Distribution</h2>
+            <div class="publication-grid">
+                <!-- Perception-Detection -->
+                <div class="publication-item">
+                    <div class="pub-category">Perception-Detection</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2024" style="flex: 2;">2024(2)</div>
+                        <div class="bar-segment year-2025" style="flex: 3;">2025(3)</div>
+                        <div class="bar-segment year-2026" style="flex: 1;">2026(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 6 papers</div>
+                </div>
+
+                <!-- Embodied-AI -->
+                <div class="publication-item">
+                    <div class="pub-category">Embodied-AI</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2019" style="flex: 1;">2019(1)</div>
+                        <div class="bar-segment year-2022" style="flex: 1;">2022(1)</div>
+                        <div class="bar-segment year-2023" style="flex: 2;">2023(2)</div>
+                        <div class="bar-segment year-2024" style="flex: 2;">2024(2)</div>
+                        <div class="bar-segment year-2025" style="flex: 11;">2025(11)</div>
+                        <div class="bar-segment year-2026" style="flex: 1;">2026(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 18 papers</div>
+                </div>
+
+                <!-- Robot-Learning -->
+                <div class="publication-item">
+                    <div class="pub-category">Robot-Learning</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2021" style="flex: 1;">2021(1)</div>
+                        <div class="bar-segment year-2024" style="flex: 1;">2024(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 2 papers</div>
+                </div>
+
+                <!-- Foundations-Training -->
+                <div class="publication-item">
+                    <div class="pub-category">Foundations-Training</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2006" style="flex: 1;">2006(1)</div>
+                        <div class="bar-segment year-2017" style="flex: 1;">2017(1)</div>
+                        <div class="bar-segment year-2024" style="flex: 1;">2024(1)</div>
+                        <div class="bar-segment year-2025" style="flex: 1;">2025(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 4 papers</div>
+                </div>
+
+                <!-- Agentic-Systems -->
+                <div class="publication-item">
+                    <div class="pub-category">Agentic-Systems</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2023" style="flex: 1;">2023(1)</div>
+                        <div class="bar-segment year-2024" style="flex: 1;">2024(1)</div>
+                        <div class="bar-segment year-2026" style="flex: 3;">2026(3)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 5 papers</div>
+                </div>
+
+                <!-- Spatial-Understanding -->
+                <div class="publication-item">
+                    <div class="pub-category">Spatial-Understanding</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2024" style="flex: 2;">2024(2)</div>
+                        <div class="bar-segment year-2025" style="flex: 3;">2025(3)</div>
+                        <div class="bar-segment year-2026" style="flex: 1;">2026(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 6 papers</div>
+                </div>
+
+                <!-- Vision-Language -->
+                <div class="publication-item">
+                    <div class="pub-category">Vision-Language</div>
+                    <div class="stacked-bar">
+                        <div class="bar-segment year-2023" style="flex: 1;">2023(1)</div>
+                        <div class="bar-segment year-2025" style="flex: 1;">2025(1)</div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a5b4;">Total: 2 papers</div>
+                </div>
+            </div>
+
+            <div class="year-legend">
+                <div class="legend-item">
+                    <div class="legend-color year-2006"></div>
+                    <span>2006</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2017"></div>
+                    <span>2017</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2019"></div>
+                    <span>2019</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2021"></div>
+                    <span>2021</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2022"></div>
+                    <span>2022</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2023"></div>
+                    <span>2023</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2024"></div>
+                    <span>2024</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2025"></div>
+                    <span>2025</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color year-2026"></div>
+                    <span>2026</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Human Feedback Events -->
+        <section>
+            <h2>Human Feedback Events</h2>
+            <div class="feedback-grid">
+                <!-- Feedback 1: March 1 - Steering -->
+                <div class="feedback-card steering">
+                    <div class="feedback-date">March 1, 2026</div>
+                    <div class="feedback-type steering">Steering</div>
+                    <div class="feedback-content">
+                        "Shift focus to the middle layer: world models for robot action, intent-to-task decomposition, and embodied understanding. This is where the research convergence happens."
+                    </div>
+                </div>
+
+                <!-- Feedback 2: March 4 - Positive -->
+                <div class="feedback-card positive">
+                    <div class="feedback-date">March 4, 2026</div>
+                    <div class="feedback-type positive">Positive</div>
+                    <div class="feedback-content">
+                        "Chose to explore causal world models (option 1) from the digest synthesis. This direction aligns with the architecture vision for grounded understanding."
+                    </div>
+                </div>
+
+                <!-- Feedback 3: March 9 - Drift Review -->
+                <div class="feedback-card drift-review">
+                    <div class="feedback-date">March 9, 2026</div>
+                    <div class="feedback-type drift-review">Drift Review</div>
+                    <div class="feedback-content">
+                        "Causal dominating 28%, ~40% duplication. Embodied-ai silent. Need to rebalance: add spatial-world and agentic-middleware layers to diversify coverage and reduce drift."
+                    </div>
+                </div>
+
+                <!-- Feedback 4: March 9 - Steering -->
+                <div class="feedback-card steering">
+                    <div class="feedback-date">March 9, 2026</div>
+                    <div class="feedback-type steering">Steering</div>
+                    <div class="feedback-content">
+                        "Implement four-layer digital twin architecture: (1) Perception layer - sensor fusion and spatial understanding, (2) World models - causal reasoning and prediction, (3) Intent-to-action - task decomposition and planning, (4) Embodied execution - robot learning and control."
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>CONSTRUCT - autonomous agentic research engine - mabstruct.ai</p>
+    </footer>
+</body>
+</html>

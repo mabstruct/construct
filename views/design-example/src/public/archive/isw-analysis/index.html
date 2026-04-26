@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0B1120 0%, #0F1629 100%);
+            color: #E5E7EB;
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Subtle dot pattern background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .header-content h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 50%, #F97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-content p {
+            font-size: 1.1rem;
+            color: #9CA3AF;
+            font-weight: 500;
+        }
+
+        /* Stats Banner */
+        .stats-banner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+            padding: 30px;
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid rgba(6, 182, 212, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(6, 182, 212, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(6, 182, 212, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #06B6D4;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Navigation Grid */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .nav-card {
+            position: relative;
+            padding: 30px;
+            background: linear-gradient(135deg, #111827 0%, #1a202c 100%);
+            border: 1px solid rgba(6, 182, 212, 0.1);
+            border-radius: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .nav-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .nav-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(6, 182, 212, 0.3);
+            box-shadow: 0 20px 40px rgba(6, 182, 212, 0.1);
+        }
+
+        .nav-card:hover::before {
+            opacity: 1;
+        }
+
+        .nav-card-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-card:hover .card-icon {
+            transform: scale(1.2);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #F3F4F6;
+        }
+
+        .card-description {
+            font-size: 0.95rem;
+            color: #9CA3AF;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid rgba(6, 182, 212, 0.1);
+        }
+
+        .card-link {
+            color: #06B6D4;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .arrow-icon {
+            display: inline-block;
+            color: #06B6D4;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-card:hover .arrow-icon {
+            transform: translateX(4px);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(6, 182, 212, 0.1);
+            margin-top: 60px;
+            color: #6B7280;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #06B6D4;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #8B5CF6;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .header-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .stats-banner {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                padding: 20px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .nav-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-card {
+                padding: 20px;
+            }
+
+            .card-icon {
+                font-size: 2rem;
+            }
+
+            .card-title {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content h1 {
+                font-size: 2rem;
+            }
+
+            .stats-banner {
+                grid-template-columns: 1fr;
+            }
+
+            .card-description {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Accent colors for variety */
+        .nav-card:nth-child(1) {
+            border-left: 3px solid #06B6D4;
+        }
+
+        .nav-card:nth-child(2) {
+            border-left: 3px solid #8B5CF6;
+        }
+
+        .nav-card:nth-child(3) {
+            border-left: 3px solid #F97316;
+        }
+
+        .nav-card:nth-child(4) {
+            border-left: 3px solid #06B6D4;
+        }
+
+        .nav-card:nth-child(5) {
+            border-left: 3px solid #8B5CF6;
+        }
+
+        .nav-card:nth-child(6) {
+            border-left: 3px solid #F97316;
+        }
+
+        .nav-card:nth-child(7) {
+            border-left: 3px solid #06B6D4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <h1>ISW Analysis</h1>
+                <p>Intelligent Semantic Worlds — research landscape status</p>
+            </div>
+        </header>
+
+        <!-- Stats Banner -->
+        <div class="stats-banner">
+            <div class="stat-item">
+                <div class="stat-value">504+</div>
+                <div class="stat-label">Total Papers</div>
+                <div style="font-size: 0.75rem; color: #6B7280; margin-top: 5px;">Across 14 clusters</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">14</div>
+                <div class="stat-label">Clusters</div>
+                <div style="font-size: 0.75rem; color: #10B981; margin-top: 5px;">+6 since v1</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Search Versions</div>
+                <div style="font-size: 0.75rem; color: #6B7280; margin-top: 5px;">v1 → v8</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">57</div>
+                <div class="stat-label">Daily Digests</div>
+                <div style="font-size: 0.75rem; color: #6B7280; margin-top: 5px;">Autonomous collection</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">19</div>
+                <div class="stat-label">Knowledge Cards</div>
+                <div style="font-size: 0.75rem; color: #6B7280; margin-top: 5px;">Curated insights</div>
+            </div>
+        </div>
+
+        <!-- Navigation Cards Grid -->
+        <div class="nav-grid">
+            <!-- Cluster Analysis -->
+            <a href="clusters.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">📊</div>
+                    <h2 class="card-title">Cluster Analysis</h2>
+                    <p class="card-description">14 research clusters, 504+ papers, distribution analysis</p>
+                    <div class="card-footer">
+                        <span class="card-link">Explore clusters</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Evolution & Timeline -->
+            <a href="timeline.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">📈</div>
+                    <h2 class="card-title">Evolution & Timeline</h2>
+                    <p class="card-description">Search pattern evolution v1→v6, cluster growth trajectory, adaptation history</p>
+                    <div class="card-footer">
+                        <span class="card-link">View timeline</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Taxonomy & Tags -->
+            <a href="taxonomy.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">🏷️</div>
+                    <h2 class="card-title">Taxonomy & Tags</h2>
+                    <p class="card-description">Tag weights, topic associations, tag cloud visualization</p>
+                    <div class="card-footer">
+                        <span class="card-link">Browse taxonomy</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Research Gaps -->
+            <a href="gaps.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">🔍</div>
+                    <h2 class="card-title">Research Gaps</h2>
+                    <p class="card-description">Open gaps, closed gaps, new discoveries</p>
+                    <div class="card-footer">
+                        <span class="card-link">Identify gaps</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Latest Digests -->
+            <a href="digests.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">📄</div>
+                    <h2 class="card-title">Latest Digests</h2>
+                    <p class="card-description">Recent daily research digests with candidate papers</p>
+                    <div class="card-footer">
+                        <span class="card-link">Read digests</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- System Architecture -->
+            <a href="architecture.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">⚙️</div>
+                    <h2 class="card-title">System Architecture</h2>
+                    <p class="card-description">Three-phase cycle, data model, infrastructure stack</p>
+                    <div class="card-footer">
+                        <span class="card-link">Learn architecture</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Knowledge Graph -->
+            <a href="knowledge-graph.html" class="nav-card">
+                <div class="nav-card-content">
+                    <div class="card-icon">🕸️</div>
+                    <h2 class="card-title">Knowledge Graph</h2>
+                    <p class="card-description">Interactive force-directed graph of 19 knowledge cards and 22 connections — browse, explore, and trace intellectual threads</p>
+                    <div class="card-footer">
+                        <span class="card-link">Explore graph</span>
+                        <span class="arrow-icon">→</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>CONSTRUCT — autonomous agentic research engine — <a href="#">mabstruct.ai</a></p>
+    </footer>
+</body>
+</html>

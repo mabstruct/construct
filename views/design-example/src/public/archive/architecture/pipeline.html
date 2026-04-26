@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONSTRUCT — Pipeline Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(139, 92, 246, 0.1));
+            border-bottom: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #94A3B8;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Navigation */
+        nav {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+        }
+
+        nav a {
+            color: #94A3B8;
+            text-decoration: none;
+            padding: 1rem 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        nav a:hover {
+            color: #E2E8F0;
+            border-bottom-color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 2rem;
+            background: linear-gradient(180deg, #06B6D4, #8B5CF6);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #E2E8F0;
+        }
+
+        /* Evolution Section */
+        .evolution-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .evolution-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+        }
+
+        .evolution-card h3 {
+            color: #06B6D4;
+            margin-bottom: 1.5rem;
+        }
+
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .flow-item {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid #06B6D4;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .flow-arrow {
+            color: #06B6D4;
+            font-weight: bold;
+        }
+
+        /* Four Stages */
+        .stages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stage-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            border-left: 4px solid #06B6D4;
+        }
+
+        .stage-card:hover {
+            border-color: #06B6D4;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.1);
+        }
+
+        .stage-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0B1120;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .stage-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stage-timing {
+            background: rgba(6, 182, 212, 0.1);
+            border-left: 2px solid #06B6D4;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #94A3B8;
+            margin: 1.5rem 0;
+            font-family: monospace;
+        }
+
+        .stage-details {
+            list-style: none;
+            padding: 0;
+        }
+
+        .stage-details li {
+            color: #94A3B8;
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .stage-details li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #06B6D4;
+        }
+
+        /* Timing Budget */
+        .timing-budget {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .timing-chart {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .timing-row {
+            display: grid;
+            grid-template-columns: 150px 1fr 100px;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .timing-label {
+            color: #E2E8F0;
+            font-weight: 500;
+        }
+
+        .timing-bar-container {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid #1E293B;
+            border-radius: 4px;
+            height: 32px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timing-bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #0B1120;
+            transition: width 0.3s ease;
+        }
+
+        .timing-bar.hunt {
+            background: linear-gradient(90deg, #06B6D4, #0891B2);
+            width: 28.5%;
+        }
+
+        .timing-bar.ingest {
+            background: linear-gradient(90deg, #8B5CF6, #7C3AED);
+            width: 14.3%;
+        }
+
+        .timing-bar.enrich {
+            background: linear-gradient(90deg, #F97316, #EA580C);
+            width: 42.8%;
+        }
+
+        .timing-bar.output {
+            background: linear-gradient(90deg, #10B981, #059669);
+            width: 2.9%;
+        }
+
+        .timing-value {
+            color: #94A3B8;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .timing-total {
+            border-top: 2px solid #1E293B;
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .timing-total .timing-label {
+            color: #06B6D4;
+        }
+
+        /* Rate Limits Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        thead {
+            background: rgba(6, 182, 212, 0.1);
+            border-bottom: 2px solid #1E293B;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: #06B6D4;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #1E293B;
+            color: #94A3B8;
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        /* Validation Checklist */
+        .checklist {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+        }
+
+        .checklist h3 {
+            margin-bottom: 1.5rem;
+        }
+
+        .checklist-items {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist-items li {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            color: #94A3B8;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .checklist-items li:last-child {
+            border-bottom: none;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #10B981;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #10B981;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* Footer */
+        footer {
+            background: #111827;
+            border-top: 1px solid #1E293B;
+            padding: 2rem;
+            text-align: center;
+            color: #94A3B8;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #06B6D4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            header {
+                padding: 2rem 1rem;
+            }
+
+            main {
+                padding: 2rem 1rem;
+            }
+
+            nav {
+                padding: 0 1rem;
+                gap: 1rem;
+            }
+
+            .evolution-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timing-row {
+                grid-template-columns: 120px 1fr 80px;
+            }
+
+            .pipeline-flow {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p class="subtitle">autonomous agentic research engine</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="agents.html">Agents</a>
+        <a href="pipeline.html" class="active">Pipeline</a>
+        <a href="adaptation.html">Adaptation</a>
+        <a href="infrastructure.html">Infrastructure</a>
+        <a href="dataflow.html">Data Flow</a>
+    </nav>
+
+    <main>
+        <!-- Pipeline Evolution -->
+        <section>
+            <h2>Pipeline Evolution</h2>
+            <div class="evolution-grid">
+                <div class="evolution-card">
+                    <h3>Version 1: Core Pipeline</h3>
+                    <div class="pipeline-flow">
+                        <div class="flow-item">Search</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">Digest</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">Ingest</div>
+                    </div>
+                    <p style="margin-top: 1.5rem; color: #94A3B8; font-size: 0.9rem;">Initial three-stage pipeline for content discovery and integration. Focus on breadth and integration efficiency.</p>
+                </div>
+
+                <div class="evolution-card">
+                    <h3>Version 2: Enhanced Pipeline</h3>
+                    <div class="pipeline-flow">
+                        <div class="flow-item">Search</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">Digest</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">Ingest</div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">Enrich</div>
+                    </div>
+                    <p style="margin-top: 1.5rem; color: #94A3B8; font-size: 0.9rem;">Added artifact enrichment stage. Extracts metadata, resolves citations, indexes code and models.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Four Stages -->
+        <section>
+            <h2>Four Stages</h2>
+            <div class="stages-grid">
+                <div class="stage-card">
+                    <div class="stage-number">1</div>
+                    <h3>Content Hunt</h3>
+                    <div class="stage-timing">~1 minute</div>
+                    <ul class="stage-details">
+                        <li>Read search-seeds.json</li>
+                        <li>Run 10 searches (8 cluster + 2 wildcard)</li>
+                        <li>Collect up to 10 candidates per search</li>
+                        <li>Write digest markdown</li>
+                        <li>Update seen-urls.json</li>
+                    </ul>
+                </div>
+
+                <div class="stage-card">
+                    <div class="stage-number">2</div>
+                    <h3>Ingestion</h3>
+                    <div class="stage-timing">~30 seconds</div>
+                    <ul class="stage-details">
+                        <li>Run digest_ingest.py script</li>
+                        <li>Create JSON in refs/digest/</li>
+                        <li>Resolve via Semantic Scholar</li>
+                        <li>Update _progress.json</li>
+                    </ul>
+                </div>
+
+                <div class="stage-card">
+                    <div class="stage-number">3</div>
+                    <h3>Artifact Enrichment</h3>
+                    <div class="stage-timing">~1.5 minutes</div>
+                    <ul class="stage-details">
+                        <li>Check Papers With Code</li>
+                        <li>Query HuggingFace Hub</li>
+                        <li>Fetch GitHub metadata</li>
+                        <li>Compose descriptions</li>
+                        <li>Write artifacts array to JSON</li>
+                    </ul>
+                </div>
+
+                <div class="stage-card">
+                    <div class="stage-number">4</div>
+                    <h3>Digest Output</h3>
+                    <div class="stage-timing">~10 seconds</div>
+                    <ul class="stage-details">
+                        <li>Format Slack-friendly digest</li>
+                        <li>Append notable artifacts</li>
+                        <li>Final validation</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Timing Budget -->
+        <section>
+            <h2>Timing Budget</h2>
+            <div class="timing-budget">
+                <div class="timing-chart">
+                    <div class="timing-row">
+                        <span class="timing-label">Content Hunt</span>
+                        <div class="timing-bar-container">
+                            <div class="timing-bar hunt">~1 min</div>
+                        </div>
+                        <span class="timing-value">28.5%</span>
+                    </div>
+                    <div class="timing-row">
+                        <span class="timing-label">Ingestion</span>
+                        <div class="timing-bar-container">
+                            <div class="timing-bar ingest">~30s</div>
+                        </div>
+                        <span class="timing-value">14.3%</span>
+                    </div>
+                    <div class="timing-row">
+                        <span class="timing-label">Artifact Enrichment</span>
+                        <div class="timing-bar-container">
+                            <div class="timing-bar enrich">~1.5 min</div>
+                        </div>
+                        <span class="timing-value">42.8%</span>
+                    </div>
+                    <div class="timing-row">
+                        <span class="timing-label">Output</span>
+                        <div class="timing-bar-container">
+                            <div class="timing-bar output">~10s</div>
+                        </div>
+                        <span class="timing-value">2.9%</span>
+                    </div>
+                    <div class="timing-row timing-total">
+                        <span class="timing-label">Total Runtime</span>
+                        <div style="padding: 0.75rem 1rem; background: rgba(6, 182, 212, 0.2); border: 1px solid #06B6D4; border-radius: 4px; text-align: center; font-weight: 600; color: #06B6D4;">~3.5 minutes</div>
+                        <span class="timing-value">100%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Rate Limits -->
+        <section>
+            <h2>Rate Limits</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Rate Limit</th>
+                        <th>Strategy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Semantic Scholar</strong></td>
+                        <td>1 request per 3 seconds</td>
+                        <td>Batch requests; queue resolution calls</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Papers With Code</strong></td>
+                        <td>1 request per 2 seconds</td>
+                        <td>Prioritize high-confidence papers only</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HuggingFace Hub</strong></td>
+                        <td>1 request per 1 second</td>
+                        <td>Cache model cards; batch queries</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GitHub API</strong></td>
+                        <td>60 requests/hour; 1 per 2 seconds</td>
+                        <td>Use authentication for higher limits; prioritize starred repos</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Validation Checklist -->
+        <section>
+            <div class="checklist">
+                <h3>Validation Checklist</h3>
+                <ul class="checklist-items">
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>search-seeds.json loads without error</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>All 10 searches complete within timeout</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>Digest markdown generated with 80+ characters minimum</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>seen-urls.json updated with new URLs</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>digest_ingest.py runs without exceptions</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>JSON output in refs/digest/ is valid</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>Semantic Scholar resolution rate &gt; 80%</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>Artifact enrichment completes for all papers with code</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>_progress.json reflects current state accurately</span>
+                    </li>
+                    <li>
+                        <div class="checkmark">✓</div>
+                        <span>Final Slack digest is well-formatted and readable</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        CONSTRUCT — autonomous agentic research engine — <a href="https://mabstruct.ai">mabstruct.ai</a>
+    </footer>
+</body>
+</html>

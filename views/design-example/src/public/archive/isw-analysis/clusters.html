@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis - Cluster Analysis</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #0B1120;
+            color: #E5E7EB;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid #1F2937;
+            padding-bottom: 2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            color: #06B6D4;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #8B5CF6;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #9CA3AF;
+        }
+
+        section {
+            margin-bottom: 3rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #F3F4F6;
+            border-bottom: 2px solid #1F2937;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Cluster Grid */
+        .clusters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .cluster-card {
+            background-color: #111827;
+            border: 1px solid #1F2937;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .cluster-card:hover {
+            border-color: #374151;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .cluster-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .cluster-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #F3F4F6;
+        }
+
+        .cluster-badge {
+            background-color: #1F2937;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .cluster-stats {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            color: #D1D5DB;
+        }
+
+        .stat-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #9CA3AF;
+            font-weight: 500;
+        }
+
+        .key-papers {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #1F2937;
+        }
+
+        .papers-label {
+            font-size: 0.85rem;
+            color: #9CA3AF;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .papers-list {
+            list-style: none;
+        }
+
+        .papers-list li {
+            font-size: 0.9rem;
+            color: #D1D5DB;
+            margin-bottom: 0.25rem;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .papers-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #06B6D4;
+        }
+
+        .themes-section {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #1F2937;
+        }
+
+        .themes-label {
+            font-size: 0.85rem;
+            color: #9CA3AF;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .theme-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .theme-tag {
+            background-color: rgba(6, 182, 212, 0.1);
+            color: #06B6D4;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .status-note {
+            margin-top: 0.75rem;
+            padding: 0.5rem;
+            background-color: rgba(139, 92, 246, 0.05);
+            border-left: 2px solid #8B5CF6;
+            font-size: 0.85rem;
+            color: #D1D5DB;
+            border-radius: 0.25rem;
+        }
+
+        /* Chart Section */
+        .chart-container {
+            background-color: #111827;
+            border: 1px solid #1F2937;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            height: 300px;
+            margin-bottom: 2rem;
+            justify-content: space-around;
+        }
+
+        .bar-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            width: 100%;
+            min-width: 40px;
+            max-width: 60px;
+            background: linear-gradient(to top, var(--color), rgba(255, 255, 255, 0.1));
+            border-radius: 0.5rem 0.5rem 0 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .bar:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .bar-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #E5E7EB;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .bar-value {
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            margin-top: 0.25rem;
+        }
+
+        /* Concept Map */
+        .concept-map {
+            background-color: #111827;
+            border: 1px solid #1F2937;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .concept-map pre {
+            background-color: #0B1120;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            color: #06B6D4;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            border: 1px solid #1F2937;
+            overflow-x: auto;
+        }
+
+        /* New Cluster Note */
+        .new-cluster-note {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border: 1px solid #1F2937;
+            border-left: 4px solid #8B5CF6;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .new-cluster-note h3 {
+            color: #8B5CF6;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .new-badge {
+            background-color: #8B5CF6;
+            color: white;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.2rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .new-cluster-note p {
+            color: #D1D5DB;
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid #1F2937;
+            padding-top: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: #6B7280;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #06B6D4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.2rem;
+            }
+
+            .clusters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bar-chart {
+                gap: 0.5rem;
+            }
+
+            .bar {
+                min-width: 30px;
+                max-width: 50px;
+            }
+
+            .bar-label {
+                font-size: 0.75rem;
+            }
+
+            .concept-map pre {
+                font-size: 0.75rem;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Overview</a>
+
+        <header>
+            <h1>ISW Analysis</h1>
+            <p class="subtitle">ISW research status</p>
+        </header>
+
+        <!-- Distribution Chart -->
+        <section>
+            <h2>Cluster Distribution</h2>
+            <div class="chart-container">
+                <div class="bar-chart">
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #F59E0B; height: 88%;"></div>
+                        <div class="bar-label">Robot Learning</div>
+                        <div class="bar-value">73 papers (14%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #A855F7; height: 64%;"></div>
+                        <div class="bar-label">Intent-to-Action</div>
+                        <div class="bar-value">53 papers (11%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #06B6D4; height: 61%;"></div>
+                        <div class="bar-label">Embodied AI &amp; Home Robotics</div>
+                        <div class="bar-value">51 papers (10%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #EC4899; height: 59%;"></div>
+                        <div class="bar-label">Vision-Language</div>
+                        <div class="bar-value">49 papers (10%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #6366F1; height: 52%;"></div>
+                        <div class="bar-label">Causal World Models</div>
+                        <div class="bar-value">43 papers (9%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #10B981; height: 47%;"></div>
+                        <div class="bar-label">Agentic Systems</div>
+                        <div class="bar-value">39 papers (8%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #22D3EE; height: 47%;"></div>
+                        <div class="bar-label">Autonomous Sim Loops</div>
+                        <div class="bar-value">39 papers (8%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #14B8A6; height: 45%;"></div>
+                        <div class="bar-label">Indoor World Model</div>
+                        <div class="bar-value">37 papers (7%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #8B5CF6; height: 39%;"></div>
+                        <div class="bar-label">3D Spatial Understanding</div>
+                        <div class="bar-value">32 papers (6%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #EF4444; height: 37%;"></div>
+                        <div class="bar-label">Agentic Robot Middleware</div>
+                        <div class="bar-value">31 papers (6%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #EAB308; height: 22%;"></div>
+                        <div class="bar-label">Spatial RAG / Robotics</div>
+                        <div class="bar-value">18 papers (4%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #94A3B8; height: 14%;"></div>
+                        <div class="bar-label">Planning Cognition</div>
+                        <div class="bar-value">12 papers (2%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #D946EF; height: 14%;"></div>
+                        <div class="bar-label">Wildcard / Emerging</div>
+                        <div class="bar-value">12 papers (2%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #94A3B8; height: 12%;"></div>
+                        <div class="bar-label">Planning Formalisms</div>
+                        <div class="bar-value">10 papers (2%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #F97316; height: 4%;"></div>
+                        <div class="bar-label">Perception &amp; Detection</div>
+                        <div class="bar-value">3 papers (1%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #94A3B8; height: 4%;"></div>
+                        <div class="bar-label">Robot Navigation</div>
+                        <div class="bar-value">1 paper (0%)</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="--color: #0EA5E9; height: 4%;"></div>
+                        <div class="bar-label">Sim-to-Real</div>
+                        <div class="bar-value">1 paper (0%)</div>
+                    </div>
+                </div>
+                <p style="color: #9CA3AF; font-size: 0.9rem; text-align: center;">Total: 504 papers across 17 clusters</p>
+            </div>
+        </section>
+
+        <!-- Clusters Grid -->
+        <section>
+            <h2>Cluster Details</h2>
+            <div class="clusters-grid">
+                <div class="cluster-card" style="border-left-color: #F59E0B;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Robot Learning</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 73
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 14%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>OmniVLA: An Omni-Modal Vision-Language-Action Model for Robot Navigation</li>
+                            <li>Causal World Modeling for Robot Control</li>
+                            <li>🔥 Predictive Inverse Dynamics Models are Scalable Learners for Robotic Manipulation (Seer)</li>
+                            <li>4D Latent World Model for Robot Planning</li>
+                            <li>Latent Action Robot Foundation World Models for Cross-Embodiment Adaptation</li>
+                            <li>H-WM: Robotic Task and Motion Planning Guided by Hierarchical World Model</li>
+                            <li>MoWM: Mixture-of-World-Models for Embodied Planning via Latent-to-Pixel Feature Modulation</li>
+                            <li>🔥 Interactive World Simulator for Robot Policy Training and Evaluation</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #A855F7;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Intent-to-Action</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 53
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 11%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 DACo: Global Commander and Local Operative — Dual-Agent Framework for Scene Navigation</li>
+                            <li>🔥 AOR: Multimodal Coding Agents as In-Context Policy Learners for Robot Manipulation</li>
+                            <li>🔥 Hierarchical LLM-Based Multi-Agent Framework with Prompt Optimization for Multi-Robot Task Planning</li>
+                            <li>🔥 Cognition to Control (C2C): Multi-Agent Learning for Human-Humanoid Collaborative Transport</li>
+                            <li>🔥 Spatially Grounded Long-Horizon Task Planning in the Wild (GroundedPlanBench)</li>
+                            <li>🔥 GRHP: Graph-Fused Hierarchical Planning for Embodied Long-Horizon Robotic Tasks</li>
+                            <li>TiPToP: A Modular Open-Vocabulary Planning System for Robotic Manipulation</li>
+                            <li>Scale-Plan: Scalable Language-Enabled Task Planning for Heterogeneous Multi-Robot Teams</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #06B6D4;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Embodied AI &amp; Home Robotics</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 51
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 10%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>Reflective Test-Time Planning for Embodied LLMs</li>
+                            <li>The Essential Role of Causality in Foundation World Models for Embodied AI</li>
+                            <li>Physical AI in 2026: Embodied Intelligence Redefining Operations</li>
+                            <li>Exploring Embodied Multimodal Large Models: Development, Datasets, and Future Directions</li>
+                            <li>The real breakthrough in robotics is foundation models — not hardware</li>
+                            <li>FindingDory: A Benchmark to Evaluate Memory in Embodied Agents</li>
+                            <li>CWM: Contrastive World Models for Action Feasibility Learning in Embodied Agent Pipelines</li>
+                            <li>1X World Model: From Video to Action</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #EC4899;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Vision-Language</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 49
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 10%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>OmniVLA: An Omni-Modal Vision-Language-Action Model for Robot Navigation</li>
+                            <li>🔥 MetaWorld-X: Hierarchical World Modeling via VLM-Orchestrated Experts for Humanoid Loco-Manipulation</li>
+                            <li>🔥 DM0: An Embodied-Native Vision-Language-Action Model towards Physical AI</li>
+                            <li>🔥 HALO: A Unified Vision-Language-Action Model for Embodied Multimodal Chain-of-Thought Reasoning</li>
+                            <li>RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models for Robotics</li>
+                            <li>SpatialPoint: Spatial-aware Point Prediction for Embodied Localization</li>
+                            <li>ACoT-VLA: Action Chain-of-Thought for Vision-Language-Action Models</li>
+                            <li>3D-Grounded Vision-Language Framework for Robotic Task Planning: Automated Prompt Synthesis and Supervised Reasoning</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #6366F1;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Causal World Models</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 43
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 9%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 Causal World Modeling for Robot Control</li>
+                            <li>🔥 Predictive Inverse Dynamics Models are Scalable Learners</li>
+                            <li>Causal World Modeling for Robot Control (LingBot-VA)</li>
+                            <li>Predictive Inverse Dynamics Models (PIDM / Seer)</li>
+                            <li>🔥 DreamDojo: A Generalist Robot World Model from Video</li>
+                            <li>🔥 V-JEPA 2: World Model and Benchmarks for Physical Reasoning</li>
+                            <li>WoW: Towards a World-Omniscient World-Model Through Embodied Interaction</li>
+                            <li>Causal-JEPA: Learning World Models through Object-Level Latent Interventions</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #10B981;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Agentic Systems</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 39
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 8%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 A-MEM: Agentic Memory for LLM Agents</li>
+                            <li>🔥 AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications</li>
+                            <li>A-MEM: Agentic Memory for LLM Agents</li>
+                            <li>AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications</li>
+                            <li>Anatomy of Agentic Memory: Taxonomy and Empirical Analysis of Evaluation and System Limitations</li>
+                            <li>Trajectory-Informed Memory Generation for Self-Improving Agent Systems</li>
+                            <li>MAS-Orchestra + MASBENCH: Understanding and Improving Multi-Agent Reasoning Through Holistic Orchestration and Controlled Benchmarks</li>
+                            <li>Meanings and Measurements: Multi-Agent Probabilistic Grounding for Vision-Language Navigation</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #22D3EE;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Autonomous Sim Loops</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 39
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 8%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>Kinema4D: Kinematic 4D World Modeling for Spatiotemporal Embodied Simulation</li>
+                            <li>🔥 Interactive World Simulator for Robot Policy Training and Evaluation</li>
+                            <li>Scaling Sim-to-Real Reinforcement Learning for Robot VLAs with Generative 3D Worlds</li>
+                            <li>Unreal Robotics Lab: A High-Fidelity Robotics Simulator with Advanced Physics and Rendering</li>
+                            <li>🔥 Robotic World Model: A Neural Network Simulator for Robust Policy Optimization in Robotics</li>
+                            <li>Robotic World Model: A Neural Network Simulator for Robust Policy Optimization in Robotics</li>
+                            <li>Newton Adds Contact-Rich Manipulation and Locomotion Capabilities for Industrial Robotics</li>
+                            <li>MolmoBot: Training Robot Manipulation Entirely in Simulation</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #14B8A6;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Indoor World Model</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 37
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 7%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 MoMa-SG: Articulated 3D Scene Graphs for Open-World Mobile Manipulation</li>
+                            <li>TwinRL: Digital Twin-Driven Reinforcement Learning for Real-World Robotic Manipulation</li>
+                            <li>Digital twins transition to intelligent, AI-driven systems in 2026</li>
+                            <li>Digital twins to embodied artificial intelligence: review and perspective</li>
+                            <li>FindAnything: Open-Vocabulary and Object-Centric Mapping for Robot Exploration in Any Environment</li>
+                            <li>Object-Aware Semantic Mapping Using Probability Density Functions for Indoor Relocalization and Path Planning</li>
+                            <li>🌀 InSpatio-WorldFM: Open-Source Real-Time 3D World Model</li>
+                            <li>🌀 Digital Twin based Automatic Reconfiguration of Robotic Systems</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #8B5CF6;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">3D Spatial Understanding</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 32
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 6%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>Hierarchical Open-Vocabulary 3D Scene Graphs for Language-Grounded Robot Navigation (HOV-SG)</li>
+                            <li>VLingNav: Embodied Navigation with Adaptive Reasoning and Visual-Assisted Linguistic Memory</li>
+                            <li>A Study of the Framework and Real-World Applications of Language Embedding for 3D Scene Understanding</li>
+                            <li>SpatialLM: Training LLMs for Structured Indoor Modeling</li>
+                            <li>Language and Geometry Grounded Sparse Voxel Representations for Holistic Scene Understanding</li>
+                            <li>VLM-Loc: Localization in Point Cloud Maps via Vision-Language Models</li>
+                            <li>RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies</li>
+                            <li>Motion-MLLM: Egomotion-Aware Video Representation for Efficient and Accurate 3D Scene Understanding</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #EF4444;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Agentic Robot Middleware</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 31
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 6%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 RACAS: Controlling Diverse Robots With a Single Agentic System</li>
+                            <li>🔥 MALLVI: A Multi-Agent Framework for Integrated Generalized Robotics Manipulation</li>
+                            <li>🔥 A Control-Theoretic Foundation for Agentic Systems</li>
+                            <li>🔥 RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks</li>
+                            <li>AgenticLab: A Real-World Robot Agent Platform that Can See, Think, and Act</li>
+                            <li>Agentic AI for Robot Control: Flexible but still Fragile</li>
+                            <li>🔥 Agentic AI for Robot Control: Flexible but still Fragile</li>
+                            <li>RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #EAB308;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Spatial RAG / Robotics</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 18
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 4%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>🔥 STaR: Scalable Task-Conditioned Retrieval for Long-Horizon Multimodal Robot Memory</li>
+                            <li>🔥 RAGNav: Retrieval-Augmented Topological Reasoning for Multi-Goal Visual-Language Navigation</li>
+                            <li>Embodied-RAG: Non-parametric Memory for Indoor/Outdoor Navigation and Explanation</li>
+                            <li>MEMENTO: Embodied Agents Meet Personalization via Memory Utilization</li>
+                            <li>CARAG: Context-Aware RAG over Spatial Knowledge Graphs</li>
+                            <li>Ctrl-World: A Controllable Generative World Model for Robot Manipulation</li>
+                            <li>🌀 A-RAG: Scaling Agentic Retrieval-Augmented Generation</li>
+                            <li>A-RAG: Scaling Agentic Retrieval-Augmented Generation via Hierarchical Retrieval Interfaces</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #94A3B8;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Planning Cognition</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 12
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 2%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>MemoryVLA: Perceptual-Cognitive Memory in Vision-Language-Action Models for Robotic Manipulation</li>
+                            <li>EchoVLA: Synergistic Declarative Memory for VLA-Driven Mobile Manipulation</li>
+                            <li>Latent learning: episodic memory complements parametric learning by enabling flexible reuse of experiences</li>
+                            <li>M2PA: A Multi-Memory Planning Agent for Open Worlds</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #D946EF;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Wildcard / Emerging</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 12
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 2%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>Cognition to Control – Multi-Agent Learning for Human-Humanoid Collaborative Transport</li>
+                            <li>CASPER: Cognitive Architecture for Social Perception and Engagement in Robots</li>
+                            <li>🌀 What Matters in Building Vision-Language-Action Models for Generalist Robots</li>
+                            <li>🌀 OpenClaw Gives Unitree Robots &quot;World Memory&quot; &amp; Spatial Understanding</li>
+                            <li>🌀 Can World Models Unlock General Purpose Robotics?</li>
+                            <li>GeCo-SRT: Geometry-aware Continual Adaptation for Robotic Cross-Task Sim-to-Real Transfer</li>
+                            <li>🌀 AffordGrasp: In-Context Affordance Reasoning for Open-Vocabulary Task-Oriented Grasping</li>
+                            <li>Reinforcement Learning in Robotic Systems: A Review on Sim-to-Real Transfer</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #94A3B8;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Planning Formalisms</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 10
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 2%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>OntoBOT: An Ontology for Unified Modeling of Tasks, Actions, Environments, and Capabilities in Personal Service Robotics</li>
+                            <li>Hierarchical Task Network (HTN) Planning in AI</li>
+                            <li>An Ontology for Unified Modeling of Tasks, Actions, Environments, and Capabilities in Personal Service Robotics</li>
+                            <li>Hierarchical Planning with Latent World Models</li>
+                            <li>Build on Priors: Vision–Language–Guided Neuro-Symbolic Imitation Learning for Data-Efficient Real-World Robot Manipulation</li>
+                            <li>EmboTeam: Grounding LLM Reasoning into Reactive Behavior Trees via PDDL for Embodied Multi-Robot Collaboration</li>
+                            <li>Temporal Task and Motion Planning with Metric Time for Multiple Object Manipulation</li>
+                            <li>Neuro-Symbolic AI Wins On Long-Horizon Reasoning And Does So At A Lower Energy Cost</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #F97316;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Perception &amp; Detection</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 3
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 1%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Key Papers</div>
+                        <ul class="papers-list">
+                            <li>Grounded SAM 2: From Open-Set Detection to Segmentation and Tracking</li>
+                            <li>Zero-Shot Open-Vocabulary OOD Object Detection and Grounding using VLMs</li>
+                            <li>Grounding DINO: Open Vocabulary Object Detection on Videos</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #94A3B8;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Robot Navigation</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 1
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 0%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Paper</div>
+                        <ul class="papers-list">
+                            <li>SceneVGGT: VGGT-based online 3D semantic SLAM for indoor scene understanding and navigation</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="cluster-card" style="border-left-color: #0EA5E9;">
+                    <div class="cluster-header">
+                        <div class="cluster-title">Sim-to-Real</div>
+                    </div>
+                    <div class="cluster-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Papers:</span> 1
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Coverage:</span> 0%
+                        </div>
+                    </div>
+                    <div class="key-papers">
+                        <div class="papers-label">Paper</div>
+                        <ul class="papers-list">
+                            <li>Reinforcement Learning in Robotic Systems: A Review on Sim-to-Real Transfer</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Concept Map -->
+        <section>
+            <h2>Research Landscape Concept Map</h2>
+            <div class="concept-map">
+                <pre>┌─────────────────────────────────────────────────────────────────┐
+│                     ISW RESEARCH LANDSCAPE                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Foundation Layer (Embodied AI & Home Robotics - 44%)             │
+│  ════════════════════════════════════════════════════════════    │
+│    World Models ─────┬─────► Language Grounding                   │
+│                      │                                            │
+│    Vision Foundation │      ┌────────────────────────────────┐   │
+│    Models ───────────┼─────►│ 3D Spatial Understanding (16%) │   │
+│                      │      └────────────────────────────────┘   │
+│    Perception ───────┤                                            │
+│                      │      ┌────────────────────────────────┐   │
+│                      └─────►│ Perception & Detection (13%)   │   │
+│                             └────────────────────────────────┘   │
+│                                                                   │
+│  Agent Reasoning Layer (Agentic Systems - 11%)                    │
+│  ═════════════════════════════════════════════════                │
+│    Memory & State ──────► Agent Behavior Planning                 │
+│    Reasoning Chains ────► Action Execution                        │
+│                                                                   │
+│  Cross-Cutting Concerns                                           │
+│  ═══════════════════════                                          │
+│    Vision-Language Integration (5%, boosted 1.5x)                 │
+│    Robot Learning (3%)                                            │
+│    ML Foundations (6%, de-emphasized)                             │
+│                                                                   │
+│  Emerging Frontiers                                               │
+│  ═════════════════                                                │
+│    Intent-to-Action (v2, no papers yet)                           │
+│    Hierarchical Planning                                          │
+│    Sim-to-Real Transfer                                           │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘</pre>
+            </div>
+        </section>
+
+        <!-- New Cluster Note -->
+        <section>
+            <div class="new-cluster-note">
+                <h3>
+                    <span class="new-badge">v2</span>
+                    Intent-to-Action Cluster (Emerging)
+                </h3>
+                <p>
+                    A new cluster introduced in v2 mapping the gap between high-level intent expression and grounded robot action.
+                    This cluster will focus on bridging language, perception, and embodied control. Currently seeking papers that
+                    address: semantic action grounding, intent disambiguation in multimodal contexts, and action-outcome prediction.
+                </p>
+            </div>
+        </section>
+
+        <footer>
+            <p>CONSTRUCT — autonomous agentic research engine — <a href="https://mabstruct.ai">mabstruct.ai</a></p>
+        </footer>
+    </div>
+</body>
+</html>

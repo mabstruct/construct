@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure — CONSTRUCT Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #94A3B8;
+            font-size: 1.1rem;
+        }
+
+        nav {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 1rem;
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: #06B6D4;
+            border-bottom: 2px solid #1E293B;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: #8B5CF6;
+        }
+
+        p {
+            color: #94A3B8;
+            margin-bottom: 1rem;
+        }
+
+        .deployment-diagram {
+            background: #111827;
+            border: 2px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .deployment-box {
+            background: #0B1120;
+            border: 1px solid #1E293B;
+            border-radius: 6px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .deployment-box.container-box {
+            border: 2px solid #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .deployment-label {
+            font-size: 0.85rem;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .deployment-title {
+            color: #E2E8F0;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .component {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+            font-size: 0.95rem;
+            color: #E2E8F0;
+        }
+
+        .component::before {
+            content: '◆';
+            color: #06B6D4;
+            flex-shrink: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #1E293B;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: #06B6D4;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 2px solid #1E293B;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #1E293B;
+            color: #E2E8F0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        td strong {
+            color: #06B6D4;
+        }
+
+        .data-model {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .model-layer {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .model-layer:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .layer-name {
+            color: #06B6D4;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .layer-desc {
+            color: #94A3B8;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .code-block {
+            background: #0B1120;
+            border: 1px solid #1E293B;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #06B6D4;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+
+        .code-block code {
+            color: #E2E8F0;
+        }
+
+        .code-block .key {
+            color: #8B5CF6;
+        }
+
+        .code-block .string {
+            color: #10B981;
+        }
+
+        .code-block .number {
+            color: #F97316;
+        }
+
+        .stack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stack-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .stack-card:hover {
+            border-color: #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .stack-category {
+            color: #94A3B8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stack-item {
+            color: #E2E8F0;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stack-desc {
+            color: #94A3B8;
+            font-size: 0.9rem;
+        }
+
+        .enhancement-list {
+            background: #111827;
+            border-left: 4px solid #06B6D4;
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .enhancement-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .enhancement-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .enhancement-title {
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .enhancement-desc {
+            color: #94A3B8;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background: #111827;
+            border-top: 1px solid #1E293B;
+            padding: 2rem;
+            text-align: center;
+            color: #94A3B8;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            nav {
+                gap: 0.5rem;
+            }
+
+            nav a {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .stack-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .code-block {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p>autonomous agentic research engine</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="agents.html">Agents</a>
+        <a href="pipeline.html">Pipeline</a>
+        <a href="adaptation.html">Adaptation</a>
+        <a href="infrastructure.html" class="active">Infrastructure</a>
+        <a href="dataflow.html">Data Flow</a>
+    </nav>
+
+    <div class="container">
+        <section>
+            <h2>Deployment Architecture</h2>
+            <p>CONSTRUCT runs as a containerized application on a single VPS, orchestrating research pipelines through scheduled tasks and persistent storage.</p>
+
+            <div class="deployment-diagram">
+                <div class="deployment-box container-box">
+                    <div class="deployment-label">Docker Container</div>
+                    <div class="deployment-title">CONSTRUCT Engine</div>
+                    <div class="component">Python application runtime with all dependencies</div>
+                    <div class="component">OpenClaw cron scheduler manages daily execution</div>
+                    <div class="component">Embedded ChromaDB vector store for semantic search</div>
+                </div>
+
+                <div style="text-align: center; color: #06B6D4;">↓</div>
+
+                <div class="deployment-box">
+                    <div class="deployment-label">Persistent Storage</div>
+                    <div class="deployment-title">VPS File System</div>
+                    <div class="component">JSON files for structured data (seeds, feedback, taxonomy)</div>
+                    <div class="component">Git repository for version control and history</div>
+                    <div class="component">Daily digest archives and search logs</div>
+                </div>
+
+                <div style="text-align: center; color: #06B6D4;">↓</div>
+
+                <div class="deployment-box">
+                    <div class="deployment-label">External Services</div>
+                    <div class="deployment-title">Third-party APIs</div>
+                    <div class="component">Brave Search for web queries</div>
+                    <div class="component">Semantic Scholar for academic papers</div>
+                    <div class="component">Papers With Code for research implementations</div>
+                    <div class="component">HuggingFace for model information</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Technology Stack</h2>
+            <p>Core technologies and external services that power CONSTRUCT's research capabilities.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Technology</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Vector Database</strong></td>
+                        <td>ChromaDB</td>
+                        <td>Semantic search over accumulated research knowledge, cross-domain queries</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Embeddings</strong></td>
+                        <td>OpenAI Embeddings</td>
+                        <td>Convert text to vectors for similarity search and semantic understanding</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Document Processing</strong></td>
+                        <td>GPT 5.2 Vision</td>
+                        <td>Extract structured data from PDFs, papers, and documents</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Task Scheduling</strong></td>
+                        <td>OpenClaw Cron</td>
+                        <td>Coordinate daily research cycles, trigger pipelines on schedule</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Storage</strong></td>
+                        <td>JSON + Git</td>
+                        <td>Structured data with version control and history</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Web Search</strong></td>
+                        <td>Brave Search API</td>
+                        <td>Privacy-focused web search queries across domains</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Academic Papers</strong></td>
+                        <td>Semantic Scholar API</td>
+                        <td>Access to peer-reviewed research and citations</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Research Code</strong></td>
+                        <td>Papers With Code</td>
+                        <td>Find implementations and GitHub repositories for papers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ML Models</strong></td>
+                        <td>HuggingFace Hub</td>
+                        <td>Discover model architectures, weights, and documentation</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>Data Model</h2>
+            <p>CONSTRUCT organizes knowledge in three hierarchical layers: topics as regions, tags as landmarks within those regions, and connections that weave them together.</p>
+
+            <div class="data-model">
+                <div class="model-layer">
+                    <div class="layer-name">Layer 1: Topics (Regions)</div>
+                    <div class="layer-desc">Broad research domains that organize knowledge into manageable clusters. Examples: "robot-manipulation", "intent-understanding", "semantic-search".</div>
+                    <div class="code-block">
+                        <div><span class="key">"topic"</span>: <span class="string">"robot-manipulation"</span>,</div>
+                        <div><span class="key">"description"</span>: <span class="string">"Techniques for grasping and moving objects"</span>,</div>
+                        <div><span class="key">"created"</span>: <span class="string">"2024-02-24"</span></div>
+                    </div>
+                </div>
+
+                <div class="model-layer">
+                    <div class="layer-name">Layer 2: Tags (Landmarks)</div>
+                    <div class="layer-desc">Specific research areas within topics, each with a semantic weight indicating relevance. Tags have hierarchical relationships and are embedded for semantic search.</div>
+                    <div class="code-block">
+                        <div><span class="key">"tag"</span>: <span class="string">"gripper-kinematics"</span>,</div>
+                        <div><span class="key">"topic"</span>: <span class="string">"robot-manipulation"</span>,</div>
+                        <div><span class="key">"weight"</span>: <span class="number">1.8</span>,</div>
+                        <div><span class="key">"embedding"</span>: [<span class="number">0.15</span>, <span class="number">-0.42</span>, ...],</div>
+                        <div><span class="key">"last_updated"</span>: <span class="string">"2024-03-14"</span></div>
+                    </div>
+                </div>
+
+                <div class="model-layer">
+                    <div class="layer-name">Layer 3: Connections (Relationships)</div>
+                    <div class="layer-desc">Semantic relationships between tags that capture how knowledge domains relate. Types include: extends (builds upon), contradicts (opposing views), parallels (analogous concepts), grounds (theoretical foundation), cites (references), relates (general connection).</div>
+                    <div class="code-block">
+                        <div><span class="key">"from_tag"</span>: <span class="string">"gripper-kinematics"</span>,</div>
+                        <div><span class="key">"to_tag"</span>: <span class="string">"deep-reinforcement-learning"</span>,</div>
+                        <div><span class="key">"type"</span>: <span class="string">"extends"</span>,</div>
+                        <div><span class="key">"evidence_count"</span>: <span class="number">3</span>,</div>
+                        <div><span class="key">"confidence"</span>: <span class="number">0.87</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Vector Database Setup</h2>
+            <p>ChromaDB provides semantic search capabilities across all accumulated research knowledge.</p>
+
+            <div class="stack-grid">
+                <div class="stack-card">
+                    <div class="stack-category">Collections</div>
+                    <div class="stack-item">research_papers</div>
+                    <div class="stack-desc">Academic publications and their abstracts</div>
+                </div>
+                <div class="stack-card">
+                    <div class="stack-category">Collections</div>
+                    <div class="stack-item">web_articles</div>
+                    <div class="stack-desc">Articles from Brave Search results</div>
+                </div>
+                <div class="stack-card">
+                    <div class="stack-category">Collections</div>
+                    <div class="stack-item">code_repositories</div>
+                    <div class="stack-desc">Implementation code from Papers With Code</div>
+                </div>
+                <div class="stack-card">
+                    <div class="stack-category">Embedding Model</div>
+                    <div class="stack-item">text-embedding-3-large</div>
+                    <div class="stack-desc">OpenAI's high-dimensional embeddings for semantic similarity</div>
+                </div>
+                <div class="stack-card">
+                    <div class="stack-category">Query Features</div>
+                    <div class="stack-item">Cross-domain</div>
+                    <div class="stack-desc">Search across multiple knowledge bases simultaneously</div>
+                </div>
+                <div class="stack-card">
+                    <div class="stack-category">Query Features</div>
+                    <div class="stack-item">Semantic filtering</div>
+                    <div class="stack-desc">Filter results by topic, date, or source</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Future Enhancements</h2>
+            <p>Planned improvements to expand CONSTRUCT's capabilities and integration points.</p>
+
+            <div class="enhancement-list">
+                <div class="enhancement-item">
+                    <div class="enhancement-title">Slack Integration</div>
+                    <div class="enhancement-desc">Direct ingestion of research links and discussions from Slack channels, allowing real-time knowledge capture from team conversations</div>
+                </div>
+                <div class="enhancement-item">
+                    <div class="enhancement-title">Cross-Domain Query Engine</div>
+                    <div class="enhancement-desc">Advanced queries that span multiple knowledge domains simultaneously, discovering unexpected connections between disparate research areas</div>
+                </div>
+                <div class="enhancement-item">
+                    <div class="enhancement-title">Topic Hierarchy Automation</div>
+                    <div class="enhancement-desc">Automatic discovery and organization of hierarchical relationships between topics based on semantic similarity and citation patterns</div>
+                </div>
+                <div class="enhancement-item">
+                    <div class="enhancement-title">Automated Connection Building</div>
+                    <div class="enhancement-desc">Machine learning pipeline to automatically detect and validate semantic connections between research concepts</div>
+                </div>
+                <div class="enhancement-item">
+                    <div class="enhancement-title">GraphQL API</div>
+                    <div class="enhancement-desc">Public API for querying the knowledge graph and integrating CONSTRUCT with other systems</div>
+                </div>
+                <div class="enhancement-item">
+                    <div class="enhancement-title">Interactive Dashboard</div>
+                    <div class="enhancement-desc">Real-time visualization of research trends, cluster evolution, and knowledge graph topology</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        CONSTRUCT — autonomous agentic research engine — mabstruct.ai
+    </footer>
+</body>
+</html>

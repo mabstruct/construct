@@ -1,42 +1,59 @@
 # Skill: Workspace Initialization
 
-**Trigger:** User says "initialize workspace", "construct init", "set up a knowledge workspace", or similar.
+**Trigger:** User says "initialize workspace", "initialize [domain-name]", "construct init", "set up a knowledge workspace", or similar.
 **Agent:** CONSTRUCT (orchestrator)
-**Produces:** Full workspace directory structure with template files
+**Produces:** A domain workspace as a subdirectory of the CONSTRUCT root
 
 ---
 
 ## Procedure
 
-### Step 1: Choose Location
+### Step 1: Determine Domain Name
 
-Ask the user:
-> "Where should I create the CONSTRUCT workspace? Give me a directory path, or I'll use the current directory."
+If the user specified a domain name (e.g., "initialize cosmology"), use it directly.
+Otherwise ask:
+> "What domain should I set up? Give me a name like 'cosmology' or 'climate-policy'."
 
-Default: current working directory.
+Convert to kebab-case: "Quantum Computing" → `quantum-computing`
 
-### Step 2: Create Directory Structure
+### Step 2: Create Workspace Subdirectory
 
-Create the following directories and files:
+Create a subdirectory in the CONSTRUCT root with the domain name:
 
 ```
-{workspace}/
-├── cards/                         # Empty — knowledge cards go here
-├── refs/                          # Empty — reference entries go here
-├── digests/                       # Empty — research digests go here
-├── publish/                       # Empty — curated outputs go here
+{domain-slug}/
+├── cards/                         # Knowledge cards
+├── refs/                          # Reference entries
+├── digests/                       # Research digests
+├── publish/                       # Curated outputs
 ├── log/                           # Audit trail
-│   └── events.jsonl               # Empty file (or first event: workspace.init)
-├── connections.json               # From template — empty edge list
-├── domains.yaml                   # From template — empty domain config
-├── governance.yaml                # From template — default thresholds
-├── search-seeds.json              # From template — empty seed config
+│   └── events.jsonl               # First event: workspace.init
+├── connections.json               # From .construct/templates/ — empty edge list
+├── domains.yaml                   # From .construct/templates/ — pre-filled with this domain
+├── governance.yaml                # From .construct/templates/ — default thresholds
+├── search-seeds.json              # From .construct/templates/ — empty seed config
 └── .gitignore                     # Ignore transient files
 ```
 
-Use the templates from `templates/` directory for initial file content.
+Use the templates from `.construct/templates/` directory for initial file content.
 
-### Step 3: Write .gitignore
+### Step 3: Pre-fill domains.yaml
+
+Unlike a blank template, pre-fill the domain entry with the domain slug:
+
+```yaml
+domains:
+  {domain-slug}:
+    name: "{Domain Name}"
+    description: ""
+    status: active
+    created: {today ISO date}
+    content_categories: []
+    source_priorities: []
+    cross_domain_links: []
+```
+
+### Step 4: Write .gitignore
 
 ```
 # CONSTRUCT workspace gitignore
@@ -46,27 +63,25 @@ __pycache__/
 .DS_Store
 ```
 
-### Step 4: Log Initialization Event
+### Step 5: Log Initialization Event
 
-Append to `log/events.jsonl`:
+Append to `{domain-slug}/log/events.jsonl`:
 ```json
-{"event": "workspace.init", "timestamp": "{ISO-8601}", "workspace": "{path}"}
+{"event": "workspace.init", "timestamp": "{ISO-8601}", "workspace": "{domain-slug}"}
 ```
 
-### Step 5: Prompt for Domain Init
+### Step 6: Chain to Domain Interview
 
-After workspace is created, ask:
-> "Workspace ready. Would you like to initialize your first knowledge domain now?"
-
-If yes → chain to `domain-init` skill.
+Immediately chain to `domain-init` skill targeting the new workspace at `{domain-slug}/`. The domain-init interview will fill in description, categories, sources, and search seeds.
 
 ---
 
 ## Validation
 
-- [ ] All directories exist
+- [ ] Subdirectory `{domain-slug}/` exists with all required directories and files
 - [ ] `connections.json` is valid JSON with empty connections array
-- [ ] `domains.yaml` is valid YAML with empty domains list
+- [ ] `domains.yaml` is valid YAML with the domain pre-filled
 - [ ] `governance.yaml` has all required threshold fields
 - [ ] `search-seeds.json` is valid JSON with empty clusters array
 - [ ] `events.jsonl` has the init event
+- [ ] domain-init interview completed successfully

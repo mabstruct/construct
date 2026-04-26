@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Flow — CONSTRUCT Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #94A3B8;
+            font-size: 1.1rem;
+        }
+
+        nav {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 1rem;
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: #06B6D4;
+            border-bottom: 2px solid #1E293B;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: #8B5CF6;
+        }
+
+        p {
+            color: #94A3B8;
+            margin-bottom: 1rem;
+        }
+
+        .flow-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .flow-box {
+            background: #111827;
+            border: 2px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .flow-box:hover {
+            border-color: #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .flow-box-title {
+            color: #E2E8F0;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .flow-box-desc {
+            color: #94A3B8;
+            font-size: 0.85rem;
+        }
+
+        .flow-box::after {
+            content: '→';
+            position: absolute;
+            right: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #06B6D4;
+            font-size: 1.5rem;
+        }
+
+        .flow-box:last-child::after {
+            content: '';
+        }
+
+        .flow-box.feedback::after {
+            content: '';
+        }
+
+        .feedback-arrow {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8B5CF6;
+            font-size: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .directory-tree {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        .tree-node {
+            color: #E2E8F0;
+            margin: 0.3rem 0;
+            padding-left: 1rem;
+        }
+
+        .tree-node.system {
+            color: #10B981;
+        }
+
+        .tree-node.config {
+            color: #06B6D4;
+        }
+
+        .tree-node.knowledge {
+            color: #8B5CF6;
+        }
+
+        .tree-node.output {
+            color: #F97316;
+        }
+
+        .tree-indent-1 { padding-left: 1rem; }
+        .tree-indent-2 { padding-left: 2rem; }
+        .tree-indent-3 { padding-left: 3rem; }
+        .tree-indent-4 { padding-left: 4rem; }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #06B6D4, #8B5CF6, #F97316);
+        }
+
+        .timeline-item {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.75rem;
+            top: 1.25rem;
+            width: 12px;
+            height: 12px;
+            background: #06B6D4;
+            border: 3px solid #0B1120;
+            border-radius: 50%;
+        }
+
+        .timeline-step {
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            font-size: 0.95rem;
+        }
+
+        .timeline-content {
+            color: #E2E8F0;
+            font-size: 0.95rem;
+        }
+
+        .timeline-detail {
+            color: #94A3B8;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .file-formats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .format-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .format-card:hover {
+            border-color: #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .format-title {
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .code-block {
+            background: #0B1120;
+            border: 1px solid #1E293B;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #E2E8F0;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+        }
+
+        .code-block .key {
+            color: #8B5CF6;
+        }
+
+        .code-block .string {
+            color: #10B981;
+        }
+
+        .code-block .number {
+            color: #F97316;
+        }
+
+        .retention-box {
+            background: #111827;
+            border-left: 4px solid #06B6D4;
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .retention-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .retention-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .retention-category {
+            color: #06B6D4;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .retention-desc {
+            color: #94A3B8;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background: #111827;
+            border-top: 1px solid #1E293B;
+            padding: 2rem;
+            text-align: center;
+            color: #94A3B8;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            nav {
+                gap: 0.5rem;
+            }
+
+            nav a {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .flow-box::after {
+                content: '↓';
+                right: 50%;
+                transform: translateX(50%);
+                bottom: -1.5rem;
+            }
+
+            .flow-diagram {
+                grid-template-columns: 1fr;
+            }
+
+            .file-formats {
+                grid-template-columns: 1fr;
+            }
+
+            .directory-tree {
+                font-size: 0.75rem;
+            }
+
+            .code-block {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p>autonomous agentic research engine</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="agents.html">Agents</a>
+        <a href="pipeline.html">Pipeline</a>
+        <a href="adaptation.html">Adaptation</a>
+        <a href="infrastructure.html">Infrastructure</a>
+        <a href="dataflow.html" class="active">Data Flow</a>
+    </nav>
+
+    <div class="container">
+        <section>
+            <h2>Data Flow Diagram</h2>
+            <p>End-to-end flow of data through CONSTRUCT's research pipeline, with feedback loops that enable continuous adaptation.</p>
+
+            <div class="flow-diagram">
+                <div class="flow-box">
+                    <div class="flow-box-title">External<br>Sources</div>
+                    <div class="flow-box-desc">Brave, Scholar, Papers With Code</div>
+                </div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Ingestion</div>
+                    <div class="flow-box-desc">Fetch & normalize raw data</div>
+                </div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Enrichment</div>
+                    <div class="flow-box-desc">Extract metadata, embedding</div>
+                </div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Vector<br>Storage</div>
+                    <div class="flow-box-desc">ChromaDB collections</div>
+                </div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Knowledge<br>Layer</div>
+                    <div class="flow-box-desc">Topics, tags, connections</div>
+                </div>
+                <div class="flow-box">
+                    <div class="flow-box-title">Output &<br>Feedback</div>
+                    <div class="flow-box-desc">Digests, curation</div>
+                </div>
+                <div class="feedback-arrow">
+                    ↻ Feedback loops enable pattern adaptation
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Repository Structure</h2>
+            <p>Organized directory layout with color-coded file categories.</p>
+
+            <div class="directory-tree">
+                <div class="tree-node system">📁 construct-root/</div>
+                <div class="tree-node system tree-indent-1">📁 src/ <span style="color: #94A3B8;"># System files</span></div>
+                <div class="tree-node tree-indent-2">├── main.py</div>
+                <div class="tree-node tree-indent-2">├── search_engine.py</div>
+                <div class="tree-node tree-indent-2">├── curator.py</div>
+                <div class="tree-node tree-indent-2">└── watson.py</div>
+
+                <div class="tree-node config tree-indent-1">📁 config/ <span style="color: #94A3B8;"># Configuration</span></div>
+                <div class="tree-node tree-indent-2">├── search-seeds.json</div>
+                <div class="tree-node tree-indent-2">├── sources.json</div>
+                <div class="tree-node tree-indent-2">└── settings.yaml</div>
+
+                <div class="tree-node knowledge tree-indent-1">📁 knowledge/ <span style="color: #94A3B8;"># Knowledge base</span></div>
+                <div class="tree-node tree-indent-2">├── taxonomy.json</div>
+                <div class="tree-node tree-indent-2">├── seen-urls.json</div>
+                <div class="tree-node tree-indent-2">├── 📁 refs/</div>
+                <div class="tree-node tree-indent-3">├── digest/</div>
+                <div class="tree-node tree-indent-3">├── papers/</div>
+                <div class="tree-node tree-indent-3">└── articles/</div>
+                <div class="tree-node tree-indent-2">└── chromadb/</div>
+
+                <div class="tree-node output tree-indent-1">📁 output/ <span style="color: #94A3B8;"># Daily outputs</span></div>
+                <div class="tree-node tree-indent-2">├── digests/</div>
+                <div class="tree-node tree-indent-2">├── feedback-log.json</div>
+                <div class="tree-node tree-indent-2">└── artifacts/</div>
+
+                <div class="tree-node system tree-indent-1">📁 logs/ <span style="color: #94A3B8;"># Execution logs</span></div>
+                <div class="tree-node system tree-indent-1">📁 .git/ <span style="color: #94A3B8;"># Version control</span></div>
+            </div>
+        </section>
+
+        <section>
+            <h2>File Lifecycle</h2>
+            <p>The journey of a research result from discovery to knowledge graph integration.</p>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 1: Brave Search Query</div>
+                    <div class="timeline-content">Search engine executes query from active seeds</div>
+                    <div class="timeline-detail">Sources: search-seeds.json, external API</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 2: Generate digest.md</div>
+                    <div class="timeline-content">Curator organizes results into daily markdown digest</div>
+                    <div class="timeline-detail">Output: digests/YYYY-MM-DD.md with formatted results</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 3: Check seen-urls.json</div>
+                    <div class="timeline-content">Deduplicate against previously seen sources</div>
+                    <div class="timeline-detail">Updates: seen-urls.json with URLs from current digest</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 4: Run digest_ingest.py</div>
+                    <div class="timeline-content">Parse markdown and extract structured data</div>
+                    <div class="timeline-detail">Converts: digest.md → JSON objects with metadata</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 5: Store in refs/digest/</div>
+                    <div class="timeline-content">Save extracted JSON entries to knowledge directory</div>
+                    <div class="timeline-detail">Files: refs/digest/YYYY-MM-DD/*.json (one per result)</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 6: Artifact Enrichment</div>
+                    <div class="timeline-content">Watson analyzes content for semantic connections</div>
+                    <div class="timeline-detail">Adds: embeddings, tags, related concepts</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 7: Human Review & Feedback</div>
+                    <div class="timeline-content">Human curator reviews digest and provides signals</div>
+                    <div class="timeline-detail">Records: feedback-log.json with quality signals</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-step">Step 8: Taxonomy Update</div>
+                    <div class="timeline-content">Update topic hierarchy and cluster weights</div>
+                    <div class="timeline-detail">Updates: taxonomy.json, search-seeds.json weights</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Key File Formats</h2>
+            <p>Structured data schemas used throughout the system for consistency and machine readability.</p>
+
+            <div class="file-formats">
+                <div class="format-card">
+                    <div class="format-title">search-seeds.json</div>
+                    <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="key">"seeds"</span>: [<br>
+&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"query"</span>: <span class="string">"robot gripper control"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"topic"</span>: <span class="string">"manipulation"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"weight"</span>: <span class="number">2.0</span><br>
+&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;]<br>
+}
+                    </div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-title">feedback-log.json</div>
+                    <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="key">"feedback"</span>: [<br>
+&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"date"</span>: <span class="string">"2024-03-14"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"signal"</span>: <span class="string">"positive"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"topic"</span>: <span class="string">"manipulation"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"note"</span>: <span class="string">"Good</span><br>
+&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;]<br>
+}
+                    </div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-title">seen-urls.json</div>
+                    <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="key">"urls"</span>: [<br>
+&nbsp;&nbsp;&nbsp;<span class="string">"https://example.com"</span>,<br>
+&nbsp;&nbsp;&nbsp;<span class="string">"https://arxiv.org/2024.123"</span><br>
+&nbsp;&nbsp;],<br>
+&nbsp;&nbsp;<span class="key">"last_updated"</span>: <span class="string">"2024-03-14"</span><br>
+}
+                    </div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-title">Digest Entry</div>
+                    <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="key">"title"</span>: <span class="string">"Paper Title"</span>,<br>
+&nbsp;&nbsp;<span class="key">"url"</span>: <span class="string">"https://..."</span>,<br>
+&nbsp;&nbsp;<span class="key">"source"</span>: <span class="string">"arxiv"</span>,<br>
+&nbsp;&nbsp;<span class="key">"tags"</span>: [<span class="string">"tag1"</span>],<br>
+&nbsp;&nbsp;<span class="key">"retrieved"</span>: <span class="string">"2024-03-14"</span><br>
+}
+                    </div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-title">taxonomy.json</div>
+                    <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="key">"topics"</span>: [<br>
+&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="string">"manipulation"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"tags"</span>: [<span class="string">"gripper"</span>]<br>
+&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;],<br>
+&nbsp;&nbsp;<span class="key">"version"</span>: <span class="string">"v6"</span><br>
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Data Retention Policy</h2>
+            <p>How CONSTRUCT manages data lifecycle to balance accessibility with storage efficiency.</p>
+
+            <div class="retention-box">
+                <div class="retention-item">
+                    <div class="retention-category">Original Files (Raw Data)</div>
+                    <div class="retention-desc">PDF documents, web pages, and raw API responses are removed after extraction and enrichment. These temporary files are not retained long-term.</div>
+                </div>
+                <div class="retention-item">
+                    <div class="retention-category">Extracted JSON (Permanent)</div>
+                    <div class="retention-desc">Structured extractions stored in refs/ directories are kept permanently. These are the canonical representation of each research result.</div>
+                </div>
+                <div class="retention-item">
+                    <div class="retention-category">Vector Embeddings (Permanent)</div>
+                    <div class="retention-desc">ChromaDB stores all embeddings indefinitely for semantic search capability. Vectors enable cross-domain connections and discovery.</div>
+                </div>
+                <div class="retention-item">
+                    <div class="retention-category">Daily Digests (Permanent)</div>
+                    <div class="retention-desc">Markdown digests are archived permanently in digests/ for historical reference and pattern analysis across time.</div>
+                </div>
+                <div class="retention-item">
+                    <div class="retention-category">Git History (Permanent)</div>
+                    <div class="retention-desc">All changes to JSON files and taxonomy are tracked in git for version control and audit trail purposes.</div>
+                </div>
+                <div class="retention-item">
+                    <div class="retention-category">Execution Logs (1 Year)</div>
+                    <div class="retention-desc">System logs in logs/ directory are kept for debugging purposes, typically retained for 12 months then archived.</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        CONSTRUCT — autonomous agentic research engine — mabstruct.ai
+    </footer>
+</body>
+</html>

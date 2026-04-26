@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONSTRUCT Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #1E293B;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #94A3B8;
+            font-weight: 500;
+        }
+
+        /* Navigation Bar */
+        nav {
+            position: sticky;
+            top: 0;
+            background-color: rgba(11, 17, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #1E293B;
+            z-index: 100;
+            padding: 0;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        nav li {
+            margin: 0;
+        }
+
+        nav a {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: #94A3B8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        nav a:hover {
+            color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        /* Main Container */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+
+        /* Section Styles */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        section h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #E2E8F0;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: #06B6D4;
+            background-color: rgba(6, 182, 212, 0.05);
+            transform: translateY(-4px);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        /* Architecture Diagram */
+        .diagram-container {
+            background-color: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .docker-box {
+            background-color: rgba(139, 92, 246, 0.1);
+            border: 2px dashed #8B5CF6;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .docker-label {
+            color: #8B5CF6;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .agent-box {
+            background-color: #111827;
+            border: 2px solid;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .agent-box.research {
+            border-color: #06B6D4;
+            color: #06B6D4;
+        }
+
+        .agent-box.curator {
+            border-color: #8B5CF6;
+            color: #8B5CF6;
+        }
+
+        .agent-box.watson {
+            border-color: #F97316;
+            color: #F97316;
+        }
+
+        .agent-box::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+
+        .agent-box.research::before {
+            border-color: #06B6D4;
+            background-color: #06B6D4;
+        }
+
+        .agent-box.curator::before {
+            border-color: #8B5CF6;
+            background-color: #8B5CF6;
+        }
+
+        .agent-box.watson::before {
+            border-color: #F97316;
+            background-color: #F97316;
+        }
+
+        .connections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #1E293B;
+        }
+
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            color: #94A3B8;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10B981;
+        }
+
+        /* Core Cycle */
+        .cycle-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .cycle-step {
+            background-color: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .cycle-step::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+
+        .cycle-step:nth-child(1)::before {
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+        }
+
+        .cycle-step:nth-child(2)::before {
+            background: linear-gradient(90deg, #8B5CF6, #F97316);
+        }
+
+        .cycle-step:nth-child(3)::before {
+            background: linear-gradient(90deg, #F97316, #10B981);
+        }
+
+        .cycle-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #E2E8F0;
+        }
+
+        .cycle-description {
+            color: #94A3B8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .cycle-arrow {
+            text-align: center;
+            color: #06B6D4;
+            font-size: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        /* Design Principles */
+        .principles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .principle-card {
+            background-color: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .principle-card:hover {
+            border-color: #06B6D4;
+            background-color: rgba(6, 182, 212, 0.05);
+            transform: translateY(-4px);
+        }
+
+        .principle-number {
+            display: inline-block;
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #0B1120;
+        }
+
+        .principle-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #E2E8F0;
+        }
+
+        .principle-description {
+            color: #94A3B8;
+            font-size: 0.95rem;
+        }
+
+        /* Quick Links */
+        .quick-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .quick-link-card {
+            background-color: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: #E2E8F0;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-link-card:hover {
+            border-color: #06B6D4;
+            background-color: rgba(6, 182, 212, 0.05);
+            transform: translateY(-4px);
+        }
+
+        .quick-link-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #E2E8F0;
+        }
+
+        .quick-link-desc {
+            font-size: 0.9rem;
+            color: #94A3B8;
+        }
+
+        .quick-link-arrow {
+            color: #06B6D4;
+            margin-top: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+            color: #94A3B8;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+            }
+
+            nav a {
+                padding: 0.75rem 1.5rem;
+                border-bottom: none;
+                border-left: 3px solid transparent;
+            }
+
+            nav a:hover {
+                border-left-color: #06B6D4;
+            }
+
+            nav a.active {
+                border-left-color: #06B6D4;
+                border-bottom: none;
+            }
+
+            main {
+                padding: 0 1rem 2rem;
+            }
+
+            section h2 {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid,
+            .agent-grid,
+            .cycle-container,
+            .principles-grid,
+            .quick-links-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .diagram-container {
+                padding: 1.5rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p>autonomous agentic research engine</p>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <ul>
+            <li><a href="index.html" class="active">Overview</a></li>
+            <li><a href="agents.html">Agents</a></li>
+            <li><a href="pipeline.html">Pipeline</a></li>
+            <li><a href="adaptation.html">Adaptation</a></li>
+            <li><a href="infrastructure.html">Infrastructure</a></li>
+            <li><a href="dataflow.html">Data Flow</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Section 1: System at a Glance -->
+        <section>
+            <h2>System at a Glance</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Agents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Pipeline Stages (v2)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">14</div>
+                    <div class="stat-label">Search Clusters (v8)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">30</div>
+                    <div class="stat-label">Daily Digests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">210+</div>
+                    <div class="stat-label">Papers Tracked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">19</div>
+                    <div class="stat-label">Knowledge Cards</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture Diagram -->
+        <section>
+            <h2>Architecture Diagram</h2>
+            <div class="diagram-container">
+                <div class="docker-box">
+                    <div class="docker-label">OpenClaw Docker Container on VPS</div>
+
+                    <div class="agent-grid">
+                        <div class="agent-box research">
+                            Research Agent
+                        </div>
+                        <div class="agent-box curator">
+                            Curator
+                        </div>
+                        <div class="agent-box watson">
+                            Watson
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connections">
+                    <div class="connection-item">
+                        <span class="connection-dot"></span>
+                        Brave Search
+                    </div>
+                    <div class="connection-item">
+                        <span class="connection-dot"></span>
+                        Semantic Scholar
+                    </div>
+                    <div class="connection-item">
+                        <span class="connection-dot"></span>
+                        ChromaDB
+                    </div>
+                    <div class="connection-item">
+                        <span class="connection-dot"></span>
+                        Human Feedback
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Core Cycle -->
+        <section>
+            <h2>Core Cycle</h2>
+            <div class="cycle-container">
+                <div class="cycle-step">
+                    <div class="cycle-title">INITIATE</div>
+                    <div class="cycle-description">Human seeds → Agent parses, extracts, proposes topics</div>
+                </div>
+                <div class="cycle-arrow">→</div>
+                <div class="cycle-step">
+                    <div class="cycle-title">PROCESS</div>
+                    <div class="cycle-description">Daily autonomous search, filter, extract, connect, compile</div>
+                </div>
+                <div class="cycle-arrow">→</div>
+                <div class="cycle-step">
+                    <div class="cycle-title">ADAPT</div>
+                    <div class="cycle-description">Human + Watson review, qualify, reweight, redirect</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Design Principles -->
+        <section>
+            <h2>Design Principles</h2>
+            <div class="principles-grid">
+                <div class="principle-card">
+                    <div class="principle-number">1</div>
+                    <div class="principle-title">Map, not archive</div>
+                    <div class="principle-description">Focus on connections and topology rather than document storage</div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">2</div>
+                    <div class="principle-title">Domain-agnostic infrastructure</div>
+                    <div class="principle-description">Flexible architecture capable of tracking any research domain</div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">3</div>
+                    <div class="principle-title">Human-in-the-loop</div>
+                    <div class="principle-description">Continuous feedback integration for system refinement</div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">4</div>
+                    <div class="principle-title">Transparent</div>
+                    <div class="principle-description">Clear visibility into agent decisions and data sources</div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">5</div>
+                    <div class="principle-title">Evolving</div>
+                    <div class="principle-description">Adaptive systems that improve through learning and reweighting</div>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">6</div>
+                    <div class="principle-title">References over copies</div>
+                    <div class="principle-description">Link to sources rather than replicate content</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Quick Links -->
+        <section>
+            <h2>Quick Links</h2>
+            <div class="quick-links-grid">
+                <a href="agents.html" class="quick-link-card">
+                    <div class="quick-link-title">Agents</div>
+                    <div class="quick-link-desc">Research, Curator, and Watson</div>
+                    <div class="quick-link-arrow">→</div>
+                </a>
+                <a href="pipeline.html" class="quick-link-card">
+                    <div class="quick-link-title">Pipeline</div>
+                    <div class="quick-link-desc">4-stage processing architecture</div>
+                    <div class="quick-link-arrow">→</div>
+                </a>
+                <a href="adaptation.html" class="quick-link-card">
+                    <div class="quick-link-title">Adaptation</div>
+                    <div class="quick-link-desc">Learning and reweighting system</div>
+                    <div class="quick-link-arrow">→</div>
+                </a>
+                <a href="infrastructure.html" class="quick-link-card">
+                    <div class="quick-link-title">Infrastructure</div>
+                    <div class="quick-link-desc">Docker, VPS, and deployment</div>
+                    <div class="quick-link-arrow">→</div>
+                </a>
+                <a href="dataflow.html" class="quick-link-card">
+                    <div class="quick-link-title">Data Flow</div>
+                    <div class="quick-link-desc">Information movement and storage</div>
+                    <div class="quick-link-arrow">→</div>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>CONSTRUCT — autonomous agentic research engine — mabstruct.ai</p>
+    </footer>
+</body>
+</html>

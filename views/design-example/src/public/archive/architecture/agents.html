@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONSTRUCT — Agents Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(139, 92, 246, 0.1));
+            border-bottom: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #94A3B8;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Navigation */
+        nav {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+        }
+
+        nav a {
+            color: #94A3B8;
+            text-decoration: none;
+            padding: 1rem 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        nav a:hover {
+            color: #E2E8F0;
+            border-bottom-color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 2rem;
+            background: linear-gradient(180deg, #06B6D4, #8B5CF6);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #E2E8F0;
+        }
+
+        /* Three Agents Cards */
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .agent-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .agent-card:hover {
+            border-color: #06B6D4;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.1);
+        }
+
+        .agent-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .agent-badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .agent-badge.cyan {
+            background: #06B6D4;
+        }
+
+        .agent-badge.violet {
+            background: #8B5CF6;
+        }
+
+        .agent-badge.orange {
+            background: #F97316;
+        }
+
+        .agent-card p {
+            color: #94A3B8;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .agent-details {
+            background: rgba(15, 23, 42, 0.5);
+            border-left: 2px solid;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .agent-details.cyan {
+            border-left-color: #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .agent-details.violet {
+            border-left-color: #8B5CF6;
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .agent-details.orange {
+            border-left-color: #F97316;
+            background: rgba(249, 115, 22, 0.05);
+        }
+
+        .config-items {
+            list-style: none;
+            margin-top: 0.5rem;
+            padding-left: 1rem;
+        }
+
+        .config-items li {
+            color: #CBD5E1;
+            margin: 0.25rem 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .config-items li::before {
+            content: '→ ';
+            color: #06B6D4;
+            margin-right: 0.5rem;
+        }
+
+        /* Agent Interaction Flow */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 2rem;
+            overflow-x: auto;
+            margin-bottom: 2rem;
+        }
+
+        .flow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .flow-label {
+            font-size: 0.85rem;
+            color: #94A3B8;
+            text-align: center;
+            max-width: 80px;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2));
+            border: 1px solid #06B6D4;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .flow-arrow {
+            color: #06B6D4;
+            font-size: 1.5rem;
+            margin: 0 1rem;
+            flex-shrink: 0;
+        }
+
+        /* Epistemic Calibrations */
+        .calibrations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .calibration-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .calibration-card h4 {
+            color: #06B6D4;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .calibration-card p {
+            color: #94A3B8;
+            font-size: 0.9rem;
+        }
+
+        /* Failure Modes Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        thead {
+            background: rgba(6, 182, 212, 0.1);
+            border-bottom: 2px solid #1E293B;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: #06B6D4;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #1E293B;
+            color: #94A3B8;
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        /* Footer */
+        footer {
+            background: #111827;
+            border-top: 1px solid #1E293B;
+            padding: 2rem;
+            text-align: center;
+            color: #94A3B8;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #06B6D4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            header {
+                padding: 2rem 1rem;
+            }
+
+            main {
+                padding: 2rem 1rem;
+            }
+
+            nav {
+                padding: 0 1rem;
+                gap: 1rem;
+            }
+
+            .flow-diagram {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+                margin: 1rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p class="subtitle">autonomous agentic research engine</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="agents.html" class="active">Agents</a>
+        <a href="pipeline.html">Pipeline</a>
+        <a href="adaptation.html">Adaptation</a>
+        <a href="infrastructure.html">Infrastructure</a>
+        <a href="dataflow.html">Data Flow</a>
+    </nav>
+
+    <main>
+        <!-- The Three Agents -->
+        <section>
+            <h2>The Three Agents</h2>
+            <div class="agents-grid">
+                <div class="agent-card">
+                    <h3>
+                        <span class="agent-badge cyan"></span>
+                        Research Agent
+                    </h3>
+                    <p>Core discovery engine for autonomous knowledge synthesis.</p>
+                    <div class="agent-details cyan">
+                        <strong>Core Functions:</strong>
+                        <ul class="config-items">
+                            <li>Literature search</li>
+                            <li>Source evaluation</li>
+                            <li>Summarization</li>
+                            <li>Cross-domain connections</li>
+                            <li>Contradiction detection</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: #94A3B8;"><strong>Schedule:</strong> Runs daily via cron</p>
+                        <p style="margin-top: 0.5rem;"><strong>Configuration:</strong></p>
+                        <ul class="config-items">
+                            <li>IDENTITY.md</li>
+                            <li>SOUL.md</li>
+                            <li>WORKFLOW.md</li>
+                            <li>MEMORY.md</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="agent-card">
+                    <h3>
+                        <span class="agent-badge violet"></span>
+                        Curator
+                    </h3>
+                    <p>Human-machine interface for knowledge reflection and feedback.</p>
+                    <div class="agent-details violet">
+                        <strong>Core Functions:</strong>
+                        <ul class="config-items">
+                            <li>Daily digest presentation</li>
+                            <li>Human feedback collection</li>
+                            <li>Reflection facilitation</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: #94A3B8;"><strong>Role:</strong> Bridge between autonomous discovery and human judgment. Ensures human oversight and explicit evaluation of research directions.</p>
+                    </div>
+                </div>
+
+                <div class="agent-card">
+                    <h3>
+                        <span class="agent-badge orange"></span>
+                        Watson v0.3.0
+                    </h3>
+                    <p>Thinking partner, knowledge curator, and co-author. Academically brilliant thinker with cross-domain inventiveness.</p>
+                    <div class="agent-details orange">
+                        <strong>Four Core Functions:</strong>
+                        <ul class="config-items">
+                            <li><strong>Knowledge Curation</strong> — owns the knowledge base (19 cards, 22 connections)</li>
+                            <li><strong>Cross-Domain Ideation</strong> — asks the obvious question, offers the adjacent idea</li>
+                            <li><strong>Synthesis & Drafting</strong> — produces publication-quality articles (3 published)</li>
+                            <li><strong>Co-Authorship</strong> — named credit, editorial judgment, publication decisions</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: #94A3B8;"><strong>Version History:</strong> v0.1 (Genesis) → v0.2 (Synthesis) → v0.2.1 (Academic brilliance) → v0.3 (Co-authorship). Each advancement evidenced and human-approved.</p>
+                        <p style="margin-top: 0.5rem;"><strong>Configuration:</strong></p>
+                        <ul class="config-items">
+                            <li>IDENTITY.md (v0.3.0)</li>
+                            <li>SOUL.md (v0.3.0)</li>
+                            <li>MEMORY.md</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Agent Interaction Flow -->
+        <section>
+            <h2>Agent Interaction Flow</h2>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-box">Research Agent</div>
+                    <span class="flow-label">daily search</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-box">Curator</div>
+                    <span class="flow-label">presents</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-box">Human</div>
+                    <span class="flow-label">feedback</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-box">Watson</div>
+                    <span class="flow-label">adapts</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-box">search-seeds.json</div>
+                    <span class="flow-label">updated</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step">
+                    <div class="flow-box">Research Agent</div>
+                    <span class="flow-label">improved</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Epistemic Calibrations -->
+        <section>
+            <h2>Epistemic Calibrations</h2>
+            <p style="color: #94A3B8; margin-bottom: 2rem;">Every claim is traced to source, speculation is labeled, gaps are surfaced. Quality priority: Accuracy &gt; Coverage &gt; Speed. Default stance: "Interesting, but is it solid?"</p>
+            <div class="calibrations-grid">
+                <div class="calibration-card">
+                    <h4>Every Claim Traced</h4>
+                    <p>Source attribution and verification chain for all assertions.</p>
+                </div>
+                <div class="calibration-card">
+                    <h4>Speculation Labeled</h4>
+                    <p>Clear distinction between evidence-based findings and inference.</p>
+                </div>
+                <div class="calibration-card">
+                    <h4>Gaps Surfaced</h4>
+                    <p>Explicit identification of knowledge boundaries and open questions.</p>
+                </div>
+                <div class="calibration-card">
+                    <h4>Accuracy Priority</h4>
+                    <p>Accuracy valued above coverage and speed in all assessments.</p>
+                </div>
+                <div class="calibration-card">
+                    <h4>Default Skepticism</h4>
+                    <p>Maintain rigorous stance: "Interesting, but is it solid?"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Failure Modes -->
+        <section>
+            <h2>Failure Modes</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Failure Mode</th>
+                        <th>Description</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Depth Avoidance</strong></td>
+                        <td>Staying at surface-level summaries instead of deep investigation</td>
+                        <td>Epistemic calibration requires drilling into methodologies and limitations</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Flattery Bias</strong></td>
+                        <td>Over-confidence in prestigious sources or authors</td>
+                        <td>Evaluate claims independent of source reputation; trace logic chains</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Premature Synthesis</strong></td>
+                        <td>Drawing conclusions before sufficient evidence accumulation</td>
+                        <td>Require evidence threshold before proposing cross-domain connections</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scope Drift</strong></td>
+                        <td>Search queries expanding beyond original domains uncontrollably</td>
+                        <td>Watson monitors search-seeds.json for coherence; Curator flags drift</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authority Creep</strong></td>
+                        <td>Gradually deferring to aggregate authority over careful evaluation</td>
+                        <td>Maintain individual claim scrutiny; don't relax standards with repetition</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Active Domains -->
+        <section>
+            <h2>Active Domains</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Focus Areas</th>
+                        <th>Integration Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>AI & Agents</strong></td>
+                        <td>Autonomous systems, agentic frameworks, emergent behavior</td>
+                        <td>Core domain; shapes system architecture</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Machine Learning</strong></td>
+                        <td>Learning paradigms, optimization, knowledge representation</td>
+                        <td>Technical foundations; connects to philosophy of learning</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cosmology</strong></td>
+                        <td>Universe structure, emergence, first principles</td>
+                        <td>Philosophical framing; explores complexity from fundamental physics</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mathematics</strong></td>
+                        <td>Category theory, information theory, formal systems</td>
+                        <td>Theoretical grounding; provides rigor for all domains</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Philosophy</strong></td>
+                        <td>Epistemology, consciousness, emergence, agency</td>
+                        <td>Meta-layer; informs evaluation and synthesis across all domains</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        CONSTRUCT — autonomous agentic research engine — <a href="https://mabstruct.ai">mabstruct.ai</a>
+    </footer>
+</body>
+</html>

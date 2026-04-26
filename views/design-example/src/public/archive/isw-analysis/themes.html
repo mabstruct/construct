@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis - Cross-Cutting Themes</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0B1120;
+            color: #E5E7EB;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(139, 92, 246, 0.1));
+            border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .header-content { max-width: 1200px; margin: 0 auto; }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle { font-size: 1.1rem; color: #9CA3AF; margin-bottom: 1rem; }
+
+        .back-link {
+            display: inline-block;
+            color: #06B6D4;
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .back-link:hover {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-color: #06B6D4;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem 4rem 2rem; }
+
+        .intro {
+            font-size: 1.05rem;
+            color: #9CA3AF;
+            margin-bottom: 2.5rem;
+            max-width: 800px;
+        }
+
+        .theme-card {
+            background-color: #111827;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            border-radius: 12px;
+            padding: 1.8rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .theme-card:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(6, 182, 212, 0.1);
+        }
+        .theme-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .theme-card.dominant::before { background: linear-gradient(180deg, #8B5CF6, #6D28D9); }
+        .theme-card.strong::before { background: linear-gradient(180deg, #06B6D4, #0891B2); }
+        .theme-card.emerging::before { background: linear-gradient(180deg, #F97316, #EA580C); }
+
+        .theme-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .theme-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #F3F4F6;
+        }
+
+        .theme-badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge-strength {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .badge-dominant { background: rgba(139, 92, 246, 0.2); color: #A78BFA; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .badge-strong { background: rgba(6, 182, 212, 0.2); color: #22D3EE; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .badge-emerging { background: rgba(249, 115, 22, 0.2); color: #FB923C; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+        .badge-papers {
+            font-size: 0.75rem;
+            color: #9CA3AF;
+        }
+
+        .theme-description {
+            font-size: 0.95rem;
+            color: #D1D5DB;
+            line-height: 1.7;
+            margin-bottom: 1.2rem;
+        }
+
+        .theme-connections {
+            background: rgba(6, 182, 212, 0.05);
+            border: 1px solid rgba(6, 182, 212, 0.1);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+        }
+
+        .theme-connections h4 {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6B7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .conn-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .conn-tag {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(107, 114, 128, 0.2);
+            color: #9CA3AF;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6B7280;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(6, 182, 212, 0.1);
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="back-link">← ISW Analysis</a>
+            <h1>Cross-Cutting Themes</h1>
+            <p class="subtitle">Patterns that span multiple research clusters — the gravitational centers of the ISW landscape</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <p class="intro">
+            Six cross-cutting themes emerge from the 504+ paper corpus, connecting individual clusters into a coherent intellectual landscape. These themes represent convergent insights — ideas that multiple independent research threads arrive at from different directions.
+        </p>
+
+        <!-- World Model Convergence -->
+        <div class="theme-card dominant">
+            <div class="theme-header">
+                <div class="theme-title">World Model Convergence</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-dominant">dominant</span>
+                    <span class="badge-papers">~22 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                World models are converging across robot learning, embodied AI, spatial understanding, and causal reasoning. Multiple independent research threads — 3D scene understanding, neural simulation, foundation model world knowledge, robotics planning — are all heading toward unified world models that combine geometric, semantic, and physical understanding. This is the gravitational center of the field.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">embodied-ai</span>
+                    <span class="conn-tag">indoor-world-model</span>
+                    <span class="conn-tag">causal-world-models</span>
+                    <span class="conn-tag">spatial-understanding</span>
+                    <span class="conn-tag">robot-learning</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Foundation Models as Default Substrate -->
+        <div class="theme-card dominant">
+            <div class="theme-header">
+                <div class="theme-title">Foundation Models as Default Substrate</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-dominant">dominant</span>
+                    <span class="badge-papers">~95 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                Approximately 50% of the 504+ papers build directly on foundation models. This is no longer a theme — it's the default assumption for all new work. The question has shifted from "should we use foundation models?" to "how do we ground them in physical reality?" Every cluster shows foundation model adoption accelerating.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">vision-language</span>
+                    <span class="conn-tag">embodied-ai</span>
+                    <span class="conn-tag">agentic-systems</span>
+                    <span class="conn-tag">perception-detection</span>
+                    <span class="conn-tag">robot-learning</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language as Universal Interface -->
+        <div class="theme-card strong">
+            <div class="theme-header">
+                <div class="theme-title">Language as Universal Interface</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-strong">strong</span>
+                    <span class="badge-papers">~18 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                Language is becoming the universal protocol between every layer: Lp-SLAM uses language for spatial mapping, SpatialLM for structured scene modeling, MAPG for vision-language navigation, VLAs for robot control, and agent-to-agent communication is converging on natural language. The risk: the vision-language bridge remains dangerously thin for precise spatial tasks.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">vision-language</span>
+                    <span class="conn-tag">intent-to-action</span>
+                    <span class="conn-tag">spatial-rag-robotics</span>
+                    <span class="conn-tag">agentic-systems</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Memory as Infrastructure -->
+        <div class="theme-card strong">
+            <div class="theme-header">
+                <div class="theme-title">Agent Memory as Infrastructure</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-strong">strong</span>
+                    <span class="badge-papers">~12 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                Memory is not a feature but infrastructure. ReMEmbR, A-MEM, AMA-Bench, GSMem, MemOS form a constellation around the same absence: embodied agents lack durable, structured memory systems adequate for long-horizon tasks. The field is converging on recognizing memory as a first-class primitive, not a module. Current approaches (RAG, context windows, vector stores) are stateless patches, not memory architectures.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">agentic-systems</span>
+                    <span class="conn-tag">embodied-ai</span>
+                    <span class="conn-tag">spatial-understanding</span>
+                    <span class="conn-tag">indoor-world-model</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intent-to-Action Pipeline -->
+        <div class="theme-card strong">
+            <div class="theme-header">
+                <div class="theme-title">Intent-to-Action Pipeline</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-strong">strong</span>
+                    <span class="badge-papers">~14 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                From natural language to executable robot steps. DACo, LLM-Planner, Grounded Decoding — the research is focused on the critical path from high-level human intent to grounded actions. This is the primary application-facing research focus, where every other theme converges into practical capability.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">intent-to-action</span>
+                    <span class="conn-tag">vision-language</span>
+                    <span class="conn-tag">agentic-robot-middleware</span>
+                    <span class="conn-tag">robot-learning</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agentic Middleware Emergence -->
+        <div class="theme-card emerging">
+            <div class="theme-header">
+                <div class="theme-title">Agentic Middleware Emergence</div>
+                <div class="theme-badges">
+                    <span class="badge-strength badge-emerging">emerging</span>
+                    <span class="badge-papers">~10 papers</span>
+                </div>
+            </div>
+            <p class="theme-description">
+                The orchestration layer between planning and control is becoming a recognizable field. AgentRob, OpenClaw, CORE, PragmaBot — a new software layer is crystallizing between foundation models and robot hardware. This middleware translates high-level intent into grounded robot actions, handling the messy realities of ROS integration, safety constraints, and error recovery.
+            </p>
+            <div class="theme-connections">
+                <h4>Connected clusters</h4>
+                <div class="conn-list">
+                    <span class="conn-tag">agentic-robot-middleware</span>
+                    <span class="conn-tag">agentic-systems</span>
+                    <span class="conn-tag">intent-to-action</span>
+                    <span class="conn-tag">embodied-ai</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>CONSTRUCT — autonomous agentic research engine — ISW research landscape analysis</p>
+    </footer>
+</body>
+</html>

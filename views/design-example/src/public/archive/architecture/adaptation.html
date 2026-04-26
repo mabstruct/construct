@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptation — CONSTRUCT Architecture</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0B1120;
+            color: #E2E8F0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #94A3B8;
+            font-size: 1.1rem;
+        }
+
+        nav {
+            background: #111827;
+            border-bottom: 1px solid #1E293B;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 1rem;
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        nav a.active {
+            color: #06B6D4;
+            border-bottom-color: #06B6D4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: #06B6D4;
+            border-bottom: 2px solid #1E293B;
+            padding-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: #8B5CF6;
+        }
+
+        .cycle-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .cycle-item {
+            background: #111827;
+            border: 2px solid #1E293B;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .cycle-item:hover {
+            border-color: #06B6D4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        .cycle-item::after {
+            content: '→';
+            position: absolute;
+            right: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #06B6D4;
+            font-size: 1.5rem;
+        }
+
+        .cycle-item:last-child::after {
+            content: '';
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #06B6D4, #8B5CF6);
+        }
+
+        .timeline-item {
+            margin-left: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.75rem;
+            top: 1.5rem;
+            width: 12px;
+            height: 12px;
+            background: #06B6D4;
+            border: 3px solid #0B1120;
+            border-radius: 50%;
+        }
+
+        .timeline-item h4 {
+            color: #06B6D4;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .timeline-item .date {
+            color: #94A3B8;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-item .triggers {
+            color: #F97316;
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .timeline-item .changes {
+            color: #E2E8F0;
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+
+        .bar-chart {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            margin: 2rem 0;
+            align-items: center;
+        }
+
+        .bar-item {
+            display: grid;
+            grid-template-columns: 200px 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 0.75rem 0;
+        }
+
+        .bar-label {
+            font-size: 0.9rem;
+            color: #94A3B8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bar {
+            height: 24px;
+            background: #1E293B;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover .bar-fill {
+            filter: brightness(1.2);
+        }
+
+        .bar-value {
+            font-size: 0.9rem;
+            color: #E2E8F0;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .feedback-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feedback-card {
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-card:hover {
+            border-color: #06B6D4;
+        }
+
+        .feedback-card.steering {
+            border-left: 4px solid #F97316;
+        }
+
+        .feedback-card.positive {
+            border-left: 4px solid #10B981;
+        }
+
+        .feedback-card.drift {
+            border-left: 4px solid #8B5CF6;
+        }
+
+        .feedback-card.direction {
+            border-left: 4px solid #06B6D4;
+        }
+
+        .feedback-date {
+            color: #94A3B8;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-title {
+            color: #E2E8F0;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .feedback-content {
+            color: #94A3B8;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: #111827;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #1E293B;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            color: #06B6D4;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 2px solid #1E293B;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #1E293B;
+            color: #E2E8F0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        footer {
+            background: #111827;
+            border-top: 1px solid #1E293B;
+            padding: 2rem;
+            text-align: center;
+            color: #94A3B8;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 768px) {
+            .cycle-diagram {
+                grid-template-columns: 1fr;
+            }
+
+            .cycle-item::after {
+                content: '↓';
+                right: 50%;
+                transform: translateX(50%);
+                bottom: -1.5rem;
+            }
+
+            .bar-item {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .bar-label {
+                white-space: normal;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            nav {
+                gap: 0.5rem;
+            }
+
+            nav a {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CONSTRUCT architecture</h1>
+        <p>autonomous agentic research engine</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="agents.html">Agents</a>
+        <a href="pipeline.html">Pipeline</a>
+        <a href="adaptation.html" class="active">Adaptation</a>
+        <a href="infrastructure.html">Infrastructure</a>
+        <a href="dataflow.html">Data Flow</a>
+    </nav>
+
+    <div class="container">
+        <section>
+            <h2>Adaptation Cycle</h2>
+            <p>The continuous feedback loop that refines CONSTRUCT's search patterns and improves research quality over time.</p>
+            <div class="cycle-diagram">
+                <div class="cycle-item">
+                    <strong>Daily Digest</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Search results compiled</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Curator Presents</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Results organized</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Human Reviews</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Quality assessed</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Feedback Recorded</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Signals captured</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Watson Analyzes</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Patterns extracted</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Pattern Updated</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Model refined</p>
+                </div>
+                <div class="cycle-item">
+                    <strong>Next Search Improved</strong>
+                    <p style="font-size: 0.85rem; color: #94A3B8; margin-top: 0.5rem;">Cycle repeats</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Search Pattern Evolution</h2>
+            <p>Eight major versions of search patterns, each triggered by specific observations and human direction.</p>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>v1: Initial Patterns</h4>
+                    <div class="date">February 24, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> System launch — 8 clusters, uniform weights, 3 terms per cluster</div>
+                    <div class="changes">Foundational search seeds established across 8 ISW domains</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v2: Intent-to-Action Focus</h4>
+                    <div class="date">March 1, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> First human feedback after 6 digest cycles — intent-to-action pipeline identified as key gap</div>
+                    <div class="changes">Added intent-to-action cluster (weight 1.5). Boosted robot-learning, vision-language. De-emphasized perception-detection, foundations-training.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v3: Causal World Models</h4>
+                    <div class="date">March 4, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> Watson landscape analysis — world models everywhere but causal reasoning absent</div>
+                    <div class="changes">Added causal-world-models cluster. Integrated interventionist prediction, counterfactual reasoning terms.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v4: Indoor World Model</h4>
+                    <div class="date">March 7, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> Embodied AI cluster too large (28 papers, 44%). Needed differentiation.</div>
+                    <div class="changes">Split indoor-world-model into own cluster. Forced differentiation of digital twin and spatial representation work.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v5: Middleware + Spatial RAG</h4>
+                    <div class="date">March 10, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> Watson identified orchestration layer between planning and control as emerging field</div>
+                    <div class="changes">Added agentic-robot-middleware and spatial-rag-robotics clusters. AgentRob, OpenClaw as anchors.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v6: Intent Decomposition</h4>
+                    <div class="date">March 14, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> 13 clusters, differentiated weights (0.5–2.0). Intent-to-action boosted to maximum.</div>
+                    <div class="changes">Intent-to-action weight → 2.0 with 8 search terms. Perception and foundations de-emphasized to 0.5.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v7: Autonomous Simulation Loops</h4>
+                    <div class="date">March 24, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> Human direction — simulation as operational loop for learning, eval, regression, scenario generation</div>
+                    <div class="changes">Added autonomous-sim-loops cluster (weight 1.3). Closed-loop simulation as instrument: scenario generation, regression testing, failure replay, synthetic data pipelines.</div>
+                </div>
+                <div class="timeline-item">
+                    <h4>v8: Game Engine Sim Platforms</h4>
+                    <div class="date">March 24, 2026</div>
+                    <div class="triggers"><strong>Triggers:</strong> Human direction — include game engine / simulation platforms in sim-loops search area</div>
+                    <div class="changes">Expanded autonomous-sim-loops with platform-neutral sim terms: Unity, Isaac Sim, MuJoCo, Unreal, Habitat. 14 clusters total.</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Current Cluster Weights</h2>
+            <p>Active search pattern clusters and their influence weights — search-seeds.json v8 (2026-03-24).</p>
+            <div class="bar-chart">
+                <div class="bar-item">
+                    <div class="bar-label">Intent-to-Action & Task Decomposition</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <div class="bar-value">2.0</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Agentic Robot Middleware</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 90%;"></div>
+                    </div>
+                    <div class="bar-value">1.8</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Indoor World Model & Digital Twin</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 90%;"></div>
+                    </div>
+                    <div class="bar-value">1.8</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Spatial RAG for Robot Task Planning</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="bar-value">1.5</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Causal World Models</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="bar-value">1.5</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Robot Learning & Training</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="bar-value">1.5</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Vision-Language Models</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="bar-value">1.5</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Autonomous Simulation Loops</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 65%;"></div>
+                    </div>
+                    <div class="bar-value">1.3</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Agentic AI Systems</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 60%;"></div>
+                    </div>
+                    <div class="bar-value">1.2</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Embodied AI & Home Robotics</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="bar-value">1.0</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">3D Spatial Understanding</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="bar-value">1.0</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Robot Navigation & Motion Planning</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 35%;"></div>
+                    </div>
+                    <div class="bar-value">0.7</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">Visual Perception & Detection</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 25%;"></div>
+                    </div>
+                    <div class="bar-value">0.5</div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label">ML Foundations & Data</div>
+                    <div class="bar">
+                        <div class="bar-fill" style="width: 25%;"></div>
+                    </div>
+                    <div class="bar-value">0.5</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Feedback Log</h2>
+            <p>Recent human feedback signals that have shaped pattern adaptation.</p>
+            <div class="feedback-cards">
+                <div class="feedback-card steering">
+                    <div class="feedback-date">March 1, 2026</div>
+                    <div class="feedback-title">Steering Signal</div>
+                    <div class="feedback-content">Intent-to-action pipeline identified as key gap. Added as new cluster. Boosted robot-learning and vision-language weights.</div>
+                </div>
+                <div class="feedback-card positive">
+                    <div class="feedback-date">March 4, 2026</div>
+                    <div class="feedback-title">Positive Signal</div>
+                    <div class="feedback-content">Causal world models proved highly relevant. Gap identified by Watson landscape analysis confirmed by human review.</div>
+                </div>
+                <div class="feedback-card drift">
+                    <div class="feedback-date">March 7, 2026</div>
+                    <div class="feedback-title">Drift Review</div>
+                    <div class="feedback-content">Embodied AI cluster too large (44% of corpus). Split indoor-world-model to force differentiation.</div>
+                </div>
+                <div class="feedback-card direction">
+                    <div class="feedback-date">March 14, 2026</div>
+                    <div class="feedback-title">Direction Confirmed</div>
+                    <div class="feedback-content">Intent decomposition approach validated. Weights differentiated (0.5–2.0). Perception and foundations de-emphasized.</div>
+                </div>
+                <div class="feedback-card steering">
+                    <div class="feedback-date">March 24, 2026</div>
+                    <div class="feedback-title">Steering Signal</div>
+                    <div class="feedback-content">Human direction: add autonomous simulation loops as explicit search area. Sim as operational loop for learning, eval, regression testing, scenario generation. Expanded with Unity ecosystem.</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Adaptation Events</h2>
+            <p>Complete record of proposed and approved adaptations to the system.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Version</th>
+                        <th>Proposed by</th>
+                        <th>Approved by</th>
+                        <th>Key Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Feb 24</td>
+                        <td>v1</td>
+                        <td>System Init</td>
+                        <td>Bootstrap</td>
+                        <td>Initial seed patterns — 8 clusters, uniform weights, 3 terms each</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 1</td>
+                        <td>v2</td>
+                        <td>Watson</td>
+                        <td>Human</td>
+                        <td>Added intent-to-action cluster (1.5). Boosted robot-learning, vision-language. De-emphasized perception, foundations.</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 4</td>
+                        <td>v3</td>
+                        <td>Watson</td>
+                        <td>Human</td>
+                        <td>Added causal-world-models cluster. Response to gap in landscape analysis.</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 7</td>
+                        <td>v4</td>
+                        <td>Watson</td>
+                        <td>Human</td>
+                        <td>Split indoor-world-model from embodied-ai (cluster too large at 44%).</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 10</td>
+                        <td>v5</td>
+                        <td>Watson</td>
+                        <td>Human</td>
+                        <td>Added agentic-robot-middleware and spatial-rag-robotics clusters.</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 14</td>
+                        <td>v6</td>
+                        <td>Watson</td>
+                        <td>Human</td>
+                        <td>13 clusters, differentiated weights (0.5–2.0). Intent-to-action → 2.0.</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 24</td>
+                        <td>v7</td>
+                        <td>Human</td>
+                        <td>Human</td>
+                        <td>Added autonomous-sim-loops cluster (1.3). Sim as operational loop for learning/eval.</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 24</td>
+                        <td>v8</td>
+                        <td>Human</td>
+                        <td>Human</td>
+                        <td>Expanded sim-loops with game engine platforms (Unity, Isaac Sim, MuJoCo, Unreal, Habitat). 14 clusters total.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <footer>
+        CONSTRUCT — autonomous agentic research engine — mabstruct.ai
+    </footer>
+</body>
+</html>

@@ -1,0 +1,3121 @@
+[
+  {
+    "date": "2026-03-31",
+    "theme": "Intent-to-action pipelines meet autonomous simulation loops \u2014 agents that plan, execute, test, and iterate in closed-loop training environments.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Hi Robot: Open-Ended Instruction Following with Hierarchical Vision-Language-Action Models",
+        "source": "OpenReview (NeurIPS 2025)",
+        "published": "",
+        "summary": "Hierarchical VLA architecture that decomposes open-ended natural language instructions into executable robot subtasks with online adaptation. Combines task planning with vision-language grounding for generalist robot control. \u2014 https://openreview.net/forum?id=lNVHg9npif",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://openreview.net/forum?id=lNVHg9npif"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Causal World Modeling for Robot Control",
+        "source": "arXiv:2601.21998",
+        "published": "",
+        "summary": "Fresh approach using autoregressive causal world models (LingBot-VA) that tightly integrate vision, language, and action for long-horizon rollouts. Demonstrates emergent long-range temporal memory and strong few-shot adaptation. \u2014 https://arxiv.org/abs/2601.21998",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.21998"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Interactive World Simulator for Robot Policy Training and Evaluation",
+        "source": "arXiv:2603.08546",
+        "published": "",
+        "summary": "Proposes world simulators as zero-shot policies that enable continuous evaluation and iteration loops for robot learning. Bridges simulation and real-world deployment with interactive world models. \u2014 https://arxiv.org/abs/2603.08546",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.21998"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "3D-Grounded Vision-Language Framework for Robotic Task Planning: Automated Prompt Synthesis and Supervised Reasoning",
+        "source": "arXiv:2502.08903",
+        "published": "",
+        "summary": "Achieves 67% improvement in 3D spatial grounding accuracy through automated prompt synthesis and expert supervision. Frozen VLMs with structured 3D reasoning for robot manipulation. \u2014 https://arxiv.org/abs/2502.08903",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.08546"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Agentic LLM-based robotic systems for real-world applications: a review on their agenticness and ethics",
+        "source": "PMC:12402697",
+        "published": "",
+        "summary": "Comprehensive 2025 review of agentic frameworks in robotics, including industry-specific vertical AI agent deployment patterns. Critical for understanding the middleware/orchestration layer. \u2014 https://pmc.ncbi.nlm.nih.gov/articles/PMC12402697/",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83d\udcce",
+        "title": "Simplify Generalist Robot Policy Evaluation in Simulation with NVIDIA Isaac Lab-Arena",
+        "source": "NVIDIA Technical Blog",
+        "published": "",
+        "summary": "End-to-end workflow for evaluating Isaac GR00T N models in Isaac Lab-Arena. Shows practical sim-in-the-loop eval for generalist policies with continuous performance optimization. \u2014 https://developer.nvidia.com/blog/simplify-generalist-robot-policy-evaluation-in-simulation-with-nvidia-isaac-lab-arena",
+        "cluster": "robot-learning",
+        "relevance": 3,
+        "url": "https://developer.nvidia.com/blog/simplify-generalist-robot-policy-evaluation-in-simulation-with-nvidia-isaac-lab-arena/"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "Digital twins to embodied artificial intelligence: review and perspective",
+        "source": "OAEPublish (Intelligence &amp; Robotics 2025)",
+        "published": "",
+        "summary": "Positions digital twins as the training and evaluation substrate for embodied AI. Emphasizes data generation for safe physical-world interaction. \u2014 https://www.oaepublish.com/articles/ir.2025.11",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": "https://www.oaepublish.com/articles/ir.2025.11"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "RoboGen: Towards Unleashing Infinite Data for Automated Robot Learning via Generative Simulation",
+        "source": "arXiv:2311.01455",
+        "published": "",
+        "summary": "Self-guided propose-generate-learn cycle where the agent proposes tasks, generates simulation scenes, labels with NL, and trains supervision. Generative sim as autonomous learning engine. \u2014 https://arxiv.org/abs/2311.01455",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2311.01455"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Physically Grounded Vision-Language Models for Robotic Manipulation",
+        "source": "arXiv:2309.02561",
+        "published": "",
+        "summary": "Fine-tunes VLMs on physically grounded concepts (mass, friction, deformability) and integrates with LLM-based planners. Improved performance on tasks requiring physical reasoning. \u2014 https://arxiv.org/abs/2309.02561",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2311.01455"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83d\udcce",
+        "title": "A Review of Nine Physics Engines for Reinforcement Learning Research",
+        "source": "arXiv:2407.08590",
+        "published": "",
+        "summary": "Comparative analysis of MuJoCo, PhysX/Isaac Gym, PyBullet, and others for RL-driven robot training. Practical guide for choosing sim platforms based on fidelity, speed, and customization. \u2014 https://arxiv.org/abs/2407.08590",
+        "cluster": "robot-learning",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2309.02561"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-30",
+    "theme": "Causal world models meet spatial reasoning \u2014 infrastructure for intent-to-action pipelines and simulation-driven robot learning.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83c\udf00",
+        "title": "Interactive World Simulator for Robot Policy Training and Evaluation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "World model as interactive simulator for zero-shot policy learning and continuous evaluation in robotics \u2014 https://arxiv.org/abs/2603.08546",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83c\udf00",
+        "title": "RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models",
+        "source": "arXiv/CVPR 2025",
+        "published": "",
+        "summary": "Framework teaching VLMs precise spatial reasoning for robotics (spatial affordance prediction, manipulation planning) \u2014 https://arxiv.org/abs/2411.16537",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83c\udf00",
+        "title": "Digital Twins Transition to Intelligent, AI-Driven Systems in 2026",
+        "source": "RTInsights",
+        "published": "",
+        "summary": "Edge AI + digital twins for millisecond-level autonomy in robotics, reducing cloud reliance for real-time adaptive control \u2014 https://www.rtinsights.com/digital-twins-in-2026-from-digital-replicas-to-intelligent-ai-driven-systems/",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "Digital Twins to Embodied AI: Review and Perspective",
+        "source": "Intelligence &amp; Robotics journal",
+        "published": "",
+        "summary": "Digital twins as safe training/evaluation environment for embodied AI, realistic data generation for complex environments \u2014 https://www.oaepublish.com/articles/ir.2025.11",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Agentic LLM-based Robotic Systems: Review on Agenticness and Ethics",
+        "source": "PMC",
+        "published": "",
+        "summary": "Comprehensive review of agentic systems in robotics, deployment of vertical AI agents for industry applications \u2014 https://pmc.ncbi.nlm.nih.gov/articles/PMC12402697/",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83d\udcce",
+        "title": "A-RAG: Scaling Agentic RAG via Hierarchical Retrieval Interfaces",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Agentic RAG framework with hierarchical retrieval for complex tasks (predefined workflows, multi-iteration) \u2014 https://arxiv.org/abs/2602.03442",
+        "cluster": "agentic-systems",
+        "relevance": 3,
+        "url": ""
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "Simplify Generalist Robot Policy Evaluation in Simulation with NVIDIA Isaac Lab-Arena",
+        "source": "NVIDIA Blog",
+        "published": "",
+        "summary": "End-to-end workflow for evaluating generalist policies (Isaac GR00T N) in simulation, manipulation skill testing \u2014 https://developer.nvidia.com/blog/simplify-generalist-robot-policy-evaluation-in-simulation-with-nvidia-isaac-lab-arena/",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": ""
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83d\udcce",
+        "title": "Reinforcement Learning in Robotic Systems: Review on Sim-to-Real Transfer",
+        "source": "Robotics and Autonomous Systems",
+        "published": "",
+        "summary": "Sim-to-real RL framework for model optimization and iterative policy transfer in robotics \u2014 https://www.sciencedirect.com/science/article/abs/pii/S0921889025004245",
+        "cluster": "robot-learning",
+        "relevance": 3,
+        "url": ""
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83d\udcce",
+        "title": "Hi Robot: Open-Ended Instruction Following with Hierarchical VLMs",
+        "source": "OpenReview",
+        "published": "",
+        "summary": "Hierarchical vision-language-action model for open-ended instruction following (reasoning + execution for intricate NL instructions) \u2014 https://openreview.net/forum?id=lNVHg9npif",
+        "cluster": "vision-language",
+        "relevance": 3,
+        "url": ""
+      }
+    ]
+  },
+  {
+    "date": "2026-03-29",
+    "theme": "Causal world modeling, digital twins, and agentic robot middleware converge as foundations for intent-driven robot action.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Causal World Modeling for Robot Control",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Vision-language action diffusion models (LingBot-VA) integrate autoregressive causal world models for long-horizon rollouts with closed-loop error correction. Emergent long-range temporal memory and few-shot adaptation\u2014a fresh foundation for robot learning beyond VLM pre-training alone. \u2014 https://ar",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.21998"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Digital twins to embodied artificial intelligence: review and perspective",
+        "source": "OAE Publishing (Intelligence &amp; Robotics)",
+        "published": "",
+        "summary": "Comprehensive review bridging digital twins to embodied AI, focusing on data generation for safe robot training and evaluation. Addresses the real-world interaction problem with digital twin simulations at scale. \u2014 https://www.oaepublish.com/articles/ir.2025.11",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.21998"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "3D-Grounded Vision-Language Framework for Robotic Task Planning: Automated Prompt Synthesis and Supervised Reasoning",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Frozen VLMs achieve high-precision 3D grounding through automated prompt synthesis and expert supervision, improving spatial reasoning for robot control by 67%. Bridges vision-language understanding and 3D spatial action planning. \u2014 https://arxiv.org/abs/2502.08903",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "GRADE: Generating Realistic and Dynamic Environments for robotics research with Isaac Sim",
+        "source": "arXiv / Journal of Field Robotics",
+        "published": "",
+        "summary": "Flexible, controllable framework for photorealistic robotic environment generation in NVIDIA Isaac Sim. Addresses integration of diverse assets (UE, Blender, AutoCAD) into USD format for simulation pipelines\u2014enables large-scale synthetic data generation. \u2014 https://arxiv.org/abs/2303.04466",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "A Review of Natural-Language-Instructed Robot Execution Systems",
+        "source": "MDPI (AI Journal)",
+        "published": "",
+        "summary": "Survey covering NL instruction \u2192 robot execution pipelines, task collaboration frameworks, and integration patterns for high-level task planning with embodied execution. Solid foundation for intent-to-action systems. \u2014 https://www.mdpi.com/2673-2688/5/3/48",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2303.04466"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83c\udf00",
+        "title": "Agentic LLM-based robotic systems for real-world applications: a review on their agenticness and ethics",
+        "source": "PMC (research article)",
+        "published": "",
+        "summary": "Comprehensive review on agentic LLM robotics systems, covering deployment strategies, vertical AI agents for industry-specific applications, and ethical considerations for embodied agency. \u2014 https://pmc.ncbi.nlm.nih.gov/articles/PMC12402697/",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12402697/"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "RoboGen: Towards Unleashing Infinite Data for Automated Robot Learning via Generative Simulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Generative robotic agent that self-proposes skills, generates scene configurations, labels tasks with NL, and designs training supervisions\u2014all autonomously in simulation. Scalable data generation for diverse skill learning. \u2014 https://arxiv.org/abs/2311.01455",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2311.01455"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83d\udcce",
+        "title": "Reinforcement learning in robotic systems: A review on sim-to-real transfer",
+        "source": "ScienceDirect (Robotics and Autonomous Systems)",
+        "published": "",
+        "summary": "Presents sim-to-real RL framework for model optimization and iterative policy transfer. Addresses the reality gap with systematic methods for domain adaptation and transfer validation. \u2014 https://www.sciencedirect.com/science/article/abs/pii/S0921889025004245",
+        "cluster": "robot-learning",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2311.01455"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Unreal Robotics Lab: A High-Fidelity Robotics Simulator with Advanced Physics and Rendering",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Unreal Engine-based simulator combining high-precision physics with photorealistic rendering for vision-based navigation. Fills gap between MuJoCo-level physics and Unreal-level visuals\u2014enables synthetic rare-event scenario generation. \u2014 https://arxiv.org/abs/2504.14135",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2504.14135"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "Digital Twin based Automatic Reconfiguration of Robotic Systems in Smart Environments",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Uses SLAM, Unity3D, and Gazebo for digital twin-driven automatic robot reconfiguration in smart environments. Practical integration of spatial mapping and path planning with simulation-based validation. \u2014 https://arxiv.org/abs/2511.00094",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2504.14135"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-28",
+    "theme": "Interactive world simulators, game-engine robotics ecosystems, and spatial reasoning benchmarks for embodied AI",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Interactive World Simulator for Robot Policy Training and Evaluation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Fast, stable world models for robot learning with 10-minute+ interactions at 15 FPS; policies trained on generated data match real-world performance \u2014 https://arxiv.org/abs/2603.08546",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.08546"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "SpatialBench: Benchmarking Multimodal Large Language Models for Spatial Cognition",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Hierarchical evaluation framework for spatial intelligence in MLLMs, from perception to causal planning \u2014 https://arxiv.org/abs/2511.21471",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.08546"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models for Robotics",
+        "source": "arXiv",
+        "published": "",
+        "summary": "1M images, 5K 3D scans, 3M spatial relationships dataset improving VLM manipulation planning \u2014 https://arxiv.org/abs/2411.16537",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2511.21471"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "Robotic World Model: A Neural Network Simulator for Robust Policy Optimization in Robotics",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Dual-autoregressive world model enabling policy learning without domain-specific biases, strong sim-to-real transfer \u2014 https://arxiv.org/abs/2501.10100",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2411.16537"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Digital twins to embodied artificial intelligence: review and perspective",
+        "source": "OAEP Intelligence &amp; Robotics",
+        "published": "",
+        "summary": "Comprehensive review of DT-Embodied AI integration for safe robot training and evaluation at scale \u2014 https://www.oaepublish.com/articles/ir.2025.11",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2501.10100"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83d\udcce",
+        "title": "GRADE: Generating Realistic and Dynamic Environments for robotics research with Isaac Sim",
+        "source": "SAGE Robotics",
+        "published": "",
+        "summary": "Flexible, photorealistic, ROS-integrated Isaac Sim framework for robotics research environments \u2014 https://journals.sagepub.com/doi/10.1177/02783649251346211",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 3,
+        "url": "https://journals.sagepub.com/doi/10.1177/02783649251346211"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "Unreal Robotics Lab: A High-Fidelity Robotics Simulator with Advanced Physics and Rendering",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Unreal Engine-based simulator bridging photorealism and high-precision physics for RL policy training \u2014 https://arxiv.org/abs/2504.14135",
+        "cluster": "embodied-ai",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2504.14135"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "Hierarchical Open-Vocabulary 3D Scene Graphs for Language-Grounded Robot Navigation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Open-vocabulary scene graphs with 75% size reduction vs. dense maps, tested on multi-story environments \u2014 https://arxiv.org/abs/2403.17846",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2504.14135"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Multi-Agent Coordination across Diverse Applications: A Survey",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Comprehensive survey of multi-agent systems including task decomposition for robot coordination and LLM-based orchestration \u2014 https://arxiv.org/abs/2502.14743",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2403.17846"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83d\udd25",
+        "title": "The Essential Role of Causality in Foundation World Models for Embodied AI",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Theoretical analysis of causal reasoning requirements for world models in embodied agents \u2014 https://arxiv.org/abs/2402.06665",
+        "cluster": "embodied-ai",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2502.14743"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-27",
+    "theme": "Intent-to-action pipelines meet spatial reasoning: from LLM task decomposition to 3D scene graphs for robotic manipulation.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "MALLVi: Multi-Agent Framework for Integrated Generalized Robotics Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Agentic multi-agent system where a &quot;Thinker&quot; LLM translates high-level subtasks into executable parameters for manipulation agents \u2014 direct implementation of intent decomposition for robot control. \u2014 https://arxiv.org/abs/2602.16898",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.16898"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Embodied-RAG: Non-parametric Memory for Indoor/Outdoor Navigation and Explanation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Spatial RAG system capturing embodied memories at any semantic/spatial resolution, enabling retrieval-augmented navigation and language generation for embodied agents \u2014 bridges spatial memory with agentic reasoning. \u2014 https://arxiv.org/abs/2409.18313",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.16898"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "RoboEXP: Action-Conditioned Scene Graph for Robotic Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Interactive scene graph construction through exploration, providing prior object location knowledge + task feasibility reasoning (e.g., &quot;no spoon \u2192 ask for help&quot;) \u2014 crucial for real-world indoor manipulation. \u2014 https://arxiv.org/abs/2402.15487",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2409.18313"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "Open-Vocabulary Functional 3D Scene Graphs for Real-World Indoor Spaces",
+        "source": "arXiv (CVPR 2025)",
+        "published": "",
+        "summary": "Detects objects + interactive elements + functional relationships in indoor RGB-D sequences, enabling 3D question answering and robotic manipulation via functional scene graphs. \u2014 https://arxiv.org/abs/2503.19199",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2402.15487"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "The Essential Role of Causality in Foundation World Models for Embodied AI",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Argues causal models are inherently high-accuracy predictors of action consequences, making them essential for world models \u2014 predictive models become causal when trained with appropriate algorithms/datasets. \u2014 https://arxiv.org/abs/2402.06665",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2503.19199"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Latent Action Robot Foundation World Models for Cross-Embodiment Adaptation",
+        "source": "OpenReview",
+        "published": "",
+        "summary": "Robot world model operating in a unified latent action space shared across diverse embodiments \u2014 improves adaptation to unseen robot platforms. \u2014 https://openreview.net/forum?id=vEZgPr1deb",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2402.06665"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "N3D-VLM: Native 3D Grounding for Spatial Reasoning in Vision-Language Models",
+        "source": "arXiv",
+        "published": "",
+        "summary": "VLM with intrinsic 3D object perception, enabling precise 3D grounding + interpretable spatial understanding \u2014 addresses VLMs&#x27; lack of depth/spatial relationship comprehension. \u2014 https://arxiv.org/abs/2512.16561",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2512.16561"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models",
+        "source": "arXiv (CVPR 2025)",
+        "published": "",
+        "summary": "Training framework for spatial affordance prediction, spatial relationship prediction, and robotic manipulation using both 2D and 3D VLMs \u2014 addresses VLM spatial reasoning gaps. \u2014 https://arxiv.org/abs/2411.16537",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2512.16561"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "Robot Simulation Software: A 2026 Perspective",
+        "source": "Black Coffee Robotics",
+        "published": "",
+        "summary": "2026 overview of Unity, Isaac Sim, MuJoCo, Gazebo \u2014 computation, photo-realism, physics accuracy, and application suitability for each platform. Timely comparative guide for autonomous sim loop practitioners. \u2014 https://www.blackcoffeerobotics.com/blog/which-robot-simulation-software-to-use",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2411.16537"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "AffordGrasp: In-Context Affordance Reasoning for Open-Vocabulary Task-Oriented Grasping",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Framework identifies task-relevant objects, grounds part-level affordances via visual grounding, generates task-oriented grasp poses within affordance regions \u2014 functional, context-aware manipulation. \u2014 https://arxiv.org/abs/2503.00778",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2503.00778"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-26",
+    "theme": "Task decomposition, simulation scaffolding, and VLA reasoning dominate this week&#x27;s crop \u2014 a continuation of the intent-to-action focus with fresh traction on multi-robot coordination and sim-to-real pipelines.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Scale-Plan: Scalable Language-Enabled Task Planning for Heterogeneous Multi-Robot Teams",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Outperforms LLM and hybrid LLM-PDDL baselines on complex multi-agent tasks; introduces MAT2-THOR benchmark for reliable multi-robot planning evaluation. \u2014 https://arxiv.org/abs/2603.08814",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.08814"
+      },
+      {
+        "rank": 2,
+        "icon": "",
+        "title": "Large Language Models for Robotics: A survey",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Comprehensive survey covering LLM integration in embodied AI, including RoCo for multi-arm collaboration and task decomposition across 6 tasks. \u2014 https://arxiv.org/html/2311.07226v2",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.08814"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Vision-Language-Policy Model for Dynamic Robot Task Planning",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Outperforms VLA-based approaches in task decomposition and planning interpretability; combines VLMs with action policies for dynamic reasoning. \u2014 https://arxiv.org/html/2512.19178v1",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2512.19178v1"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "DiT4DiT: Jointly Modeling Video Dynamics and Actions for Generalizable Robot Control",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Uses video generation models as foundation model backbone \u2014 trains on internet-scale data to learn motion priors, causal structure, and implicit physical dynamics. \u2014 https://arxiv.org/html/2603.10448v1",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2603.10448v1"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83d\udd25",
+        "title": "Scaling Sim-to-Real Reinforcement Learning for Robot VLAs with Generative 3D Worlds",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Leverages generative 3D world models to scale unlimited synthetic data; ablation shows increasing scene diversity directly improves zero-shot generalization. \u2014 https://arxiv.org/abs/2603.18532",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.18532"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Language Movement Primitives: Grounding Language Models in Robot Motion",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Grounds VLMs into control-theoretic trajectories via dynamic movement primitives \u2014 semantically meaningful parameters that translate high-level reasoning into low-level behaviors. \u2014 https://arxiv.org/html/2602.02839",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.18532"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "N3D-VLM: Native 3D Grounding Enables Accurate Spatial Reasoning in Vision-Language Models",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Integrates 3D detection, grounding, and chain-of-thought reasoning \u2014 enhances accuracy and interpretability by working with structured 3D bounding box representations. \u2014 https://arxiv.org/html/2512.16561v1",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2512.16561v1"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Simplify Generalist Robot Policy Evaluation in Simulation with NVIDIA Isaac Lab-Arena",
+        "source": "NVIDIA Dev Blog",
+        "published": "",
+        "summary": "Scalable, repeatable simulation-based evaluation for generalist policies across diverse tasks, embodiments, and environments. \u2014 https://developer.nvidia.com/blog/simplify-generalist-robot-policy-evaluation-in-simulation-with-nvidia-isaac-lab-arena/",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://developer.nvidia.com/blog/simplify-generalist-robot-policy-evaluation-in-simulation-with-nvidia-isaac-lab-arena/"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "AI Agent Systems: Architectures, Applications, and Evaluation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Survey covering memory architectures, tool use, critic/verifier patterns for consistency checking, and long-term memory for extended interaction. \u2014 https://arxiv.org/html/2601.01743v1",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2601.01743v1"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "Reinforcement learning in robotic systems: A review on sim-to-real transfer",
+        "source": "ScienceDirect",
+        "published": "",
+        "summary": "Presents a sim-to-real RL framework for model optimization and iterative policy transfer; covers domain randomization, system identification, and domain adaptation. \u2014 https://www.sciencedirect.com/science/article/abs/pii/S0921889025004245",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S0921889025004245"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-24",
+    "theme": "agent-to-action pipelines and world-model tooling \u2014 from embedded/IoT \u201cagent skills\u201d to tactile-first manipulation and policy context.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Skilled AI Agents for Embedded and IoT Systems Development",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Surveys/argues for \u201cskilled\u201d LLM agents in embedded/HIL/IoT development workflows\u2014useful framing for robot-middleware style agent stacks. \u2014 https://arxiv.org/abs/2603.19583",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.19583"
+      },
+      {
+        "rank": 2,
+        "icon": "",
+        "title": "World4RL: Diffusion World Models for Policy Refinement with Reinforcement Learning for Robotic Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Uses diffusion world models to refine manipulation policies with RL\u2014interesting for imagination-driven policy improvement loops. \u2014 https://arxiv.org/abs/2509.19080",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.19583"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83c\udf00",
+        "title": "No Need to Look! Locating and Grasping Objects by a Robot Arm Covered with Sensitive Skin",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Tactile-first manipulation (skin-covered arm) that reduces reliance on vision\u2014adjacent but potentially strong for robust household interaction. \u2014 https://arxiv.org/abs/2508.17986",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2509.19080"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "China\u2019s New Five-Year Plan Prioritizes Robotics. The World Should Pay Attention.",
+        "source": "The Diplomat",
+        "published": "",
+        "summary": "Policy/standardization context for robotics scaling; weakly technical but can inform ecosystem/timing assumptions. \u2014 https://thediplomat.com/2026/03/chinas-new-five-year-plan-prioritizes-robotics-the-world-should-pay-attention/",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2508.17986"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "DreamDojo Platform for Scalable Robot Training",
+        "source": "Labellerr blog",
+        "published": "",
+        "summary": "Secondary write-up about a \u201cgeneralist robot world model\u201d platform; may contain pointers but needs source-tracing. \u2014 https://www.labellerr.com/blog/dreamdojo-generalist-robot-world-model/",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.labellerr.com/blog/dreamdojo-generalist-robot-world-model/"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-23",
+    "theme": "turning language into physically grounded action via spatial memory, probabilistic grounding, and simulation-ready digital twins.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Meanings and Measurements: Multi-Agent Probabilistic Grounding for Vision-Language Navigation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Agentic decomposition of metric+semantic language into grounded sub-queries, then probabilistic composition for metrically consistent actions; introduces MAPG-Bench + robot demo",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.19166"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "GSMem: 3D Gaussian Splatting as Persistent Spatial Memory for Zero-Shot Embodied Exploration and Reasoning",
+        "source": "arXiv",
+        "published": "",
+        "summary": "3D Gaussian splatting as \u201cre-observable\u201d spatial memory; can render optimal novel views post-hoc to fix missed observations and improve VLM reasoning",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.19137"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "MotionAnymesh: Physics-Grounded Articulation for Simulation-Ready Digital Twins",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Zero-shot mesh\u2192articulated asset pipeline that grounds VLM part reasoning with physical priors and enforces collision-free articulation",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.12936"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "CORE: Contextual Safety Reasoning and Grounding for Open-World Robots",
+        "source": "arXiv",
+        "published": "",
+        "summary": "VLM infers context-dependent safety rules from vision, grounds spatial safe sets, enforces online with control barrier functions + uncertainty-aware guarantees",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.19983"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "Asset-Centric Metric-Semantic Maps of Indoor Environments",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Explicit indoor map with object meshes+poses+categories (Unitree Go2 + RGB-D) positioned as a better mid-layer for LLM planning than scene-only semantics or object-only mapping",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2510.10778"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83c\udf00",
+        "title": "A Hyperbolic Perspective on Hierarchical Structure in Object-Centric Scene Representations",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Post-hoc projection of slot embeddings into hyperbolic space reveals latent scene\u2192object hierarchies; suggests geometry as an inductive bias for multi-level world models",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.14022"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "Newton 1.0 GA: GPU-accelerated physics engine for contact-rich manipulation & locomotion",
+        "source": "NVIDIA Developer Blog",
+        "published": "",
+        "summary": "NVIDIA Developer Blog \u2014 Modular sim stack (URDF/MJCF/USD) unifying solvers + deformables; useful substrate for training policies and validating simulation-ready twins",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://developer.nvidia.com/blog/newton-adds-contact-rich-manipulation-and-locomotion-capabilities-for-industrial-robotics/"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "World Models: Computing the Uncomputable",
+        "source": "Not Boring (Substack)",
+        "published": "",
+        "summary": "Not Boring (Substack) \u2014 Broad but concrete synthesis of action-conditioned world models for planning; good landscape map of approaches and tradeoffs",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.notboring.co/p/world-models"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-22",
+    "theme": "intent\u2192plan\u2192action loops are getting more *modular* and more *real-world benchmarkable* (digital twins, TAMP+FMs, and reproducible agent stacks).",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "TwinRL: Digital Twin-Driven Reinforcement Learning for Real-World Robotic Manipulation",
+        "source": "arXiv",
+        "published": "2026-03-19",
+        "summary": "Reconstructs a high-fidelity \u201cdigital twin\u201d from smartphone-captured scenes, then uses sim to expand exploration + guide online RL for VLA manipulation with minimal real-world time.",
+        "cluster": "indoor-world-model",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.09023"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "TiPToP: A Modular Open-Vocabulary Planning System for Robotic Manipulation",
+        "source": "arXiv",
+        "published": "2026-03-10",
+        "summary": "Zero-robot-data modular stack (vision foundation models + task-and-motion planning) that matches/outscores a VLA fine-tuned on 350h DROID; open-source & component-level failure analysis.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.09971"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "AgenticLab: A Real-World Robot Agent Platform that Can See, Think, and Act",
+        "source": "arXiv",
+        "published": "2026-03-09",
+        "summary": "Model-agnostic real-robot benchmark + closed-loop pipeline (perception \u2192 decomposition \u2192 verification \u2192 replanning) to expose long-horizon grounding failures that VQA-style tests miss.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.01662"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "Loc3R-VLM: Language-based Localization and 3D Reasoning with Vision-Language Models",
+        "source": "arXiv",
+        "published": "2026-03-18",
+        "summary": "Adds explicit 3D spatial supervision from monocular video (global layout reconstruction + egocentric situation modeling) to make 2D VLMs viewpoint-aware for localization/3D QA.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.18002"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "Motion-MLLM: Egomotion-Aware Video Representation for Efficient and Accurate 3D Scene Understanding",
+        "source": "arXiv",
+        "published": "2026-03-18",
+        "summary": "Injects IMU/egomotion tokens to ground absolute scale and spatial relations; proposes motion-visual keyframe filtering for better cost-effectiveness than heavy 3D reps.",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.17980"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "MAS-Orchestra + MASBENCH: Understanding and Improving Multi-Agent Reasoning Through Holistic Orchestration and Controlled Benchmarks",
+        "source": "arXiv",
+        "published": "2026-03-09",
+        "summary": "Treats MAS orchestration as function-calling RL and proposes a controlled benchmark (depth/horizon/breadth/parallel/robustness) to predict when multi-agent beats single-agent.",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.14652"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "Latent Policy Steering (LPS) with Embodiment-Agnostic Pretrained World Models",
+        "source": "arXiv",
+        "published": "2026-03-10",
+        "summary": "Pretrains a world model with optical-flow action reps across robots+humans, then uses the WM + value function to steer a base policy\u2014helpful for low-data real-world regimes.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2507.13340"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "WorldVLM: Combining World Model Forecasting and Vision-Language Reasoning",
+        "source": "arXiv",
+        "published": "2026-03-17",
+        "summary": "Hybrid VLM+world-model architecture: VLM emits high-level behavior commands, WM predicts dynamics. Presented in driving, but the pattern is a clean separation for embodied planners.",
+        "cluster": "causal-world-models",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.14497"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Causality Elicitation from Large Language Models",
+        "source": "arXiv",
+        "published": "2026-03-04",
+        "summary": "Turns an LLM into an inspectable causal-hypothesis generator: sample docs \u2192 canonicalize events \u2192 run causal discovery to surface candidate causal graphs (not \u201ctrue causality\u201d, but useful).",
+        "cluster": "wildcard",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.04276"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "Large Scale Robotic Material Handling: Learning, Planning, and Control",
+        "source": "arXiv",
+        "published": "2026-03-01",
+        "summary": "Full-stack autonomy on a 40-ton hydraulic material handler (pile attack point selection + trajectory control for an underactuated gripper). A rare \u201cindustrial scale\u201d embodied stack.",
+        "cluster": "robot-learning",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2508.09003"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-21",
+    "theme": "intent \u2192 skills \u2192 control loops(how we turn language into robust robot behavior, with intermediate representations like hierarchical skills, scene graphs, and 3D grounding).",
+    "candidates": [
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "Hierarchical Open-Vocabulary 3D Scene Graphs for Language-Grounded Robot Navigation (HOV-SG)",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Compresses open-vocabulary maps into hierarchical scene graphs (object/room/floor) and demonstrates long-horizon language-conditioned navigation.",
+        "cluster": "spatial-understanding",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2403.17846"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Inducing Causal World Models in LLMs for Zero-Shot Physical Reasoning",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Attempts to *inject causal structure* into LLM-style reasoning for physical scenarios; adjacent to \u201cinterventionist\u201d world models for embodied agents.",
+        "cluster": "causal-world-models",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2507.19855"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Three-dimensional-grounded vision-language framework for robotic task planning: Automated prompt synthesis and supervised reasoning",
+        "source": "ScienceDirect (Engineering Applications of AI)",
+        "published": "",
+        "summary": "Practical path: frozen VLM + automated prompt synthesis + supervision to achieve high-precision 3D grounding for task planning.",
+        "cluster": "vision-language",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S0952197625032993"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "Transformation of industrial robotics with natural language models: Recent progress and future prospects",
+        "source": "ScienceDirect",
+        "published": "",
+        "summary": "Industry-facing survey; useful to map research architectures to deployment constraints (safety, latency, integration).",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/pii/S073658452500167X"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-19",
+    "theme": "Intent-to-action pipeline tightens \u2014 hierarchical planners, spatial grounding, and world models converge.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Spatially Grounded Long-Horizon Task Planning in the Wild (GroundedPlanBench)",
+        "source": "arXiv \u2014 published 1 week ago",
+        "published": "",
+        "summary": "Benchmark jointly evaluating action planning and spatial grounding; tests whether VLM-generated plans correspond to physically feasible robot manipulation. Built on DROID with 308 real-world scenes, 1K evaluation episodes.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.13433"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "GRHP: Graph-Fused Hierarchical Planning for Embodied Long-Horizon Robotic Tasks",
+        "source": "ScienceDirect \u2014 published December 5, 2025",
+        "published": "",
+        "summary": "Dual-graph architecture \u2014 scene graph for spatial layouts + task graph for dependencies. Addresses dynamic replanning with explicit spatial associations between objects.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S095219762503444X"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83c\udf00",
+        "title": "3D-Grounded Vision-Language Framework for Robotic Task Planning",
+        "source": "arXiv \u2014 published February 13, 2025",
+        "published": "",
+        "summary": "Modular framework with automated prompt synthesis and supervised reasoning for 3D grounding. Ablation shows removing language model supervisor drops success rate by 67%.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "LAC-WM: Latent Action Robot Foundation World Models for Cross-Embodiment Adaptation",
+        "source": "OpenReview \u2014 published October 8, 2025",
+        "published": "",
+        "summary": "Robot foundation world model operating in learned unified latent action space shared across diverse embodiments. Explores how unified action space improves world model performance when adapted to unseen robot embodiments.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://openreview.net/forum?id=vEZgPr1deb"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83d\udd25",
+        "title": "4D Latent World Model for Robot Planning",
+        "source": "OpenReview \u2014 published October 8, 2025",
+        "published": "",
+        "summary": "Serves as a planner, generating future scenes translated into executable actions via goal-conditioned inverse dynamics model. Demonstrates superior visual quality, physical consistency, and multi-view coherence.",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83d\udd25",
+        "title": "V-JEPA 2: World Model and Physical Reasoning Benchmarks",
+        "source": "Meta AI \u2014 recent",
+        "published": "",
+        "summary": "New V-JEPA 2 world model + benchmarks for physical reasoning. Robot plans by imagining consequences of candidate actions and rating them via model-predictive control toward desired goals.",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://ai.meta.com/blog/v-jepa-2-world-model-benchmarks/"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "Digital Twin based Automatic Reconfiguration of Robotic Systems",
+        "source": "arXiv \u2014 published October 30, 2025",
+        "published": "",
+        "summary": "Combines SLAM (spatial mapping) with path planning for automatic reconfiguration in smart environments.",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2511.00094"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "A-RAG: Scaling Agentic Retrieval-Augmented Generation",
+        "source": "arXiv \u2014 published February 3, 2026",
+        "published": "",
+        "summary": "Hierarchical retrieval interfaces for agentic RAG. Two paradigms: multi-passage single-shot retrieval and step-by-step workflow execution.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.03442"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83d\udd25",
+        "title": "MoWM: Mixture-of-World-Models for Embodied Planning",
+        "source": "arXiv \u2014 published September 30, 2025",
+        "published": "",
+        "summary": "Unsupervised world models trained on large-scale video learn universal dynamics. Maps predicted future state sequences to action sequences via inverse dynamics model.",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2509.21797"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "AffordGrasp: In-Context Affordance Reasoning for Open-Vocabulary Task-Oriented Grasping",
+        "source": "arXiv \u2014 published March 2, 2025",
+        "published": "",
+        "summary": "Framework identifies task-relevant objects, grounds part-level affordances via visual grounding module, generates task-oriented grasp poses within affordance regions.\n\n---",
+        "cluster": "wildcard (affordance reasoning)",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2503.00778"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-18",
+    "theme": "Intent-to-action pipelines take center stage \u2014 new work on hierarchical cognition, spatial grounding benchmarks, and sim-to-real transfer advances.",
+    "candidates": [
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "RoboCasa365: A Large-Scale Simulation Framework for Training and Benchmarking Generalist Robots",
+        "source": "arXiv",
+        "published": "",
+        "summary": "365 days of simulated household scenarios for training generalist robots at scale. Tests progress toward everyday task execution.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.04356"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "CAIMAN: Causal Action Influence Detection for Sample-Efficient Loco-Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Hierarchical framework for whole-body object pushing with legged robots using causal influence as intrinsic motivation.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2502.00835"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Ctrl-World: A Controllable Generative World Model for Robot Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Multi-view world model with pose-conditioned memory retrieval and frame-level action conditioning for precise instruction-following.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2510.10125"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "H-WM: Robotic Task and Motion Planning Guided by Hierarchical World Model",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Addresses LLM planner limitations (language as interface \u2192 semantic-execution misalignment) with world-model-based predictive visual guidance.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.11291"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Beyond Dense Futures: World Models as Structured Planners for Robotic Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Two-stage training with discrete token vocabulary \u2014 world model predicts structured frames, then maps foresight to low-level actions.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.12553"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Four memory dimensions (temporal, spatial, object, procedural) framework for evaluating history-dependent manipulation policies.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.04639"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "GeCo-SRT: Geometry-aware Continual Adaptation for Robotic Cross-Task Sim-to-Real Transfer",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Geometry-aware adaptation method for transferring policies across tasks from simulation to real robots.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.20871"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-17",
+    "theme": "World models graduate from dense prediction to structured planning, while multi-agent hierarchies learn to optimize their own prompts.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "StructVLA: Beyond Dense Futures \u2014 World Models as Structured Planners for Robotic Manipulation",
+        "source": "arXiv",
+        "published": "2026-03-13",
+        "summary": "Replaces dense future-frame rollouts with sparse, kinematically meaningful \"structured frames\" (gripper transitions, turning points) that bridge visual planning and low-level action. 75% on SimplerEnv-WidowX, 94.8% on LIBERO.",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.12553"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Hierarchical LLM-Based Multi-Agent Framework with Prompt Optimization for Multi-Robot Task Planning",
+        "source": "arXiv (ICRA 2026)",
+        "published": "2026-02-25",
+        "summary": "Upper-layer LLM decomposes tasks and assigns to lower-layer agents that generate PDDL problems. TextGrad-inspired textual-gradient updates optimize each agent's prompt. SOTA on MAT-THOR: 0.95/0.84/0.60 on compound/complex/vague tasks.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.21670"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Cognition to Control (C2C): Multi-Agent Learning for Human-Humanoid Collaborative Transport",
+        "source": "arXiv",
+        "published": "2026-03-05",
+        "summary": "Three-layer hierarchy: VLM grounding \u2192 deliberative skill/coordination layer (MARL as Markov potential game) \u2192 whole-body control. Translates human intent into contact-stable humanoid motion for collaborative transport tasks.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.03768"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "Multimodal Behavior Tree Generation: A Small VLM for Robot Task Planning",
+        "source": "arXiv",
+        "published": "2026-03-06",
+        "summary": "Fine-tunes compact VLMs (500M\u20134B params) to generate executable BehaviorTree.CPP behavior trees from RGB observations + instructions. 4B model hits 87% success rate on household tasks, matching closed-source models at a fraction of compute.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.06084"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "IMR-LLM: Industrial Multi-Robot Task Planning and Program Generation",
+        "source": "arXiv",
+        "published": "2026-03-03",
+        "summary": "LLM constructs disjunctive graphs for industrial multi-robot scheduling, then uses process trees to guide executable low-level program generation. Includes IMR-Bench for industrial multi-robot task evaluation.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.02669"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Reflective Test-Time Planning for Embodied LLMs",
+        "source": "arXiv",
+        "published": "2026-02-24",
+        "summary": "Introduces reflection-in-action (test-time scaling to score candidate actions before execution) and reflection-on-action (test-time training to update policy after execution). Includes retrospective re-evaluation for long-horizon credit assignment. Real-robot trials.",
+        "cluster": "embodied-ai",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.21198"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "InSpatio-WorldFM: Open-Source Real-Time 3D World Model",
+        "source": "InSpatio (product release)",
+        "published": "2026-03-04",
+        "summary": "Open-source generative frame model for real-time 3D scene generation on consumer GPUs. Multi-view consistent, spatially-aware \u2014 designed for robotics, simulation, and XR edge deployment. Not a paper, but a released model.",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": "https://www.inspatio.com/en/models/worldfm"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Latent Particle World Models (LPWM): Self-supervised Object-centric Stochastic Dynamics Modeling",
+        "source": "arXiv",
+        "published": "2026-03-06",
+        "summary": "Self-supervised discovery of keypoints, bounding boxes, and object masks directly from video. End-to-end trained object-centric world model supporting unconditional video prediction and goal-conditioned imitation learning.",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.04553"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "GeoAgentic-RAG: Multi-Agent Framework for Autonomous Geospatial Reasoning",
+        "source": "ScienceDirect (ISPRS Journal)",
+        "published": "2026-02 (est.)",
+        "summary": "Multi-agent framework combining multimodal LLMs with spatial-semantic retrieval for geospatial question answering. Addresses the core limitation that text-based similarity can't represent topology and spatial context. Adjacent to indoor spatial RAG.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 3,
+        "url": "https://www.sciencedirect.com/science/article/pii/S1569843226001111"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "Ego-Vision World Model for Humanoid Contact Planning",
+        "source": "arXiv",
+        "published": "2025-10-13 (v2: 2026-03-08)",
+        "summary": "Learned world model + sampling-based MPC for humanoid contact planning. Trained on demonstration-free offline data; handles wall support, object blocking, arch traversal. Deployed on physical humanoid with ego-centric depth.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2510.11682"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-16",
+    "theme": "Agentic frameworks are converging on robot manipulation \u2014 this week's standout papers show LLMs not just planning, but rewriting their own low-level controllers, self-resetting for data collection, and closing the loop from intent to physical action.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-12",
+        "summary": "Unifies data collection, policy learning, and deployment under a single VLM-driven controller using Entangled Action Pairs for autonomous self-resetting loops \u2014 25% success rate improvement on long-horizon tasks with 53.7% less human effort.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.11558"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "AOR: Multimodal Coding Agents as In-Context Policy Learners for Robot Manipulation",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-03",
+        "summary": "LLM agent improves manipulation policy by rewriting its own Python controller code between trials \u2014 no demonstrations, no reward engineering, no gradient updates. The full motor control implementation is the unit of reasoning.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.04466"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "HALO: A Unified Vision-Language-Action Model for Embodied Multimodal Chain-of-Thought Reasoning",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-27",
+        "summary": "Unified VLA enabling sequential textual task reasoning \u2192 visual subgoal prediction \u2192 action prediction via Mixture-of-Transformers architecture. Includes automated EM-CoT data synthesis pipeline. Strong on long-horizon and OOD scenarios.",
+        "cluster": "vision-language",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.21157"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "RoboCritics: Enabling Reliable End-to-End LLM Robot Programming through Expert-Informed Critics",
+        "source": "arXiv (cs.RO) \u2014 HRI 2026",
+        "published": "2026-03-06",
+        "summary": "Augments LLM-based robot programming with expert critics that analyze motion traces for safety violations (joint speeds, collisions, unsafe poses) and offer one-click fixes. User study (n=18) shows reduced safety violations and better execution quality vs. baseline LLM interface.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.06842"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "HiTOC: Hierarchical Task-Oriented Communication for Long-Horizon Tasks",
+        "source": "arXiv (eess.IV) \u2014 IEEE ICC 2026",
+        "published": "2026-01-20",
+        "summary": "Hierarchical planner-actor architecture where robot transmits only subtask-relevant observations to edge server. Conditional variational information bottleneck minimizes bandwidth per subtask. Outperforms SOTA on MAP-THOR benchmark.",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.13685"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Trajectory-Informed Memory Generation for Self-Improving Agent Systems",
+        "source": "arXiv (cs.AI)",
+        "published": "2026-03-11",
+        "summary": "Framework for extracting structured learnings from agent execution trajectories \u2014 strategy tips from successes, recovery tips from failures, optimization tips from inefficiencies. Up to 14.3pp gains on AppWorld benchmark; 149% relative improvement on complex tasks.",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.10600"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "MANGO: Sim2real Image Translation Enables Viewpoint-Robust Policies from Fixed-Camera Datasets",
+        "source": "arXiv (cs.CV/cs.RO)",
+        "published": "2026-01-14",
+        "summary": "Unpaired image translation with segmentation-conditioned InfoNCE loss bridges sim-to-real visual gap while maintaining viewpoint consistency. Increases shifted-view success rates by 40+ percentage points using only small fixed-camera real-world datasets.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2601.09605"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Test-Driven Agentic Framework for Reliable Robot Controller Synthesis",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-28",
+        "summary": "Test-driven LLM agent iteratively refines generated controller code via structured test suites. Dual-tier repair strategy (prompt-level + direct code editing). Substantially improves reliability over one-shot generation especially for underspecified prompts.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.00455"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "When World Models Dream Wrong: Physical-Conditioned Adversarial Attacks against World Models",
+        "source": "arXiv (cs.LG)",
+        "published": "2026-02-21",
+        "summary": "First white-box attack on generative world models via perturbed physical-condition channels (HDMap, 3D-box features). Downstream impact: 4% drop in 3D detection, 20% worse planning. Important for world-model reliability in any embodied system.",
+        "cluster": "causal-world-models",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2602.18739"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "Federated Causal Representation Learning for Decentralized Counterfactual Reasoning",
+        "source": "arXiv (cs.LG)",
+        "published": "2026-02-23",
+        "summary": "Each client learns latent states disentangling intrinsic dynamics from control influences; central server estimates global transition structure. Enables cross-client counterfactual queries (\"what if client B operated differently?\") without sharing raw data. Interesting paradigm for distributed robot fleets.",
+        "cluster": "causal-world-models",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2602.19414"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-15",
+    "theme": "The intent-to-action pipeline matures \u2014 from VLM grounding layers and hierarchical skill coordination to world models that actually work as simulators, plus a pragmatic VLA that scales to 20K hours of real-world data.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Cognition to Control (C2C): Multi-Agent Learning for Human-Humanoid Collaborative Transport",
+        "source": "arXiv (cs.RO, cs.AI)",
+        "published": "",
+        "summary": "Three-layer hierarchy (VLM grounding \u2192 deliberative MARL skill layer \u2192 whole-body control) bridging System 2 deliberation with low-latency execution; emergent leader-follower behaviors",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.03768"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "LingBot-VLA: A Pragmatic VLA Foundation Model",
+        "source": "arXiv (cs.RO)",
+        "published": "",
+        "summary": "20K hours real-world dual-arm data across 9 robot configs; SOTA on 100 tasks per platform with 130 post-training episodes; open-source codebase (261 samples/sec, 1.5\u20132.8\u00d7 speedup)",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2601.18692"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "AGPS: Agent-Guided Policy Search \u2014 Accelerating Robotic RL with Agent Guidance",
+        "source": "",
+        "published": "",
+        "summary": "Accelerating Robotic RL with Agent Guidance** \u2014 arXiv (cs.RO, cs.AI) \u2014 Replaces human supervisors in HIL RL with multimodal agent as semantic world model; corrective waypoints and exploration pruning; outperforms HIL on deformable objects",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.11978"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "Automating Skill Acquisition from Open-Source Agentic Repositories",
+        "source": "arXiv (cs.AI)",
+        "published": "",
+        "summary": "Framework mining GitHub repos to extract procedural skills into SKILL.md format; 40% gains in knowledge transfer efficiency; the SKILL.md spec as universal agent capability format",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.11808"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "NovaPlan: Zero-Shot Long-Horizon Manipulation via Closed-Loop Video Language Planning",
+        "source": "arXiv (cs.RO)",
+        "published": "",
+        "summary": "Hierarchical VLM + video planning with geometrically grounded execution; autonomous re-planning on failure using object keypoints and hand poses from generated videos",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.20119"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-14",
+    "theme": "World models are reaching deployment maturity \u2014 from edge-native embodied brains to $1B JEPA bets \u2014 while VLA architectures splinter into guidance-enhanced and minimal-baseline camps.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "DreamZero: World Action Models are Zero-shot Policies",
+        "source": "arXiv (NVIDIA)",
+        "published": "",
+        "summary": "14B-parameter World Action Model that jointly models video and action via diffusion, enabling zero-shot robot policies; cross-embodiment transfer with only 30 min of play data",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.15922"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "OmniGuide: Universal Guidance Fields for Enhancing Generalist Robot Policies",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Inference-time guidance framework that steers VLA policies (\u03c0\u2080.\u2085, GR00T N1.6) using differentiable 3D energy fields from foundation models and VLMs",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2603.10052"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "ACE Robotics Open-Sources Kairos 3.0-4B",
+        "source": "ACE Robotics / Zawya",
+        "published": "",
+        "summary": "ACE Robotics / Zawya \u2014 First native embodied world model with unified multi-modal understanding-generation-prediction; 4B params, 72x faster than Cosmos 2.5, real-time edge on Jetson Thor",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.zawya.com/en/economy/global/ace-robotics-open-sources-real-time-generative-world-model-kairos-30-4b-vypqm9w6"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "VLM-PoseManip: Dexterous Manipulation via VLM-based Instructive Pose Estimation for HRC",
+        "source": "ScienceDirect",
+        "published": "",
+        "summary": "Unified framework bridging high-level instruction understanding and physically grounded dexterous execution for human-robot collaboration in unstructured settings",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S1474034626002004"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-13",
+    "theme": "World models learning from autonomous play, control theory meets agentic AI, and memory architectures for personalized embodied agents.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "PlayWorld: Learning Robot World Models from Autonomous Play",
+        "source": "arXiv (Princeton / Caltech)",
+        "published": "2026-03-09",
+        "summary": "First system to learn video world models entirely from unsupervised robot self-play rather than human demos. RL in the world model improves real-world policy success by 65%. Directly addresses sim-to-real gap via scalable autonomous data collection.",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.09030"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "A Control-Theoretic Foundation for Agentic Systems",
+        "source": "arXiv",
+        "published": "2026-03-11",
+        "summary": "Formalizes agentic AI as hierarchical control loops with 5 levels of agency \u2014 from reactive rules to self-synthesizing control objectives. Provides mathematical stability/safety analysis framework for AI-in-the-loop robot control. A rare rigorous foundation for what's usually hand-wavy.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.10779"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "DM0: An Embodied-Native Vision-Language-Action Model towards Physical AI",
+        "source": "arXiv (Zhiyuan Robot / multiple labs)",
+        "published": "2026-02-20",
+        "summary": "Purpose-built VLA model (not adapted from chat LLM) using Qwen3-1.7B backbone with dedicated perception encoder. Designed ground-up for embodied reasoning + manipulation action output. Represents the shift from \"VLM + action wrapper\" to \"embodied-native\" architectures.",
+        "cluster": "vision-language",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.14974"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "MEMENTO: Embodied Agents Meet Personalization via Memory Utilization",
+        "source": "arXiv (ICLR 2026)",
+        "published": "2025-05-22 (accepted ICLR 2026)",
+        "summary": "Benchmark + hierarchical knowledge-graph memory for personalized embodied agents. Agents can recall object semantics but fail at applying sequential user patterns. Proposes episodic memory \u2192 KG user-profile architecture. Directly relevant to spatial RAG for personalized robot task planning.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2505.16348"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "IntentCUA: Intent-Level Skill Abstraction for Multi-Agent Planning",
+        "source": "arXiv (AAMAS 2026)",
+        "published": "2026-02-19",
+        "summary": "Multi-agent framework where Planner, Plan-Optimizer, and Critic share intent-abstracted memory. Reduces redundant re-planning via skill retrieval from intent prototypes. 74.8% task success on long-horizon desktop tasks. Transferable architecture for robot task decomposition.",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.17049"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83c\udf00",
+        "title": "HMR-1: Hierarchical Massage Robot with VLM for Embodied Healthcare",
+        "source": "arXiv",
+        "published": "2026-03-09",
+        "summary": "VLM-based acupoint grounding + low-level trajectory control for massage robots. Includes MedMassage-12K dataset (12K images, 174K QA pairs). Unusual but demonstrates the high-level grounding \u2192 low-level control pattern in a novel domain.",
+        "cluster": "embodied-ai",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.08817"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "Speech-Omni-Lite: Portable Speech Interfaces for VLMs",
+        "source": "arXiv",
+        "published": "2026-03-10",
+        "summary": "Plug-and-play speech modules that bolt onto any frozen VL backbone \u2014 adds speech understanding + generation without retraining. Achieves parity with models trained on millions of hours using only thousands. Relevant for voice-commanded robot interfaces.",
+        "cluster": "vision-language",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.09627"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "CARAG: Context-Aware RAG over Spatial Knowledge Graphs",
+        "source": "ISPRS International Journal of Geo-Information",
+        "published": "2026-02",
+        "summary": "RAG framework treating spatial data + documents as unified knowledge substrate via spatial knowledge graph with concept and instance levels. Applied to railway O&M but the architecture \u2014 spatial KG as RAG source for context-aware retrieval \u2014 maps directly to indoor robot spatial reasoning.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 4,
+        "url": "https://www.mdpi.com/2220-9964/15/2/78"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Simon Willison's Agentic Engineering Patterns",
+        "source": "simonwillison.net (blog)",
+        "published": "2026-02-23",
+        "summary": "Practitioner's pattern catalog for coding agents (Claude Code, Codex) \u2014 red/green TDD, linear codebase walkthroughs, cost-of-code recalibration. Not robotics, but the engineering patterns (test-first agent loops, supervisor patterns) transfer to agentic robot middleware design.",
+        "cluster": "agentic-systems",
+        "relevance": 3,
+        "url": "https://simonwillison.net/2026/Feb/23/agentic-engineering-patterns/"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "A Natural Behavior Planner for Multi-Personal HRI in Simulation",
+        "source": "ScienceDirect (Robotics and Autonomous Systems: Compositionality)",
+        "published": "2026-03",
+        "summary": "Extends affordance reasoning beyond physical manipulation to social cues and contextual roles in multi-person HRI. Robot must perceive not just what actions objects afford, but how it ought to behave in social context. Bridges affordance theory with social robot behavior planning.\n\n---\n\n*Generated by research-agent cron, 2026-03-13 08:00 CET*",
+        "cluster": "wildcard",
+        "relevance": 3,
+        "url": "https://www.sciencedirect.com/science/article/pii/S3050741326000017"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-12",
+    "theme": "Object-centric world models get real; spatial grounding closes the loop from perception to manipulation; the VC consensus on world models crystallizes around the data-vs-physics inflection.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Latent Particle World Models (LPWM): Self-supervised Object-centric Stochastic Dynamics Modeling",
+        "source": "arXiv (ICLR 2026 Oral)",
+        "published": "2026-03-04",
+        "summary": "Self-supervised object-centric world model that discovers keypoints, bboxes, and masks from video; models stochastic particle dynamics and supports goal-conditioned imitation learning.",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.04553"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "RAGNav: Retrieval-Augmented Topological Reasoning for Multi-Goal Visual-Language Navigation",
+        "source": "arXiv",
+        "published": "2026-03-04",
+        "summary": "RAG framework for multi-goal indoor navigation with dual-basis memory (topological map + semantic forest), enabling spatial-aware retrieval and sequential planning in complex indoor environments.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.03745"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "DACo: Global Commander and Local Operative \u2014 Dual-Agent Framework for Scene Navigation",
+        "source": "arXiv",
+        "published": "2026-02-21",
+        "summary": "Decouples global deliberation from local grounding via a dual-agent architecture. Global Commander plans high-level strategy; Local Operative handles egocentric perception and execution. 4.9-6.5% improvements over baselines in zero-shot VLN.",
+        "cluster": "intent-to-action",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.18941"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "ABot-M0: VLA Foundation Model for Robotic Manipulation with Action Manifold Learning",
+        "source": "arXiv",
+        "published": "2026-02-16",
+        "summary": "\"One-brain, many-forms\" VLA that learns a unified action manifold from 6M+ trajectories across diverse robot morphologies. Proposes Action Manifold Hypothesis: effective robot actions lie on a low-dimensional manifold, not in full action space.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.11236"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Can World Models Unlock General Purpose Robotics?",
+        "source": "Bessemer Venture Partners",
+        "published": "2026-03-11",
+        "summary": "VC deep-dive comparing the world model moment to NLP's 2005 inflection. Key stat: V-JEPA 2 takes ~16s/action; real-time needs 100x speedup. Frames the data gap as fundamentally harder than LLMs' internet bootstrapping.",
+        "cluster": "wildcard",
+        "relevance": 4,
+        "url": "https://www.bvp.com/atlas/can-world-models-unlock-general-purpose-robotics"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "MV-RoboBench: Seeing Across Views \u2014 Benchmarking Spatial Reasoning of VLMs in Robotic Scenes",
+        "source": "arXiv",
+        "published": "2025-10 (v2 updated 2026-03)",
+        "summary": "Multi-view spatial reasoning benchmark for VLMs and VLAs. Key finding: strong single-view VLM scores don't transfer to multi-view robotic tasks \u2014 spatial intelligence and task execution are correlated only in multi-view settings.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2510.19400"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "GeCo-SRT: Geometry-aware Continual Adaptation for Robotic Cross-Task Sim-to-Real Transfer",
+        "source": "arXiv (CVPR 2026)",
+        "published": "2026-02-24",
+        "summary": "Continual sim-to-real transfer that accumulates geometric knowledge across tasks via mixture-of-experts. 52% avg improvement over baseline, only 1/6 data needed for new task adaptation. Reframes sim-to-real as knowledge accumulation, not isolated transfer.",
+        "cluster": "wildcard",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.20871"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Where Bits Matter in World Model Planning: Mixed-Bit Quantization for Spatial Reasoning",
+        "source": "arXiv (Workshop)",
+        "published": "2026-02-12",
+        "summary": "Studies how bit allocation across world model modules affects spatial planning. Finds a critical 4-bit transition regime where encoder precision matters most \u2014 practical insight for deploying world models on edge robotics hardware.",
+        "cluster": "indoor-world-model",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2602.11882"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Latent World Models for Automated Driving: A Unified Taxonomy",
+        "source": "arXiv (IEEE T-ITS submission)",
+        "published": "2026-03-10",
+        "summary": "Comprehensive taxonomy of latent-space world models for driving \u2014 but the framework (latent worlds/actions/generators, structural priors, five cross-cutting mechanics) transfers directly to indoor robotics world models. Good architectural reference.",
+        "cluster": "causal-world-models",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2603.09086"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "Where Autonomy Works: Evaluating Robot Capabilities in 2026",
+        "source": "Epoch AI",
+        "published": "2026-02",
+        "summary": "Rigorous assessment: navigation is deployed, manipulation works only in controlled settings, transfer is rarely demonstrated. Foundation models are now default for manipulation but speed (3-10x slower than humans) isn't the main bottleneck \u2014 generalization is.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 4,
+        "url": "https://epoch.ai/blog/where-autonomy-works-evaluating-robot-capabilities-in-2026"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-11",
+    "theme": "World models are becoming practical robot simulators, while spatial reasoning benchmarks expose how far VLMs still have to go \u2014 today's batch spans interactive world simulation for policy training, multi-agent manipulation orchestration, VLM-driven humanoid control, and several new benchmarks probing spatial intelligence in indoor scenes.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Interactive World Simulator for Robot Policy Training and Evaluation",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-09",
+        "summary": "Consistency-model-based world simulator that runs at 15 FPS on a single RTX 4090, enabling 10+ minute stable rollouts; policies trained purely on world-model-generated data match real-world-trained policies.",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.08546"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "MetaWorld-X: Hierarchical World Modeling via VLM-Orchestrated Experts for Humanoid Loco-Manipulation",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-09",
+        "summary": "Decomposes humanoid whole-body control into specialized expert policies trained under human motion priors, then uses a VLM to dynamically compose them for multi-stage loco-manipulation tasks.",
+        "cluster": "vision-language",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.08572"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "MALLVI: A Multi-Agent Framework for Integrated Generalized Robotics Manipulation",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-18",
+        "summary": "Multi-agent VLM framework (Decomposer, Localizer, Thinker, Reflector) for closed-loop robotic manipulation; the Reflector enables targeted error recovery by reactivating only relevant agents instead of full replanning.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.16898"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "FindAnything: Open-Vocabulary and Object-Centric Mapping for Robot Exploration in Any Environment",
+        "source": "arXiv (cs.RO)",
+        "published": "2025-04-11 (v4 updated recently)",
+        "summary": "Real-time open-vocabulary object-centric volumetric mapping using eSAM + VL features; faster and more memory-efficient than SOTA, deployable on resource-constrained robots including MAVs.",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2504.08603"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "SpatiaLQA: A Benchmark for Evaluating Spatial Logical Reasoning in Vision-Language Models",
+        "source": "arXiv (cs.CV) \u2014 Accepted CVPR 2026",
+        "published": "2026-02-24",
+        "summary": "9,605 QA pairs from 241 real indoor scenes testing spatial *logical* reasoning (multi-step spatial dependencies); proposes recursive scene graph reasoning that outperforms all 41 tested VLMs.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.20901"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "SpatiaLab: Can Vision-Language Models Perform Spatial Reasoning in the Wild?",
+        "source": "arXiv (cs.CV)",
+        "published": "2026-02-05",
+        "summary": "1,400 VQA pairs across 30 task types (depth/occlusion, orientation, 3D geometry, navigation) in realistic unconstrained scenes; exposes major VLM weaknesses in wild spatial reasoning.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.03916"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "Object-Aware Semantic Mapping Using Probability Density Functions for Indoor Relocalization and Path Planning",
+        "source": "Nature Scientific Reports",
+        "published": "2026-02 (estimated)",
+        "summary": "Probabilistic object-centric semantic map representation for indoor robots; unifies relocalization and path planning in a single object-level representation validated in a real apartment.",
+        "cluster": "indoor-world-model",
+        "relevance": 4,
+        "url": "https://www.nature.com/articles/s41598-026-40498-3"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "AVIC: Adaptive Test-Time Scaling with World Models for Visual Spatial Reasoning",
+        "source": "arXiv (cs.CV)",
+        "published": "2026-02-10",
+        "summary": "Studies *when* and *how much* visual imagination via world models actually helps spatial reasoning; introduces adaptive framework that matches fixed-imagination strategies with far fewer world-model calls.",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.08236"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "ReAcTree: Hierarchical LLM Agent Trees with Control Flow for Long-Horizon Task Planning",
+        "source": "arXiv (cs.AI) \u2014 Accepted AAMAS 2026",
+        "published": "2025-11-04 (v2: 2026-02-10)",
+        "summary": "Hierarchical agent tree that decomposes long-horizon goals into subgoals handled by specialized LLM nodes with episodic + working memory; nearly doubles ReAct's success rate on WAH-NL (31% \u2192 61%).",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2511.02424"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "Towards Learning a Generalizable 3D Scene Representation from 2D Observations",
+        "source": "arXiv (cs.CV) \u2014 Accepted ESANN 2026",
+        "published": "2026-02-11",
+        "summary": "Generalizable NeRF for predicting 3D workspace occupancy in a global frame from egocentric robot views; 26mm reconstruction error including occluded regions, trained on only 40 real scenes.",
+        "cluster": "spatial-understanding",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2602.10943"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-10",
+    "theme": "Agentic robot middleware goes real-world: robot-agnostic control, spatial memory retrieval, and the honest fragility of LLM-driven physical systems.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "RACAS: Controlling Diverse Robots With a Single Agentic System",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-07",
+        "summary": "Three LLM/VLM modules (Monitors, Controller, Memory Curator) communicate via natural language for closed-loop robot control \u2014 zero retraining across wheeled, multi-jointed limb, and underwater platforms. Only needs NL description of robot + action defs.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2603.05621"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "MoMa-SG: Articulated 3D Scene Graphs for Open-World Mobile Manipulation",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-22",
+        "summary": "Builds semantic-kinematic 3D scene graphs of articulated indoor environments \u2014 bridges semantics, geometry, and kinematics for long-horizon mobile manipulation. Includes Arti4D-Semantic dataset (62 RGB-D sequences, 600 object interactions). Validated on quadruped + mobile manipulator.",
+        "cluster": "indoor-world-model",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.16356"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "STaR: Scalable Task-Conditioned Retrieval for Long-Horizon Multimodal Robot Memory",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-09",
+        "summary": "Agentic reasoning framework for robot memory: builds task-agnostic multimodal long-term memory, then uses Information Bottleneck-based retrieval for compact, non-redundant memory snippets. MLLM agent plans search strategy + issues API calls to retrieve spatial/temporal/semantic memory. Deployed on real Husky robot.",
+        "cluster": "spatial-rag-robotics",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.09255"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "AgentRob: From Virtual Forum Agents to Hijacked Physical Robots",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-19",
+        "summary": "Bridges online forums, LLM agents, and physical Unitree Go2/G1 robots via MCP (Model Context Protocol). Forum agents poll for mentions, extract NL commands, dispatch robot actions, report back. Three-layer architecture (Forum \u2192 Agent \u2192 Robot). VLM-driven controllers expose robot primitives as callable tools.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.13591"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "Agentic AI for Robot Control: Flexible but still Fragile",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-02-18",
+        "summary": "Honest stress-test of agentic robot control on two physical platforms (indoor mobile manipulation Mobipick + agricultural robot Valdemar). Reveals substantial fragility: non-deterministic behavior, instruction-following errors, prompt sensitivity. Supports operator intervention and structured introspection.",
+        "cluster": "agentic-robot-middleware",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.13081"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "PragmaBot: A Pragmatist Robot \u2014 Learning to Plan Tasks by Experiencing the Real World",
+        "source": "arXiv (cs.RO) \u2014 Accepted RA-L",
+        "published": "2025-07-22",
+        "summary": "Verbal RL without parameter updates \u2014 VLM acts as robot brain+eye, self-reflects on failures stored in short-term memory, distills lessons to long-term memory, uses RAG for new tasks. STM-based reflection: 35%\u219284% success. LTM+RAG: 22%\u219280% single-trial success across 12 real-world scenarios.",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2507.16713"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "Unveiler: Learning Object-Centric Spatial Reasoning for Sequential Manipulation in Cluttered Environments",
+        "source": "arXiv (cs.RO)",
+        "published": "2026-03-04",
+        "summary": "Decouples high-level spatial reasoning from low-level action execution via lightweight transformer-based Spatial Relationship Encoder. 97.6% success (partial occlusion), 90% (full occlusion) in simulation. SRE transfers zero-shot to real scenes \u2014 no retraining for physical robot.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2603.02511"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Continual Learning and Refinement of Causal Models through Dynamic Predicate Invention",
+        "source": "arXiv (cs.AI)",
+        "published": "2026-02-19",
+        "summary": "Builds symbolic causal world models entirely online using Meta-Interpretive Learning + predicate invention. Creates reusable abstractions from agent observations within the decision loop. Lifted inference scales to complex relational dynamics; sample-efficiency orders of magnitude better than PPO baselines.",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.17217"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "What Matters in Building Vision-Language-Action Models for Generalist Robots",
+        "source": "Nature Machine Intelligence",
+        "published": "2026-02 (Nature MI)",
+        "summary": "Nature MI paper systematically studying VLA design choices: backbone selection, architecture formulation, cross-embodiment data. Comes with RoboVLMs codebase (GitHub). Authoritative reference for the VLA design space.",
+        "cluster": "wildcard (vision-language)",
+        "relevance": 4,
+        "url": "https://www.nature.com/articles/s42256-025-01168-7"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "OpenClaw Gives Unitree Robots \"World Memory\" & Spatial Understanding",
+        "source": "ToolMesh AI (news)",
+        "published": "2026-03-06",
+        "summary": "OpenClaw's Spatial Agent Memory + SpatialRAG constructs a voxelized world from LiDAR, stereo cameras, RGB, and odometry. Each voxel tagged with spatial vector embeddings + semantic labels. Hardware-agnostic, ROS-free. Demonstrated on Unitree humanoids for spatiotemporal recall of people, objects, events.\n\n---",
+        "cluster": "wildcard (spatial-rag-robotics / agentic-robot-middleware)",
+        "relevance": 4,
+        "url": "https://www.toolmesh.ai/news/openclaw-unitree-robots-world-memory-spatial-temporal"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-09",
+    "theme": "The VLA-World-Model marriage matures \u2014 three papers independently discover that jointly training world models and VLA policies in closed loops produces dramatic real-world gains, while spatial grounding becomes the secret ingredient connecting vision-language understanding to precise manipulation.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "WoVR: World Models as Reliable Simulators for Post-Training VLA Policies with RL",
+        "source": "arXiv",
+        "published": "",
+        "summary": "World-model RL framework for VLA post-training; keyframe-initialized rollouts + co-evolution tame hallucination; LIBERO 40\u219269%, real-robot 62\u219292%",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.13977"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "World-VLA-Loop: Closed-Loop Learning of Video World Model and VLA Policy",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Co-evolves video world model and VLA in closed loop; failure rollouts refine world model which improves RL; 36.7% real-world improvement after two iterations",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.06508"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "ST4VLA: Spatially Guided Training for Vision-Language-Action Models",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Dual-system VLA separating where/what from how via spatial grounding pre-training then spatially guided action post-training; new SOTA on SimplerEnv (66\u219285 Google Robot)",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.10109"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "MICoBot: Mixed-Initiative Dialog for Human-Robot Collaborative Manipulation",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Three-level mixed-initiative system where both human and robot take initiative via NL; allocates steps by affordance model + human availability; real trials with 18 participants",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2508.05535"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Physics-Consistent Real-to-Sim for Highly Cluttered Environments",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Reconstructs physically consistent 3D scenes from single RGB-D via differentiable optimization with contact graph; solves floating-object problems for downstream manipulation sim",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.12633"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-08",
+    "theme": "Causal world models and object-level interventionism take center stage, with major new work on latent-space causal inductive bias, hierarchical planning, and predictive inverse dynamics.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "**Causal-JEPA: Learning World Models through Object-Level Latent Interventions**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.11389"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "**H-WM: Robotic Task and Motion Planning Guided by Hierarchical World Model**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2602.11291"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "**MoWM: Mixture-of-World-Models for Embodied Planning via Latent-to-Pixel Feature Modulation**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "--- ## \ud83c\udf00 Interesting Adjacent Finds",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2509.21797"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "**CWM: Contrastive World Models for Action Feasibility Learning in Embodied Agent Pipelines**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.22452"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "**Say, Dream, and Act: Learning Video World Models for Instruction-Driven Robot Manipulation**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2602.10717"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "**AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.22769"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "**Anatomy of Agentic Memory: Taxonomy and Empirical Analysis of Evaluation and System Limitations**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2602.19320v1"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "**RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models for Robotics**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2411.16537"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "**Language and Geometry Grounded Sparse Voxel Representations for Holistic Scene Understanding**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.15734"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "**COMBAT: Conditional World Models for Behavioral Agent Training**",
+        "source": "arXiv",
+        "published": "",
+        "summary": "",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2603.00825"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-07",
+    "theme": "Causal world models meet action prediction \u2014 counterfactual reasoning, inverse dynamics, and embodied agents that can imagine before they act.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "DreamDojo: A Generalist Robot World Model from Video",
+        "source": "arXiv (Feb 9, 2026)",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/pdf/2602.06949"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "V-JEPA 2: World Model and Benchmarks for Physical Reasoning",
+        "source": "Meta AI Research Blog",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://ai.meta.com/blog/v-jepa-2-world-model-benchmarks/"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Predictive Inverse Dynamics Models are Scalable Learners for Robotic Manipulation (Seer)",
+        "source": "arXiv (Dec 19, 2024) + ICLR 2025",
+        "published": "",
+        "summary": "--- ## \ud83c\udf1f Strong Candidates",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2412.15109"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "WoW: Towards a World-Omniscient World-Model Through Embodied Interaction",
+        "source": "arXiv (Oct 2025, v2)",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/html/2509.22642v2"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "4D Latent World Model for Robot Planning",
+        "source": "OpenReview (ICLR 2026 submission, Oct 8, 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "Latent Action Robot Foundation World Models for Cross-Embodiment Adaptation",
+        "source": "OpenReview (ICLR 2026 submission, Oct 8, 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "robot-learning",
+        "relevance": 5,
+        "url": "https://openreview.net/forum?id=vEZgPr1deb"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "From Watch to Imagine: Steering Long-Horizon Manipulation via Human Demonstration and Future Envisionment",
+        "source": "arXiv (Oct 21, 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2509.22205"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "ADAM: An Embodied Causal Agent in Open-World Environments",
+        "source": "OpenReview (ICLR 2025 submission, Oct 29, 2024)",
+        "published": "",
+        "summary": "--- ## \ud83c\udf00 Adjacent & Interesting",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://openreview.net/forum?id=Ouu3HnIVBc"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "Embodied Instruction Following in Unknown Environments",
+        "source": "arXiv (Jun 2024, workshop paper)",
+        "published": "",
+        "summary": "",
+        "cluster": "intent-to-action",
+        "relevance": 4,
+        "url": "https://www.arxiv.org/pdf/2406.11818"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "A Study of the Framework and Real-World Applications of Language Embedding for 3D Scene Understanding",
+        "source": "arXiv (Aug 19, 2025)",
+        "published": "",
+        "summary": "--- 8 cluster searches (causal-world-models, robot-learning, embodied-ai, vision-language, intent-to-action, agentic-systems, spatial-understanding, perception-detection) + 2 wildcard searches (causal reasoning breakthrough, interventionist prediction inverse dynamics). Stage 2 (ingest via digest_ingest.py) + Stage 3 (artifact enrichment: GitHub, HuggingFace, Papers With Code).",
+        "cluster": "spatial-understanding",
+        "relevance": 3,
+        "url": "https://arxiv.org/html/2508.05064"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-06",
+    "theme": "Causal world models gain momentum as the next frontier for robot control, with new paradigms for predictive planning, inverse dynamics, and interventionist reasoning. Memory architectures for agents continue to mature, while spatial language models bridge 3D understanding with LLMs.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "1. **A-MEM: Agentic Memory for LLM Agents**",
+        "source": "arXiv 2502.12110 (February 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "agentic-systems",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2502.12110"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "2. **Causal World Modeling for Robot Control (LingBot-VA)**",
+        "source": "arXiv 2601.21998 (January 2026)",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2601.21998"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "3. **Predictive Inverse Dynamics Models (PIDM / Seer)**",
+        "source": "arXiv 2412.15109 (December 2024)",
+        "published": "",
+        "summary": "--- ## Strong Contenders",
+        "cluster": "causal-world-models / robot-learning",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2412.15109"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "**The Essential Role of Causality in Foundation World Models for Embodied AI**",
+        "source": "arXiv 2402.06665 (April 2024)",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2402.06665"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "**SpatialLM: Training LLMs for Structured Indoor Modeling**",
+        "source": "arXiv 2506.07491 (November 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2506.07491"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "**AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications**",
+        "source": "arXiv 2602.22769 (February 2026)",
+        "published": "",
+        "summary": "",
+        "cluster": "agentic-systems",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2602.22769"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "**3D-Grounded Vision-Language Framework for Robotic Task Planning**",
+        "source": "arXiv 2502.08903 (February 2025)",
+        "published": "",
+        "summary": "--- ## Noteworthy & Adjacent",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 8,
+        "icon": "\ud83c\udf00",
+        "title": "8. **LEXIS: Language-Extended Indoor SLAM**",
+        "source": "arXiv 2309.15065 (March 2024)",
+        "published": "",
+        "summary": "",
+        "cluster": "spatial-understanding",
+        "relevance": 3,
+        "url": "https://arxiv.org/abs/2309.15065"
+      },
+      {
+        "rank": 9,
+        "icon": "\ud83c\udf00",
+        "title": "9. **WoW: World-omniscient World-model via Embodied Interaction**",
+        "source": "arXiv 2509.22642 (October 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2509.22642"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "**4D Latent World Model for Robot Planning**",
+        "source": "OpenReview iB9qx28gv4 (October 2025)",
+        "published": "",
+        "summary": "",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-05",
+    "theme": "Causal world models meet inverse dynamics \u2014 from video prediction to actionable robot control",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Causal World Modeling for Robot Control",
+        "source": "arXiv",
+        "published": "2026-01-29",
+        "summary": "LingBot-VA: Vision-language action diffusion model with autoregressive causal world models. Integrates video world modeling as an independent foundation for robot learning (alongside vision-language pretraining). Enables long-horizon rollouts with closed-loop error correction during execution.",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/html/2601.21998v1"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Predictive Inverse Dynamics Models are Scalable Learners",
+        "source": "arXiv / ICLR 2025",
+        "published": "2024-12-19",
+        "summary": "PIDM (Seer): Predicts actions using inverse dynamics models conditioned on forecasted visual states. End-to-end paradigm that bridges vision pretraining and action prediction \u2014 unifies \"vision\" and \"action\" scaling paths in manipulation.",
+        "cluster": "causal-world-models",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2412.15109"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "A-MEM: Agentic Memory for LLM Agents",
+        "source": "arXiv",
+        "published": "2025-10 (OpenReview)",
+        "summary": "Autonomous contextual memory generation + intelligent connection with existing memories. Combines Zettelkasten structure with agent-driven decision making. Enables continuous memory evolution through new experiences and higher-order attributes.",
+        "cluster": "agentic-systems",
+        "relevance": 5,
+        "url": "https://arxiv.org/abs/2502.12110"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "4D Latent World Model for Robot Planning",
+        "source": "OpenReview (CoRL 2025?)",
+        "published": "2025-10-08",
+        "summary": "4D latent world model as planner \u2014 generates future scenes with multi-view coherence and physical consistency. Paired with goal-conditioned inverse dynamics model to translate planned futures into executable actions. Novel 4D approach (spatial + temporal).",
+        "cluster": "robot-learning",
+        "relevance": 4,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83d\udd25",
+        "title": "AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications",
+        "source": "arXiv",
+        "published": "2026-02 (1 week ago)",
+        "summary": "First benchmark for memory in agent applications. Two subsets: real-world machine-generated patterns + synthetic scalable horizon/complexity. Introduces Hybrid Tool-Augmented Retrieval to transcend similarity-based retrieval limitations. --- ## STRONG SIGNALS",
+        "cluster": "agentic-systems",
+        "relevance": 5,
+        "url": "https://arxiv.org/html/2602.22769v1"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "3D-Grounded Vision-Language Framework for Robotic Task Planning",
+        "source": "arXiv / ScienceDirect",
+        "published": "2025-02-13",
+        "summary": "Automated prompt synthesis + supervised reasoning for frozen VLMs to achieve high-precision 3D grounding. 67% improvement in task planning accuracy. Demonstrates that frozen models can ground spatially via prompt engineering + expert supervision.",
+        "cluster": "vision-language",
+        "relevance": 4,
+        "url": "https://arxiv.org/abs/2502.08903"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "GEN-0: Embodied Foundation Models That Scale with Physical Interaction",
+        "source": "Generalist AI blog",
+        "published": "2025-11-04",
+        "summary": "New class of embodied foundation models for multimodal training on high-fidelity raw physical interaction. Establishes scaling laws for robot intelligence (like LLMs). Architecture + data engine for behavioral generalization that grows with real-world experience.",
+        "cluster": "embodied-ai",
+        "relevance": 4,
+        "url": "https://generalistai.com/blog/nov-04-2025-GEN-0"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "SpatialLM: Training LLMs for Structured Indoor Modeling",
+        "source": "arXiv / NeurIPS 2025",
+        "published": "2025-11-05",
+        "summary": "3D LLM that processes point cloud data and generates structured 3D scene understanding outputs. Demonstrates feasibility of training LLMs for structured indoor modeling \u2014 a step toward foundation models that reason about, interact with, and create 3D scenes.",
+        "cluster": "spatial-understanding",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2506.07491"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "WoW: World-omniscient World-model Through Embodied Interaction",
+        "source": "arXiv",
+        "published": "2025-10-16",
+        "summary": "SOPHIA: VLM agents evaluate DiT-generated output and guide refinement by iteratively evolving language instruction. Co-trained Inverse Dynamics Model translates plans into robotic actions. WoWBench benchmark for physical consistency and causal reasoning. Strong on physical causality, collision dynamics, object permanence.",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2509.22642v2"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "The Essential Role of Causality in Foundation World Models for Embodied AI",
+        "source": "arXiv",
+        "published": "2024-04-29",
+        "summary": "Theoretical analysis: gap between causal reasoning guarantees and practical needs in foundation models. Addresses tension between domain-specific causal identification and general-environment foundation models. Critical for safety-aware embodied AI. ---",
+        "cluster": "causal-world-models",
+        "relevance": 4,
+        "url": "https://arxiv.org/html/2402.06665v2"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-04",
+    "theme": "From vision to intent: new methods ground human language and spatial reasoning into robot action.",
+    "candidates": [
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "CASPER: Cognitive Architecture for Social Perception and Engagement in Robots",
+        "source": "Springer",
+        "published": "** Mar 2024",
+        "summary": "Springer \u2014 Symbolic cognitive architecture for intention reading and collaborative behavior calculation in human-robot teaming scenarios",
+        "cluster": "wildcard | **",
+        "relevance": 0,
+        "url": "https://link.springer.com/article/10.1007/s12369-024-01116-2"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "4D Latent World Model for Robot Planning",
+        "source": "OpenReview",
+        "published": "** Oct 2025",
+        "summary": "Uses 4D latent world model as planner, generates future scenes translated into executable actions via goal-conditioned inverse dynamics",
+        "cluster": "robot-learning | **",
+        "relevance": 0,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      },
+      {
+        "rank": 7,
+        "icon": "",
+        "title": "A Study of the Framework and Real-World Applications of Language Embedding for 3D Scene Understanding",
+        "source": "arxiv.org",
+        "published": "** Aug 2025",
+        "summary": "Integrates LLMs and language embeddings into Gaussian Splatting for text-conditioned generation, editing, semantic scene understanding",
+        "cluster": "spatial-understanding | **",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2508.05064v1"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Towards Efficient LLM Grounding for Embodied Multi-Agent Collaboration",
+        "source": "arxiv.org",
+        "published": "** Sep 2025",
+        "summary": "Novel feedback mechanism for closed-loop LLM planning in multi-agent collaboration, addresses grounding complexity via communication and credit assignment",
+        "cluster": "intent-to-action | **",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2405.14314"
+      },
+      {
+        "rank": 10,
+        "icon": "",
+        "title": "Grounded Decoding: Guiding Text Generation",
+        "source": "NeurIPS 2023",
+        "published": "",
+        "summary": "Guides LLM output directly at generation for robot planning, enables grounding with embodiment constraints, safety functions, general planning algorithms",
+        "cluster": "intent-to-action | **",
+        "relevance": 0,
+        "url": "https://papers.neurips.cc/paper_files/paper/2023/file/bb3cfcb0284642a973dd631ec9184f2f-Paper-Conference.pdf"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-03",
+    "theme": "Intent-to-action pathways, world models for planning, omni-modal orchestration \u2014 the human-robot ecosystem layer is emerging.",
+    "candidates": [
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "Planning with affordances: Integrating learned affordance models and symbolic planning",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Affordance models define what actions are possible in a state; integrated with symbolic planning for feasible task plans.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2502.02768"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "FindingDory: A Benchmark to Evaluate Memory in Embodied Agents",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "60 navigation tasks testing long-horizon memory in realistic indoor environments; measures efficiency beyond simple recall.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2506.15635v2"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "VLingNav: Embodied Navigation with Adaptive Reasoning and Visual-Assisted Linguistic Memory",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Visual-assisted linguistic memory enables long-horizon spatial reasoning; prevents repetitive exploration.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2601.08665v1"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "4D Latent World Model for Robot Planning",
+        "source": "OpenReview",
+        "published": "",
+        "summary": "Generates future scenes with visual quality and multi-view coherence; translated into actions via goal-conditioned inverse dynamics.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://openreview.net/forum?id=iB9qx28gv4"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "LaMI: Large Language Models for Multi-Modal Human-Robot Interaction",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Regulates robot behavior via high-level NL guidance, atomic actions/expressions, and examples; systematizes LLM-based HRI.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2401.15174v4"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-02",
+    "theme": "Bridging Intent and Action \u2014 Unified multimodal models, affordance-based planning, and memory-efficient spatial understanding systems drive toward seamless human-robot collaboration.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "OmniVLA: An Omni-Modal Vision-Language-Action Model for Robot Navigation",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "First VLA model unifying language, spatial coordinates, and visual goals for flexible robot navigation; enables robots to interpret multiple goal specifications like humans.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2509.19480"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "SpatialLM: Training Large Language Models for Structured Indoor Modeling",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "3D LLM processing point clouds to generate structured scene understanding; NeurIPS 2025, targets indoor layout reconstruction from spatial data.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2506.07491"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "SceneVGGT: VGGT-based online 3D semantic SLAM for indoor scene understanding",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Memory-efficient semantic SLAM using Visual Geometry Grounded Transformer with sliding window and temporal coherence; enabling real-time indoor navigation.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2602.15899v2"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "LaMI: Large Language Models for Multi-Modal Human-Robot Interaction",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Framework regulating robot behavior through high-level natural language guidance, atomic action definitions, and examples; published Jan 2026.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2401.15174v4"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Planning with affordances: Integrating learned affordance models and symbolic planning",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Hybrid system combining learned affordance models (what actions possible + how to perform) with symbolic planning for goal achievement; Feb 2025.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2502.02768"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83c\udf00",
+        "title": "CWM: Contrastive World Models for Action Feasibility Learning in Embodied Agent Pipelines",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Intrinsic affordance evaluation using contrastive world models to filter feasible actions in embodied agent task execution; published Feb 2026.",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2602.22452"
+      }
+    ]
+  },
+  {
+    "date": "2026-03-01",
+    "theme": "Foundation models meet embodied intelligence\u2014from robotic world models to agentic memory architectures.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "The real breakthrough in robotics is foundation models \u2014 not hardware",
+        "source": "",
+        "published": "",
+        "summary": "not hardware** \u2014 startupnews.fyi \u2014 Physical AI evolving beyond fixed scripts: embodied agents that learn optimal policies through experience and coordinate with humans",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://startupnews.fyi/2026/02/28/the-real-breakthrough-in-robotics-is-foundation-models-not-hardware/"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "AMA-Bench: Evaluating Long-Horizon Memory for Agentic Applications",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "First benchmark suite for evaluating memory in agent applications with controlled scaling across real-world and synthetic task horizons",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2602.22769v1"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "A-Mem: Agentic Memory for LLM Agents",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Autonomous contextual memory with intelligent connection establishment, continuous evolution through experience, and Zettelkasten-inspired organization",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/pdf/2502.12110"
+      },
+      {
+        "rank": 4,
+        "icon": "",
+        "title": "New framework pinpoints conditions that make data augmentation improve robustness",
+        "source": "",
+        "published": "",
+        "summary": "techxplore.com \u2014 Proximal-support augmentation (PSA) condition ensures augmented data densely covers space around original samples, achieving flatter, more stable minima",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://techxplore.com/news/2026-01-framework-conditions-augmentation-robustness.html"
+      },
+      {
+        "rank": 5,
+        "icon": "",
+        "title": "DepthART: Monocular Depth Estimation as Autoregressive Refinement Task",
+        "source": "ijcai.org",
+        "published": "",
+        "summary": "ijcai.org \u2014 Applies Visual AutoRegressive Transformer (VAR) to monocular depth estimation, demonstrating superior results vs. diffusion models with faster inference",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.ijcai.org/proceedings/2025/114"
+      },
+      {
+        "rank": 6,
+        "icon": "",
+        "title": "TinyDepth: Light-weight monocular depth estimation via transformer-fusion for monocular visual SLAM",
+        "source": "sciencedirect.com",
+        "published": "",
+        "summary": "Efficient transformer-based depth estimation network optimized for resource-limited hardware in SLAM contexts",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S1566253525006633"
+      },
+      {
+        "rank": 7,
+        "icon": "\ud83c\udf00",
+        "title": "Exploring Embodied Multimodal Large Models: Development, Datasets, and Future Directions",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Survey of breakthrough models integrating large models with multimodal perception for complex embodied tasks",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2502.15336v1"
+      },
+      {
+        "rank": 8,
+        "icon": "",
+        "title": "Three-dimensional-grounded vision-language framework for robotic task planning",
+        "source": "sciencedirect.com",
+        "published": "",
+        "summary": "Frozen VLMs achieve high-precision 3D grounding through automated prompt synthesis and expert supervision, improving task success by 67%",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S0952197625032993"
+      },
+      {
+        "rank": 9,
+        "icon": "",
+        "title": "FindingDory: A Benchmark to Evaluate Memory in Embodied Agents",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "60 diverse navigation tasks in realistic indoor environments quantifying task completion efficiency beyond simple recall",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2506.15635v2"
+      },
+      {
+        "rank": 10,
+        "icon": "\ud83c\udf00",
+        "title": "DAC-HRC: Socially adaptive cognitive architecture for human-robot collaboration",
+        "source": "",
+        "published": "",
+        "summary": "frontiersin.org \u2014 Novel cognitive architecture optimizing HRC in Industry 4.0 contexts with social adaptation capabilities",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2024.1248646/full"
+      }
+    ]
+  },
+  {
+    "date": "2026-02-28",
+    "theme": "World models meet spatial reasoning \u2014 from robotic simulators to multimodal LLMs bridging 3D understanding.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "\ud83d\udd25 Robotic World Model: A Neural Network Simulator for Robust Policy Optimization in Robotics",
+        "source": "",
+        "published": "",
+        "summary": "_arXiv \u00b7 January 2025_ Dual-autoregressive world model for robot policy learning without domain-specific inductive biases \u2014 long-horizon sim-to-real breakthrough. _arXiv \u00b7 February 2026_",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2501.10100"
+      }
+    ]
+  },
+  {
+    "date": "2026-02-27",
+    "theme": "Theory meets practice \u2014 from depth estimation breakthroughs to real-world embodied systems",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "DepthART: Monocular Depth Estimation as Autoregressive Refinement Task",
+        "source": "IJCAI 2025",
+        "published": "",
+        "summary": "IJCAI 2025 \u2014 VAR-based approach beats diffusion models with faster inference; novel refinement training beats teacher forcing",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.ijcai.org/proceedings/2025/114"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Proximal-Support Augmentation: Framework for Data Augmentation Robustness",
+        "source": "",
+        "published": "",
+        "summary": "TechXplore/AAAI-26 \u2014 First mathematical framework proving *when* augmentation works; introduces PSA condition for flatter, more stable minima",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://techxplore.com/news/2026-01-framework-conditions-augmentation-robustness.html"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Exploring Embodied Multimodal Large Models: Development, Datasets, and Future Directions",
+        "source": "arXiv Feb 2025",
+        "published": "",
+        "summary": "Comprehensive survey bridging LLMs/LVMs with embodied perception, navigation, interaction; identifies scalability and real-time challenges",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2502.15336v1"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "DAC-HRC: Socially adaptive cognitive architecture for human-robot collaboration",
+        "source": "",
+        "published": "",
+        "summary": "Frontiers in Robotics May 2024 \u2014 Distributed Adaptive Control framework optimizing HRC in Industry 4.0; social adaptation layer",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2024.1248646/full"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "CASPER: Cognitive Architecture for Social Perception and Engagement in Robots",
+        "source": "",
+        "published": "",
+        "summary": "Int'l Journal of Social Robotics Mar 2024 \u2014 Implements intention reading and collaborative behavior for HRI; addresses scarcity of social cognition models",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://link.springer.com/article/10.1007/s12369-024-01116-2"
+      }
+    ]
+  },
+  {
+    "date": "2026-02-26",
+    "theme": "",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Zero-Shot Open-Vocabulary OOD Object Detection and Grounding using VLMs",
+        "source": "openreview.net",
+        "published": "",
+        "summary": "Automated zero-shot framework for open vocabulary OOD object detection, segmentation, and grounding in autonomous driving",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://openreview.net/forum?id=Q2wVVeOpz8"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "Grounding DINO: Open Vocabulary Object Detection on Videos",
+        "source": "",
+        "published": "",
+        "summary": "pyimagesearch.com \u2014 Practical tutorial applying Grounding DINO successor to video streams with open-vocabulary detection (updated Feb 2026)",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://pyimagesearch.com/2025/12/08/grounding-dino-open-vocabulary-object-detection-on-videos/"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Three-dimensional-grounded vision-language framework for robotic task planning",
+        "source": "sciencedirect.com",
+        "published": "",
+        "summary": "Automated prompt synthesis enables frozen VLMs to achieve high-precision 3D grounding with 67% performance boost",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.sciencedirect.com/science/article/abs/pii/S0952197625032993"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "Physically Grounded Vision-Language Models for Robotic Manipulation",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "VLMs grounded in physical object concepts integrated with LLM-based planners for improved reasoning on physical tasks",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2309.02561"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Exploring Embodied Multimodal Large Models: Development, Datasets, and Future Directions",
+        "source": "arxiv.org",
+        "published": "",
+        "summary": "Survey examining integration of large models with multimodal perception systems and persistent challenges in early-stage field (Feb 2025)",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2502.15336v1"
+      }
+    ]
+  },
+  {
+    "date": "2026-02-25",
+    "theme": "Vision-language grounding, agent memory architectures, and generative robotics simulation emerge as key themes across embodied AI research.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Grounded SAM 2: From Open-Set Detection to Segmentation and Tracking",
+        "source": "",
+        "published": "",
+        "summary": "PyImageSearch \u2014 Major advancement combining Grounding DINO with SAM 2 for language-conditioned object detection, segmentation, and tracking in video \u2014 critical for embodied perception pipelines",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://pyimagesearch.com/2026/01/19/grounded-sam-2-from-open-set-detection-to-segmentation-and-tracking/"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "VLingNav: Embodied Navigation with Adaptive Reasoning and Visual-Assisted Linguistic Memory",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Introduces visual-assisted linguistic memory (VLingMem) for long-horizon spatial reasoning in navigation, with Nav-AdaCoT-2.9M dataset featuring adaptive chain-of-thought annotations",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2601.08665v1"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "Interpretable Vision Transformers in Monocular Depth Estimation via SVDA",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Novel SVD-Inspired Attention mechanism makes Transformer depth estimation interpretable while maintaining performance \u2014 addresses the opacity problem in modern architectures",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2602.11005"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "New framework pinpoints conditions for data augmentation robustness",
+        "source": "",
+        "published": "",
+        "summary": "TechXplore \u2014 Identifies proximal-support augmentation (PSA) condition that ensures augmented data leads to flatter, more stable minima \u2014 theoretical breakthrough in understanding when augmentation actually helps",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://techxplore.com/news/2026-01-framework-conditions-augmentation-robustness.html"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "Physical AI in 2026: Embodied Intelligence Redefining Operations",
+        "source": "",
+        "published": "",
+        "summary": "TechAhead \u2014 Industry analysis on action-based AI and Large Action Models enabling robots to translate high-level instructions into motor behaviors \u2014 broader context on commercial deployment",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.techaheadcorp.com/blog/how-embodied-intelligence-redefining-industrial-operation/"
+      },
+      {
+        "rank": 6,
+        "icon": "\ud83c\udf00",
+        "title": "DAC-HRC: Socially adaptive cognitive architecture for human-robot collaboration",
+        "source": "",
+        "published": "",
+        "summary": "Frontiers in Robotics and AI \u2014 Novel cognitive architecture for Industry 4.0 HRC based on Distributed Adaptive Control \u2014 interesting departure from standard architectures",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2024.1248646/full"
+      }
+    ]
+  },
+  {
+    "date": "2026-02-24",
+    "theme": "World models, spatial reasoning, and VLM-based manipulation are converging into practical robotic systems \u2014 the gap between simulation and reality is narrowing fast.",
+    "candidates": [
+      {
+        "rank": 1,
+        "icon": "\ud83d\udd25",
+        "title": "Robotic World Model: Neural Network Simulator for Robust Policy Optimization",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Dual-autoregressive mechanism + self-supervised training for reliable long-horizon predictions; no domain-specific biases needed",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/abs/2501.10100"
+      },
+      {
+        "rank": 2,
+        "icon": "\ud83d\udd25",
+        "title": "SceneVGGT: Memory-Efficient Streaming Semantic SLAM",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Adapts VGGT transformer with sliding window + submap alignment for real-time 3D semantic reconstruction on long sequences",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2602.15899"
+      },
+      {
+        "rank": 3,
+        "icon": "\ud83d\udd25",
+        "title": "WorldEval: World Model as Real-World Robot Policies Evaluator",
+        "source": "arXiv",
+        "published": "",
+        "summary": "Uses WAN2.1 14B image-to-video model trained on 1,400 real robot trajectories to evaluate policies in simulation",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://arxiv.org/html/2505.19017v1"
+      },
+      {
+        "rank": 4,
+        "icon": "\ud83c\udf00",
+        "title": "From Prompts to Production: Agentic Development Playbook",
+        "source": "InfoQ",
+        "published": "",
+        "summary": "InfoQ \u2014 Introduces Agentic SDLC (ASDLC); catalogs patterns like Supervisor, ReAct, Human-in-the-Loop for real-world deployment",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.infoq.com/articles/prompts-to-production-playbook-for-agentic-development/"
+      },
+      {
+        "rank": 5,
+        "icon": "\ud83c\udf00",
+        "title": "SpatialPrompting: Zero-Shot 3D Spatial Reasoning with MLLMs",
+        "source": "ResearchGate",
+        "published": "",
+        "summary": "ResearchGate \u2014 Harnesses emergent reasoning of off-the-shelf MLLMs for zero-shot spatial reasoning in 3D environments",
+        "cluster": "",
+        "relevance": 0,
+        "url": "https://www.researchgate.net/publication/393183479_Enhancing_Spatial_Reasoning_in_Multimodal_Large_Language_Models_through_Reasoning-based_Segmentation"
+      }
+    ]
+  }
+]

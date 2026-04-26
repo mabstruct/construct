@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISW Analysis - Taxonomy</title>
+    <style>
+        header, nav, footer { display: none !important; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0B1120;
+            color: #E0E7FF;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #06B6D4;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #8B5CF6;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #06B6D4;
+            text-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #8B5CF6;
+            margin-bottom: 30px;
+        }
+
+        section {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #06B6D4;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #8B5CF6;
+        }
+
+        /* Card styling */
+        .card {
+            background-color: #111827;
+            border: 1px solid #1F2937;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        /* Section 1: D3 Bubble Chart */
+        #bubbleChart {
+            width: 100%;
+            height: 600px;
+            background-color: #111827;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .bubble {
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .bubble circle {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.5));
+        }
+
+        .bubble:hover circle {
+            filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 0 8px rgba(0, 0, 0, 0.5));
+            stroke-width: 2.5px;
+        }
+
+        .bubble text {
+            pointer-events: none;
+            font-weight: 600;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            fill: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Tooltip styling */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(17, 24, 39, 0.95);
+            border: 1px solid #8B5CF6;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.9em;
+            color: #E0E7FF;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
+            display: none;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #06B6D4;
+            margin-bottom: 4px;
+        }
+
+        /* Section 2: Distribution Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #111827;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background-color: #1F2937;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #1F2937;
+        }
+
+        th {
+            color: #06B6D4;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+
+        td {
+            color: #E0E7FF;
+        }
+
+        tr:hover {
+            background-color: #1F2937;
+        }
+
+        .tag-cell {
+            font-weight: 500;
+            color: #06B6D4;
+        }
+
+        .count-cell {
+            font-weight: 600;
+            width: 60px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .bar {
+            height: 20px;
+            background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .bar-label {
+            font-weight: 600;
+            color: #E0E7FF;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Section 3: Topic-to-Tag Mapping */
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .topic-card {
+            background-color: #111827;
+            border: 2px solid #1F2937;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .topic-card:hover {
+            border-color: #06B6D4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .topic-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #06B6D4;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topic-name::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background-color: #06B6D4;
+            border-radius: 50%;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .small-tag {
+            padding: 5px 12px;
+            background-color: #1F2937;
+            border: 1px solid #374151;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #E0E7FF;
+            transition: all 0.3s ease;
+        }
+
+        .small-tag:hover {
+            border-color: #06B6D4;
+            color: #06B6D4;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid #1F2937;
+            text-align: center;
+            color: #6B7280;
+            font-size: 0.9em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .section-title {
+                font-size: 1.4em;
+            }
+
+            #bubbleChart {
+                height: 400px;
+            }
+
+            .mapping-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" class="back-link">← Back to Overview</a>
+            <h1>ISW Analysis</h1>
+            <p class="subtitle">ISW research status</p>
+        </header>
+
+        <!-- Section 1: D3 Bubble Chart -->
+        <section>
+            <h2 class="section-title">Tag Cloud</h2>
+            <div id="bubbleChart"></div>
+            <div class="tooltip" id="tooltip">
+                <div class="tooltip-title" id="tooltipTitle"></div>
+                <div id="tooltipContent"></div>
+            </div>
+        </section>
+
+        <!-- Section 2: Distribution Table -->
+        <section>
+            <h2 class="section-title">Tag Distribution & Frequency</h2>
+            <div class="card">
+                <div class="table-container">
+                    <table id="distributionTable">
+                        <thead>
+                            <tr>
+                                <th>Tag</th>
+                                <th>Count</th>
+                                <th>Distribution</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Topic-to-Tag Mapping -->
+        <section>
+            <h2 class="section-title">Topic-to-Tag Mapping</h2>
+            <div class="mapping-grid" id="mappingGrid"></div>
+        </section>
+
+        <footer>
+            <p>CONSTRUCT - autonomous agentic research engine - mabstruct.ai</p>
+        </footer>
+    </div>
+
+    <!-- D3.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+    <script>
+        // Topic Colors Mapping (from ISWLandscape.jsx)
+        const TOPIC_COLORS = {
+            'embodied-ai': '#8B5CF6',
+            'perception': '#F97316',
+            'spatial': '#F43F5E',
+            'vision-language': '#06B6D4',
+            'agentic': '#10B981',
+            'robot-learning': '#3B82F6',
+            'foundations': '#A78BFA',
+            'world-models': '#EC4899',
+            'intent': '#FBBF24',
+            'middleware': '#F472B6',
+            'simulation': '#84CC16',
+            'spatial-rag': '#D946EF'
+        };
+
+        // Tag to Topic mapping for color assignment
+        const tagToTopic = {
+            'foundation-models': 'foundations',
+            'multimodal': 'vision-language',
+            'grounding': 'perception',
+            'transformers': 'foundations',
+            'simulation': 'simulation',
+            'depth-estimation': 'spatial',
+            'object-detection': 'perception',
+            'segmentation': 'perception',
+            'agent-architecture': 'agentic',
+            'slam': 'spatial',
+            'world-models': 'world-models',
+            'scene-modeling': 'spatial',
+            'human-robot-collaboration': 'embodied-ai',
+            'prompt-engineering': 'agentic',
+            'reinforcement-learning': 'robot-learning',
+            'deep-learning': 'foundations',
+            'memory-systems': 'agentic',
+            'motion-planning': 'spatial',
+            'data-augmentation': 'foundations',
+            '3d-localization': 'spatial',
+            'generative-data': 'robot-learning',
+            'configuration-space': 'spatial'
+        };
+
+        // Distribution Data (sorted by frequency)
+        const distributionData = [
+            { tag: 'foundation-models', count: 28 },
+            { tag: 'multimodal', count: 19 },
+            { tag: 'grounding', count: 10 },
+            { tag: 'transformers', count: 10 },
+            { tag: 'simulation', count: 7 },
+            { tag: 'depth-estimation', count: 7 },
+            { tag: 'object-detection', count: 6 },
+            { tag: 'segmentation', count: 6 },
+            { tag: 'agent-architecture', count: 6 },
+            { tag: 'slam', count: 6 },
+            { tag: 'world-models', count: 5 },
+            { tag: 'scene-modeling', count: 5 },
+            { tag: 'human-robot-collaboration', count: 3 },
+            { tag: 'prompt-engineering', count: 3 },
+            { tag: 'reinforcement-learning', count: 2 },
+            { tag: 'deep-learning', count: 2 },
+            { tag: 'memory-systems', count: 2 },
+            { tag: 'motion-planning', count: 2 },
+            { tag: 'data-augmentation', count: 2 },
+            { tag: '3d-localization', count: 2 },
+            { tag: 'generative-data', count: 1 },
+            { tag: 'configuration-space', count: 1 }
+        ];
+
+        // Topic-to-Tag Mapping
+        const topicMapping = {
+            'embodied-ai': ['foundation-models', 'simulation', 'multimodal', 'human-robot-collaboration', 'world-models'],
+            'spatial-understanding': ['transformers', 'depth-estimation', 'slam', '3d-localization', 'scene-modeling'],
+            'perception-detection': ['object-detection', 'transformers', 'segmentation', 'grounding'],
+            'agentic-systems': ['agent-architecture', 'memory-systems', 'prompt-engineering'],
+            'vision-language': ['foundation-models', 'transformers', 'multimodal', 'grounding'],
+            'robot-learning': ['simulation', 'reinforcement-learning', 'world-models', 'generative-data'],
+            'robot-navigation': ['slam', 'memory-systems', 'motion-planning', 'configuration-space'],
+            'foundations-training': ['deep-learning', 'data-augmentation']
+        };
+
+        // Initialize D3 Bubble Chart
+        function initBubbleChart() {
+            const container = document.getElementById('bubbleChart');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Prepare data with counts and colors
+            const bubbleData = distributionData.map(d => ({
+                tag: d.tag,
+                count: d.count,
+                color: TOPIC_COLORS[tagToTopic[d.tag]] || '#06B6D4'
+            }));
+
+            // Calculate radius based on count with logarithmic scale for better visualization
+            const countExtent = d3.extent(bubbleData, d => d.count);
+            const radiusScale = d3.scaleSqrt()
+                .domain(countExtent)
+                .range([15, 60]);
+
+            bubbleData.forEach(d => {
+                d.r = radiusScale(d.count);
+            });
+
+            // Create SVG
+            const svg = d3.select('#bubbleChart')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            // Create force simulation
+            const simulation = d3.forceSimulation(bubbleData)
+                .force('x', d3.forceX(width / 2).strength(0.05))
+                .force('y', d3.forceY(height / 2).strength(0.05))
+                .force('collide', d3.forceCollide(d => d.r + 2).strength(0.8))
+                .force('charge', d3.forceManyBody().strength(-50))
+                .alphaDecay(0.005); // Very slow decay for gentle floating
+
+            // Create bubble groups
+            const bubbles = svg.selectAll('.bubble')
+                .data(bubbleData, d => d.tag)
+                .enter()
+                .append('g')
+                .attr('class', 'bubble');
+
+            // Add circles
+            bubbles.append('circle')
+                .attr('r', d => d.r)
+                .attr('fill', d => d.color)
+                .attr('opacity', 0.85);
+
+            // Add labels
+            bubbles.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.3em')
+                .attr('font-size', d => {
+                    const baseFontSize = d.r * 0.5;
+                    return Math.max(10, Math.min(16, baseFontSize)) + 'px';
+                })
+                .text(d => d.tag.replace(/-/g, ' '))
+                .each(function(d) {
+                    // Dynamically adjust font size for text wrapping
+                    const textLength = this.getComputedTextLength();
+                    if (textLength > d.r * 1.6) {
+                        d3.select(this).attr('font-size', d => {
+                            const adjusted = (d.r * 0.35);
+                            return Math.max(8, Math.min(12, adjusted)) + 'px';
+                        });
+                    }
+                });
+
+            // Add hover interactions
+            const tooltip = document.getElementById('tooltip');
+            const tooltipTitle = document.getElementById('tooltipTitle');
+            const tooltipContent = document.getElementById('tooltipContent');
+
+            bubbles.on('mouseenter', function(event, d) {
+                // Grow bubble slightly
+                d3.select(this).select('circle')
+                    .transition()
+                    .duration(200)
+                    .attr('r', d.r * 1.15);
+
+                // Show tooltip
+                tooltipTitle.textContent = d.tag;
+                tooltipContent.innerHTML = `<div>Count: <strong>${d.count}</strong></div>`;
+                tooltip.style.display = 'block';
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 30) + 'px';
+            })
+            .on('mousemove', function(event) {
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 30) + 'px';
+            })
+            .on('mouseleave', function(event, d) {
+                // Return to normal size
+                d3.select(this).select('circle')
+                    .transition()
+                    .duration(200)
+                    .attr('r', d.r);
+
+                // Hide tooltip
+                tooltip.style.display = 'none';
+            });
+
+            // Update positions on simulation tick
+            simulation.on('tick', () => {
+                bubbles.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            // Reheat simulation on window resize
+            window.addEventListener('resize', () => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                svg.attr('width', newWidth).attr('height', newHeight);
+                simulation.force('x', d3.forceX(newWidth / 2).strength(0.05))
+                    .force('y', d3.forceY(newHeight / 2).strength(0.05));
+                simulation.alpha(0.5).restart();
+            });
+        }
+
+        // Function to render distribution table
+        function renderDistributionTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            const maxCount = Math.max(...distributionData.map(d => d.count));
+
+            distributionData.forEach(item => {
+                const row = document.createElement('tr');
+                const barWidth = (item.count / maxCount) * 100;
+
+                row.innerHTML = `
+                    <td class="tag-cell">${item.tag}</td>
+                    <td class="count-cell">${item.count}</td>
+                    <td style="width: 100%;">
+                        <div class="bar-chart">
+                            <div class="bar" style="width: ${barWidth}%; min-width: 5px;"></div>
+                            <span class="bar-label">${item.count}</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Function to render topic mapping
+        function renderTopicMapping() {
+            const grid = document.getElementById('mappingGrid');
+            grid.innerHTML = '';
+
+            Object.entries(topicMapping).forEach(([topic, tags]) => {
+                const card = document.createElement('div');
+                card.className = 'topic-card';
+
+                const topicNameDiv = document.createElement('div');
+                topicNameDiv.className = 'topic-name';
+                topicNameDiv.textContent = topic.replace(/-/g, ' ');
+
+                const tagList = document.createElement('div');
+                tagList.className = 'tag-list';
+
+                // Find colors for tags
+                tags.forEach(tagName => {
+                    const topicKey = tagToTopic[tagName];
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'small-tag';
+                    tagSpan.textContent = tagName;
+                    if (topicKey) {
+                        const color = TOPIC_COLORS[topicKey];
+                        tagSpan.style.borderColor = color;
+                        tagSpan.style.color = color;
+                    }
+                    tagList.appendChild(tagSpan);
+                });
+
+                card.appendChild(topicNameDiv);
+                card.appendChild(tagList);
+                grid.appendChild(card);
+            });
+        }
+
+        // Initialize all visualizations
+        document.addEventListener('DOMContentLoaded', function() {
+            initBubbleChart();
+            renderDistributionTable();
+            renderTopicMapping();
+        });
+    </script>
+</body>
+</html>
