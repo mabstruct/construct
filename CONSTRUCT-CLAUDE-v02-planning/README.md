@@ -6,7 +6,7 @@ This directory is the **planning bridge** for CONSTRUCT Claude-native v0.2. It h
 
 v0.2 is an evolution of `CONSTRUCT-CLAUDE-impl/`, not a separate product. The main new capability is live, locally served derived views over workspace knowledge state.
 
-Per `../CONSTRUCT-CLAUDE-spec/adrs/adr-0002-v02-packaging.md` (Proposed): v0.2 implementation lands **in-place** in `../CONSTRUCT-CLAUDE-impl/` (new `views-*` skills) and `../views/src/` (browser app). This directory is archived to `spec/archive/v02-backlog.md` once v0.2 ships.
+Per `../CONSTRUCT-CLAUDE-spec/adrs/adr-0002-v02-packaging.md` (Accepted): v0.2 implementation lands **in-place** in `../CONSTRUCT-CLAUDE-impl/` (new `views-*` skills) and `../views/src/` (browser app). This directory is archived to `spec/archive/v02-backlog.md` once v0.2 ships.
 
 ## Inputs
 

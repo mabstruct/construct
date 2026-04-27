@@ -1,7 +1,8 @@
 # ADR-0002: v0.2 Packaging and Planning Directory Layout
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-04-27
+**Accepted:** 2026-04-27
 **Deciders:** ;-)mab
 **Context:** v0.2 (live views) needs a home. `CONSTRUCT-CLAUDE-v02-planning/` was created as a planning workspace. Before any v0.2 implementation work begins, we need to decide where v0.2 source code lives and what role v02/ plays going forward. This is Epic 1 in `CONSTRUCT-CLAUDE-v02-planning/backlog.md`.
 
