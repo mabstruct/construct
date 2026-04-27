@@ -1,5 +1,6 @@
 # CONSTRUCT — Claude Agent Configuration
 
+**Version:** see [`VERSION`](VERSION) (currently `0.2.0-dev`)
 **Purpose:** A complete CONSTRUCT knowledge system implemented as Claude agent configuration.
 **Runtime:** Claude handles dialog, sessions, web search, file management, and reasoning natively.
 **No code required:** This is a configuration-only project. Claude IS the agent runtime.
