@@ -112,9 +112,17 @@ Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-build-pipeline.md` (TBD)
 - [ ] Define stale-build detection (rebuild only when SPA *source* changed; never on data-only changes per `architecture-overview.md` §3.2)
 - [ ] Define build-time success and error reporting
 
-### Epic 7: Runtime Topology + User-Facing Entry — RESOLVED
+### Epic 7: Runtime Topology + User-Facing Entry — RESOLVED + skills IMPLEMENTED + VERIFIED
 
 **Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-runtime-topology.md` (Draft). `construct-up` / `construct-down` skills, port range 3001–3009, `version.json` polling for `UPDATE` flag, `/<workspace>/` routing, MVP landing dashboard, local→cloud topology with stable JSON boundary, `serve --single` for SPA history fallback.
+
+**Implementation:** `CONSTRUCT-CLAUDE-impl/skills/construct-up/SKILL.md` and `construct-down/SKILL.md` (this commit).
+
+**Verification (skills-side):** End-to-end run on staged scaffold — `construct-up` picked port 3001, started detached `serve` directly via `node_modules/.bin/serve` (single-process model), wrote `views/server.pid`, served HTTP 200 on `/` and on `/cosmology/digests/X` (history fallback). `construct-down` read PID, SIGTERM cleanly killed the process within 1s, removed PID file, post-shutdown connection refused as expected.
+
+**SPA-side checks (UPDATE flag, routing, landing) await Epic 8 implementation.** The runtime-topology spec stays in `Draft` status until those land — flip to `Accepted` after Epic 8 verification.
+
+**Implementation note from testing:** Spec §3.1 originally suggested `nohup npm run serve` for the detached process. Verified that `npm run` adds an `sh -c` wrapper layer, making the recorded PID the npm process rather than the serve process — and SIGTERM doesn't always propagate. Updated to invoke `./node_modules/.bin/serve` directly, which gives a clean single-PID model. Spec updated.
 
 - [x] Pick the local serving option → `serve --single` via `npm run serve`
 - [x] Design `views-up` (named `construct-up`) — single user-facing command → §3.1

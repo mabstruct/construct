@@ -61,7 +61,7 @@ The CONSTRUCT install root looks like:
 
 1. Resolve `views/build/`. If missing or empty → fail clearly with "run `views-build` first" (MVP simplification — chained build is v0.2.1).
 2. Pick the first free port in `3001..3009`. If all taken → fail clearly with port-exhaustion message.
-3. Start the SPA server as a detached process (no terminal attachment) by invoking `npm run serve` from `views/src/`. The `serve` script in `views/src/package.json` resolves to `serve ../build --single -l <port>`. `serve` is a dev dependency, installed by `npm install` during scaffold/build — `npx` network behaviour is not relied on at run time. The `--single` flag is mandatory: it makes the server fall back to `index.html` for unknown paths so client-side routes (`/<workspace>/...`, `/articles/<slug>`) work on direct load and reload.
+3. Start the SPA server as a detached process (no terminal attachment) by invoking the `serve` binary **directly** from `views/src/node_modules/.bin/serve`, NOT via `npm run serve`. Concretely: `nohup ./node_modules/.bin/serve ../build --single -l <port> > <install-root>/views/server.log 2>&1 < /dev/null &`. The `--single` flag is mandatory (SPA history fallback for `BrowserRouter` routes). Direct invocation (vs. `npm run`) means the recorded PID is the actual `serve` node process — single-process model, clean SIGTERM in `construct-down`, no `npm`-wrapper signal-propagation issues. (Verified: `npm run serve` adds an `sh -c` wrapper that broke clean shutdown in testing.)
 4. Write `views/server.pid` with the child PID.
 5. Report URL `http://localhost:<port>/` to the user.
 
