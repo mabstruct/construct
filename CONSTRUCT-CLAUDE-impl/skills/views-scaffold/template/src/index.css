@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens — Epic 4 fills these per spec-v02-design-prototype.md §3.1.
+ * Epic 3 ships a bare dark base so the scaffold doesn't look broken before
+ * the design prototype lands.
+ */
+@theme {
+  /* Epic 4 will populate this block with the full token set. */
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0a0a0a;
+  color: rgba(255, 255, 255, 0.9);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
