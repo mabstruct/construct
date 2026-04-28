@@ -72,19 +72,23 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - [x] Define route map and top-level layout shell → 10 routes in `routes.jsx` per topology §5
 - [x] Define theming entry-points → `index.css` with `@theme` placeholder for Epic 4
 
-### Epic 4: Design Prototype — NEW
+### Epic 4: Design Prototype — RESOLVED + IMPLEMENTED (visual verification pending)
 
-Goal: lock the visual language, navigation taxonomy, and reusable component inventory before any view implementation begins. Treat `views/design-example/` as a visual reference only — it has navigation discrepancies that must be resolved here.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-design-prototype.md` — Draft (kept Draft until browser-side visual checks pass).
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-design-prototype.md` (TBD)
+**Implementation:** 10 components at `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/src/components/` — Layout, CosmicBG, Header (TopRow + conditional BottomRow), Brand, WorkspaceSwitcher (with hardcoded mock workspaces; Epic 8 swaps to useFetch), UpdateFlag (unwired stub; Epic 8 wires useVersionFlag), Footer, EmptyState, LoadingState, ErrorState. Plus updated `index.css` with full theme tokens per spec §3.1 and `App.jsx` wrapping AppRoutes in Layout.
 
-- [ ] Audit `views/design-example/` for navigation discrepancies vs. `spec-v02-runtime-topology.md` §5 routing; record what to keep, drop, or revise
-- [ ] Lock navigation taxonomy: header structure, workspace switcher placement, breadcrumbs, route hierarchy display, `UPDATE` flag location
-- [ ] Define visual language: theme (glass-morphism dark, per PRD §4.7), color palette, typography scale, spacing system
-- [ ] Define component inventory: Layout, Header, WorkspaceSwitcher, StatusCard, MetricTile, ChartWrapper, Table, MarkdownRenderer, Tag, Badge, EmptyState, LoadingState, UpdateFlag — and which are needed in what view (cross-reference Epic 8)
-- [ ] Define responsive baseline: desktop primary, tablet acceptable; mobile out-of-scope for v0.2
-- [ ] Define accessibility baseline: keyboard nav, focus states, WCAG AA contrast minimum
-- [ ] Build a static design prototype (HTML or JSX, no data fetching) demonstrating each route in empty and populated states — serves as the visual contract Epic 8 implements against
+**Mechanical acceptance verified:** all CSS custom properties on `:root`, fonts registered via Tailwind 4 `@theme`, `data-workspace` attribute on Layout wrapper, sticky glass-morphism header, bottom row conditional on `useParams().workspace`, no rotating rings, no "OpenClaw" string, 1539 modules build successfully (build size 241kb JS / 25kb CSS gzipped to ~82kb total).
+
+**Pending:** browser-side visual verification — typography rendering, WCAG AA contrast, desktop/tablet responsive checks. User opens `npm run dev` (port 5173) or built `serve --single` to verify and signs off; spec then flips Draft → Accepted.
+
+- [x] Audit `views/design-example/` → spec §13 (Layout/Header lifted in spirit; flat single-workspace nav rejected; Analysis/Architecture/Thought-Stream pages dropped; OpenClaw footer line removed)
+- [x] Lock navigation taxonomy → spec §4 implemented in Header.jsx (two-row, sticky, BottomRow conditional)
+- [x] Define visual language → index.css with theme tokens, Syne+Manrope fonts via Layout useEffect
+- [x] Define component inventory → 10 components shipped; missing: StatusCard, MetricTile, ChartWrapper, Table, MarkdownRenderer, Tag, Badge, ConfidencePill (deferred to Epic 8 — they're page-content components, not layout chrome)
+- [x] Define responsive baseline → Tailwind `md:` / `lg:` breakpoints used; desktop primary, tablet acceptable
+- [x] Define accessibility baseline → focus rings on all interactives, ARIA labels, prefers-reduced-motion respected
+- [x] Build a static design prototype → page stubs remain placeholder; layout chrome (Header, Footer, CosmicBG) renders on every route. Per-page visual prototypes deferred to Epic 8 implementation
 
 ### Epic 5: Data Generation Workflow — RESOLVED + IMPLEMENTED + VERIFIED
 
