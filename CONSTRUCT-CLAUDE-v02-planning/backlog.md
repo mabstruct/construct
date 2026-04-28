@@ -152,19 +152,17 @@ All sub-tasks resolved by `spec-v02-views.md`:
 - [x] Define updates required to `daily-cycle.md` → §10
 - [x] Define updates required to command/reference docs → §11 (Epic 11 / docs)
 
-### Epic 10: Validation and Acceptance
+### Epic 10: Validation and Acceptance — RESOLVED
 
-Goal: define how we know v0.2 is done.
+**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-validation.md` (Draft). Four fixtures (empty / single-domain-small / multi-domain-medium / adversarial-corrupt) under `tests/fixtures/v02/`. Cross-spec acceptance matrix consolidates checks from all 9 prior specs into one execution plan. Adversarial fixture validates all four architecture invariants. End-to-end smoke test sequence documented. Performance + portability + browser targets stated.
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-validation.md` (TBD)
-
-- [ ] Define fixture workspace(s) for view validation (small + medium + edge-case workspaces)
-- [ ] Define acceptance checks for each route (consolidate per-view acceptance from Epic 8)
-- [ ] Define broken-data resilience checks (reference data-model spec §9 + §10)
-- [ ] Define source-of-truth invariant tests (reference data-model spec §12)
-- [ ] Define manual rebuild and serve verification flow
-- [ ] Define performance expectations for small (≤50 cards) and medium (≤500 cards) workspaces
-- [ ] Define portability expectations across Claude surfaces and local machines
+- [x] Define fixture workspace(s) → §3 (4 fixtures with full directory structures)
+- [x] Define acceptance checks for each route → §4.7 (cross-references Epic 8 §6)
+- [x] Define broken-data resilience checks → §3.4 (adversarial fixture + expected warnings)
+- [x] Define source-of-truth invariant tests → §4.1 (the four invariants from architecture-overview)
+- [x] Define manual rebuild and serve verification flow → §5 (end-to-end smoke test)
+- [x] Define performance expectations → §6 (small ≤30s pipeline, medium ≤90s, browser targets)
+- [x] Define portability expectations → §7 (macOS, Linux, Node 20+, Python 3.10+, browsers)
 
 ### Epic 11: Documentation and Migration
 
