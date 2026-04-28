@@ -1,7 +1,8 @@
 # spec-v02-data-generation — `views-generate-data` Skill
 
-**Status:** Draft
+**Status:** Accepted
 **Date:** 2026-04-28
+**Accepted:** 2026-04-29 (verified end-to-end: 11 files written from a multi-card test fixture; envelope correct; determinism verified — `build_id` identical across two runs against unchanged state; `source_cards[]` expansion produces full objects for present cards and `{status: "missing"}` for absent; `connects_to` denormalised correctly; broken card with missing required fields logged + excluded; safe-delete invariant verified by content-stable build_id)
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 5
 **Related:** `spec-v02-data-model.md` · `spec-v02-runtime-topology.md` §4 · `architecture-overview.md` §3.2, §4 · `prd-v02-live-views.md` §5.1 · `templates/*` and `references/*` in `CONSTRUCT-CLAUDE-impl/`

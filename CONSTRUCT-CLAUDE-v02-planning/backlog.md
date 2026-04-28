@@ -86,19 +86,29 @@ Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-design-prototype.md` (TBD)
 - [ ] Define accessibility baseline: keyboard nav, focus states, WCAG AA contrast minimum
 - [ ] Build a static design prototype (HTML or JSX, no data fetching) demonstrating each route in empty and populated states — serves as the visual contract Epic 8 implements against
 
-### Epic 5: Data Generation Workflow
+### Epic 5: Data Generation Workflow — RESOLVED + IMPLEMENTED + VERIFIED
 
-Goal: add a repeatable workflow that converts workspace state into UI-ready data per `spec-v02-data-model.md`.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-data-generation.md` — **Accepted** (verified 2026-04-29).
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-data-generation.md` (TBD)
+**Implementation:** `CONSTRUCT-CLAUDE-impl/skills/views-generate-data/` — `SKILL.md` + `generate.py` main + 9 lib/ modules (frontmatter, discover, envelope, build_id, parse_cards, parse_connections, parse_domains, parse_digests, parse_articles, parse_events, parse_curation, compute_stats) + `requirements.txt` (pyyaml). ~700 lines of Python.
 
-- [ ] Design `views-generate-data` skill (`SKILL.md`)
-- [ ] Define file discovery rules across cards, refs, digests, publish, and log artifacts
-- [ ] Define parsing rules for markdown, frontmatter, JSON, and event logs
-- [ ] Define aggregate/stat computation rules (reference `spec-v02-data-model.md` §5.7)
-- [ ] Define failure behavior for partial or malformed workspace data (reference data-model spec §9)
-- [ ] Define incremental versus full regeneration behavior — and whether the incremental path is in v0.2 or deferred to v0.2.1
-- [ ] Define `version.json` write semantics and `build_id` hashing rule (reference topology spec §4 + data-model spec §8)
+**Verification (test fixture with 1 workspace, 2 valid cards + 1 broken card, 1 connection, 1 digest, 1 article with 2 source cards + 1 missing reference):**
+- All 11 expected files written (3 global: domains/articles/stats; 6 per-workspace: cards/connections/digests/events/stats/curation-history; version.json; warnings log)
+- Envelope correct on every file (schema_version, build_id, generated_at, data)
+- DETERMINISM verified: `build_id e2f2f98c` identical across two runs against unchanged state — only `generated_at` differs
+- `source_cards[]` expansion: present cards get full title/type/confidence/contribution objects; absent card gets `{status: "missing"}`
+- `connects_to` denormalised correctly (both directions of the supports edge present)
+- Stats: avg_confidence, lifecycle histogram, confidence histogram, connection count
+- Warnings: broken card flagged with the 4 missing required fields, excluded from cards.json, other cards unaffected
+- Safe-delete invariant: `build_id` is a deterministic function of input content, so wiping `views/build/data/` and regenerating produces the same `build_id` (proven by determinism check)
+
+- [x] Design `views-generate-data` skill (`SKILL.md`) → spec §3.4 / implemented
+- [x] Define file discovery rules → spec §4 / `lib/discover.py`
+- [x] Define parsing rules for markdown, frontmatter, JSON, and event logs → spec §5 / `lib/parse_*.py`
+- [x] Define aggregate/stat computation rules → spec §5.8 / `lib/compute_stats.py`
+- [x] Define failure behavior for partial or malformed data → spec §7 / per-parser warning emission
+- [x] Define incremental vs full regeneration → full only in v0.2 (spec §8); incremental deferred to v0.2.1
+- [x] Define `version.json` write semantics and `build_id` hashing → spec §6 / `lib/build_id.py`
 
 ### Epic 6: Build Pipeline — RESOLVED + IMPLEMENTED + VERIFIED
 
