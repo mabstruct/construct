@@ -123,55 +123,19 @@ Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-build-pipeline.md` (TBD)
 - [x] Diagram local + cloud topology → §9
 - [x] State explicit non-goals → §10
 
-### Epic 8: Required Views Implementation Plan
+### Epic 8: Required Views Implementation Plan — RESOLVED
 
-Goal: break each required view into concrete implementation work, against the design prototype (Epic 4) and data contracts (Epic 2).
+**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-views.md` (Draft) — single consolidated spec covering all 9 routes (Landing, Articles list/detail, Workspace dashboard, Knowledge graph, Landscape, Artifacts, Digests list/detail) plus NotFound. Defines per-view fetched data, composition, filters, interactions, empty/loading/error states. Cross-cutting decisions: mixed detail pattern (full page for digests/articles, side panel for cards/graph nodes); top chip toolbar for filters; magazine cards for articles list; URL-backed filter state. Knowledge graph is single-workspace only in v0.2 (cross-workspace deferred to v0.2.1 with bridges).
 
-Spec target: per-view sub-specs under `../CONSTRUCT-CLAUDE-spec/spec-v02-view-*.md`, OR one consolidated `spec-v02-views.md` (TBD — decide as part of Epic 4 wrap-up).
+All sub-tasks resolved by `spec-v02-views.md`:
 
-#### Landing Dashboard (`/`)
-
-- [ ] Define workspace switcher / status grid contents (consumes `domains.json`, global `stats.json`)
-- [ ] Define per-workspace status panel (papers, cards, edges, landscape preview, last activity)
-- [ ] Define cross-workspace articles strip (consumes `articles.json`)
-- [ ] Define empty-state behavior (no workspaces yet)
-
-#### Per-Workspace Dashboard (`/<workspace>/`)
-
-- [ ] Define workspace-scoped metrics and activity widgets
-- [ ] Define charts: lifecycle distribution, confidence histogram, activity timeline
-- [ ] Define empty-state behavior
-
-#### Knowledge Graph (`/<workspace>/knowledge-graph`)
-
-- [ ] Choose graph rendering approach (D3 force-directed, recommended)
-- [ ] Define node/edge visual encodings (color = epistemic type, size = confidence/connections, edge style by type)
-- [ ] Define filtering model and side-panel interactions
-- [ ] Define performance budget for large graphs (200+ nodes)
-
-#### Domain Landscape (`/<workspace>/landscape`)
-
-- [ ] Define domain health metrics and visualizations
-- [ ] Define taxonomy coverage heatmap
-- [ ] Defer: comparison view across workspaces (v0.2.1)
-
-#### Artifacts Overview (`/<workspace>/artifacts`)
-
-- [ ] Define card list columns, sort, and filters
-- [ ] Define markdown detail rendering rules (per data-model spec §5.2 — `body_markdown` rendered via react-markdown)
-- [ ] Define connection summary presentation in card detail
-
-#### Digests (`/<workspace>/digests` + `/<workspace>/digests/<id>`)
-
-- [ ] Define list/detail UI behavior
-- [ ] Define filtering and stats behavior
-- [ ] Define raw-source link handling (reference `raw_path` per data-model spec §11.7)
-
-#### Articles (`/articles` + `/articles/<slug>`)
-
-- [ ] Define list view (cross-workspace, sortable, filterable)
-- [ ] Define detail view with provenance trace (consumes expanded `source_cards[]`)
-- [ ] Define draft vs. published states
+- [x] Landing — workspace switcher + status grid + articles strip + empty state → §4.1
+- [x] Per-Workspace Dashboard — metrics, charts, activity, empty state → §4.4
+- [x] Knowledge Graph — react-force-graph, node/edge encodings, type+lifecycle filters, side-panel interactions, 500-node budget → §4.5
+- [x] Domain Landscape — health metrics, taxonomy heatmap, cross-workspace comparison deferred to v0.2.1 → §4.6
+- [x] Artifacts Overview — columns, sort, chip-toolbar filters, side-panel detail with markdown body → §4.7
+- [x] Digests — list/detail behavior, date-range filter, raw-source link handling (not exposed per data-model §11.7) → §4.8 + §4.9
+- [x] Articles — magazine card list with chip filters, full-page detail with provenance trace, click-source-card → artifacts side-panel → §4.2 + §4.3
 
 ### Epic 9: Skill and Workflow Integration — RESOLVED
 
