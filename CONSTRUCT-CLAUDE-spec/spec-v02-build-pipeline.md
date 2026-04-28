@@ -1,7 +1,8 @@
 # spec-v02-build-pipeline — `views-scaffold` and `views-build` Skills
 
-**Status:** Draft
+**Status:** Accepted
 **Date:** 2026-04-28
+**Accepted:** 2026-04-28 (verified end-to-end: views-scaffold copies template, substitutes {{VERSION}}, runs npm install; views-build runs Vite, verifies emptyOutDir invariant by leaving dummy data/+version.json untouched across rebuild)
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 6
 **Related:** `spec-v02-scaffold.md` · `spec-v02-design-prototype.md` · `spec-v02-runtime-topology.md` · `architecture-overview.md` · `prd-v02-live-views.md` §5.2, §5.4

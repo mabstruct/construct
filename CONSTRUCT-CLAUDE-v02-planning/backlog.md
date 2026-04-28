@@ -100,17 +100,23 @@ Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-data-generation.md` (TBD)
 - [ ] Define incremental versus full regeneration behavior — and whether the incremental path is in v0.2 or deferred to v0.2.1
 - [ ] Define `version.json` write semantics and `build_id` hashing rule (reference topology spec §4 + data-model spec §8)
 
-### Epic 6: Build Pipeline
+### Epic 6: Build Pipeline — RESOLVED + IMPLEMENTED + VERIFIED
 
-Goal: make views buildable from generated data.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-build-pipeline.md` — **Accepted** (verified 2026-04-28).
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-build-pipeline.md` (TBD)
+**Implementation:** `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/SKILL.md` (consumes the template tree from Epic 3) and `CONSTRUCT-CLAUDE-impl/skills/views-build/SKILL.md`.
 
-- [ ] Design `views-scaffold` skill (`SKILL.md`) — one-time `views/src/` setup; consumes Epic 3 + Epic 4 outputs
-- [ ] Design `views-build` skill (`SKILL.md`) — `npm install && npm run build` → `views/build/`
-- [ ] Define install/build commands and expected outputs
-- [ ] Define stale-build detection (rebuild only when SPA *source* changed; never on data-only changes per `architecture-overview.md` §3.2)
-- [ ] Define build-time success and error reporting
+**Verification (full walking skeleton on staged install):**
+- views-scaffold: install root detected, template copied, `{{VERSION}}` substituted to `0.2.0-dev`, `npm install` completed (~30s cached), node_modules/vite verified
+- views-build: preconditions checked, `emptyOutDir: false` confirmed via grep, `npm run build` succeeded (52 modules, ~602ms), `views/build/{index.html, assets/}` produced
+- INVARIANT verified: created dummy `views/build/data/cosmology/cards.json` and `views/build/version.json`, ran a second `views-build` — both files survived byte-identical
+- End-to-end chain (scaffold → build → construct-up → curl → construct-down) all passed; `/version.json` even served correctly to the browser-style fetch
+
+- [x] Design `views-scaffold` skill (`SKILL.md`) → spec §3, implemented + verified
+- [x] Design `views-build` skill (`SKILL.md`) → spec §4, implemented + verified
+- [x] Define install/build commands and expected outputs → spec §5; bundle ~233kb JS, 5.8kb CSS, 0.4kb HTML
+- [x] Define stale-build detection → deferred to v0.2.1 (spec §4.6); always rebuilds for v0.2 MVP
+- [x] Define build-time success and error reporting → SKILL.md Failure-mode tables in both skills
 
 ### Epic 7: Runtime Topology + User-Facing Entry — RESOLVED + skills IMPLEMENTED + VERIFIED
 
