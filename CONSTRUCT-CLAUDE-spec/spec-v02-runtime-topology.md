@@ -3,7 +3,7 @@
 **Status:** Draft
 **Date:** 2026-04-27
 **Owner:** ;-)mab
-**Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 6
+**Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 7
 **Related:** `prd-v02-live-views.md` §3.4, §5.3, §6.1 · `adrs/adr-0002-v02-packaging.md`
 
 ---
@@ -12,7 +12,7 @@
 
 This spec defines, for v0.2 MVP, **how the user starts, browses, and stops CONSTRUCT** when live views are present. It picks the local serving option, names the user-facing entry skill, defines server lifecycle, routing, and the refresh model. It also marks the stable boundary that survives a future cloud-topology swap.
 
-This spec **does not** cover JSON data contracts (Epic 2 / `spec-v02-data-model.md`), per-view UI design (Epic 7), or hook attachment to existing skills (Epic 8 / `prd-v02-live-views.md` §6.1).
+This spec **does not** cover JSON data contracts (Epic 2 / `spec-v02-data-model.md`), per-view UI design (Epic 8), or hook attachment to existing skills (Epic 9 / `prd-v02-live-views.md` §6.1).
 
 ---
 
@@ -239,7 +239,7 @@ Server binds `127.0.0.1` only. This is non-negotiable for v0.2 — no LAN/remote
 |---|---|---|
 | `domain-init` | Add lazy `construct-up` check at start (one extra step) | Server bootstraps automatically on first domain init per the user's product framing |
 
-All other v0.1 skills are untouched by this spec. (Hook integration that triggers `views-generate-data` after research/curation/synthesis is Epic 8, not this spec.)
+All other v0.1 skills are untouched by this spec. (Hook integration that triggers `views-generate-data` after research/curation/synthesis is Epic 9, not this spec.)
 
 ---
 
@@ -324,7 +324,7 @@ What **changes**:
 ## 11. Open Follow-ups (don't block this spec)
 
 1. **Where does `construct-up` exec the server in the user's process tree?** Detached background via `nohup`-equivalent? `setsid`? Platform differences (macOS vs. Linux)? — implementation detail for the skill author.
-2. **What "stale" means for `views/build/`** — if data was regenerated but build isn't rerun, the SPA still loads old JSON. Either auto-rebuild on data change (cheap with Vite's `--watch`) or document the constraint that `views-generate-data` includes a build step. Decision deferred to Epic 4/5 implementation.
+2. **What "stale" means for `views/build/`** — if data was regenerated but build isn't rerun, the SPA still loads old JSON. Either auto-rebuild on data change (cheap with Vite's `--watch`) or document the constraint that `views-generate-data` includes a build step. Decision deferred to Epic 5/6 implementation.
 3. **Multi-CONSTRUCT discovery** — if user has 3 CONSTRUCT installs running on 3001/3002/3003, is there a "where are they?" command? Not needed for MVP. Could be a global `~/.construct/registry` later.
 4. **Port 3001 vs. 3000** — convention in many docs uses 3000. We chose 3001 to leave 3000 free for the very common Node app default. Worth a one-line note in user docs.
 5. **`construct-down` and orphan workspaces** — if the user `construct-down`s while a research-cycle is mid-flight, does the cycle still write data? (Yes — Claude is independent of the views server.) Worth saying so explicitly somewhere in user docs.

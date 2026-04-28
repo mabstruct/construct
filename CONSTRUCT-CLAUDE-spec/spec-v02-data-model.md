@@ -12,7 +12,7 @@
 
 This spec defines, for v0.2 MVP, **the JSON files that `views-generate-data` writes** into `views/build/data/`. These files are the contract between the agent runtime (which produces them) and the SPA (which consumes them). It is the **stable boundary** identified in `spec-v02-runtime-topology.md` §9.3 — the artefact that survives a future cloud topology swap unchanged.
 
-This spec does not cover: how to compute aggregate stats efficiently (Epic 4 — `views-generate-data` skill design), nor how each view component renders the data (Epic 7 — view implementation).
+This spec does not cover: how to compute aggregate stats efficiently (Epic 5 — `views-generate-data` skill design), nor how each view component renders the data (Epic 8 — view implementation).
 
 ---
 
@@ -95,7 +95,7 @@ Every JSON file starts with this envelope at the top level:
 
 **Source:** `<install-root>/domains.yaml` (one root-level file aggregating all domains) + scan of workspace directories + per-workspace card/connection/ref counts.
 
-> **Note for MVP:** v0.1 puts `domains.yaml` *inside each workspace*. v0.2 introduces a single `<install-root>/domains.yaml` aggregating across workspaces. If keeping per-workspace `domains.yaml` is preferred, `views-generate-data` simply scans each workspace and merges. Decide in Epic 4 implementation. For this spec, the contract is the same either way.
+> **Note for MVP:** v0.1 puts `domains.yaml` *inside each workspace*. v0.2 introduces a single `<install-root>/domains.yaml` aggregating across workspaces. If keeping per-workspace `domains.yaml` is preferred, `views-generate-data` simply scans each workspace and merges. Decide in Epic 5 implementation. For this spec, the contract is the same either way.
 
 ```jsonc
 {
@@ -296,7 +296,7 @@ Every JSON file starts with this envelope at the top level:
 ```
 
 **Notes:**
-- Event types are not enumerated here — they're whatever skills emit. Documenting the canonical set is Epic 8 work.
+- Event types are not enumerated here — they're whatever skills emit. Documenting the canonical set is Epic 9 work.
 - The SPA renders events from a small set of known types and falls back to `<actor> <type> <subject>` for unknown ones.
 
 ### 5.7 `stats.json` — global + per-workspace
@@ -397,7 +397,7 @@ PRD §2 ("Decide what provenance and confidence metadata must survive into view 
 | Events | `actor`, `skill`, `timestamp` |
 | Stats | All histograms preserved; aggregates derived |
 
-**Nothing is hidden from the view layer**, with one exception: the canonical `log/events.jsonl` may contain skill-internal scratch events. Generation filters to a documented event type allowlist (Epic 8).
+**Nothing is hidden from the view layer**, with one exception: the canonical `log/events.jsonl` may contain skill-internal scratch events. Generation filters to a documented event type allowlist (Epic 9).
 
 ---
 
@@ -458,7 +458,7 @@ This spec is implemented when:
 
 ## 11. Open Follow-ups
 
-1. **`domains.yaml` location.** v0.1 puts it inside each workspace; v0.2 implies a global registry. Decide in Epic 4. Either way, the JSON output contract is the same.
+1. **`domains.yaml` location.** v0.1 puts it inside each workspace; v0.2 implies a global registry. Decide in Epic 5. Either way, the JSON output contract is the same.
 2. **Markdown body weight.** A workspace with 1000 cards × 5KB body = 5MB `cards.json`. Acceptable for MVP. v0.2.1 may split body into separate files keyed by ID.
 3. **Connections cross-workspace.** Currently per-workspace only. Bridges (cross-workspace connections from `bridge-detect`) need a separate `bridges.json` global file when surfaced — v0.2.1.
 4. **Activity feed cross-workspace.** Per-workspace `events.json` only for v0.2. Cross-workspace `events.json` global file — v0.2.1.
