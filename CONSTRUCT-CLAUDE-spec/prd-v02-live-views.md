@@ -1,10 +1,26 @@
 # CONSTRUCT v0.2 — Live Views — Product Requirements Document
 
 **Version:** 0.2.0
-**Date:** 2026-04-24
-**Status:** Draft
+**Date:** 2026-04-24 (revised 2026-04-28)
+**Status:** Draft — vision and product requirements; implementation details live in the specs below
 **Prerequisite:** v0.1 (Claude-native agent system — complete)
 **Companion:** [v0.1 PRD (prd.md)](prd.md)
+
+**Implementation specs (binding — supersede this PRD where they conflict):**
+
+- `architecture-overview.md` — three-layer canonical/derived/presentation pattern, the four invariants
+- `adrs/adr-0002-v02-packaging.md` — v0.2 packaging (Accepted)
+- `spec-v02-runtime-topology.md` — server, routing, `construct-up`/`construct-down`
+- `spec-v02-data-model.md` — JSON schemas + envelope
+- `spec-v02-scaffold.md` — toolchain, deps, directory layout
+- `spec-v02-design-prototype.md` — visual contract, components, navigation taxonomy
+- `spec-v02-data-generation.md` — `views-generate-data` skill
+- `spec-v02-build-pipeline.md` — `views-scaffold` + `views-build`
+- `spec-v02-views.md` — per-view implementation plans
+- `spec-v02-hook-integration.md` — v0.1 skill hooks
+- `spec-v02-validation.md` — fixtures + acceptance
+
+This PRD captures the product vision and high-level requirements. The specs above hold the binding implementation details; where this document diverges from them, the specs are authoritative.
 
 ---
 
@@ -23,7 +39,7 @@ v0.2 closes this gap with **live views**: a set of web pages generated from work
 | **Workspace files remain source of truth** | Views are derived — regenerated from `cards/`, `connections.json`, `domains.yaml`, etc. |
 | **Claude generates, browser renders** | View generation is a skill (or set of skills). The output is a built web app. |
 | **Vite + React stack** | Matches the existing design prototype in `views/design-example/src/`. Tailwind CSS, lucide-react icons, recharts for charts. |
-| **Local-first** | Views are served by a local HTTP server (e.g., `python -m http.server` or `npx serve`). No cloud deployment in v0.2. |
+| **Local-first** | Views are served by `serve --single` from `views/build/`, on a port in 3001–3009 (chosen by `construct-up`). No cloud deployment in v0.2. |
 | **Publish is deferred** | Publishing views to a public host (e.g., here.now) is a v0.3 concern. v0.2 is localhost only. |
 
 ---
@@ -32,38 +48,65 @@ v0.2 closes this gap with **live views**: a set of web pages generated from work
 
 ### 3.1 Directory Layout
 
+> **Drilled into:** `spec-v02-scaffold.md` §3 (full layout) and `architecture-overview.md` §3 (three-layer rationale).
+
 ```
 views/
-├── design-example/          # Reference design (existing prototype — read-only)
-│   └── src/
-├── src/                     # Generated Vite+React source (written by skills)
-│   ├── index.html
-│   ├── main.jsx
-│   ├── App.jsx
-│   ├── components/          # Shared layout, nav, reusable UI components
-│   ├── pages/               # One component per view
-│   ├── data/                # Generated JSON data files (from workspace)
-│   ├── public/              # Static assets (graph HTML, etc.)
+├── design-example/          # Reference design — read-only, may be removed in a later milestone
+├── src/                     # Vite project root; SPA source
 │   ├── package.json
-│   ├── vite.config.js
-│   └── index.css
-└── build/                   # Production build output (served by local HTTP server)
+│   ├── vite.config.js       # build.outDir = '../build', emptyOutDir = false
+│   ├── index.html
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── routes.jsx
+│       ├── index.css        # Tailwind directives + theme tokens
+│       ├── components/      # Layout, Header, MetricTile, ...
+│       ├── pages/           # One per route
+│       ├── hooks/           # useFetch, useVersionFlag
+│       └── lib/
+└── build/                   # Vite output + generated data — served by serve --single
+    ├── index.html           # written by views-build (Vite)
+    ├── assets/              # written by views-build (Vite, hashed bundles)
+    ├── data/                # written by views-generate-data (NEVER touched by Vite)
+    │   ├── domains.json     # global
+    │   ├── articles.json    # global, cross-workspace
+    │   ├── stats.json       # global
+    │   └── <workspace>/     # per-workspace files (cards.json, connections.json, etc.)
+    ├── version.json         # written by views-generate-data; SPA polls for UPDATE flag
+    └── server.pid           # written by construct-up
 ```
+
+**Key correction from earlier draft:** generated JSON lives at `views/build/data/` (fetched at runtime), not `views/src/data/` (which would be bundled at build time). This decoupling lets `views-generate-data` rewrite data without triggering a Vite rebuild — it's the load-bearing change for the UPDATE-flag polling story. See `architecture-overview.md` §3.2 for the two-writer invariant.
 
 ### 3.2 Data Flow
 
 ```
 Workspace files (cards/, connections.json, domains.yaml, refs/, digests/, publish/, log/)
     │
+    │  views-generate-data (Python helper script invoked via SKILL.md)
     ▼
-[data-generation skill] ── reads workspace, produces JSON into views/src/data/
-    │
-    ▼
-[vite build] ── builds views/src/ → views/build/
-    │
-    ▼
-[local HTTP server] ── serves views/build/ on localhost
+views/build/data/*.json + views/build/version.json    (runtime JSON, fetched by SPA)
+
+
+views/src/                                           views/build/index.html + assets/
+(SPA source)  ── views-build (Vite) ──────►          (compiled bundle)
+
+
+views/build/  ── construct-up (serve --single) ──►   localhost:<port>
+                                                      │
+                                                      ▼
+                                                    Browser SPA
+                                                    fetches /data/*.json + /version.json
+                                                    (read-only)
 ```
+
+Two **independent** writers into `views/build/`:
+- `views-build` writes `index.html` + `assets/` (rare — only when SPA source changes)
+- `views-generate-data` writes `data/` + `version.json` (frequent — every regen-hook trigger)
+
+These never overlap. `vite.config.js`'s `emptyOutDir: false` is the load-bearing config that prevents Vite from wiping `data/` on rebuild.
 
 ### 3.3 Generation Triggers
 
@@ -75,20 +118,22 @@ Workspace files (cards/, connections.json, domains.yaml, refs/, digests/, publis
 
 ### 3.4 Serving
 
-The built site in `views/build/` is a static SPA. Served by any local HTTP server:
+> **Drilled into:** `spec-v02-runtime-topology.md` (server lifecycle, ports, PID, lifecycle).
+
+The built site in `views/build/` is a static SPA. Served via the `serve` npm package with `--single` for SPA history-fallback:
 
 ```bash
-# Option A: Python
-cd views/build && python -m http.server 3000
-
-# Option B: Node
-npx serve views/build -p 3000
-
-# Option C: Vite preview
-cd views/src && npm run preview
+cd views/src && npm run serve -- -l <port>
+# In production: invoked by the construct-up skill which picks a port from 3001–3009
 ```
 
-No backend API. All data is baked into the build as JSON imports.
+`construct-up` is the user-facing entry. It picks a free port, starts the server detached, writes `views/server.pid`, and reports the URL. `construct-down` reads the PID and stops it.
+
+**Why not `python -m http.server`:** it doesn't do SPA history fallback. Reloading at `/<workspace>/digests` would 404. We use BrowserRouter (clean URLs) which requires the server to fall back to `index.html` for unknown paths. `serve --single` does this; Python's stdlib server doesn't.
+
+**Why not `vite preview`:** it's dev tooling, not a stable production-grade server. Used in scaffold sanity-checks only.
+
+No backend API. All data is fetched at runtime as JSON files served as static assets.
 
 ---
 
@@ -221,49 +266,63 @@ No backend API. All data is baked into the build as JSON imports.
 
 ### 5.1 `views-generate-data`
 
-**Purpose:** Read workspace files and produce JSON data files into `views/src/data/`.
+> **Drilled into:** `spec-v02-data-generation.md` and `spec-v02-data-model.md`.
 
-**Inputs:** Workspace path (containing `cards/`, `connections.json`, etc.)
-**Outputs:**
-- `views/src/data/cards.json` — all cards (frontmatter + content)
-- `views/src/data/connections.json` — full connection graph
-- `views/src/data/domains.json` — domain taxonomy with computed stats
-- `views/src/data/digests.json` — all digests parsed into structured JSON
-- `views/src/data/articles.json` — all published outputs
-- `views/src/data/events.json` — recent events from log
-- `views/src/data/stats.json` — precomputed aggregate statistics
+**Purpose:** Read workspace files and produce JSON data files into `views/build/data/`. **Sole writer** to that directory (architecture-overview invariant I1).
 
-**Procedure:** Read every relevant workspace file, extract/aggregate, write JSON.
+**Inputs:** Install root path (containing `AGENTS.md`, workspace subdirectories).
+**Outputs:** Hybrid global + per-workspace layout:
+- `views/build/data/domains.json` — global workspace registry with computed metrics
+- `views/build/data/articles.json` — global, cross-workspace published outputs
+- `views/build/data/stats.json` — global aggregates
+- `views/build/data/<workspace>/cards.json` — per-workspace cards (frontmatter + body)
+- `views/build/data/<workspace>/connections.json` — per-workspace UI-shaped graph
+- `views/build/data/<workspace>/digests.json` — per-workspace research digests
+- `views/build/data/<workspace>/events.json` — per-workspace recent events
+- `views/build/data/<workspace>/stats.json` — per-workspace metrics
+- `views/build/data/<workspace>/curation-history.json` — per-workspace curation history
+- `views/build/version.json` — `{schema_version, build_id, generated_at}` polled by SPA
+
+**Procedure:** Workspace discovery + per-schema parsing + aggregation + deterministic JSON serialisation + `build_id` hashing. Skill is procedural SKILL.md plus a Python helper for the heavy lifting (see `spec-v02-data-generation.md` §3).
 
 ### 5.2 `views-build`
 
-**Purpose:** Run `npm install && npm run build` in `views/src/`, producing output in `views/build/`.
+> **Drilled into:** `spec-v02-build-pipeline.md`.
+
+**Purpose:** Run `npm install && npm run build` in `views/src/`, producing `views/build/{index.html, assets/}`.
 
 **Procedure:**
-1. Run `views-generate-data` first (ensure fresh data)
-2. Execute Vite build
-3. Copy/move build output to `views/build/`
-4. Report success with file counts and size
+1. Verify `views/src/` exists, `vite.config.js` declares `emptyOutDir: false`
+2. `npm install` if `node_modules/` missing/stale
+3. `npm run build` (Vite writes to `../build/` per outDir config)
+4. Verify post-build artefacts; report bundle size
 
-### 5.3 `views-serve`
+**Critically does NOT:**
+- Chain `views-generate-data` (separate writer, separate schedule)
+- Touch `views/build/data/` or `views/build/version.json`
 
-**Purpose:** Start or restart a local HTTP server on `views/build/`.
+### 5.3 `views-serve` and `construct-up`
 
-**Procedure:**
-1. Check if `views/build/` exists and is non-empty
-2. Start HTTP server on a configurable port (default 3000)
-3. Report URL to user
+> **Drilled into:** `spec-v02-runtime-topology.md`.
+
+`views-serve` is the low-level "start an HTTP server on `views/build/`" primitive (`npm run serve -- -l <port>`). The user-facing entry is **`construct-up`**, which wraps it: picks a port (3001–3009), starts the server detached, writes `views/server.pid`, reports the URL.
+
+`construct-down` reads the PID and stops the server.
 
 ### 5.4 `views-scaffold`
 
-**Purpose:** Initial one-time setup — create `views/src/` from templates, install dependencies. Uses `views/design-example/` as the reference design.
+> **Drilled into:** `spec-v02-scaffold.md` (toolchain) and `spec-v02-build-pipeline.md` §3 (skill behavior).
+
+**Purpose:** One-time setup of `views/src/`. Creates the Vite + React + Tailwind project structure with all components and page stubs.
 
 **Procedure:**
-1. Scaffold `views/src/` with Vite + React project structure
-2. Adapt design-example Layout, theme, routing to CONSTRUCT domains
-3. Create page components for each required view
-4. Copy shared components (Layout, theme)
+1. Verify install root has `AGENTS.md` + `.construct/`
+2. Verify `views/src/` doesn't already exist (or `--force` flag passed)
+3. Copy template at `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/` → `views/src/`
+4. Substitute `{{VERSION}}` placeholder from `CONSTRUCT-CLAUDE-impl/VERSION`
 5. Run `npm install`
+
+`design-example/` is **visual reference only** — not vendored. The template materialises `spec-v02-design-prototype.md`'s component inventory directly.
 
 ---
 
@@ -271,17 +330,23 @@ No backend API. All data is baked into the build as JSON imports.
 
 ### 6.1 Event Hooks
 
-The following existing skills should trigger view regeneration when `views/` exists:
+> **Drilled into:** `spec-v02-hook-integration.md`.
+
+Hooks are **conditionally automatic**: they fire when `views/build/` exists, no-op silently otherwise. No config opt-out for v0.2 MVP.
 
 | Skill | Hook point | Action |
 |-------|-----------|--------|
-| `research-cycle` | After Step 7 (Report) | `views-generate-data` + `views-build` |
-| `curation-cycle` | After Step 7 (Report) | `views-generate-data` + `views-build` |
-| `synthesis` | After publish step | `views-generate-data` + `views-build` |
-| `card-create` | After card written | `views-generate-data` (build optional) |
-| `card-connect` | After connection added | `views-generate-data` (build optional) |
+| `research-cycle` | After Step 7 (Report) | `views-generate-data` |
+| `curation-cycle` | After Step 7 (Report) | `views-generate-data` |
+| `synthesis` | After publish step | `views-generate-data` |
+| ~~`card-create`~~ | n/a | **Excluded in v0.2.** Inside parent skills (research-cycle), per-card hooks would fire dozens of times redundantly. Direct invocation is rare; v0.2.1 may add with debouncing |
+| ~~`card-connect`~~ | n/a | **Excluded in v0.2.** Same rationale |
 
-Hooks are optional — views always work as on-demand rebuild too.
+**Note: hooks invoke `views-generate-data` only — not `views-build`.** SPA source rarely changes during normal use; rebuild is its own (manual) operation.
+
+**Failure isolation:** A failed `views-generate-data` MUST NOT cause the parent skill to fail. The parent reports success with a `⚠ views regeneration failed: <msg>` warning line.
+
+**Bootstrap hook:** `domain-init` lazily invokes `construct-up` if no server is running (per `spec-v02-runtime-topology.md` §3.2).
 
 ### 6.2 Curation History
 
@@ -305,7 +370,8 @@ Views should support historized reports:
 | Routing | react-router-dom 7.x | Matches design example |
 | Markdown rendering | react-markdown | For card content and article display |
 | Graph visualization | D3.js (force-directed) | For knowledge graph view; design example uses iframe approach |
-| HTTP server | Python `http.server` or `npx serve` | Zero-install for Python; near-zero for Node |
+| HTTP server | `serve` (npm package) with `--single` | SPA history fallback for `BrowserRouter`; Node already required by Vite. Python `http.server` rejected (no fallback) |
+| Knowledge graph | `react-force-graph` (D3 under the hood) | React-friendly wrapper; saves D3 imperative-vs-declarative boilerplate |
 
 ---
 
