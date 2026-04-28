@@ -26,7 +26,7 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 
 - ~~Should v0.2 live in-place inside `CONSTRUCT-CLAUDE-impl/` or become a new deployable package assembled from `CONSTRUCT-CLAUDE-v02-planning/`?~~ **Resolved** by `../CONSTRUCT-CLAUDE-spec/adrs/adr-0002-v02-packaging.md` — in-place inside `CONSTRUCT-CLAUDE-impl/`.
 - ~~How much of `views/design-example/` is directly reusable versus only a visual reference?~~ **Resolved** — visual reference only. The example has navigation discrepancies that disqualify wholesale vendoring. A clean design prototype is the goal of Epic 4.
-- Are view-generation hooks mandatory after mutating skills, or optional behind a config flag? — open, to be answered by Epic 9.
+- ~~Are view-generation hooks mandatory after mutating skills, or optional behind a config flag?~~ **Resolved** by `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` — conditionally automatic when `views/build/` exists; no opt-out config for v0.2 MVP. Three skills hook regen (research-cycle, curation-cycle, synthesis); card-create and card-connect explicitly excluded. domain-init lazily bootstraps construct-up.
 - ~~What is the minimum supported local serving workflow: Vite preview, static serve, or both?~~ **Resolved** by `../CONSTRUCT-CLAUDE-spec/spec-v02-runtime-topology.md` — `serve --single` via `npm run serve`.
 - Should multi-domain aggregation be first-class in v0.2 or follow after single-domain live views are solid? — open. Current direction: cross-workspace **articles** are first-class in v0.2; cross-workspace **bridges** and **activity feed** deferred to v0.2.1 (per `spec-v02-runtime-topology.md` §6).
 
@@ -173,24 +173,20 @@ Spec target: per-view sub-specs under `../CONSTRUCT-CLAUDE-spec/spec-v02-view-*.
 - [ ] Define detail view with provenance trace (consumes expanded `source_cards[]`)
 - [ ] Define draft vs. published states
 
-### Epic 9: Skill and Workflow Integration
+### Epic 9: Skill and Workflow Integration — RESOLVED
 
-Goal: integrate views into the existing Claude-native operating model.
+**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` (Draft). Hooks are conditionally automatic on `views/build/` existence; no config opt-out for v0.2 MVP. Three skills hook regeneration (research-cycle, curation-cycle, synthesis); card-create and card-connect deliberately excluded to avoid per-card thrash. domain-init prepends a lazy construct-up bootstrap. Failure isolation: hook failures emit a warning to the parent skill's report but never propagate as failure.
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` (TBD)
-
-Open question to resolve in this spec: are hooks mandatory or optional behind a config flag?
-
-- [ ] Identify all existing skills that should trigger data regeneration (reference PRD §6.1)
-- [ ] Define optional vs. mandatory hook behavior — answer the open question
-- [ ] Define hook for `research-cycle`
-- [ ] Define hook for `curation-cycle`
-- [ ] Define hook for `synthesis`
-- [ ] Define hook for `card-create`
-- [ ] Define hook for `card-connect`
-- [ ] Define lazy `construct-up` invocation in `domain-init` (reference topology spec §3.2)
-- [ ] Define updates required to `daily-cycle.md`
-- [ ] Define updates required to command/reference docs
+- [x] Identify all existing skills that should trigger data regeneration → spec §4 (3 skills, with rationale for excluding 2)
+- [x] Define optional vs. mandatory hook behavior → §2, §8 (conditionally automatic; opt-out deferred to v0.2.1)
+- [x] Define hook for `research-cycle` → §4.1
+- [x] Define hook for `curation-cycle` → §4.2
+- [x] Define hook for `synthesis` → §4.3
+- [x] ~~Define hook for `card-create`~~ → excluded in v0.2 (§4.4)
+- [x] ~~Define hook for `card-connect`~~ → excluded in v0.2 (§4.4)
+- [x] Define lazy `construct-up` invocation in `domain-init` → §6
+- [x] Define updates required to `daily-cycle.md` → §10
+- [x] Define updates required to command/reference docs → §11 (Epic 11 / docs)
 
 ### Epic 10: Validation and Acceptance
 
