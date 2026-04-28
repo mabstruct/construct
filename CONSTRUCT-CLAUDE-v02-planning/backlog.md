@@ -55,20 +55,22 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - [x] Specify `curation-history.json` schema → §5.8
 - [x] Decide what provenance and confidence metadata must survive into view data → §6
 
-### Epic 3: Views Scaffold
+### Epic 3: Views Scaffold — RESOLVED + IMPLEMENTED + VERIFIED
 
-Goal: establish the generated React/Vite app structure for v0.2.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-scaffold.md` — **Accepted** (verified 2026-04-28).
 
-Spec target: `../CONSTRUCT-CLAUDE-spec/spec-v02-scaffold.md` (TBD)
+**Implementation:** template tree at `../CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/` (commit `c9cc7dd`).
 
-Note: `views/design-example/` is **visual reference only**. The scaffold is *not* produced by copying design-example wholesale — it is a clean structure that hosts the design prototype defined in Epic 4.
+**Verification:** copied template to a clean test layout, ran `npm install` (416 pkgs, 53s, no errors), `npm run build` (52 modules, 593ms, ~233kb JS), `serve --single` (HTTP 200 on root + history-fallback verified for `/cosmology/digests/2026-04-25`), `emptyOutDir: false` invariant verified (dummy `data/cosmology/cards.json` and `version.json` survived rebuild byte-identical).
 
-- [ ] Define canonical `views/` directory layout (consistent with `architecture-overview.md` §7)
-- [ ] Lock dependency list: React, Vite, Tailwind, lucide-react, recharts, react-router-dom, react-markdown, D3 (graph), `serve`
-- [ ] Create scaffold rules for `views/src/`, `views/build/`, and shared assets
-- [ ] Define `package.json` scripts: `build`, `serve` (with `--single`), `dev` (Vite dev server, optional)
-- [ ] Define route map and top-level layout shell (consumes Epic 4 component inventory)
-- [ ] Define theming entry-points (Tailwind config, design tokens) — implementation in Epic 4
+**Vite version correction:** spec said Vite 8; install failed because `@vitejs/plugin-react` peers Vite 4–7. Pinned to Vite 7. Spec updated.
+
+- [x] Define canonical `views/` directory layout → spec §3, materialised in `template/`
+- [x] Lock dependency list → spec §4 (with Vite 7 correction)
+- [x] Create scaffold rules → template tree exists; views-scaffold skill (Epic 6) copies it
+- [x] Define `package.json` scripts → `dev`, `build`, `serve`, `preview` per spec §5
+- [x] Define route map and top-level layout shell → 10 routes in `routes.jsx` per topology §5
+- [x] Define theming entry-points → `index.css` with `@theme` placeholder for Epic 4
 
 ### Epic 4: Design Prototype — NEW
 

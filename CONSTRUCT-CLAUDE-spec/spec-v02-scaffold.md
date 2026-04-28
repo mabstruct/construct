@@ -1,7 +1,8 @@
 # spec-v02-scaffold — Views SPA Scaffold
 
-**Status:** Draft
+**Status:** Accepted
 **Date:** 2026-04-28
+**Accepted:** 2026-04-28 (verified via implementation: template at `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/`; `npm install` + `npm run build` + `serve --single` all pass on the staged template; `emptyOutDir: false` invariant verified by surviving rebuild with dummy `data/` and `version.json` present)
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 3
 **Related:** `prd-v02-live-views.md` §3, §5.4 · `spec-v02-runtime-topology.md` · `spec-v02-data-model.md` · `architecture-overview.md` · `adrs/adr-0002-v02-packaging.md`
@@ -30,7 +31,7 @@ This spec produces a **bare-but-runnable** scaffold: a default Vite + React + Ta
 |---|---|
 | Language | JavaScript with JSX. No TypeScript in v0.2. |
 | Framework | React 19.x |
-| Build tool | Vite 8.x |
+| Build tool | Vite 7.x (Vite 8 was tried and rejected — `@vitejs/plugin-react` peers Vite 4–7; bumping to plugin-react v5+ to chase Vite 8 is deferred) |
 | Styling | Tailwind CSS 4.x via `@tailwindcss/vite` plugin (no separate `postcss.config.js`) |
 | Component approach | Hand-built with Tailwind utility classes. No shadcn, Radix, or Mantine deps. |
 | Routing | `react-router-dom` 7.x with `BrowserRouter` (matches `serve --single` history fallback) |
@@ -43,7 +44,7 @@ This spec produces a **bare-but-runnable** scaffold: a default Vite + React + Ta
 | Project root | `views/src/` is the Vite project root (`package.json`, `vite.config.js`, `index.html` live here) |
 | Build output | `views/build/` (Vite's `outDir` configured to `../build`) |
 | Build cleanup behaviour | `emptyOutDir: false` — Vite must NOT clean `views/build/` because `data/` and `version.json` are owned by `views-generate-data` |
-| Node version | Pin via `.nvmrc` at Node 20 (Vite 8 requirement) |
+| Node version | Pin via `.nvmrc` at Node 20 (Vite 7 minimum is Node 18, Node 20 is current LTS) |
 | Visual identity inheritance | None at this stage. Epic 4 audits `views/design-example/` and lifts what's keepable. Epic 3 ships a default-Tailwind look. |
 | `views/design-example/` fate | Stays at current path. May be removed in a later milestone (v0.3+) once Epic 4 has extracted what's worth keeping. |
 
@@ -127,7 +128,7 @@ These three writers never touch the same paths. Vite's `emptyOutDir: false` is w
 
 ```jsonc
 {
-  "vite": "^8.0.0",
+  "vite": "^7.0.0",
   "@vitejs/plugin-react": "^4.3.0",
   "tailwindcss": "^4.0.0",
   "@tailwindcss/vite": "^4.0.0",

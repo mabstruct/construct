@@ -362,7 +362,7 @@ Views should support historized reports:
 
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
-| Build tool | Vite 8.x | Matches design example; fast builds |
+| Build tool | Vite 7.x | Pinned at 7 because @vitejs/plugin-react peers Vite 4–7; Vite 8 deferred until plugin-react bumps |
 | UI framework | React 19.x | Matches design example |
 | Styling | Tailwind CSS 4.x | Matches design example |
 | Charts | Recharts | Matches design example |

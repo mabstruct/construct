@@ -354,7 +354,7 @@ Beyond budget: graceful degradation (e.g., graph renders a warning if >500 nodes
 
 | Tool | Required version | Notes |
 |---|---|---|
-| Node.js | ≥20 | Vite 8 requirement; pinned via `.nvmrc` |
+| Node.js | ≥20 | Current LTS; covers Vite 7 minimum; pinned via `.nvmrc` |
 | npm | bundled with Node | |
 | Python | ≥3.10 | matches repo `pyproject.toml`; needed for views-generate-data |
 
