@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { X } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import MarkdownRenderer from './MarkdownRenderer'
 import Tag from './Tag'
 import ConfidencePill from './ConfidencePill'
 import SourceTierIndicator from './SourceTierIndicator'
@@ -53,8 +53,8 @@ export default function CardSidePanel({ card, connections, workspace, onClose, o
         </div>
 
         {card.body_markdown && (
-          <div className="prose-construct text-sm leading-relaxed text-white/80 max-w-none">
-            <ReactMarkdown>{card.body_markdown}</ReactMarkdown>
+          <div className="text-sm">
+            <MarkdownRenderer>{card.body_markdown}</MarkdownRenderer>
           </div>
         )}
 
