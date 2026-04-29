@@ -1,20 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Check } from 'lucide-react'
+import { useFetch } from '../hooks/useFetch'
 
 // Per spec-v02-design-prototype.md §4.5 + spec-v02-views.md §5.2.
-// Pill in top-row right side, dropdown lists workspaces from domains.json.
-// Epic 4 ships hardcoded mock workspaces; Epic 8 swaps to useFetch('/data/domains.json').
-const MOCK_WORKSPACES = [
-  { id: 'cosmology', name: 'Cosmology', status: 'active' },
-  { id: 'climate-policy', name: 'Climate Policy', status: 'active' },
-]
-
+// Reads /data/domains.json — the user's actual workspaces appear in the dropdown.
 export default function WorkspaceSwitcher() {
   const { workspace } = useParams()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const { data, loading, error } = useFetch('/data/domains.json')
 
   useEffect(() => {
     function onClickOutside(e) {
@@ -24,8 +20,9 @@ export default function WorkspaceSwitcher() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const current = MOCK_WORKSPACES.find((w) => w.id === workspace)
-  const label = current ? current.name : 'Switch workspace'
+  const workspaces = data?.domains || []
+  const current = workspaces.find((w) => w.id === workspace)
+  const label = current ? current.name : workspace || 'Switch workspace'
 
   return (
     <div ref={ref} className="relative">
@@ -41,12 +38,18 @@ export default function WorkspaceSwitcher() {
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 mt-2 w-56 rounded-lg border border-white/10 bg-black/80 backdrop-blur-xl shadow-lg overflow-hidden z-50"
+          className="absolute right-0 mt-2 w-64 rounded-lg border border-white/10 bg-black/80 backdrop-blur-xl shadow-lg overflow-hidden z-50"
         >
-          {MOCK_WORKSPACES.length === 0 && (
+          {loading && (
+            <div className="px-3 py-2 text-xs text-white/40">Loading…</div>
+          )}
+          {error && (
+            <div className="px-3 py-2 text-xs text-amber-300">Could not load workspaces</div>
+          )}
+          {!loading && !error && workspaces.length === 0 && (
             <div className="px-3 py-2 text-xs text-white/40">No workspaces yet</div>
           )}
-          {MOCK_WORKSPACES.map((w) => (
+          {workspaces.map((w) => (
             <button
               key={w.id}
               role="option"
@@ -57,8 +60,8 @@ export default function WorkspaceSwitcher() {
               }}
               className="flex w-full items-center justify-between px-3 py-2 text-sm text-left text-white/80 hover:bg-white/[0.06]"
             >
-              <span>{w.name}</span>
-              {w.id === workspace && <Check className="h-3.5 w-3.5 text-cyan-300" />}
+              <span className="truncate">{w.name || w.id}</span>
+              {w.id === workspace && <Check className="h-3.5 w-3.5 text-cyan-300 shrink-0" />}
             </button>
           ))}
         </div>
