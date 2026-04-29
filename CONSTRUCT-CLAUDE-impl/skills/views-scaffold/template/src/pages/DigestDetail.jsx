@@ -96,7 +96,9 @@ export default function DigestDetail() {
                     )}
                   </div>
                   {f.summary && (
-                    <p className="text-sm text-white/70 leading-relaxed">{f.summary}</p>
+                    <div className="text-sm text-white/70 leading-relaxed">
+                      <MarkdownRenderer>{f.summary}</MarkdownRenderer>
+                    </div>
                   )}
                   {f.cluster && (
                     <p className="text-[10px] text-white/30 mt-1.5 uppercase tracking-wider">

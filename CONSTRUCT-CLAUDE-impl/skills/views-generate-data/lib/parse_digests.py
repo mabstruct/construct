@@ -105,7 +105,8 @@ def _extract_first_h1(body: str) -> str | None:
 
 
 def _extract_section(body: str, name: str) -> str | None:
-    pat = rf"^##\s+{re.escape(name)}\s*\n+(.*?)(?=\n##\s+|\Z)"
+    # Allow trailing text on the heading line (e.g. "## Top Findings (sorted by relevance)").
+    pat = rf"^##\s+{re.escape(name)}[^\n]*\n+(.*?)(?=\n##\s+|\Z)"
     m = re.search(pat, body, re.MULTILINE | re.DOTALL)
     return m.group(1) if m else None
 
@@ -149,10 +150,27 @@ def _extract_top_findings(body: str) -> list[dict]:
             "title": title,
             "relevance": relevance,
             "summary": summary,
-            "url": "",
+            "url": _extract_url(title + " " + summary),
             "cluster": "",
         })
     return findings
+
+
+def _extract_url(text: str) -> str:
+    """Find a primary URL in the text. Recognises bare URLs and arXiv IDs."""
+    # First try a bare http(s) URL
+    m = re.search(r"https?://[^\s\)\]\}'\"<>]+", text)
+    if m:
+        return m.group(0).rstrip(".,;:")
+    # Then try arXiv ID like 2503.14738 or 2602.12238
+    m = re.search(r"arXiv:\s*(\d{4}\.\d{4,6})", text, re.IGNORECASE)
+    if m:
+        return f"https://arxiv.org/abs/{m.group(1)}"
+    # Bare ID without "arXiv:" prefix, must be in parentheses to disambiguate
+    m = re.search(r"\((\d{4}\.\d{4,6})\)", text)
+    if m:
+        return f"https://arxiv.org/abs/{m.group(1)}"
+    return ""
 
 
 def _extract_clusters_table(body: str) -> list[dict]:
