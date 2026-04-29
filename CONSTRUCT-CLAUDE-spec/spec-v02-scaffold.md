@@ -38,7 +38,7 @@ This spec produces a **bare-but-runnable** scaffold: a default Vite + React + Ta
 | Markdown rendering | `react-markdown` |
 | Charts | `recharts` |
 | Icons | `lucide-react` |
-| Knowledge graph | `react-force-graph` (React wrapper around `d3-force`); `d3` available transitively for fine-grained customization |
+| Knowledge graph | `react-force-graph-2d` (2D-only variant of react-force-graph); `d3` available for fine-grained customization. Avoids the 3D/VR variants which transitively pull `three-bmfont-text` via a `git+ssh://` URL — that dep blocks installs for users without GitHub SSH credentials. |
 | HTTP server | `serve` (npm package), dev dependency, invoked via `npm run serve` per topology spec |
 | Dev server | `npm run dev` included (Vite's built-in dev server with HMR) |
 | Project root | `views/src/` is the Vite project root (`package.json`, `vite.config.js`, `index.html` live here) |
@@ -119,7 +119,7 @@ These three writers never touch the same paths. Vite's `emptyOutDir: false` is w
   "react-markdown": "^9.0.0",
   "recharts": "^2.12.0",
   "lucide-react": "^0.400.0",
-  "react-force-graph": "^1.45.0",
+  "react-force-graph-2d": "^1.27.0",
   "d3": "^7.9.0"
 }
 ```
@@ -148,7 +148,7 @@ Adding anything from this list is a **deviation** that requires updating this sp
 
 ### 4.4 Notes on specific picks
 
-- **`d3`** is listed explicitly because `react-force-graph` re-exports many d3 utilities and depending on it directly is cleaner than relying on transitive resolution. Lets the knowledge-graph view drop into raw d3 for fine-grained tweaks.
+- **`d3`** is listed explicitly because `react-force-graph-2d` re-exports many d3 utilities; depending on it directly is cleaner than relying on transitive resolution. Lets the knowledge-graph view drop into raw d3 for fine-grained tweaks.
 - **`react-markdown` 9.x** — current major. Version-pin to avoid markdown-it migrations.
 - **`recharts`** matches design-example's pick; widely supported; renders as SVG (theme-friendly).
 - **`lucide-react`** — design-example uses this; lightweight; tree-shakable.
@@ -378,7 +378,7 @@ This spec is implemented when:
 1. **Tailwind theme location.** §7 places the placeholder `@theme` block in `index.css`. Epic 4 may decide to split tokens into a separate `theme.css` or use `tailwind.config.js`. Either is fine — don't pre-decide here.
 2. **Path aliases.** `jsconfig.json` lets editors resolve `@/components/...` style imports. Whether to enable this is an Epic 4/8 ergonomics question. For Epic 3, `jsconfig.json` is shipped with `compilerOptions.baseUrl: "src"` but no aliases — covers basic editor IntelliSense without committing to a pattern.
 3. **Public folder contents.** `views/src/public/` is empty for Epic 3. Epic 4 may add favicon, OG image, robots.txt.
-4. **`react-force-graph` 2D vs 3D.** The package ships multiple variants (`react-force-graph-2d`, `-3d`, `-vr`). Epic 8 (Knowledge Graph view) picks one. For Epic 3, listing the umbrella `react-force-graph` is enough.
+4. ~~`react-force-graph` 2D vs 3D.~~ **Resolved 2026-04-29**: pinned to `react-force-graph-2d`. The umbrella `react-force-graph` package transitively pulls `three-bmfont-text` (via the 3D variant's `three.js` dependency) using a `git+ssh://` URL, which blocks `npm install` for users without GitHub SSH credentials. Switch to the 2D-only variant resolved this; install dropped from 416 → 330 packages, 53s → 17s, 6 moderate vulnerabilities → 0.
 5. **Build determinism.** Vite produces hashed asset filenames (`main-a3f81c.js`). For the `version.json` / `build_id` mechanism to work, the **data files** are what hash deterministically — the SPA bundle hash is independent and changes only when source changes. Worth flagging here so it's clear in Epic 5 implementation.
 
 ---
