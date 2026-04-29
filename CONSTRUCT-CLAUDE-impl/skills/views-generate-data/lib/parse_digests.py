@@ -157,19 +157,35 @@ def _extract_top_findings(body: str) -> list[dict]:
 
 
 def _extract_url(text: str) -> str:
-    """Find a primary URL in the text. Recognises bare URLs and arXiv IDs."""
-    # First try a bare http(s) URL
+    """Find a primary URL in the text.
+
+    Recognises (in priority order): bare http(s) URLs, arXiv IDs (with or
+    without the `arXiv:` prefix when parenthesised), Nature article IDs
+    (s#####-###-#####-#), and bare DOIs (10.NNNN/...).
+    """
+    # 1. Bare http(s) URL
     m = re.search(r"https?://[^\s\)\]\}'\"<>]+", text)
     if m:
         return m.group(0).rstrip(".,;:")
-    # Then try arXiv ID like 2503.14738 or 2602.12238
+    # 2. arXiv ID with prefix: "arXiv:2503.14738"
     m = re.search(r"arXiv:\s*(\d{4}\.\d{4,6})", text, re.IGNORECASE)
     if m:
         return f"https://arxiv.org/abs/{m.group(1)}"
-    # Bare ID without "arXiv:" prefix, must be in parentheses to disambiguate
+    # 3. Bare arXiv ID inside parentheses: "(2503.14452)"
     m = re.search(r"\((\d{4}\.\d{4,6})\)", text)
     if m:
         return f"https://arxiv.org/abs/{m.group(1)}"
+    # 4. Nature article ID: "s41586-025-09900-4" (also Nature Astronomy
+    #    s41550-..., Nature Physics s41567-..., etc. — all share the prefix
+    #    s4#### + dashes pattern). Match either bare or parenthesised.
+    m = re.search(r"(?<![A-Za-z0-9])(s4\d{4}-\d{3}-\d{5}-\d)(?![A-Za-z0-9])", text)
+    if m:
+        return f"https://www.nature.com/articles/{m.group(1)}"
+    # 5. Generic DOI: "10.NNNN/..." — requires the slash so we don't catch
+    #    bare numbers like "10.5x" or "10.4 sigma".
+    m = re.search(r"(?<![A-Za-z0-9])(10\.\d{4,9}/[^\s\)\]\}'\"<>]+)", text)
+    if m:
+        return f"https://doi.org/{m.group(1).rstrip('.,;:')}"
     return ""
 
 
