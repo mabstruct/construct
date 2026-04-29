@@ -16,6 +16,19 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+# Defense in depth: friendly error if invoked directly without PyYAML.
+# Normal path is via run.sh which auto-bootstraps a per-skill venv.
+try:
+    import yaml  # noqa: F401
+except ImportError:
+    print(
+        "Error: PyYAML is required but not available in this Python interpreter.\n"
+        "Run via the wrapper instead, which auto-bootstraps a per-skill venv:\n"
+        "    bash <install-root>/.construct/skills/views-generate-data/run.sh <install-root>",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 from lib import (  # noqa: E402
     build_id as build_id_mod,
     compute_stats,

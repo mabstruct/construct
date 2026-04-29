@@ -25,27 +25,29 @@ test -d <install-root>/views/build && echo OK || echo MISSING
 
 If MISSING → fail with: `views/build/ not found. Run views-build first.`
 
-### Step 2: Verify Python + PyYAML Available
+### Step 2: Verify Python Available
 
-The helper script needs Python 3.10+ and PyYAML.
+The helper script needs Python 3.10+. PyYAML is needed too but the wrapper (Step 3) handles auto-bootstrapping a per-skill venv if system Python doesn't have it.
 
 ```bash
 python3 -c "import sys; assert sys.version_info >= (3, 10)" || echo "BAD_PYTHON"
-python3 -c "import yaml" || echo "MISSING_YAML"
 ```
 
-- If `BAD_PYTHON` → fail with: `Python 3.10+ required. Install or upgrade Python.`
-- If `MISSING_YAML` → fail with: `PyYAML missing. Run: pip install pyyaml`
-
-For installations that prefer a virtualenv, the `.construct/` directory may host one — adapt the python invocation accordingly.
+If `BAD_PYTHON` → fail with: `Python 3.10+ required. Install or upgrade Python.`
 
 ### Step 3: Run the Generator
 
-Execute the helper script:
+Invoke the wrapper script — NOT `generate.py` directly. The wrapper picks the right interpreter:
 
 ```bash
-python3 <install-root>/.construct/skills/views-generate-data/generate.py <install-root>
+bash <install-root>/.construct/skills/views-generate-data/run.sh <install-root>
 ```
+
+What the wrapper does:
+1. If system `python3` has PyYAML → uses it directly.
+2. Otherwise, bootstraps a per-skill venv at `.construct/skills/views-generate-data/.venv/` (one-time, ~5s) with `pyyaml` installed via the skill's `requirements.txt`, then uses that venv's python.
+
+This avoids the macOS PEP-668 `externally-managed-environment` error users hit when trying `pip install pyyaml` against system Python.
 
 Capture stdout. Capture stderr.
 
@@ -83,7 +85,8 @@ Browser will show UPDATE flag within 30s if open.
 | Not in a CONSTRUCT install | No `AGENTS.md` | `Not a CONSTRUCT installation: missing AGENTS.md.` |
 | Build dir missing | No `views/build/` | `views/build/ not found. Run views-build first.` |
 | Bad Python | Version <3.10 | `Python 3.10+ required.` |
-| Missing PyYAML | `import yaml` fails | `PyYAML missing. Run: pip install pyyaml` |
+| Missing PyYAML | wrapper auto-bootstraps a per-skill venv on first run | (silent — handled) |
+| Venv bootstrap failed | wrapper exits 1 with `Error: skill venv … does not have PyYAML.` | (stderr passed through; recovery hint included) |
 | Script catastrophic | Non-zero exit | (stderr passed through verbatim) |
 
 Per-file parse errors are NOT skill failures. They are logged to `views/build/data/_generation-warnings.log` by the script and counted in the report. The skill exits zero in this case.
