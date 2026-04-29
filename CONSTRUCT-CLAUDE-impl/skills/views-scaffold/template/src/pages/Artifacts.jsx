@@ -29,6 +29,7 @@ export default function Artifacts() {
   // Filter state from URL params
   const types = params.get('type')?.split(',').filter(Boolean) || []
   const lifecycles = params.get('lifecycle')?.split(',').filter(Boolean) || []
+  const categories = params.get('content_categories')?.split(',').filter(Boolean) || []
   const confMin = params.get('conf_min') ? Number(params.get('conf_min')) : undefined
   const confMax = params.get('conf_max') ? Number(params.get('conf_max')) : undefined
   const tierMin = params.get('tier_min') ? Number(params.get('tier_min')) : undefined
@@ -62,18 +63,27 @@ export default function Artifacts() {
     setParams(next)
   }
 
+  const categoryOptions = useMemo(() => {
+    const set = new Set()
+    for (const c of cards.data?.cards || []) {
+      for (const cat of c.content_categories || []) set.add(cat)
+    }
+    return Array.from(set).sort()
+  }, [cards.data])
+
   const filtered = useMemo(() => {
     const all = cards.data?.cards || []
     return all.filter((c) => {
       if (types.length && !types.includes(c.epistemic_type)) return false
       if (lifecycles.length && !lifecycles.includes(c.lifecycle)) return false
+      if (categories.length && !(c.content_categories || []).some((cat) => categories.includes(cat))) return false
       if (confMin !== undefined && c.confidence < confMin) return false
       if (confMax !== undefined && c.confidence > confMax) return false
       if (tierMin !== undefined && c.source_tier < tierMin) return false
       if (tierMax !== undefined && c.source_tier > tierMax) return false
       return true
     })
-  }, [cards.data, types.join(','), lifecycles.join(','), confMin, confMax, tierMin, tierMax])
+  }, [cards.data, types.join(','), lifecycles.join(','), categories.join(','), confMin, confMax, tierMin, tierMax])
 
   const sorted = useMemo(() => {
     const list = [...filtered]
@@ -96,7 +106,7 @@ export default function Artifacts() {
   if (cards.loading) return <LoadingState shape="cards-table" />
   if (cards.error) return <ErrorState message={cards.error.message} />
 
-  const hasFilters = types.length || lifecycles.length ||
+  const hasFilters = types.length || lifecycles.length || categories.length ||
     confMin !== undefined || confMax !== undefined || tierMin !== undefined || tierMax !== undefined
   const allCards = cards.data?.cards || []
   const allConns = conns.data?.connections || []
@@ -127,6 +137,15 @@ export default function Artifacts() {
           value={lifecycles}
           onChange={(v) => setListParam('lifecycle', v)}
         />
+        {categoryOptions.length > 0 && (
+          <FilterChip
+            label="Category"
+            mode="multi"
+            options={categoryOptions}
+            value={categories}
+            onChange={(v) => setListParam('content_categories', v)}
+          />
+        )}
         <FilterChip
           label="Confidence"
           mode="range"
