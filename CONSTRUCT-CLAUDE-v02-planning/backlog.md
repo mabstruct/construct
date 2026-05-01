@@ -205,6 +205,49 @@ Goal: make v0.2 understandable and deployable.
 - [ ] Document what remains deferred to v0.2.1 and v0.3
 - [ ] Patch `prd-v02-live-views.md` §3.1, §3.2, §3.4, §5 for consistency with the runtime-topology + data-model specs (currently has `src/data/` and lists Python `http.server` as an option)
 
+### Epic 12: Knowledge Views — Restyle + Wiki
+
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-knowledge-views-spike.md` — Draft (Spike A decisions locked 2026-04-30; Spike B decisions deferred until Spike A ships).
+
+Two sibling slices feeding the daily read/explore experience. Spike A (12.2) is the urgent visual + dynamics fix to the existing graph; Spike B (12.1) introduces a new wiki read-mode page. Decision rationale and rejected alternatives (iframe HTML, raw-D3 lift, library swap) are captured in the spec.
+
+#### Slice 12.2 — Knowledge Graph Restyle (Spike A)
+
+Goal: turn the current `react-force-graph-2d` view from "unusable at 33 cards × ~50 connections" into a calm, legible exploration surface that matches the `views/design-example` visual grammar.
+
+**Locked decisions** (spec §5):
+
+| ID | Decision | Locked value |
+|---|---|---|
+| D1 | Scope | Restyle current engine (no library swap, no D3 lift, no iframe) |
+| D2 | Edge labels default | Auto-on when ≤ 30 edges; toggle override stays |
+| D3 | Node sizing | Degree-based, shrunk: `4 + sqrt(deg) × 1.4` (peak ~12px) |
+| D6 | Sequencing | Slice 12.2 (Spike A) before 12.1 (Spike B) |
+| D7 | Backlog placement | Epic 12 in v0.2 (this entry) |
+
+**Q-A answers** (spec §2.7): Q-A1 → D2; Q-A2 → D3; Q-A3 → drag-pin persistence deferred (no localStorage yet); Q-A4 → side panel collapse 300ms ease; Q-A5 → legend becomes click-to-toggle, drives the same `?type=` URL state as the chip toolbar.
+
+**Implementation parameters** (fall out of D1, locked by spec §2.3 + §2.4):
+
+- [ ] Layout dynamics: charge `-1400`, add `d3-force` collision with `r + 4` padding, link distance `140`, link strength `0.4`
+- [ ] Cooldown: `cooldownTicks={150}`, on engine stop call `fgRef.current.zoomToFit(600, 40)` once, then disable auto-fit
+- [ ] Node radius formula: `4 + Math.sqrt(degree) * 1.4`
+- [ ] Edge alpha: `0.22` ambient · `0.85` spotlit · `0.07` dimmed
+- [ ] Label visibility: ambient gate `globalScale > 1.0`; ambient labels only on `egoSet`; 10px font; 2px text-shadow stroke for legibility
+- [ ] Edge-labels default: auto-on when `links.length ≤ 30`, toggle persists
+- [ ] Palette swap: type colours → design-example 6+4 grouping (theme blue, provocation purple, finding green, gap amber, method cyan, weird pink, +4 extension)
+- [ ] Surfaces: canvas bg `#0a0e17`, side panel surface `#111827`, node stroke `#445566`
+- [ ] Side panel: 300ms ease collapse animation
+- [ ] Legend: click-to-toggle-type, drives `?type=` URL state shared with chip toolbar
+
+**Out of scope for 12.2** (deferred): drag-pin persistence across navigation (Q-A3), node sizing by confidence×lifecycle, cross-workspace KG, engine swap.
+
+#### Slice 12.1 — Wiki Read-Mode View (Spike B)
+
+Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable rendering of cards — the read-mode counterpart to the graph; the natural link target for digest/article cross-references.
+
+**Status:** decisions deferred until Spike A ships and the user has ratified the design defaults in spec §3 (Q-B1..Q-B5, D4..D5). No implementation work in 12.1 until those land.
+
 ## Sequencing Proposal
 
 **Spec-first phase (current):**

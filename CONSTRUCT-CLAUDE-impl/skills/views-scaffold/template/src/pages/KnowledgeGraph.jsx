@@ -9,9 +9,11 @@ import LoadingState from '../components/LoadingState'
 import ErrorState from '../components/ErrorState'
 
 // Route: /:workspace/knowledge-graph
-// Spec: spec-v02-views.md §4.5
-// Visual contract: views/design-example/.../knowledge-graph.html — node
-// labels, optional edge labels, drag-to-pin, ego-network highlight on hover.
+// Spec: spec-v02-views.md §4.5 (route) and spec-v02-knowledge-views-spike.md
+// §2.3–§2.4 (Spike A locked 2026-04-30 — restyle, layout-dynamics fixes,
+// design-example colour palette, click-to-toggle legend, auto-on edge
+// labels under 30 edges).
+// Visual reference: views/design-example/.../knowledge-graph.html.
 
 const EPISTEMIC_TYPES = [
   'finding', 'claim', 'concept', 'method', 'paper',
@@ -19,31 +21,36 @@ const EPISTEMIC_TYPES = [
 ]
 const LIFECYCLE_STATES = ['seed', 'growing', 'mature', 'archived']
 
-// 10-colour categorical palette for epistemic types.
+// Type palette aligned with views/design-example badge colours (the canonical
+// 6 — theme/provocation/finding/gap/method/weird) plus 4 distinct extensions
+// for the types we carry beyond the design example.
 const TYPE_COLORS = {
-  finding:     'rgb(34, 197, 94)',
-  claim:       'rgb(234, 179, 8)',
-  concept:     'rgb(99, 102, 241)',
-  method:      'rgb(56, 189, 248)',
-  paper:       'rgb(168, 85, 247)',
-  theme:       'rgb(244, 114, 182)',
-  gap:         'rgb(220, 38, 38)',
-  provocation: 'rgb(249, 115, 22)',
-  question:    'rgb(34, 211, 238)',
-  connection:  'rgb(163, 163, 163)',
+  theme:       'rgb(96, 165, 250)',   // #60a5fa  blue
+  provocation: 'rgb(192, 132, 252)',  // #c084fc  purple
+  finding:     'rgb(74, 222, 128)',   // #4ade80  green
+  gap:         'rgb(251, 191, 36)',   // #fbbf24  amber
+  method:      'rgb(34, 211, 238)',   // #22d3ee  cyan
+  // Extensions — distinct hues that read against the canonical 6
+  claim:       'rgb(250, 204, 21)',   // #facc15  yellow
+  concept:     'rgb(129, 140, 248)',  // #818cf8  indigo
+  paper:       'rgb(167, 139, 250)',  // #a78bfa  violet
+  question:    'rgb(94, 234, 212)',   // #5eead4  teal
+  connection:  'rgb(148, 163, 184)',  // #94a3b8  slate (neutral default)
 }
 
-// 9-colour palette for connection types.
+// Connection palette — supports/extends/parallels/requires lifted from the
+// design example's `.conn-type-*` rules; the four we carry beyond the
+// design example (enables/inspires/challenges/gap-for) get adjacent hues.
 const CONN_COLORS = {
-  supports:    'rgba(34, 197, 94, 0.85)',
-  extends:     'rgba(56, 189, 248, 0.85)',
-  enables:     'rgba(34, 211, 238, 0.85)',
-  requires:    'rgba(99, 102, 241, 0.85)',
-  inspires:    'rgba(244, 114, 182, 0.85)',
-  parallels:   'rgba(168, 85, 247, 0.85)',
-  contradicts: 'rgba(220, 38, 38, 0.95)',
-  challenges:  'rgba(234, 88, 12, 0.95)',
-  'gap-for':   'rgba(234, 179, 8, 0.95)',
+  supports:    'rgba(74, 222, 128, 0.85)',    // green
+  extends:     'rgba(96, 165, 250, 0.85)',    // blue
+  enables:     'rgba(34, 211, 238, 0.85)',    // cyan
+  requires:    'rgba(192, 132, 252, 0.85)',   // purple
+  inspires:    'rgba(244, 114, 182, 0.85)',   // pink
+  parallels:   'rgba(251, 191, 36, 0.85)',    // amber
+  contradicts: 'rgba(248, 113, 113, 0.95)',   // red
+  challenges:  'rgba(251, 146, 60, 0.95)',    // orange
+  'gap-for':   'rgba(234, 179, 8, 0.95)',     // gold
 }
 
 // Per spec: dashed for contradicts/challenges, dotted for gap-for, solid otherwise.
@@ -54,9 +61,22 @@ const CONN_DASH = {
 }
 
 const NODE_BUDGET = 500
-const FADE_ALPHA = 0.08
-const LABEL_FONT = '500 11px Manrope, system-ui, sans-serif'
-const EDGE_LABEL_FONT = '9px Manrope, system-ui, sans-serif'
+// Three-tier alpha for edges (spec §2.4): spotlit / ambient / dimmed.
+// AMBIENT_ALPHA pushed up from spec's 0.22 — at typical fit-zoom (~0.5×)
+// the world-pixel linkWidth turns into sub-pixel screen strokes that
+// anti-alias to invisibility. Higher alpha + fatter ambient strokes
+// compensate without rewriting linkWidth in screen space.
+const SPOTLIT_ALPHA = 0.95
+const AMBIENT_ALPHA = 0.55
+const DIM_ALPHA = 0.10
+const EDGE_LABEL_AUTO_THRESHOLD = 30   // auto-on when links.length ≤ 30 (Q-A1)
+// Label font sizes are *screen* pixels — the canvas font is set per-frame
+// as `${SIZE / globalScale}px` so labels stay constant on screen regardless
+// of zoom (see nodeCanvasObject / linkCanvasObject below).
+const NODE_LABEL_SCREEN_PX = 11
+const EDGE_LABEL_SCREEN_PX = 9
+const NODE_STROKE_DEFAULT = 'rgba(68, 85, 102, 0.85)'  // #445566 from design example
+const CANVAS_BG = '#0a0e17'                            // matches design example shell
 
 export default function KnowledgeGraph() {
   const { workspace } = useParams()
@@ -67,11 +87,16 @@ export default function KnowledgeGraph() {
   const containerRef = useRef(null)
 
   const [hoveredId, setHoveredId] = useState(null)
-  const [showEdgeLabels, setShowEdgeLabels] = useState(false)
+  // Default decided once when conns load (Q-A1: auto-on when ≤ 30 edges).
+  // null = not yet seeded; once seeded, user toggles persist.
+  const [showEdgeLabels, setShowEdgeLabels] = useState(null)
   const [showNodeLabels, setShowNodeLabels] = useState(true)
   const [size, setSize] = useState({ w: 0, h: 0 })
 
   // Track container size so the canvas fills its bounds reactively.
+  // Deps include loading flags because the container only enters the DOM
+  // after the early-return loading branch resolves; without re-running, the
+  // observer would attach to a null ref and the canvas would never mount.
   useEffect(() => {
     if (!containerRef.current) return
     const el = containerRef.current
@@ -81,7 +106,7 @@ export default function KnowledgeGraph() {
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [cards.loading, conns.loading])
 
   const types = params.get('type')?.split(',').filter(Boolean) || []
   const lifecycles = params.get('lifecycle')?.split(',').filter(Boolean) || []
@@ -134,17 +159,30 @@ export default function KnowledgeGraph() {
   // Build graphData. The same node objects are reused across renders so the
   // simulation's positions/velocity/fx/fy survive prop updates — this is what
   // makes the experience feel persistent (drag-to-pin actually sticks).
+  //
+  // Cross-workspace edge guard: connections.json contains references to
+  // cards in OTHER workspaces (a connection in cosmology may target a card
+  // that lives in philosophy-of-physics). Per spec-v02-views.md §4.5,
+  // cross-workspace KG is deferred to v0.2.1; the v0.2 view is single-
+  // workspace. If we keep these phantom-targeted links, d3-force's link
+  // force throws "node not found" on initialize, leaves the force in a
+  // half-state, and every subsequent tick errors with "Attempted to assign
+  // to readonly property" when it tries to mutate undefined node positions.
+  // That is what blanks the canvas during drag.
   const graphData = useMemo(() => {
     const nodes = allCards.map((c) => ({
       id: c.id,
       title: c.title,
       type: c.epistemic_type,
       lifecycle: c.lifecycle,
-      // Sized by sqrt of degree for visual weight without runaway growth.
-      r: 6 + Math.sqrt(degree.get(c.id) || 0) * 2.2,
+      // Spec §2.3 D3: shrunk radius caps around 12px instead of the previous
+      // 22px, keeping nodes from touching at the 33-card / 50-edge scale.
+      r: 4 + Math.sqrt(degree.get(c.id) || 0) * 1.4,
     }))
+    const nodeIds = new Set(nodes.map((n) => n.id))
     const links = allConns
       .filter((c) => c.source && c.target)
+      .filter((c) => nodeIds.has(c.source) && nodeIds.has(c.target))
       .map((c) => ({ source: c.source, target: c.target, type: c.type }))
     return { nodes, links }
   }, [allCards, allConns, degree])
@@ -178,15 +216,41 @@ export default function KnowledgeGraph() {
     }
   }, [graphData])
 
-  // Force tuning matching the design example: spread-out feel, soft centering.
+  // Force tuning — minimal departure from the pre-spike values that were at
+  // least stable. Earlier attempts at a finite-cooldown + collision-force +
+  // -1400 charge regime produced a "graph vanishes on drag-start" failure
+  // we couldn't reproduce in the editor; reverting to an always-running
+  // simulation (cooldownTicks=Infinity) avoids the engine-stop/restart
+  // edge cases entirely.
   useEffect(() => {
     const fg = fgRef.current
     if (!fg) return
     const link = fg.d3Force('link')
     if (link) link.distance(140).strength(0.4)
     const charge = fg.d3Force('charge')
-    if (charge) charge.strength(-600)
+    if (charge) charge.strength(-700)
     fg.d3ReheatSimulation()
+  }, [graphData])
+
+  // Seed showEdgeLabels once per dataset based on edge count (Q-A1 auto-on
+  // threshold). After the first seed the user's toggle wins.
+  useEffect(() => {
+    if (showEdgeLabels === null && graphData.links.length > 0) {
+      setShowEdgeLabels(graphData.links.length <= EDGE_LABEL_AUTO_THRESHOLD)
+    }
+  }, [graphData.links.length, showEdgeLabels])
+
+  // One-shot fit-to-view after the simulation has had time to spread out.
+  // Uses a timer instead of onEngineStop because cooldownTicks=Infinity
+  // means the engine never stops on its own. 1500ms is empirically long
+  // enough at the 33-node / 50-edge scale for the layout to be readable
+  // (alpha decay 0.018 × 1500ms ≈ alpha ~0.07, mostly settled).
+  useEffect(() => {
+    if (!graphData.nodes.length) return
+    const t = setTimeout(() => {
+      if (fgRef.current) fgRef.current.zoomToFit(400, 60)
+    }, 1500)
+    return () => clearTimeout(t)
   }, [graphData])
 
   const releaseAll = () => {
@@ -294,10 +358,11 @@ export default function KnowledgeGraph() {
         </button>
       </div>
 
-      {/* Canvas */}
+      {/* Canvas — design-example deep navy shell (#0a0e17) */}
       <div
         ref={containerRef}
-        className="relative rounded-xl border border-white/[0.06] bg-black/40 overflow-hidden h-[calc(100vh-18rem)] min-h-[480px]"
+        className="relative rounded-xl border border-white/[0.06] overflow-hidden h-[calc(100vh-18rem)] min-h-[480px]"
+        style={{ backgroundColor: CANVAS_BG }}
       >
         {size.w > 0 && (
           <ForceGraph2D
@@ -324,10 +389,10 @@ export default function KnowledgeGraph() {
               const spotlit = isSpotlit(node.id)
               const isSelected = node.id === selectedCardId
               const isHovered = node.id === hoveredId
-              const baseColor = TYPE_COLORS[node.type] || 'rgb(180,180,180)'
+              const baseColor = TYPE_COLORS[node.type] || 'rgb(148, 163, 184)'
 
               const alpha = !visible
-                ? FADE_ALPHA
+                ? DIM_ALPHA
                 : !spotlit
                   ? 0.18
                   : isHovered || isSelected
@@ -351,11 +416,14 @@ export default function KnowledgeGraph() {
                 ctx.fill()
               }
 
-              // Stroke ring — heavier for selected, lighter for hover, thin otherwise.
-              ctx.lineWidth = isSelected ? 2.4 : isHovered ? 1.8 : 0.7
+              // Stroke ring — selected gets a cyan accent; otherwise a muted
+              // slate matching the design example's `marker path { fill: #445566 }`.
+              ctx.lineWidth = isSelected ? 2.4 : isHovered ? 1.8 : 0.8
               ctx.strokeStyle = isSelected
                 ? 'rgba(34, 211, 238, 0.95)'
-                : withAlpha(brighten(baseColor), visible ? 0.55 : FADE_ALPHA * 2)
+                : visible
+                  ? NODE_STROKE_DEFAULT
+                  : withAlpha(NODE_STROKE_DEFAULT, DIM_ALPHA * 2)
               ctx.stroke()
 
               // Pin indicator — a small dot at the upper-right when fx/fy are set.
@@ -366,36 +434,57 @@ export default function KnowledgeGraph() {
                 ctx.fill()
               }
 
-              // Label below the node — clipped at view-scale to avoid clutter.
-              if (showNodeLabels && visible && globalScale > 0.5) {
+              // Label rendering — three rules in priority order:
+              //   1. Ego-set always shows (hovered/selected node + 1-hop)
+              //   2. Ambient mode shows labels only when zoomed in past 1.6×
+              //      so the rest-state stays readable instead of "33 names
+              //      stacked on top of each other"
+              //   3. Font is sized in *screen* pixels, not world. Canvas
+              //      ctx.font specifies world units, so to keep a constant
+              //      11-screen-pixel label we divide by globalScale. This is
+              //      what made labels look "huge" before — they were 11
+              //      world-units, scaling with the view.
+              const inEgo = egoSet && egoSet.has(node.id)
+              const ambientShow = !egoSet && globalScale > 1.6
+              const labelAllowed = showNodeLabels && visible && (inEgo || ambientShow)
+              if (labelAllowed) {
                 const label = node.title.length > 32 ? node.title.slice(0, 30) + '…' : node.title
-                ctx.font = LABEL_FONT
+                const fontWorldPx = NODE_LABEL_SCREEN_PX / globalScale
+                const offsetWorldPx = 4 / globalScale
+                const strokeWorldPx = 3 / globalScale
+                ctx.font = `500 ${fontWorldPx}px Manrope, system-ui, sans-serif`
                 ctx.textAlign = 'center'
                 ctx.textBaseline = 'top'
+                ctx.lineWidth = strokeWorldPx
+                ctx.strokeStyle = 'rgba(10, 14, 23, 0.9)'
+                ctx.strokeText(label, node.x, node.y + node.r + offsetWorldPx)
                 ctx.fillStyle = isHovered || isSelected
                   ? 'rgba(255,255,255,0.95)'
-                  : `rgba(220,228,238,${spotlit ? 0.7 : 0.35})`
-                ctx.fillText(label, node.x, node.y + node.r + 4)
+                  : `rgba(220,228,238,${inEgo ? 0.9 : 0.6})`
+                ctx.fillText(label, node.x, node.y + node.r + offsetWorldPx)
               }
             }}
             linkColor={(l) => {
               const sId = l.source.id || l.source
               const tId = l.target.id || l.target
               const visible = isVisible(sId) && isVisible(tId)
-              const spotlit = !egoSet || (egoSet.has(sId) && egoSet.has(tId))
-              const base = CONN_COLORS[l.type] || 'rgba(255,255,255,0.4)'
-              if (!visible) return withAlpha(base, FADE_ALPHA)
-              if (!spotlit) return withAlpha(base, 0.12)
-              return base
+              const base = CONN_COLORS[l.type] || 'rgba(200, 215, 230, 0.85)'
+              if (!visible) return withAlpha(base, DIM_ALPHA)
+              // Three tiers (spec §2.4): no spotlight = ambient, in spotlight
+              // = full base alpha, outside spotlight = dimmed.
+              if (!egoSet) return withAlpha(base, AMBIENT_ALPHA)
+              if (egoSet.has(sId) && egoSet.has(tId)) return withAlpha(base, SPOTLIT_ALPHA)
+              return withAlpha(base, DIM_ALPHA)
             }}
             linkLineDash={(l) => CONN_DASH[l.type] || null}
             linkWidth={(l) => {
               const sId = l.source.id || l.source
               const tId = l.target.id || l.target
               const visible = isVisible(sId) && isVisible(tId)
-              const spotlit = !egoSet || (egoSet.has(sId) && egoSet.has(tId))
               if (!visible) return 0.4
-              return spotlit ? 1.8 : 0.7
+              if (!egoSet) return 1.2
+              if (egoSet.has(sId) && egoSet.has(tId)) return 2.0
+              return 0.6
             }}
             linkDirectionalArrowLength={(l) => {
               const sId = l.source.id || l.source
@@ -403,20 +492,28 @@ export default function KnowledgeGraph() {
               return isVisible(sId) && isVisible(tId) ? 4 : 0
             }}
             linkDirectionalArrowRelPos={1}
-            linkCanvasObjectMode={() => (showEdgeLabels ? 'after' : undefined)}
+            // Always 'after' so the library's default link rendering runs
+            // first; our custom paint just adds edge labels on top when
+            // toggled. Returning undefined here previously caused the
+            // library to skip default rendering entirely — that's the bug
+            // where no edges appeared at all.
+            linkCanvasObjectMode={() => 'after'}
             linkCanvasObject={(link, ctx, globalScale) => {
               if (!showEdgeLabels) return
               const sId = link.source.id || link.source
               const tId = link.target.id || link.target
               if (!isVisible(sId) || !isVisible(tId)) return
               if (egoSet && !(egoSet.has(sId) && egoSet.has(tId))) return
-              if (globalScale < 0.7) return
+              if (globalScale < 1.0) return
               const sx = link.source.x, sy = link.source.y
               const tx = link.target.x, ty = link.target.y
               if (sx == null || tx == null) return
               const mx = (sx + tx) / 2
-              const my = (sy + ty) / 2 - 4
-              ctx.font = EDGE_LABEL_FONT
+              const my = (sy + ty) / 2 - 4 / globalScale
+              // Edge label font in screen-px; same scale-inverse trick as
+              // node labels so size is constant regardless of zoom.
+              const fontWorldPx = EDGE_LABEL_SCREEN_PX / globalScale
+              ctx.font = `${fontWorldPx}px Manrope, system-ui, sans-serif`
               ctx.textAlign = 'center'
               ctx.textBaseline = 'middle'
               ctx.fillStyle = withAlpha(CONN_COLORS[link.type] || 'rgba(255,255,255,0.6)', 0.95)
@@ -446,16 +543,50 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend — Type swatches are clickable, toggling the ?type= URL list
+          (Q-A5). Edge swatches stay read-only; connection type filtering is
+          out of scope for this slice. */}
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-white/50">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-white/30 uppercase tracking-wider">Type</span>
-          {activeNodeTypes.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: TYPE_COLORS[t] }} />
-              {t}
-            </span>
-          ))}
+          {activeNodeTypes.map((t) => {
+            const filterActive = types.length > 0
+            const isOn = !filterActive || types.includes(t)
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  const next = types.includes(t)
+                    ? types.filter((x) => x !== t)
+                    : [...types, t]
+                  setListParam('type', next)
+                }}
+                aria-pressed={filterActive && types.includes(t)}
+                className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-colors ${
+                  isOn
+                    ? 'text-white/75 hover:bg-white/[0.06]'
+                    : 'text-white/30 hover:text-white/55 hover:bg-white/[0.04]'
+                }`}
+                title={
+                  types.includes(t)
+                    ? `Remove ${t} from filter`
+                    : filterActive
+                      ? `Add ${t} to filter`
+                      : `Show only ${t}`
+                }
+              >
+                <span
+                  className="inline-block w-2 h-2 rounded-full"
+                  style={{
+                    backgroundColor: TYPE_COLORS[t],
+                    opacity: isOn ? 1 : 0.35,
+                  }}
+                />
+                {t}
+              </button>
+            )
+          })}
         </div>
         {activeConnTypes.length > 0 && (
           <div className="flex flex-wrap items-center gap-3">
@@ -523,14 +654,4 @@ function withAlpha(rgb, alpha) {
   const parts = m[1].split(',').map((s) => s.trim())
   const [r, g, b] = parts
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-function brighten(rgb) {
-  // Lift each channel ~30% toward white for the stroke ring.
-  const m = rgb.match(/rgba?\(([^)]+)\)/)
-  if (!m) return rgb
-  const parts = m[1].split(',').map((s) => s.trim())
-  const [r, g, b] = parts.map(Number)
-  const lift = (v) => Math.min(255, Math.round(v + (255 - v) * 0.35))
-  return `rgb(${lift(r)}, ${lift(g)}, ${lift(b)})`
 }

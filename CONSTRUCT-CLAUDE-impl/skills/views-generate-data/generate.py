@@ -76,7 +76,7 @@ def main() -> int:
         connections = parse_connections.parse(ws, warnings)
         parse_connections.denormalize_into_cards(cards, connections["connections"])
 
-        digests = parse_digests.parse(ws, warnings)
+        digests = parse_digests.parse(ws, warnings, cards=cards)
         events = parse_events.parse(ws, warnings)
         curation = parse_curation.parse(ws, warnings)
 

@@ -9,10 +9,17 @@ from pathlib import Path
 from .frontmatter import parse as parse_frontmatter
 
 
-def parse(workspace: Path, warnings: list) -> list[dict]:
+def parse(workspace: Path, warnings: list, cards: list[dict] | None = None) -> list[dict]:
     digests_dir = workspace / "digests"
     if not digests_dir.is_dir():
         return []
+
+    # Build card-id → first-url map for finding-URL fallback.
+    # Findings often reference cards via `card-id` backticks instead of inline
+    # arXiv/DOI links (especially in book-heavy domains). When no inline URL
+    # can be extracted from a finding, the first backticked card with a
+    # url-source provides a sensible click target.
+    card_url_map = _build_card_url_map(cards or [])
 
     digests = []
     for md_file in sorted(digests_dir.glob("*.md")) + sorted(digests_dir.glob("**/*.md")):
@@ -26,7 +33,7 @@ def parse(workspace: Path, warnings: list) -> list[dict]:
             warnings.append({"workspace": workspace.name, "file": rel, "reason": f"read error: {e}"})
             continue
 
-        digest = _parse_one(text, rel, md_file, warnings, workspace)
+        digest = _parse_one(text, rel, md_file, warnings, workspace, card_url_map)
         digests.append(digest)
 
     # Deduplicate (could happen with the glob workaround above)
@@ -41,7 +48,8 @@ def parse(workspace: Path, warnings: list) -> list[dict]:
     return unique
 
 
-def _parse_one(text: str, rel: str, md_file: Path, warnings: list, workspace: Path) -> dict:
+def _parse_one(text: str, rel: str, md_file: Path, warnings: list, workspace: Path,
+               card_url_map: dict[str, str] | None = None) -> dict:
     digest_id = md_file.stem
     parse_status = "ok"
     meta: dict = {}
@@ -63,7 +71,7 @@ def _parse_one(text: str, rel: str, md_file: Path, warnings: list, workspace: Pa
     summary_text = summary or ""
 
     counts = _extract_counts(summary or body)
-    top_findings = _extract_top_findings(body)
+    top_findings = _extract_top_findings(body, card_url_map or {})
     search_clusters = _extract_clusters_table(body)
     coverage_notes = _extract_section(body, "Coverage Notes") or ""
     suggested = _extract_section(body, "Suggested Adjustments") or ""
@@ -126,7 +134,7 @@ def _extract_counts(text: str) -> dict:
     return out
 
 
-def _extract_top_findings(body: str) -> list[dict]:
+def _extract_top_findings(body: str, card_url_map: dict[str, str]) -> list[dict]:
     section = _extract_section(body, "Top Findings")
     if not section:
         return []
@@ -145,15 +153,50 @@ def _extract_top_findings(body: str) -> list[dict]:
         m2 = re.search(r"relevance:\s*(\d+)", meta_str)
         if m2:
             relevance = int(m2.group(1))
+        text = title + " " + summary
+        url = _extract_url(text) or _extract_card_url(text, card_url_map)
         findings.append({
             "rank": rank,
             "title": title,
             "relevance": relevance,
             "summary": summary,
-            "url": _extract_url(title + " " + summary),
+            "url": url,
             "cluster": "",
         })
     return findings
+
+
+def _build_card_url_map(cards: list[dict]) -> dict[str, str]:
+    """Map card id → first url-source URL, for finding-link fallback."""
+    out: dict[str, str] = {}
+    for c in cards:
+        cid = c.get("id")
+        if not cid:
+            continue
+        for src in c.get("sources", []) or []:
+            if not isinstance(src, dict):
+                continue
+            if src.get("type") == "url":
+                ref = src.get("ref") or src.get("url")
+                if isinstance(ref, str) and ref.strip():
+                    out[cid] = ref.strip()
+                    break
+    return out
+
+
+def _extract_card_url(text: str, card_url_map: dict[str, str]) -> str:
+    """Resolve the first backticked card-id in text to a URL via the card map.
+
+    Findings frequently say "See `card-id`" or "(`a`, `b`)". We pick the first
+    backticked token that looks like a card slug AND is present in the map.
+    """
+    if not card_url_map:
+        return ""
+    for m in re.finditer(r"`([a-z0-9][a-z0-9\-]*)`", text):
+        cid = m.group(1)
+        if cid in card_url_map:
+            return card_url_map[cid]
+    return ""
 
 
 def _extract_url(text: str) -> str:

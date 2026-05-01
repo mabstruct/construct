@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { X } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -8,14 +9,27 @@ import SourceTierIndicator from './SourceTierIndicator'
 // Per spec-v02-views.md §4.7. Side panel rendered when ?card=:id in URL.
 // Receives the card object + the connection list for the workspace +
 // a callback for the close (X) and connection-jump (?card=other).
+//
+// Q-A4 (spec-v02-knowledge-views-spike.md): 300ms ease slide-in matches
+// the design-example feel. Off-screen on mount, transitions in next frame.
 export default function CardSidePanel({ card, connections, workspace, onClose, onSelect }) {
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
   if (!card) return null
 
   const inbound = connections.filter((c) => c.target === card.id)
   const outbound = connections.filter((c) => c.source === card.id)
 
   return (
-    <aside className="fixed top-14 md:top-[6.5rem] right-0 bottom-0 w-full md:w-[480px] z-40 border-l border-white/[0.06] bg-black/90 backdrop-blur-xl overflow-y-auto">
+    <aside
+      className={`fixed top-14 md:top-[6.5rem] right-0 bottom-0 w-full md:w-[480px] z-40 border-l border-white/[0.06] bg-black/90 backdrop-blur-xl overflow-y-auto transition-transform duration-300 ease-out ${
+        entered ? 'translate-x-0' : 'translate-x-full'
+      }`}
+    >
       <div className="sticky top-0 flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-black/60 backdrop-blur-xl">
         <span className="font-display text-xs uppercase tracking-wider text-white/50">Card</span>
         <button

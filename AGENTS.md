@@ -2,6 +2,8 @@
 
 ## Project
 
+Development project for CONSTRUCT.
+
 CONSTRUCT is a local-first, agent-powered personal knowledge system. You systematically collect, curate, connect, and compound knowledge across domains — and produce high-quality outputs as derived views of accumulated knowledge.
 
 **Active approach:** Claude-native agent configuration (`CONSTRUCT-CLAUDE-impl/`)
@@ -13,6 +15,13 @@ CONSTRUCT is a local-first, agent-powered personal knowledge system. You systema
 Testing and validating the Claude-native agent system:
 - Agent identity, skills, workflows, templates, and references in `CONSTRUCT-CLAUDE-impl/`
 - Specification documents in `CONSTRUCT-CLAUDE-spec/`
+
+## Test Workspaces
+
+`test-ws/` contains CONSTRUCT workspaces used to exercise skills, workflows, and views against real workspace state. They are not user data — treat them as fixtures.
+
+- **`test-ws/my-construct/`** — the larger, more complex fixture (multiple domains: cosmology, philosophy-of-mind, philosophy-of-physics, plus generated `views/`). Used regularly as the primary test workspace.
+- **`test-ws/ping-eon/`** — smaller fixture (currently one domain: api-gateways). Used for lighter-weight tests.
 
 ## Workflow
 
