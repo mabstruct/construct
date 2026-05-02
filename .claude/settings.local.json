@@ -66,7 +66,9 @@
       "Bash(rm -f views/src/package.json.bak)",
       "Bash(bash run.sh /Users/mab/dev/mabstruct/construct/test-ws/my-construct)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/)",
-      "Bash(curl -s http://localhost:3001/version.json)"
+      "Bash(curl -s http://localhost:3001/version.json)",
+      "Bash(ps -p 42809 -o pid,command)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)"
     ]
   }
 }

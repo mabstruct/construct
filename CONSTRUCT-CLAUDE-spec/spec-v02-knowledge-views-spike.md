@@ -1,7 +1,7 @@
 # spec-v02-knowledge-views-spike — Knowledge-Graph Restyle + Wiki View
 
-**Status:** Spike A locked 2026-04-30 → implementation underway · Spike B deferred
-**Date:** 2026-04-29 (initial) · 2026-04-30 (Spike A decisions locked)
+**Status:** Spike A locked 2026-04-30 → shipped 2026-05-02 (Slice 12.2 done) · Spike B locked 2026-05-02 (Slice 12.1 ready to plan)
+**Date:** 2026-04-29 (initial) · 2026-04-30 (Spike A decisions locked) · 2026-05-02 (Spike A shipped, Spike B locked)
 **Owner:** ;-)mab
 **Type:** Two parallel spikes feeding one decision
 **Related:** `spec-v02-views.md` §4.5 (current KG), `spec-v02-design-prototype.md`, `spec-v02-data-model.md` §5.2 (cards), §5.3 (connections), `views/design-example/src/public/archive/isw-analysis/knowledge-graph.html` (visual reference), `architecture-overview.md` §3.2 (two-writer invariant), `CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 12 (slice 12.2 = Spike A, slice 12.1 = Spike B)
@@ -292,13 +292,22 @@ This is what the user identified in question 1: cards have URL sources that aren
 
 No new dependencies. All data already in the existing JSON.
 
-### 3.8 Open questions for Spike B
+### 3.8 Spike B questions — RESOLVED 2026-05-02
 
-- **Q-B1.** Inline collapsible (Option A) vs TOC sidebar (Option B)? Recommendation: A. ✱ needs decision
-- **Q-B2.** Should `/:workspace` (workspace root) redirect to `/:workspace/wiki` or stay on dashboard? ✱ needs decision
-- **Q-B3.** Lunr.js for full-text search, or start with naive `.includes()` substring? Likely naive is fine at our scale (<100 cards); revisit at >500. ✱ low priority
-- **Q-B4.** Print stylesheet — in scope for v0.2 or defer? ✱ defer to v0.2.1
-- **Q-B5.** Does the artifacts page still earn its keep once wiki exists, or merge them? Suggest: keep both — artifacts is filter-heavy index, wiki is reading view. They share data, not UX.
+- **Q-B1.** Inline collapsible (Option A) vs TOC sidebar (Option B)? → **Option A** (long scroll + inline collapsibles). Locked as D4.
+- **Q-B2.** Should `/:workspace` (workspace root) redirect to `/:workspace/wiki` or stay on dashboard? → **Stay on dashboard.** Wiki is an option, not the workspace default; `/:workspace` continues to land on the status overview. Locked as D5.
+- **Q-B3.** Lunr.js for full-text search, or start with naive `.includes()` substring? → **Naive substring.** Revisit at >500 cards/workspace.
+- **Q-B4.** Print stylesheet — in scope for v0.2 or defer? → **Defer to v0.2.1.**
+- **Q-B5.** Does the artifacts page still earn its keep once wiki exists, or merge them? → **Keep both.** Artifacts is the filter-heavy index → side-panel pattern; Wiki is the continuous reading view. Different UX, shared data.
+
+### 3.9 Karpathy LLM-Wiki cross-check (2026-05-02)
+
+Spike B was cross-checked against `analysis-karpathi/llm_wiki_mabstruct_analysis.md` before locking. Outcome: no structural conflict.
+
+- **Aligned:** persistent interlinked human-readable knowledge, cross-references + backlinks ("Mentioned in"), citation-grounded, markdown surface, compounding over time.
+- **Beyond LLM-Wiki (already in mabstruct):** claim layer (epistemic_type/confidence/lifecycle/provenance), typed knowledge graph, temporal lifecycle, multi-agent governance. The Wiki view is a *read-mode rendering* over this richer substrate, not a markdown-only system.
+- **Deliberate gap:** Karpathy-style **synthesis / topic pages** that aggregate many atomic claims into a topic narrative are NOT in 12.1. The existing `synthesis` workflow + cross-workspace `articles/` cover this concern; deeper compilation is a future improvement to that workflow, not a Wiki-layer responsibility.
+- **Positioning consequence locked into Q-B2:** Wiki is a sibling reading view, not the workspace default landing. If product framing later shifts toward "wiki is home" (Karpathy-style), revisit Q-B2 in v0.3+.
 
 ---
 
@@ -320,29 +329,26 @@ Each route earns its keep with a distinct use case. The wiki + graph pair is the
 
 ## 5. Decision Points
 
-Spike A locked 2026-04-30 (defaults accepted). Spike B decisions deferred until Spike A ships.
+Spike A locked 2026-04-30, shipped 2026-05-02. Spike B locked 2026-05-02.
 
 | ID | Decision | Locked value |
 |---|---|---|
 | D1 | Spike A: restyle current engine vs. lift-D3 vs. defer | **Restyle** — locked 2026-04-30 (½ day, low risk; lift-D3 / library swap / iframe rejected per §2.5–§2.6) |
 | D2 | Spike A: edge labels default (Q-A1) | **Auto-on when ≤ 30 edges, toggle override** — locked 2026-04-30 |
 | D3 | Spike A: node sizing metric (Q-A2) | **Degree-based, shrunk to `4 + sqrt(deg) × 1.4`** — locked 2026-04-30 |
-| D4 | Spike B: layout option A vs B (Q-B1) | _Open — defer to Spike B kickoff_ (default if no input: Option A) |
-| D5 | Spike B: workspace root redirect to wiki (Q-B2) | _Open — defer to Spike B kickoff_ (default if no input: stay on dashboard) |
+| D4 | Spike B: layout option A vs B (Q-B1) | **Option A** (long scroll + inline collapsibles) — locked 2026-05-02 |
+| D5 | Spike B: workspace root redirect to wiki (Q-B2) | **Stay on dashboard** — locked 2026-05-02. Wiki is an option, not the default. |
 | D6 | Order of work | **Spike A first → Spike B** — locked 2026-04-30 (overrides original wiki-first recommendation; user-driven sequencing call) |
-| D7 | Backlog placement | **Epic 12 in v0.2** — locked 2026-04-30; appended to `CONSTRUCT-CLAUDE-v02-planning/backlog.md` with slice 12.2 active and 12.1 placeholder |
+| D7 | Backlog placement | **Epic 12 in v0.2** — locked 2026-04-30; Slice 12.2 active and 12.1 placeholder in `CONSTRUCT-CLAUDE-v02-planning/backlog.md` |
+| D8 | Spike B: synthesis / topic-page layer | **Out of scope for 12.1** — locked 2026-05-02. Compilation of cards into topic narratives stays with the existing synthesis workflow + cross-workspace articles. Wiki view renders the atomic-card layer in reading mode only. |
 
 ---
 
-## 6. Recommended Path — UPDATED 2026-04-30 (Spike A first)
+## 6. Recommended Path — UPDATED 2026-05-02 (Spike A shipped, Spike B locked)
 
-User overrode the original wiki-first sequencing (D6). Path is now:
-
-1. **Now (~½ day):** Full KG restyle (slice 12.2). Combines the §2.3 root-cause fixes (force-tuning + collision + cooldownTicks + zoomToFit + label gate) with the §2.4 visual restyle to design-example grammar in one pass. No more "stop-the-bleeding then redo" — single coherent shipped state.
-2. **Then (~½–1 day):** Build Wiki view — Option A (slice 12.1). Higher daily value once the graph is calm; unlocks digest cross-linking.
-3. **Backlog as Epic 12** in `CONSTRUCT-CLAUDE-v02-planning/backlog.md` — appended 2026-04-30:
-   - 12.2: KG restyle (active)
-   - 12.1: Wiki view (placeholder; activated after 12.2 ships)
+1. ~~**Slice 12.2 — KG restyle**~~ — **shipped 2026-05-02** at the locked spec values (charge -1400 + d3 collision r+4, cooldownTicks 150 + onEngineStop fit, ambient/spotlit/dimmed alpha 0.22/0.85/0.07, ambient label gate >1.0, design-example palette, click-to-toggle legend, side-panel #111827 + 300ms collapse). The earlier "canvas blanks on drag" failure that pushed deviations was a cross-workspace edge bug, fixed by filtering links to nodes-in-workspace.
+2. **Now (~½–1 day):** Build Wiki view — slice 12.1, Option A (D4) at `/:workspace/wiki`, dashboard remains workspace landing (D5). Per §3.3 content model: anchor + meta row + body markdown + sources + connections-out + backlinks (connections-in) + "Mentioned in" (digest/article references). Per §3.4: substring search + filters + URL state. Per §3.5: digest/article/graph cross-links. Per §3.8 D8: no synthesis/topic-page layer (handled by existing synthesis workflow).
+3. **Backlog updated** in `CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 12: Slice 12.2 marked done; Slice 12.1 expanded with locked decisions + implementation parameters.
 
 ---
 

@@ -207,13 +207,15 @@ Goal: make v0.2 understandable and deployable.
 
 ### Epic 12: Knowledge Views — Restyle + Wiki
 
-**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-knowledge-views-spike.md` — Draft (Spike A decisions locked 2026-04-30; Spike B decisions deferred until Spike A ships).
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-knowledge-views-spike.md` — Spike A locked 2026-04-30 → shipped 2026-05-02. Spike B locked 2026-05-02 → 12.1 ready to plan.
 
 Two sibling slices feeding the daily read/explore experience. Spike A (12.2) is the urgent visual + dynamics fix to the existing graph; Spike B (12.1) introduces a new wiki read-mode page. Decision rationale and rejected alternatives (iframe HTML, raw-D3 lift, library swap) are captured in the spec.
 
-#### Slice 12.2 — Knowledge Graph Restyle (Spike A)
+#### Slice 12.2 — Knowledge Graph Restyle (Spike A) — DONE 2026-05-02
 
 Goal: turn the current `react-force-graph-2d` view from "unusable at 33 cards × ~50 connections" into a calm, legible exploration surface that matches the `views/design-example` visual grammar.
+
+**Shipped commits:** `ba957cb` (initial implementation, with deviations documented at the time) → `ae2d0d7` (locked-spec values restored after the cross-workspace edge guard fixed the underlying drag-blanks bug).
 
 **Locked decisions** (spec §5):
 
@@ -227,26 +229,50 @@ Goal: turn the current `react-force-graph-2d` view from "unusable at 33 cards ×
 
 **Q-A answers** (spec §2.7): Q-A1 → D2; Q-A2 → D3; Q-A3 → drag-pin persistence deferred (no localStorage yet); Q-A4 → side panel collapse 300ms ease; Q-A5 → legend becomes click-to-toggle, drives the same `?type=` URL state as the chip toolbar.
 
-**Implementation parameters** (fall out of D1, locked by spec §2.3 + §2.4):
+**Implementation parameters** (locked by spec §2.3 + §2.4 — all shipped at locked values):
 
-- [ ] Layout dynamics: charge `-1400`, add `d3-force` collision with `r + 4` padding, link distance `140`, link strength `0.4`
-- [ ] Cooldown: `cooldownTicks={150}`, on engine stop call `fgRef.current.zoomToFit(600, 40)` once, then disable auto-fit
-- [ ] Node radius formula: `4 + Math.sqrt(degree) * 1.4`
-- [ ] Edge alpha: `0.22` ambient · `0.85` spotlit · `0.07` dimmed
-- [ ] Label visibility: ambient gate `globalScale > 1.0`; ambient labels only on `egoSet`; 10px font; 2px text-shadow stroke for legibility
-- [ ] Edge-labels default: auto-on when `links.length ≤ 30`, toggle persists
-- [ ] Palette swap: type colours → design-example 6+4 grouping (theme blue, provocation purple, finding green, gap amber, method cyan, weird pink, +4 extension)
-- [ ] Surfaces: canvas bg `#0a0e17`, side panel surface `#111827`, node stroke `#445566`
-- [ ] Side panel: 300ms ease collapse animation
-- [ ] Legend: click-to-toggle-type, drives `?type=` URL state shared with chip toolbar
+- [x] Layout dynamics: charge `-1400`, `d3-force` collision with `r + 4` padding, link distance `140`, link strength `0.4`
+- [x] Cooldown: `cooldownTicks={150}`, `onEngineStop` calls `fgRef.current.zoomToFit(600, 40)` once per dataset (re-fit gate resets only on `graphData` change, so pin/release reheats don't re-fit)
+- [x] Node radius formula: `4 + Math.sqrt(degree) * 1.4`
+- [x] Edge alpha: `0.22` ambient · `0.85` spotlit · `0.07` dimmed
+- [x] Label visibility: ambient gate `globalScale > 1.0`; ego-set labels always; 10px font; 2px text-shadow stroke
+- [x] Edge-labels default: auto-on when `links.length ≤ 30`, toggle persists
+- [x] Palette swap: type colours → design-example 6+4 grouping (theme blue, provocation purple, finding green, gap amber, method cyan, weird pink, +4 extension)
+- [x] Surfaces: canvas bg `#0a0e17`, side panel surface `#111827/95` + header `#111827/80`, node stroke `#445566`
+- [x] Side panel: 300ms ease open + 300ms ease collapse on close (intercepts X, schedules `onClose` after the animation; mid-exit card switch cancels the pending close)
+- [x] Legend: click-to-toggle-type, drives `?type=` URL state shared with chip toolbar
+- [x] Cross-workspace edge guard: filter links to nodes present in this workspace's `cards.json` (root cause of canvas-blanks-on-drag; unblocks the locked layout dynamics)
 
 **Out of scope for 12.2** (deferred): drag-pin persistence across navigation (Q-A3), node sizing by confidence×lifecycle, cross-workspace KG, engine swap.
 
-#### Slice 12.1 — Wiki Read-Mode View (Spike B)
+#### Slice 12.1 — Wiki Read-Mode View (Spike B) — LOCKED 2026-05-02
 
 Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable rendering of cards — the read-mode counterpart to the graph; the natural link target for digest/article cross-references.
 
-**Status:** decisions deferred until Spike A ships and the user has ratified the design defaults in spec §3 (Q-B1..Q-B5, D4..D5). No implementation work in 12.1 until those land.
+**Locked decisions** (spec §5):
+
+| ID | Decision | Locked value |
+|---|---|---|
+| D4 | Layout (Q-B1) | **Option A** — long scroll + inline collapsibles. Anchored URLs (`#card-id`) for deep links from digests/articles. |
+| D5 | Workspace landing (Q-B2) | **Stay on dashboard.** Wiki is an option, not the default. `/:workspace` continues to land on the status overview. |
+| D8 | Synthesis / topic-page layer (Karpathy LLM-Wiki check, spec §3.9) | **Out of scope for 12.1.** Compilation of cards into topic narratives stays with the existing `synthesis` workflow + cross-workspace `articles/`. Wiki view renders the atomic-card layer in reading mode only. |
+
+**Q-B answers** (spec §3.8): Q-B1 → D4; Q-B2 → D5; Q-B3 → naive substring search (revisit at >500 cards); Q-B4 → defer print stylesheet to v0.2.1; Q-B5 → keep both Artifacts and Wiki (different UX, shared data).
+
+**Karpathy LLM-Wiki cross-check** (spec §3.9): aligned on persistent interlinked human-readable knowledge, cross-references + backlinks, citation grounding, markdown surface. mabstruct already extends beyond the markdown-only baseline (claim layer, typed graph, lifecycle, governance). The deliberate gap — Karpathy-style synthesis/topic pages — is owned by the synthesis workflow per D8, not by 12.1.
+
+**Implementation parameters** (per spec §3.3–§3.6):
+
+- [ ] Route: `/:workspace/wiki` + URL-backed `useSearchParams` filter state
+- [ ] Header nav: insert "Wiki" between "Artifacts" and "Knowledge Graph" → Dashboard · Articles · Digests · Wiki · Artifacts · Knowledge Graph · Landscape
+- [ ] Per-card render order: `<h2 id={card.id}>` anchor → meta row (epistemic-type · lifecycle · confidence · source-tier · last-reviewed) → body markdown → sources block → connections-out (grouped by type, link to target anchor) → connections-in (backlinks from `connects_to` reverse-index) → "Mentioned in" (digest IDs + article IDs that reference the card-id; derived client-side from `digests.json` body + `articles.json` provenance)
+- [ ] Inline collapsibles per card (Option A); anchor + meta row always visible, expand reveals body + sources + connections + mentioned-in
+- [ ] Search: substring match on `title` + `body_markdown` + `tags[]` (debounced 200ms; client-side; no Lunr)
+- [ ] Filters: lifecycle multi-select, confidence range, category multi-select, type multi-select; default sort type → category → title; alternates created-desc / last-reviewed-desc / confidence-desc
+- [ ] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
+- [ ] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
+
+**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), print stylesheet (Q-B4 — v0.2.1), Wiki-as-workspace-landing (D5 — revisit if positioning shifts in v0.3+).
 
 ## Sequencing Proposal
 
