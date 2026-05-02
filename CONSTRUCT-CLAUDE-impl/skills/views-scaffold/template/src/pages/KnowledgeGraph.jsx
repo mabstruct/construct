@@ -1,6 +1,7 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import ForceGraph2D from 'react-force-graph-2d'
+import { forceCollide } from 'd3-force'
 import { useFetch } from '../hooks/useFetch'
 import FilterChip from '../components/FilterChip'
 import CardSidePanel from '../components/CardSidePanel'
@@ -62,18 +63,15 @@ const CONN_DASH = {
 
 const NODE_BUDGET = 500
 // Three-tier alpha for edges (spec §2.4): spotlit / ambient / dimmed.
-// AMBIENT_ALPHA pushed up from spec's 0.22 — at typical fit-zoom (~0.5×)
-// the world-pixel linkWidth turns into sub-pixel screen strokes that
-// anti-alias to invisibility. Higher alpha + fatter ambient strokes
-// compensate without rewriting linkWidth in screen space.
-const SPOTLIT_ALPHA = 0.95
-const AMBIENT_ALPHA = 0.55
-const DIM_ALPHA = 0.10
+// Locked values from spec-v02-knowledge-views-spike.md §2.4.
+const SPOTLIT_ALPHA = 0.85
+const AMBIENT_ALPHA = 0.22
+const DIM_ALPHA = 0.07
 const EDGE_LABEL_AUTO_THRESHOLD = 30   // auto-on when links.length ≤ 30 (Q-A1)
 // Label font sizes are *screen* pixels — the canvas font is set per-frame
 // as `${SIZE / globalScale}px` so labels stay constant on screen regardless
 // of zoom (see nodeCanvasObject / linkCanvasObject below).
-const NODE_LABEL_SCREEN_PX = 11
+const NODE_LABEL_SCREEN_PX = 10
 const EDGE_LABEL_SCREEN_PX = 9
 const NODE_STROKE_DEFAULT = 'rgba(68, 85, 102, 0.85)'  // #445566 from design example
 const CANVAS_BG = '#0a0e17'                            // matches design example shell
@@ -216,19 +214,19 @@ export default function KnowledgeGraph() {
     }
   }, [graphData])
 
-  // Force tuning — minimal departure from the pre-spike values that were at
-  // least stable. Earlier attempts at a finite-cooldown + collision-force +
-  // -1400 charge regime produced a "graph vanishes on drag-start" failure
-  // we couldn't reproduce in the editor; reverting to an always-running
-  // simulation (cooldownTicks=Infinity) avoids the engine-stop/restart
-  // edge cases entirely.
+  // Force tuning — locked spec values (§2.3): charge -1400 + d3-force collision
+  // with `r + 4` padding so nodes stop overlapping at the chosen radius. The
+  // earlier "canvas blanks on drag" failure that pushed us to charge=-700 +
+  // no-collision was caused by cross-workspace edges referencing absent
+  // nodes (now filtered in graphData), not by these forces themselves.
   useEffect(() => {
     const fg = fgRef.current
     if (!fg) return
     const link = fg.d3Force('link')
     if (link) link.distance(140).strength(0.4)
     const charge = fg.d3Force('charge')
-    if (charge) charge.strength(-700)
+    if (charge) charge.strength(-1400)
+    fg.d3Force('collision', forceCollide().radius((n) => n.r + 4).strength(1))
     fg.d3ReheatSimulation()
   }, [graphData])
 
@@ -240,18 +238,18 @@ export default function KnowledgeGraph() {
     }
   }, [graphData.links.length, showEdgeLabels])
 
-  // One-shot fit-to-view after the simulation has had time to spread out.
-  // Uses a timer instead of onEngineStop because cooldownTicks=Infinity
-  // means the engine never stops on its own. 1500ms is empirically long
-  // enough at the 33-node / 50-edge scale for the layout to be readable
-  // (alpha decay 0.018 × 1500ms ≈ alpha ~0.07, mostly settled).
+  // One-shot fit-to-view per dataset, fired by onEngineStop (spec §2.3).
+  // Subsequent reheats (drag-pin, release-pins) keep this gate true so the
+  // user's chosen viewport isn't yanked back to fit on every interaction.
+  const fittedRef = useRef(false)
   useEffect(() => {
-    if (!graphData.nodes.length) return
-    const t = setTimeout(() => {
-      if (fgRef.current) fgRef.current.zoomToFit(400, 60)
-    }, 1500)
-    return () => clearTimeout(t)
+    fittedRef.current = false
   }, [graphData])
+  const handleEngineStop = useCallback(() => {
+    if (fittedRef.current) return
+    fittedRef.current = true
+    if (fgRef.current) fgRef.current.zoomToFit(600, 40)
+  }, [])
 
   const releaseAll = () => {
     for (const n of graphData.nodes) {
@@ -371,8 +369,9 @@ export default function KnowledgeGraph() {
             width={size.w}
             height={size.h}
             backgroundColor="rgba(0,0,0,0)"
-            cooldownTicks={Infinity}
+            cooldownTicks={150}
             warmupTicks={40}
+            onEngineStop={handleEngineStop}
             d3VelocityDecay={0.32}
             d3AlphaDecay={0.018}
             nodeRelSize={1}
@@ -434,24 +433,23 @@ export default function KnowledgeGraph() {
                 ctx.fill()
               }
 
-              // Label rendering — three rules in priority order:
+              // Label rendering — locked rules from spec §2.4:
               //   1. Ego-set always shows (hovered/selected node + 1-hop)
-              //   2. Ambient mode shows labels only when zoomed in past 1.6×
-              //      so the rest-state stays readable instead of "33 names
-              //      stacked on top of each other"
+              //   2. Ambient mode shows labels only when globalScale > 1.0
+              //      so the rest-state stays readable
               //   3. Font is sized in *screen* pixels, not world. Canvas
               //      ctx.font specifies world units, so to keep a constant
-              //      11-screen-pixel label we divide by globalScale. This is
-              //      what made labels look "huge" before — they were 11
-              //      world-units, scaling with the view.
+              //      10-screen-pixel label we divide by globalScale. This is
+              //      what made labels look "huge" before — they were world-
+              //      unit sized, scaling with the view.
               const inEgo = egoSet && egoSet.has(node.id)
-              const ambientShow = !egoSet && globalScale > 1.6
+              const ambientShow = !egoSet && globalScale > 1.0
               const labelAllowed = showNodeLabels && visible && (inEgo || ambientShow)
               if (labelAllowed) {
                 const label = node.title.length > 32 ? node.title.slice(0, 30) + '…' : node.title
                 const fontWorldPx = NODE_LABEL_SCREEN_PX / globalScale
                 const offsetWorldPx = 4 / globalScale
-                const strokeWorldPx = 3 / globalScale
+                const strokeWorldPx = 2 / globalScale
                 ctx.font = `500 ${fontWorldPx}px Manrope, system-ui, sans-serif`
                 ctx.textAlign = 'center'
                 ctx.textBaseline = 'top'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { X } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -10,13 +10,28 @@ import SourceTierIndicator from './SourceTierIndicator'
 // Receives the card object + the connection list for the workspace +
 // a callback for the close (X) and connection-jump (?card=other).
 //
-// Q-A4 (spec-v02-knowledge-views-spike.md): 300ms ease slide-in matches
-// the design-example feel. Off-screen on mount, transitions in next frame.
+// Q-A4 (spec-v02-knowledge-views-spike.md): 300ms ease slide-in on mount AND
+// 300ms slide-out on close. To animate the close, the X button does NOT call
+// onClose immediately; it flips `open` to false (drives the translate-x-full
+// class) and schedules onClose 300ms later — which is what removes ?card= and
+// unmounts us. If the user picks a different card mid-exit (the new card.id
+// arrives before the timer fires), we cancel the pending close and re-enter.
 export default function CardSidePanel({ card, connections, workspace, onClose, onSelect }) {
-  const [entered, setEntered] = useState(false)
+  const [open, setOpen] = useState(false)
+  const closeTimerRef = useRef(null)
+
   useEffect(() => {
-    const id = requestAnimationFrame(() => setEntered(true))
+    if (!card) return
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    const id = requestAnimationFrame(() => setOpen(true))
     return () => cancelAnimationFrame(id)
+  }, [card?.id])
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
   }, [])
 
   if (!card) return null
@@ -24,16 +39,24 @@ export default function CardSidePanel({ card, connections, workspace, onClose, o
   const inbound = connections.filter((c) => c.target === card.id)
   const outbound = connections.filter((c) => c.source === card.id)
 
+  const handleClose = () => {
+    setOpen(false)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+      closeTimerRef.current = null
+    }, 300)
+  }
+
   return (
     <aside
-      className={`fixed top-14 md:top-[6.5rem] right-0 bottom-0 w-full md:w-[480px] z-40 border-l border-white/[0.06] bg-black/90 backdrop-blur-xl overflow-y-auto transition-transform duration-300 ease-out ${
-        entered ? 'translate-x-0' : 'translate-x-full'
+      className={`fixed top-14 md:top-[6.5rem] right-0 bottom-0 w-full md:w-[480px] z-40 border-l border-white/[0.06] bg-[#111827]/95 backdrop-blur-xl overflow-y-auto transition-transform duration-300 ease-out ${
+        open ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
-      <div className="sticky top-0 flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-black/60 backdrop-blur-xl">
+      <div className="sticky top-0 flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-[#111827]/80 backdrop-blur-xl">
         <span className="font-display text-xs uppercase tracking-wider text-white/50">Card</span>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="p-1 rounded hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
           aria-label="Close detail"
         >
