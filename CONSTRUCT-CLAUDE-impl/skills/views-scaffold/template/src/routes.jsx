@@ -9,6 +9,7 @@ import Landscape from './pages/Landscape'
 import Artifacts from './pages/Artifacts'
 import Digests from './pages/Digests'
 import DigestDetail from './pages/DigestDetail'
+import Wiki from './pages/Wiki'
 import NotFound from './pages/NotFound'
 
 // Route map mirrors spec-v02-runtime-topology.md §5.
@@ -23,6 +24,7 @@ export default function AppRoutes() {
       <Route path="/:workspace/knowledge-graph" element={<KnowledgeGraph />} />
       <Route path="/:workspace/landscape" element={<Landscape />} />
       <Route path="/:workspace/artifacts" element={<Artifacts />} />
+      <Route path="/:workspace/wiki" element={<Wiki />} />
       <Route path="/:workspace/digests" element={<Digests />} />
       <Route path="/:workspace/digests/:id" element={<DigestDetail />} />
       <Route path="*" element={<NotFound />} />

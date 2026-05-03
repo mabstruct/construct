@@ -126,21 +126,45 @@ function CategoriesSection({ workspace, categories, coverage }) {
 
 function HeatmapCell({ cell, workspace, intensity }) {
   const alpha = cell.count === 0 ? 0.04 : 0.08 + intensity * 0.32
-  const to = `/${workspace}/artifacts?content_categories=${encodeURIComponent(cell.name)}`
+  // Cell click → Wiki filtered by this category (read-mode is the default
+  // verb per spec-v02-knowledge-views-spike.md §3.5). A small secondary link
+  // sends users to the Artifacts table for filter-and-narrow workflows.
+  // Empty cells are non-clickable.
+  const wikiTo = `/${workspace}/wiki?category=${encodeURIComponent(cell.name)}`
+  const artifactsTo = `/${workspace}/artifacts?content_categories=${encodeURIComponent(cell.name)}`
+  const empty = cell.count === 0
   return (
-    <Link
-      to={to}
-      className="group block rounded-lg border border-white/[0.06] hover:border-cyan-400/40 transition-colors px-3 py-3"
+    <div
+      className="group relative rounded-lg border border-white/[0.06] hover:border-cyan-400/40 transition-colors px-3 py-3"
       style={{ backgroundColor: `rgba(34, 211, 238, ${alpha})` }}
     >
-      <div className="text-sm text-white/85 font-medium truncate">{cell.name}</div>
+      {empty ? (
+        <div className="text-sm text-white/85 font-medium truncate">{cell.name}</div>
+      ) : (
+        <Link
+          to={wikiTo}
+          className="block text-sm text-white/85 font-medium truncate hover:text-white"
+          title={`Read cards in ${cell.name}`}
+        >
+          {cell.name}
+        </Link>
+      )}
       <div className="flex items-baseline gap-2 mt-1">
         <span className="font-display text-xl text-white tabular-nums">{cell.count}</span>
-        {cell.count === 0 && (
+        {empty && (
           <span className="text-[10px] text-white/40 italic">not yet covered</span>
         )}
       </div>
-    </Link>
+      {!empty && (
+        <Link
+          to={artifactsTo}
+          className="mt-1 inline-block text-[10px] text-white/35 hover:text-cyan-200"
+          title="Open filtered Artifacts table"
+        >
+          → Artifacts table
+        </Link>
+      )}
+    </div>
   )
 }
 

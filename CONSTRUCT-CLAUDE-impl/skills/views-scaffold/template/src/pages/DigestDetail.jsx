@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import LoadingState from '../components/LoadingState'
 import ErrorState from '../components/ErrorState'
+import { linkifyCardIds } from '../lib/linkifyCardIds'
 
 // Route: /:workspace/digests/:id
 // Spec: spec-v02-views.md §4.9
@@ -10,6 +12,15 @@ import ErrorState from '../components/ErrorState'
 export default function DigestDetail() {
   const { workspace, id } = useParams()
   const { data, loading, error } = useFetch(`/data/${workspace}/digests.json`)
+  // Cards lookup powers card-id → wiki anchor linkification in finding
+  // summaries (per spec-v02-knowledge-views-spike.md §3.5). Loaded
+  // separately so a missing cards.json doesn't break the digest view.
+  const cardsRes = useFetch(`/data/${workspace}/cards.json`)
+  const cardsById = useMemo(() => {
+    const m = new Map()
+    for (const c of cardsRes.data?.cards || []) m.set(c.id, c)
+    return m
+  }, [cardsRes.data])
 
   if (loading) return <LoadingState />
   if (error) return <ErrorState message={error.message} />
@@ -63,7 +74,7 @@ export default function DigestDetail() {
         <section>
           <h2 className="font-display text-base uppercase tracking-wider text-white/50 mb-3">Summary</h2>
           <div className="text-sm">
-            <MarkdownRenderer>{digest.summary_text}</MarkdownRenderer>
+            <MarkdownRenderer>{linkifyCardIds(digest.summary_text, cardsById, workspace)}</MarkdownRenderer>
           </div>
         </section>
       )}
@@ -97,7 +108,7 @@ export default function DigestDetail() {
                   </div>
                   {f.summary && (
                     <div className="text-sm text-white/70 leading-relaxed">
-                      <MarkdownRenderer>{f.summary}</MarkdownRenderer>
+                      <MarkdownRenderer>{linkifyCardIds(f.summary, cardsById, workspace)}</MarkdownRenderer>
                     </div>
                   )}
                   {f.cluster && (

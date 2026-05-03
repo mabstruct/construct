@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -5,6 +6,7 @@ import Tag from '../components/Tag'
 import ConfidencePill from '../components/ConfidencePill'
 import LoadingState from '../components/LoadingState'
 import ErrorState from '../components/ErrorState'
+import { linkifyCardIds } from '../lib/linkifyCardIds'
 
 // Route: /articles/:slug
 // Spec: spec-v02-views.md §4.3
@@ -70,7 +72,7 @@ export default function ArticleDetail() {
 
       {article.body_markdown && (
         <div className="text-base leading-relaxed">
-          <MarkdownRenderer>{article.body_markdown}</MarkdownRenderer>
+          <MarkdownRenderer>{linkifyArticleBody(article)}</MarkdownRenderer>
         </div>
       )}
 
@@ -86,6 +88,21 @@ export default function ArticleDetail() {
       )}
     </article>
   )
+}
+
+// Linkify backticked card-ids in the article body to their wiki anchors.
+// Articles span multiple workspaces; we resolve each card-id's workspace
+// from the article's `source_cards[]` (each entry has workspace_id). Cards
+// not cited in source_cards aren't linked — keeps us from inventing routes
+// to cards we can't verify exist in this build.
+function linkifyArticleBody(article) {
+  const map = new Map()
+  for (const s of article.source_cards || []) {
+    if (s?.id && s?.workspace_id) {
+      map.set(s.id, { workspace_id: s.workspace_id })
+    }
+  }
+  return linkifyCardIds(article.body_markdown, map)
 }
 
 function SourceRow({ source }) {

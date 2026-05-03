@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { BookOpen, X } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import Tag from './Tag'
 import ConfidencePill from './ConfidencePill'
@@ -55,13 +55,24 @@ export default function CardSidePanel({ card, connections, workspace, onClose, o
     >
       <div className="sticky top-0 flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-[#111827]/80 backdrop-blur-xl">
         <span className="font-display text-xs uppercase tracking-wider text-white/50">Card</span>
-        <button
-          onClick={handleClose}
-          className="p-1 rounded hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
-          aria-label="Close detail"
-        >
-          <X className="h-4 w-4 text-white/60" />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to={`/${workspace}/wiki#${card.id}`}
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-white/60 hover:text-cyan-200 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+            aria-label="Open in wiki"
+            title="Open in wiki"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>Open in wiki</span>
+          </Link>
+          <button
+            onClick={handleClose}
+            className="p-1 rounded hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+            aria-label="Close detail"
+          >
+            <X className="h-4 w-4 text-white/60" />
+          </button>
+        </div>
       </div>
 
       <div className="px-5 py-5 space-y-5">

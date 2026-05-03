@@ -1,8 +1,21 @@
 import ReactMarkdown from 'react-markdown'
+import { Link } from 'react-router-dom'
 
 // Per spec-v02-views.md §5.3. Wraps react-markdown with theme-aware element
 // overrides so prose looks right on the dark base. Used in CardSidePanel,
 // ArticleDetail, DigestDetail.
+
+// Internal paths get react-router Link (in-place client navigation, preserves
+// scroll-to-anchor for `#card-id`); external schemes still open in a new tab.
+function SmartLink({ href, children, ...rest }) {
+  const isInternal = typeof href === 'string' && href.startsWith('/')
+  const cls = 'text-cyan-300 hover:text-cyan-200 underline decoration-cyan-300/30 hover:decoration-cyan-200/60'
+  if (isInternal) {
+    return <Link to={href} className={cls} {...rest}>{children}</Link>
+  }
+  return <a href={href} className={cls} target="_blank" rel="noopener noreferrer" {...rest}>{children}</a>
+}
+
 const components = {
   h1: ({ node, ...p }) => <h1 className="font-display text-2xl text-white mt-6 mb-3 leading-tight" {...p} />,
   h2: ({ node, ...p }) => <h2 className="font-display text-xl text-white mt-6 mb-2 leading-snug" {...p} />,
@@ -12,7 +25,7 @@ const components = {
   ul: ({ node, ...p }) => <ul className="my-3 ml-5 list-disc space-y-1 text-white/80" {...p} />,
   ol: ({ node, ...p }) => <ol className="my-3 ml-5 list-decimal space-y-1 text-white/80" {...p} />,
   li: ({ node, ...p }) => <li className="leading-relaxed" {...p} />,
-  a:  ({ node, ...p }) => <a className="text-cyan-300 hover:text-cyan-200 underline decoration-cyan-300/30 hover:decoration-cyan-200/60" target="_blank" rel="noopener noreferrer" {...p} />,
+  a:  ({ node, ...p }) => <SmartLink {...p} />,
   strong: ({ node, ...p }) => <strong className="text-white font-semibold" {...p} />,
   em: ({ node, ...p }) => <em className="italic text-white/85" {...p} />,
   code: ({ node, inline, className, ...p }) =>

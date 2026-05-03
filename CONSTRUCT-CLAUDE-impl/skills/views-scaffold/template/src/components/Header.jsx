@@ -5,11 +5,15 @@ import UpdateFlag from './UpdateFlag'
 
 // Per spec-v02-design-prototype.md §4.1.
 // Two-row sticky header. Top always; bottom only on /<workspace>/* routes.
+// Wiki added per spec-v02-knowledge-views-spike.md §3.6 (Slice 12.1, locked
+// 2026-05-02). Placed adjacent to Artifacts since they share the card-data
+// surface; Wiki is the reading view, Artifacts is the filtered index.
 const WORKSPACE_LINKS = [
   { to: '', label: 'Dashboard' },
   { to: '/knowledge-graph', label: 'Knowledge Graph' },
   { to: '/landscape', label: 'Landscape' },
   { to: '/artifacts', label: 'Artifacts' },
+  { to: '/wiki', label: 'Wiki' },
   { to: '/digests', label: 'Digests' },
 ]
 
