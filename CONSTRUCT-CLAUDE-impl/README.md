@@ -253,6 +253,8 @@ Runs `views-scaffold`: copies the SPA template into `views/src/`, installs Node 
 - `views.auto_regenerate: false` — disable automatic data regeneration after skills
 - `views.workspace_landing: wiki` — make `/:workspace` redirect to the wiki view instead of the dashboard
 - `views.confirm_refresh: true` — show "✓ views updated" confirmation after successful hook regen
+- `views.per_card_hooks.enabled: true` — allow direct `card-create` / `card-connect` to schedule debounced views refresh
+- `views.per_card_hooks.debounce_seconds: 5` and `mode: trailing` — collapse bursts of direct card edits into one refresh after the user pauses
 
 **Reset everything:**
 > "Reset the views"

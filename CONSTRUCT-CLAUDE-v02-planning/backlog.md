@@ -289,6 +289,8 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 
 **Remaining v0.2.1 design decisions now locked:** per-card hooks use a configurable **5s trailing-edge debounce**; concurrent direct invocations are deferred to later architecture consolidation work.
 
+**Implemented post-v0.2.0:** direct `card-create` / `card-connect` now schedule debounced views refresh via `views.per_card_hooks` config. Concurrent invocation hardening remains deferred.
+
 ## Sequencing Proposal
 
 **Spec-first phase (current):**

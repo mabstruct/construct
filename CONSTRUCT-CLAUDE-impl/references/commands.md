@@ -74,7 +74,7 @@ A single-page reference of everything you can ask CONSTRUCT to do.
 | `stop` | construct-down | Stop local server, remove PID file |
 | `reset views` | views-reset | Remove `views/src/`, `views/build/`, skill venv — clean slate |
 
-**Config:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to set `views.auto_regenerate: false` (disable post-skill data refresh), `views.workspace_landing: wiki` (open wiki instead of dashboard when navigating to a workspace), or `views.confirm_refresh: true` (show "✓ views updated" after hook regen).
+**Config:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to set `views.auto_regenerate: false` (disable post-skill data refresh), `views.workspace_landing: wiki` (open wiki instead of dashboard when navigating to a workspace), `views.confirm_refresh: true` (show "✓ views updated" after hook regen), or `views.per_card_hooks.*` (schedule a debounced refresh after direct card-create/card-connect edits).
 
 ---
 

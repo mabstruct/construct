@@ -96,7 +96,22 @@ Append to `log/events.jsonl`:
 {"event": "create_card", "timestamp": "{ISO-8601}", "card_id": "{id}", "epistemic_type": "{type}", "confidence": {N}, "author": "{who}"}
 ```
 
-### Step 7: Confirm
+### Step 7: Views Refresh Hook (Direct Invocation Only)
+
+If this skill was invoked directly by the user (not as part of `research-cycle`, `daily-cycle`, or another parent skill that owns views refresh):
+
+1. If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false` AND `.construct/config.yaml` does not set `views.per_card_hooks.enabled: false`:
+   - Run:
+     ```bash
+     bash <install-root>/.construct/skills/views-generate-data/debounced-hook.sh <install-root> card-create
+     ```
+   - If it succeeds and prints a line, append that line to the report. This only happens when `views.confirm_refresh: true`, and the message is:
+     > Note: views refresh scheduled (5s trailing debounce).
+   - If it fails, append a warning to the report:
+     > ⚠ views refresh scheduling failed: {single-line message}. Card creation still succeeded; run `views-generate-data` manually if needed.
+2. Otherwise → skip silently.
+
+### Step 8: Confirm
 
 > "Card '{title}' created as {lifecycle} ({epistemic_type}, confidence {N}). {connection_info}"
 

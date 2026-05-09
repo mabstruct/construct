@@ -103,6 +103,7 @@ Per-file parse errors are NOT skill failures. They are logged to `views/build/da
 ## Notes
 
 - **Incremental regeneration.** The generator fingerprints each workspace's source files (cards/*, connections.json, domains.yaml, digests/*, etc.) by mtime+size. Unchanged workspaces are loaded from the previously generated JSON cache in `views/build/data/<ws>/` instead of re-parsing. If nothing changed at all, the run exits immediately. Fingerprints are stored in `views/build/data/_build_meta.json`.
+- **Per-card debounced hooks.** Direct `card-create` / `card-connect` invocations can schedule this skill via `debounced-hook.sh`. The helper stores state under `.construct/state/views-hooks/`, waits for a 5s trailing-edge debounce window (configurable), then runs one regeneration in the background. This is best-effort by design; concurrency hardening is deferred.
 - **Sole writer to `views/build/data/`.** Architecture-overview invariant I1. Hook-fired regenerations (research-cycle, curation-cycle, synthesis) all flow through this skill.
 - **Determinism.** Two runs on identical workspace state produce byte-identical output (modulo `generated_at`). Verified by safe-delete invariant I3 in validation.
 - **Failure isolation.** Per-file errors do not stop the run. The script writes whatever parsed cleanly and surfaces warnings. The agent's parent skill (research-cycle, etc.) is unaffected by views-generate-data warnings.
