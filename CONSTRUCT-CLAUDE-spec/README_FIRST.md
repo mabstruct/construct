@@ -42,6 +42,7 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 | 1 | [product-brief.md](product-brief.md) | Product vision adapted for Claude-native delivery | First |
 | 2 | [prd.md](prd.md) | Technical requirements for the agent configuration approach | After the brief |
 | 3 | [user-journeys.md](user-journeys.md) | Three reference journeys: cold start, daily use, co-authorship | To understand "done" |
+| 4 | [prd-v02-cross-domain-cluster.md](prd-v02-cross-domain-cluster.md) | Requirements for the post-v0.2 cross-domain views cluster | When planning the next v0.2.x feature wave |
 
 ### Engineering contracts
 
@@ -51,6 +52,9 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 | [knowledge-card-schema.md](knowledge-card-schema.md) | Canonical card format (shared) |
 | [nfrs.md](nfrs.md) | Non-functional requirements adapted for agent-native delivery |
 | [validation-strategy.md](validation-strategy.md) | How to verify correctness without CI/CD |
+| [spec-v02-cross-domain-data.md](spec-v02-cross-domain-data.md) | Binding data contract for `bridges.json`, candidate persistence, and cross-domain scoring |
+| [spec-v02-cross-domain-views.md](spec-v02-cross-domain-views.md) | Binding UI contract for the Cross-Domain dashboard card and comparison route |
+| [spec-v02-cross-domain-graph.md](spec-v02-cross-domain-graph.md) | Binding graph contract for `/cross-domain/graph`, bridges-first mode, and multi-domain drill-down |
 
 ### Agent specifications
 

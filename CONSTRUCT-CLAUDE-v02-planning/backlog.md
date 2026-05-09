@@ -291,6 +291,10 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 
 **Implemented post-v0.2.0:** direct `card-create` / `card-connect` now schedule debounced views refresh via `views.per_card_hooks` config. Concurrent invocation hardening remains deferred.
 
+**Next requirements anchor:** see `../CONSTRUCT-CLAUDE-spec/prd-v02-cross-domain-cluster.md` for the cross-domain feature cluster that now defines the next meaningful v0.2.x wave.
+
+**First binding specs drafted:** `../CONSTRUCT-CLAUDE-spec/spec-v02-cross-domain-data.md` (`bridges.json` + scoring), `../CONSTRUCT-CLAUDE-spec/spec-v02-cross-domain-views.md` (landing Cross-Domain card + `/cross-domain` comparison route), and `../CONSTRUCT-CLAUDE-spec/spec-v02-cross-domain-graph.md` (`/cross-domain/graph`, bridges-first mode, multi-domain graph drill-down).
+
 ## Sequencing Proposal
 
 **Spec-first phase (current):**
