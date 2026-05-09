@@ -41,6 +41,8 @@ Present a brief summary:
 Run if last cycle was >24h ago (or user requests).
 Report what was found.
 
+**Views auto-refresh:** If `views/build/` exists, `views-generate-data` runs automatically after the cycle completes. The browser shows an UPDATE flag within 30s.
+
 ### 3. Curation Cycle
 **Skill:** `curation-cycle`
 
@@ -53,6 +55,8 @@ Run maintenance:
 - Bridge detection
 
 Report findings and actions taken.
+
+**Views auto-refresh:** Same as research — views data regenerated automatically if views are scaffolded.
 
 ### 4. User Interaction Phase
 

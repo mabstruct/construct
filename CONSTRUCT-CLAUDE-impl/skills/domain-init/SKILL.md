@@ -15,6 +15,8 @@ Otherwise → ask the user which workspace to configure (list existing subdirect
 
 All file operations below are relative to the domain workspace subdirectory (e.g., `cosmology/`).
 
+**Views bootstrap check:** If `views/build/` exists at the install root but no server is running (no `views/server.pid` file, or the PID in the file is not alive), invoke `construct-up` to start the views server. If `views/build/` does not exist, skip silently.
+
 ### Step 1: Scope Interview
 
 Run an interview-style dialog. Ask these questions adaptively — skip any the user pre-answered:
