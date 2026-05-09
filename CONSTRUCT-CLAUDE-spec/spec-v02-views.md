@@ -1,6 +1,6 @@
 # spec-v02-views — Per-View Implementation Plan
 
-**Status:** Draft
+**Status:** Accepted (2026-05-09)
 **Date:** 2026-04-28
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 8

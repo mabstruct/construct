@@ -1,6 +1,6 @@
 # spec-v02-design-prototype — Visual Language, Navigation Taxonomy, Component Inventory
 
-**Status:** Draft
+**Status:** Accepted (2026-05-09)
 **Date:** 2026-04-28
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 4

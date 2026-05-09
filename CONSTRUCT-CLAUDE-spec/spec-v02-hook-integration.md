@@ -1,6 +1,6 @@
 # spec-v02-hook-integration — Skill Hooks for v0.2 Views
 
-**Status:** Draft
+**Status:** Accepted (2026-05-09)
 **Date:** 2026-04-28
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 9

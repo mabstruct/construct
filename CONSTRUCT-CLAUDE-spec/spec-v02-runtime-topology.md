@@ -1,6 +1,6 @@
 # spec-v02-runtime-topology — Runtime Topology and User-Facing Entry
 
-**Status:** Draft
+**Status:** Accepted (2026-05-09)
 **Date:** 2026-04-27
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 7

@@ -1,6 +1,6 @@
 # spec-v02-validation — Validation, Acceptance, and Fixtures
 
-**Status:** Draft
+**Status:** Accepted (2026-05-09)
 **Date:** 2026-04-28
 **Owner:** ;-)mab
 **Closes Epic:** `../CONSTRUCT-CLAUDE-v02-planning/backlog.md` Epic 10
@@ -391,7 +391,7 @@ v0.2 is considered shipped when:
 - [ ] `CONSTRUCT-CLAUDE-impl/README.md` updated with v0.2 commands and user phrases (Epic 11)
 - [ ] `CONSTRUCT-CLAUDE-v02-planning/` directory archived to `CONSTRUCT-CLAUDE-spec/archive/v02-backlog.md` (per ADR-0002)
 - [ ] `CONSTRUCT-CLAUDE-impl/VERSION` flipped from `0.2.0-dev` to `0.2.0`
-- [ ] All draft specs flipped from `Status: Draft` to `Status: Accepted`
+- [x] All draft specs flipped from `Status: Draft` to `Status: Accepted` (2026-05-09)
 
 ---
 

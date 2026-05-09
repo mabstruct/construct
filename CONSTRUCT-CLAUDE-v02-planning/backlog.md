@@ -72,15 +72,15 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - [x] Define route map and top-level layout shell → 10 routes in `routes.jsx` per topology §5
 - [x] Define theming entry-points → `index.css` with `@theme` placeholder for Epic 4
 
-### Epic 4: Design Prototype — RESOLVED + IMPLEMENTED (visual verification pending)
+### Epic 4: Design Prototype — RESOLVED + IMPLEMENTED + VERIFIED
 
-**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-design-prototype.md` — Draft (kept Draft until browser-side visual checks pass).
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-design-prototype.md` — **Accepted** (browser-side visual verification passed 2026-05-09).
 
 **Implementation:** 10 components at `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/src/components/` — Layout, CosmicBG, Header (TopRow + conditional BottomRow), Brand, WorkspaceSwitcher (with hardcoded mock workspaces; Epic 8 swaps to useFetch), UpdateFlag (unwired stub; Epic 8 wires useVersionFlag), Footer, EmptyState, LoadingState, ErrorState. Plus updated `index.css` with full theme tokens per spec §3.1 and `App.jsx` wrapping AppRoutes in Layout.
 
 **Mechanical acceptance verified:** all CSS custom properties on `:root`, fonts registered via Tailwind 4 `@theme`, `data-workspace` attribute on Layout wrapper, sticky glass-morphism header, bottom row conditional on `useParams().workspace`, no rotating rings, no "OpenClaw" string, 1539 modules build successfully (build size 241kb JS / 25kb CSS gzipped to ~82kb total).
 
-**Pending:** browser-side visual verification — typography rendering, WCAG AA contrast, desktop/tablet responsive checks. User opens `npm run dev` (port 5173) or built `serve --single` to verify and signs off; spec then flips Draft → Accepted.
+**Visual verification passed** (2026-05-09): typography, contrast, and responsive layout confirmed in browser.
 
 - [x] Audit `views/design-example/` → spec §13 (Layout/Header lifted in spirit; flat single-workspace nav rejected; Analysis/Architecture/Thought-Stream pages dropped; OpenClaw footer line removed)
 - [x] Lock navigation taxonomy → spec §4 implemented in Header.jsx (two-row, sticky, BottomRow conditional)
@@ -167,43 +167,56 @@ All sub-tasks resolved by `spec-v02-views.md`:
 - [x] Digests — list/detail behavior, date-range filter, raw-source link handling (not exposed per data-model §11.7) → §4.8 + §4.9
 - [x] Articles — magazine card list with chip filters, full-page detail with provenance trace, click-source-card → artifacts side-panel → §4.2 + §4.3
 
-### Epic 9: Skill and Workflow Integration — RESOLVED
+### Epic 9: Skill and Workflow Integration — RESOLVED + IMPLEMENTED
 
-**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` (Draft). Hooks are conditionally automatic on `views/build/` existence; no config opt-out for v0.2 MVP. Three skills hook regeneration (research-cycle, curation-cycle, synthesis); card-create and card-connect deliberately excluded to avoid per-card thrash. domain-init prepends a lazy construct-up bootstrap. Failure isolation: hook failures emit a warning to the parent skill's report but never propagate as failure.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` (Draft).
+
+**Implementation (2026-05-09):** Step 8 (Views Refresh Hook) added to `research-cycle/SKILL.md`, `curation-cycle/SKILL.md`, `synthesis/SKILL.md`. Views bootstrap check added to `domain-init/SKILL.md` Step 0. `daily-cycle.md` workflow updated with auto-refresh notes.
 
 - [x] Identify all existing skills that should trigger data regeneration → spec §4 (3 skills, with rationale for excluding 2)
 - [x] Define optional vs. mandatory hook behavior → §2, §8 (conditionally automatic; opt-out deferred to v0.2.1)
-- [x] Define hook for `research-cycle` → §4.1
-- [x] Define hook for `curation-cycle` → §4.2
-- [x] Define hook for `synthesis` → §4.3
+- [x] Define hook for `research-cycle` → §4.1 → **implemented**
+- [x] Define hook for `curation-cycle` → §4.2 → **implemented**
+- [x] Define hook for `synthesis` → §4.3 → **implemented**
 - [x] ~~Define hook for `card-create`~~ → excluded in v0.2 (§4.4)
 - [x] ~~Define hook for `card-connect`~~ → excluded in v0.2 (§4.4)
-- [x] Define lazy `construct-up` invocation in `domain-init` → §6
-- [x] Define updates required to `daily-cycle.md` → §10
-- [x] Define updates required to command/reference docs → §11 (Epic 11 / docs)
+- [x] Define lazy `construct-up` invocation in `domain-init` → §6 → **implemented**
+- [x] Define updates required to `daily-cycle.md` → §10 → **implemented**
+- [x] Define updates required to command/reference docs → §11 → **implemented** (Epic 11)
 
-### Epic 10: Validation and Acceptance — RESOLVED
+### Epic 10: Validation and Acceptance — RESOLVED + EXECUTED
 
-**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-validation.md` (Draft). Four fixtures (empty / single-domain-small / multi-domain-medium / adversarial-corrupt) under `tests/fixtures/v02/`. Cross-spec acceptance matrix consolidates checks from all 9 prior specs into one execution plan. Adversarial fixture validates all four architecture invariants. End-to-end smoke test sequence documented. Performance + portability + browser targets stated.
+**Spec:** `../CONSTRUCT-CLAUDE-spec/spec-v02-validation.md` (Draft).
 
-- [x] Define fixture workspace(s) → §3 (4 fixtures with full directory structures)
-- [x] Define acceptance checks for each route → §4.7 (cross-references Epic 8 §6)
-- [x] Define broken-data resilience checks → §3.4 (adversarial fixture + expected warnings)
-- [x] Define source-of-truth invariant tests → §4.1 (the four invariants from architecture-overview)
-- [x] Define manual rebuild and serve verification flow → §5 (end-to-end smoke test)
+**Execution (2026-05-09):**
+- 4 fixtures created under `tests/fixtures/v02/` (empty, single-domain-small, multi-domain-medium, adversarial-corrupt)
+- `views-generate-data` ran successfully on all 4 fixtures (exit 0)
+- **I1 PASS:** Only `views-generate-data` writes to `views/build/data/`
+- **I2 PASS:** No POST/PUT/DELETE/PATCH in SPA source
+- **I3 PASS:** Safe-delete determinism — `build_id` identical after wipe+regen (single-domain-small: `2ffe6f81` both runs)
+- Adversarial fixture: 2 valid cards, 0 connections (malformed JSON), orphan article with `{status: "missing"}`, 4 warnings logged
+- Empty fixture: all collections produce empty arrays
+- Browser-side checks (all routes, empty states, UPDATE flag, deep-URL reload) confirmed by user
+
+- [x] Define fixture workspace(s) → §3 → **created**
+- [x] Define acceptance checks for each route → §4.7 → **browser-verified by user**
+- [x] Define broken-data resilience checks → §3.4 → **verified on adversarial fixture**
+- [x] Define source-of-truth invariant tests → §4.1 → **I1–I3 automated, I4 by spec traceability**
+- [x] Define manual rebuild and serve verification flow → §5 → **verified by user on live workspace**
 - [x] Define performance expectations → §6 (small ≤30s pipeline, medium ≤90s, browser targets)
 - [x] Define portability expectations → §7 (macOS, Linux, Node 20+, Python 3.10+, browsers)
 
-### Epic 11: Documentation and Migration
+### Epic 11: Documentation and Migration — DONE
 
 Goal: make v0.2 understandable and deployable.
 
-- [ ] Update `CONSTRUCT-CLAUDE-impl/README.md` for views workflows
-- [ ] Document v0.2 commands and user phrases
-- [ ] Document setup prerequisites for Node-based local views
-- [ ] Document migration and upgrade path from v0.1 workspaces
-- [ ] Document what remains deferred to v0.2.1 and v0.3
-- [ ] Patch `prd-v02-live-views.md` §3.1, §3.2, §3.4, §5 for consistency with the runtime-topology + data-model specs (currently has `src/data/` and lists Python `http.server` as an option)
+**Implementation (2026-05-09):**
+- [x] Update `CONSTRUCT-CLAUDE-impl/README.md` for views workflows → **done** (Local Views section, skill tree, prerequisites, key phrases)
+- [x] Document v0.2 commands and user phrases → **done** (commands.md Views & Server table)
+- [x] Document setup prerequisites for Node-based local views → **done** (README prerequisites, Views section)
+- [x] Document migration and upgrade path from v0.1 workspaces → **N/A** (v0.2 is additive — no migration needed; existing workspaces work unchanged; views are opt-in via `views-scaffold`)
+- [x] Document what remains deferred to v0.2.1 and v0.3 → captured in backlog sequencing and per-epic out-of-scope notes
+- [x] Patch `prd-v02-live-views.md` §3.3, §3.4, §5.3, §7, §8, §9 for consistency with final specs → **done** (hooks don't run build, direct serve invocation, no views-serve skill, react-force-graph-2d, search in wiki, route count)
 
 ### Epic 12: Knowledge Views — Restyle + Wiki
 
@@ -245,9 +258,9 @@ Goal: turn the current `react-force-graph-2d` view from "unusable at 33 cards ×
 
 **Out of scope for 12.2** (deferred): drag-pin persistence across navigation (Q-A3), node sizing by confidence×lifecycle, cross-workspace KG, engine swap.
 
-#### Slice 12.1 — Wiki Read-Mode View (Spike B) — LOCKED 2026-05-02
+#### Slice 12.1 — Wiki Read-Mode View (Spike B) — DONE 2026-05-09
 
-Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable rendering of cards — the read-mode counterpart to the graph; the natural link target for digest/article cross-references.
+Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable rendering of cards — the read-mode counterpart to the graph; the natural link target for digest/article cross-references. **Verified by user in live cosmology workspace.**
 
 **Locked decisions** (spec §5):
 
@@ -263,14 +276,14 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 
 **Implementation parameters** (per spec §3.3–§3.6):
 
-- [ ] Route: `/:workspace/wiki` + URL-backed `useSearchParams` filter state
-- [ ] Header nav: insert "Wiki" between "Artifacts" and "Knowledge Graph" → Dashboard · Articles · Digests · Wiki · Artifacts · Knowledge Graph · Landscape
-- [ ] Per-card render order: `<h2 id={card.id}>` anchor → meta row (epistemic-type · lifecycle · confidence · source-tier · last-reviewed) → body markdown → sources block → connections-out (grouped by type, link to target anchor) → connections-in (backlinks from `connects_to` reverse-index) → "Mentioned in" (digest IDs + article IDs that reference the card-id; derived client-side from `digests.json` body + `articles.json` provenance)
-- [ ] Inline collapsibles per card (Option A); anchor + meta row always visible, expand reveals body + sources + connections + mentioned-in
-- [ ] Search: substring match on `title` + `body_markdown` + `tags[]` (debounced 200ms; client-side; no Lunr)
-- [ ] Filters: lifecycle multi-select, confidence range, category multi-select, type multi-select; default sort type → category → title; alternates created-desc / last-reviewed-desc / confidence-desc
-- [ ] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
-- [ ] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
+- [x] Route: `/:workspace/wiki` + URL-backed `useSearchParams` filter state
+- [x] Header nav: insert "Wiki" between "Artifacts" and "Knowledge Graph" → Dashboard · Articles · Digests · Wiki · Artifacts · Knowledge Graph · Landscape
+- [x] Per-card render order: `<h2 id={card.id}>` anchor → meta row (epistemic-type · lifecycle · confidence · source-tier · last-reviewed) → body markdown → sources block → connections-out (grouped by type, link to target anchor) → connections-in (backlinks from `connects_to` reverse-index) → "Mentioned in" (digest IDs + article IDs that reference the card-id; derived client-side from `digests.json` body + `articles.json` provenance)
+- [x] Inline collapsibles per card (Option A); anchor + meta row always visible, expand reveals body + sources + connections + mentioned-in
+- [x] Search: substring match on `title` + `body_markdown` + `tags[]` (debounced 200ms; client-side; no Lunr)
+- [x] Filters: lifecycle multi-select, confidence range, category multi-select, type multi-select; default sort type → category → title; alternates created-desc / last-reviewed-desc / confidence-desc
+- [x] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
+- [x] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
 
 **Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), print stylesheet (Q-B4 — v0.2.1), Wiki-as-workspace-landing (D5 — revisit if positioning shifts in v0.3+).
 
