@@ -4,7 +4,7 @@
 // No rotating rings (removed for v0.2 — distracting on a working tool).
 export default function CosmicBG() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+    <div aria-hidden data-cosmic-bg className="pointer-events-none fixed inset-0 overflow-hidden z-0">
       {/* Layer 1: corner radial-gradient washes */}
       <div
         className="absolute -inset-[30%]"

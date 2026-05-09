@@ -5,3 +5,4 @@
 views:
   auto_regenerate: true    # set to false to disable post-skill views hooks
   workspace_landing: dashboard  # 'dashboard' or 'wiki' — default page for /:workspace
+  confirm_refresh: false   # set to true to show "✓ views updated" after successful hook regen

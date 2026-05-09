@@ -252,6 +252,7 @@ Runs `views-scaffold`: copies the SPA template into `views/src/`, installs Node 
 **Configuration:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to customize views behavior:
 - `views.auto_regenerate: false` — disable automatic data regeneration after skills
 - `views.workspace_landing: wiki` — make `/:workspace` redirect to the wiki view instead of the dashboard
+- `views.confirm_refresh: true` — show "✓ views updated" confirmation after successful hook regen
 
 **Reset everything:**
 > "Reset the views"

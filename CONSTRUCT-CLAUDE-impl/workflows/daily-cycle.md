@@ -72,7 +72,14 @@ Based on curation findings, the user may:
 | "Draft something on {topic}" | `synthesis` |
 | Free conversation | CONSTRUCT handles directly |
 
-### 5. End of Session
+### 5. Views Refresh (if applicable)
+
+If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
+- Run `views-generate-data` once, after all child skills (research-cycle, curation-cycle) have completed.
+- Child skills skip their own Step 8 hooks when invoked as part of this workflow (skill-chain depth check).
+- Report outcome per the standard hook pattern: silent on success, warning on failure.
+
+### 6. End of Session
 
 Before the user leaves:
 > "Session summary:

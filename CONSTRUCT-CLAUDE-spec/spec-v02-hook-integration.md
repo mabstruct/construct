@@ -331,8 +331,8 @@ This spec is implemented when:
 ## 12. Open Follow-ups
 
 1. **Per-card hooks (v0.2.1).** If `card-create` / `card-connect` direct invocation (outside parent skills) becomes common, add hooks with debouncing (e.g., min 5s between regens, batched if multiple fire in window).
-2. **Hook-source detection.** v0.2 hooks fire unconditionally on parent-skill success, even if the parent ran inside another parent (e.g., daily-cycle running curation which would call its own hook). For now this redundancy is harmless (each regen is full and idempotent). v0.2.1 may add a "skill-chain depth" check to suppress redundant child hooks.
-3. **Visual confirmation in user message.** §4.1 step 3 says "no extra user-facing message." Some users may want a confirmation ("✓ views updated"). Could be a config preference in v0.2.1.
+2. **Hook-source detection.** **Implemented post-v0.2.0** as skill-chain depth check. Each hook's SKILL.md includes a "Skip check" instruction: if the skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills, the child hook is skipped. The parent workflow triggers a single terminal regeneration. This eliminates redundant regen in nested calls.
+3. **Visual confirmation in user message.** **Implemented post-v0.2.0** via `views.confirm_refresh: true` in `.construct/config.yaml`. Default is `false` (silent). When enabled, hooks append `✓ views updated (build_id: {id})` to the skill's report.
 4. **Server-not-up but data regenerated.** If the user runs `research-cycle` while `views/build/` exists but the server is down, `views-generate-data` writes fresh JSON to disk; nothing serves it. Reasonable behavior for v0.2 (next `construct-up` will pick it up). Document explicitly in `daily-cycle.md`.
 5. **Workspace removal hook.** What happens if the user deletes a workspace directory? Currently undefined. v0.2 hooks fire only on mutation of *existing* workspaces; deletion is a pure filesystem op outside the skill graph. The next regen happens to handle this (the deleted workspace simply doesn't appear in `domains.json`). No explicit hook needed.
 

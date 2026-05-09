@@ -285,7 +285,7 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 - [x] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
 - [x] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
 
-**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), print stylesheet (Q-B4 — v0.2.1), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
+**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), ~~print stylesheet (Q-B4 — v0.2.1)~~ **implemented post-v0.2.0** (full @media print block in index.css; hides chrome, forces black-on-white, expands all cards, avoids page breaks inside cards), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
 
 ## Sequencing Proposal
 

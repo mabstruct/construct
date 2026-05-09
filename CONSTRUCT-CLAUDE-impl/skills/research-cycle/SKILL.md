@@ -142,13 +142,17 @@ For each paper above relevance threshold:
 ### Step 8: Views Refresh Hook
 
 If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
+
+**Skip check:** If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent will trigger a single regeneration after all child skills complete. This avoids redundant regeneration (e.g., daily-cycle runs research-cycle → curation-cycle → both would fire hooks; only the last one matters since regen is full and idempotent).
+
+If not skipped:
 1. Run `views-generate-data` to refresh the SPA's cached JSON
-2. If it succeeds → no extra user-facing message (the SPA picks it up via `version.json` polling within 30s)
+2. If it succeeds → if `.construct/config.yaml` sets `views.confirm_refresh: true`, append to the report: `✓ views updated (build_id: {id})`. Otherwise, no extra user-facing message (the SPA picks it up via `version.json` polling within 30s).
 3. If it fails → append a warning to the report:
    > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `views-generate-data` manually to refresh the views.
 4. Always preserve this skill's success status — the hook is a side effect, not a success condition
 
-If `views/build/` does not exist, or `views.auto_regenerate` is `false`, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
+If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
 
 ---
 

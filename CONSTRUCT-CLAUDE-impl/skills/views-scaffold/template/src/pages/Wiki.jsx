@@ -284,7 +284,7 @@ export default function Wiki() {
       </header>
 
       {/* Search */}
-      <div className="relative mb-3">
+      <div className="relative mb-3" data-no-print>
         <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
         <input
           type="text"
@@ -296,7 +296,7 @@ export default function Wiki() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div className="flex items-center gap-2 mb-3 flex-wrap" data-no-print>
         <FilterChip
           label="Type"
           mode="multi"

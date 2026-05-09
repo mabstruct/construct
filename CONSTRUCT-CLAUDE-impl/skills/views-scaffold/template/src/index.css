@@ -83,3 +83,68 @@ body {
     transition-duration: 0s !important;
   }
 }
+
+/* Print stylesheet — optimised for Wiki page but applies globally.
+ * Hides navigation chrome, cosmic background, and interactive controls.
+ * Forces black-on-white for readability and ink economy.
+ */
+@media print {
+  /* Hide non-content elements */
+  header, footer, nav,
+  [data-cosmic-bg],
+  [data-no-print],
+  button, select, input,
+  .fixed, .sticky {
+    display: none !important;
+  }
+
+  /* Reset colours for paper */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  /* Force readable text */
+  *, *::before, *::after {
+    color: black !important;
+    background: transparent !important;
+    border-color: #ccc !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Links: show URL inline */
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555 !important;
+  }
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
+  }
+
+  /* Wiki cards: expand all, remove collapse affordance */
+  details {
+    display: block !important;
+  }
+  details[open] summary ~ * {
+    display: block !important;
+  }
+  summary::marker, summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Page breaks: avoid splitting a card */
+  article, section, .wiki-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Reasonable max width */
+  .max-w-4xl {
+    max-width: 100% !important;
+  }
+}
