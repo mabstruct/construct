@@ -1,0 +1,18 @@
+{
+  "id": "ref-void-lensing-2023",
+  "title": "Void Lensing with DES Year-3 Data: Constraints on Void Profiles and Cosmology",
+  "authors": ["Vielzeuf, P.", "Kovacs, A.", "Demirbozan, U."],
+  "year": 2023,
+  "venue": "Monthly Notices of the Royal Astronomical Society",
+  "url": "https://arxiv.org/abs/2301.08692",
+  "abstract": "We measure the weak gravitational lensing signal around cosmic voids identified in DES Year-3 data, detecting the void lensing signal at >10σ and constraining void density profiles.",
+  "relevance_score": 0.72,
+  "key_findings": ["Void lensing detected at >10σ", "~7000 voids analyzed", "Consistent with ΛCDM void profiles"],
+  "content_categories": ["large-scale-structure"],
+  "source_tier": 2,
+  "extraction_status": "complete",
+  "ingested_date": "2026-04-02",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-core",
+  "cards_generated": ["card-void-lensing"]
+}

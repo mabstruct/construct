@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "updated": "2026-04-01T12:00:00Z",
+  "clusters": [
+    {
+      "id": "cosmology-core",
+      "domain": "cosmology",
+      "terms": ["dark energy equation of state", "cosmic acceleration"],
+      "weight": 0.8,
+      "status": "active",
+      "last_queried": "2026-04-10T09:00:00Z"
+    },
+    {
+      "id": "cosmology-cmb",
+      "domain": "cosmology",
+      "terms": ["CMB anomalies", "Planck satellite data"],
+      "weight": 0.6,
+      "status": "active",
+      "last_queried": "2026-04-10T09:00:00Z"
+    }
+  ]
+}

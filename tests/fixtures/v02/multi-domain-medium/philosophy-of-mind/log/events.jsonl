@@ -1,0 +1,15 @@
+{"event": "domain.init", "timestamp": "2026-03-20T10:00:00Z", "details": "Initialized philosophy-of-mind domain"}
+{"event": "card.created", "timestamp": "2026-03-20T11:00:00Z", "details": "Created card-hard-problem"}
+{"event": "card.created", "timestamp": "2026-03-22T10:00:00Z", "details": "Created card-neural-correlates"}
+{"event": "card.created", "timestamp": "2026-03-24T14:00:00Z", "details": "Created card-global-workspace"}
+{"event": "card.created", "timestamp": "2026-03-25T11:00:00Z", "details": "Created card-ilp-consciousness"}
+{"event": "card.created", "timestamp": "2026-03-28T09:00:00Z", "details": "Created card-qualia-inversion"}
+{"event": "card.created", "timestamp": "2026-03-30T16:00:00Z", "details": "Created card-zombie-argument"}
+{"event": "research_cycle_complete", "timestamp": "2026-03-31T09:00:00Z", "details": "Research cycle 1 complete: 6 cards"}
+{"event": "card.created", "timestamp": "2026-04-01T10:00:00Z", "details": "Created card-binding-problem"}
+{"event": "card.created", "timestamp": "2026-04-02T14:00:00Z", "details": "Created card-attention-schema"}
+{"event": "card.created", "timestamp": "2026-04-03T09:00:00Z", "details": "Created card-predictive-processing"}
+{"event": "card.created", "timestamp": "2026-04-05T11:00:00Z", "details": "Created card-panpsychism"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:00:00Z", "details": "Connected card-hard-problem -> card-zombie-argument (supports)"}
+{"event": "card.promoted", "timestamp": "2026-04-08T10:00:00Z", "details": "Promoted card-hard-problem to mature"}
+{"event": "curation_cycle_complete", "timestamp": "2026-04-20T10:00:00Z", "details": "Curation cycle complete: 10 cards, 12 connections"}

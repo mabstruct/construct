@@ -1,0 +1,18 @@
+{
+  "id": "ref-baryonic-simulations-2025",
+  "title": "FLAMINGO: Baryonic Feedback in Large-Volume Cosmological Simulations",
+  "authors": ["Schaye, J.", "Kugel, R.", "Schaller, M."],
+  "year": 2025,
+  "venue": "Monthly Notices of the Royal Astronomical Society",
+  "url": "https://arxiv.org/abs/2503.14588",
+  "abstract": "We present the FLAMINGO simulation suite calibrated to observed gas fractions and stellar masses, quantifying baryonic feedback effects on the matter power spectrum for Stage-IV survey analyses.",
+  "relevance_score": 0.78,
+  "key_findings": ["AGN feedback suppresses P(k) by 10-15% at k~1 h/Mpc", "Gas fraction calibration reduces model spread", "Provides emulator for survey analyses"],
+  "content_categories": ["large-scale-structure"],
+  "source_tier": 2,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-28",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-core",
+  "cards_generated": ["card-baryonic-feedback"]
+}

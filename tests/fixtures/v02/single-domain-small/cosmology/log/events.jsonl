@@ -1,0 +1,30 @@
+{"event": "domain.init", "timestamp": "2026-03-15T10:00:00Z", "details": "Initialized cosmology domain"}
+{"event": "card.created", "timestamp": "2026-03-16T11:00:00Z", "details": "Created card-hubble-tension"}
+{"event": "card.created", "timestamp": "2026-03-18T09:30:00Z", "details": "Created card-cmb-cold-spot"}
+{"event": "card.created", "timestamp": "2026-03-20T14:00:00Z", "details": "Created card-dark-energy-w0wa"}
+{"event": "card.created", "timestamp": "2026-03-22T10:15:00Z", "details": "Created card-desi-bao-results"}
+{"event": "card.created", "timestamp": "2026-03-25T16:00:00Z", "details": "Created card-inflation-eternal"}
+{"event": "card.created", "timestamp": "2026-03-28T11:30:00Z", "details": "Created card-baryonic-feedback"}
+{"event": "connection.created", "timestamp": "2026-03-28T12:00:00Z", "details": "Connected card-dark-energy-w0wa -> card-desi-bao-results (supports)"}
+{"event": "connection.created", "timestamp": "2026-03-28T12:05:00Z", "details": "Connected card-hubble-tension -> card-dark-energy-w0wa (challenges)"}
+{"event": "research_cycle_complete", "timestamp": "2026-03-30T09:00:00Z", "details": "Research cycle 1 complete: 6 cards, 2 connections"}
+{"event": "card.created", "timestamp": "2026-04-01T10:00:00Z", "details": "Created card-neutrino-mass-cosmo"}
+{"event": "card.created", "timestamp": "2026-04-02T14:30:00Z", "details": "Created card-void-lensing"}
+{"event": "card.created", "timestamp": "2026-04-03T09:00:00Z", "details": "Created card-modified-gravity"}
+{"event": "card.created", "timestamp": "2026-04-05T11:00:00Z", "details": "Created card-string-landscape"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:00:00Z", "details": "Connected card-desi-bao-results -> card-hubble-tension (gap-for)"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:05:00Z", "details": "Connected card-inflation-eternal -> card-string-landscape (parallels)"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:10:00Z", "details": "Connected card-cmb-cold-spot -> card-void-lensing (requires)"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:15:00Z", "details": "Connected card-void-lensing -> card-cmb-cold-spot (enables)"}
+{"event": "connection.created", "timestamp": "2026-04-06T10:20:00Z", "details": "Connected card-modified-gravity -> card-dark-energy-w0wa (contradicts)"}
+{"event": "connection.created", "timestamp": "2026-04-07T09:00:00Z", "details": "Connected card-baryonic-feedback -> card-void-lensing (extends)"}
+{"event": "connection.created", "timestamp": "2026-04-07T09:05:00Z", "details": "Connected card-neutrino-mass-cosmo -> card-cmb-cold-spot (inspires)"}
+{"event": "connection.created", "timestamp": "2026-04-07T09:10:00Z", "details": "Connected card-hubble-tension -> card-modified-gravity (inspires)"}
+{"event": "card.promoted", "timestamp": "2026-04-08T10:00:00Z", "details": "Promoted card-dark-energy-w0wa from growing to mature"}
+{"event": "card.promoted", "timestamp": "2026-04-08T10:05:00Z", "details": "Promoted card-cmb-cold-spot from growing to mature"}
+{"event": "card.promoted", "timestamp": "2026-04-08T10:10:00Z", "details": "Promoted card-hubble-tension from growing to mature"}
+{"event": "research_cycle_complete", "timestamp": "2026-04-10T09:00:00Z", "details": "Research cycle 2 complete: 10 cards, 10 connections"}
+{"event": "connection.created", "timestamp": "2026-04-12T11:00:00Z", "details": "Connected card-string-landscape -> card-inflation-eternal (supports)"}
+{"event": "connection.created", "timestamp": "2026-04-12T11:05:00Z", "details": "Connected card-dark-energy-w0wa -> card-modified-gravity (gap-for)"}
+{"event": "connection.created", "timestamp": "2026-04-12T11:10:00Z", "details": "Connected card-desi-bao-results -> card-baryonic-feedback (requires)"}
+{"event": "curation_cycle_complete", "timestamp": "2026-04-20T10:00:00Z", "details": "Curation cycle complete: 10 cards, 15 connections, 0 promotions"}

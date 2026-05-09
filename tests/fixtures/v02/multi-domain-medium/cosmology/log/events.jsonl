@@ -1,0 +1,15 @@
+{"event": "domain.init", "timestamp": "2026-03-15T10:00:00Z", "details": "Initialized cosmology domain"}
+{"event": "card.created", "timestamp": "2026-03-16T11:00:00Z", "details": "Created card-hubble-tension"}
+{"event": "card.created", "timestamp": "2026-03-18T09:30:00Z", "details": "Created card-cmb-cold-spot"}
+{"event": "card.created", "timestamp": "2026-03-19T14:00:00Z", "details": "Created card-early-universe-nucleosynthesis"}
+{"event": "card.created", "timestamp": "2026-03-20T14:00:00Z", "details": "Created card-dark-energy-w0wa"}
+{"event": "card.created", "timestamp": "2026-03-22T10:15:00Z", "details": "Created card-desi-bao-results"}
+{"event": "card.created", "timestamp": "2026-03-25T16:00:00Z", "details": "Created card-inflation-eternal"}
+{"event": "card.created", "timestamp": "2026-03-28T11:30:00Z", "details": "Created card-baryonic-feedback"}
+{"event": "research_cycle_complete", "timestamp": "2026-03-30T09:00:00Z", "details": "Research cycle 1 complete: 7 cards"}
+{"event": "card.created", "timestamp": "2026-04-01T10:00:00Z", "details": "Created card-neutrino-mass-cosmo"}
+{"event": "card.created", "timestamp": "2026-04-02T14:30:00Z", "details": "Created card-void-lensing"}
+{"event": "card.created", "timestamp": "2026-04-03T09:00:00Z", "details": "Created card-modified-gravity"}
+{"event": "card.created", "timestamp": "2026-04-05T11:00:00Z", "details": "Created card-string-landscape"}
+{"event": "card.promoted", "timestamp": "2026-04-08T10:00:00Z", "details": "Promoted card-dark-energy-w0wa to mature"}
+{"event": "card.created", "timestamp": "2026-04-08T14:00:00Z", "details": "Created card-primordial-gravitational-waves"}

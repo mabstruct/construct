@@ -44,14 +44,20 @@ CONSTRUCT-CLAUDE-impl/
 │   ├── card-archive/SKILL.md      # Archive card with supersedes handling
 │   ├── card-connect/SKILL.md      # Manage connections between cards
 │   ├── card-evaluate/SKILL.md     # Evaluate card for promotion
-│   ├── research-cycle/SKILL.md    # Run a web research cycle
-│   ├── curation-cycle/SKILL.md    # Run graph maintenance
+│   ├── research-cycle/SKILL.md    # Run a web research cycle (hooks views regen)
+│   ├── curation-cycle/SKILL.md    # Run graph maintenance (hooks views regen)
 │   ├── gap-analysis/SKILL.md      # Identify knowledge gaps
-│   ├── synthesis/SKILL.md         # Draft output from graph state
+│   ├── synthesis/SKILL.md         # Draft output from graph state (hooks views regen)
 │   ├── graph-status/SKILL.md      # Report graph health
 │   ├── search-adjust/SKILL.md     # Adjust search patterns
 │   ├── bridge-detect/SKILL.md     # Cross-domain bridge detection
-│   └── workspace-validate/SKILL.md # 5-layer workspace integrity audit
+│   ├── workspace-validate/SKILL.md # 5-layer workspace integrity audit
+│   ├── views-scaffold/SKILL.md    # Scaffold the views SPA (one-time setup)
+│   ├── views-build/SKILL.md       # Build the views SPA (Vite production build)
+│   ├── views-generate-data/SKILL.md # Generate JSON data files from workspace state
+│   ├── views-reset/SKILL.md       # Remove all views artifacts for a clean slate
+│   ├── construct-up/SKILL.md      # Start the local views server
+│   └── construct-down/SKILL.md    # Stop the local views server
 │
 ├── workflows/                     # Multi-skill orchestration sequences
 │   ├── cold-start.md              # Full workspace setup (J1)
@@ -107,6 +113,7 @@ Then open `~/my-construct/` in Claude (Desktop, Code, or claude.ai project) and 
 - A Claude subscription (Pro, Max, Team, or Enterprise) — needed for artifacts, persistent storage, and MCP connectors
 - Claude Desktop app (macOS/Windows), Claude Code, or access to claude.ai
 - The setup script (`setup-construct.sh`) from this repository
+- **For local views (v0.2):** Node.js 20+ and Python 3.10+ (used by `views-scaffold`, `views-build`, `views-generate-data`)
 
 ### Verify Setup
 
@@ -218,6 +225,36 @@ Creates a new subdirectory, runs the domain initialization interview.
 
 Marks the domain as paused — curation continues but no new research cycles run.
 
+### Local Views (v0.2)
+
+CONSTRUCT can serve a local browser dashboard showing your knowledge graph, cards, digests, articles, and domain landscape — derived entirely from workspace files.
+
+**First-time setup:**
+> "Scaffold the views"
+
+Runs `views-scaffold`: copies the SPA template into `views/src/`, installs Node dependencies. One-time operation.
+
+**Build and generate data:**
+> "Build the views"
+> "Update the views"
+
+`views-build` produces a production bundle in `views/build/`. `views-generate-data` parses workspace files and writes JSON data to `views/build/data/`.
+
+**Start / stop the server:**
+> "Start CONSTRUCT" or "Show me the views"
+> "Stop CONSTRUCT"
+
+`construct-up` starts a local server on port 3001–3009. `construct-down` stops it. The server survives across Claude conversations.
+
+**Automatic refresh:** After `research-cycle`, `curation-cycle`, or `synthesis`, views data is regenerated automatically if `views/build/` exists. The browser shows an UPDATE flag within 30 seconds — click it to reload.
+
+**Reset everything:**
+> "Reset the views"
+
+`views-reset` removes `views/src/`, `views/build/`, and the per-skill Python venv for a clean re-scaffold.
+
+**Prerequisites:** Node.js 20+, Python 3.10+.
+
 ### Key phrases Claude recognizes
 
 | What you say | What runs |
@@ -235,6 +272,12 @@ Marks the domain as paused — curation continues but no new research cycles run
 | "Adjust search for X" | `search-adjust` skill |
 | "Find bridges between X and Y" | `bridge-detect` skill |
 | "Validate the workspace" | `workspace-validate` skill |
+| "Scaffold the views" | `views-scaffold` skill |
+| "Build the views" | `views-build` skill |
+| "Update the views" / "Refresh data" | `views-generate-data` skill |
+| "Start CONSTRUCT" / "Show me the views" | `construct-up` skill |
+| "Stop CONSTRUCT" | `construct-down` skill |
+| "Reset the views" | `views-reset` skill |
 
 ## What Claude Handles Natively (No Config Needed)
 

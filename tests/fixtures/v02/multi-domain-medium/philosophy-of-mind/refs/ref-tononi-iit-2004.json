@@ -1,0 +1,18 @@
+{
+  "id": "ref-tononi-iit-2004",
+  "title": "An Information Integration Theory of Consciousness",
+  "authors": ["Tononi, Giulio"],
+  "year": 2004,
+  "venue": "BMC Neuroscience",
+  "url": "https://doi.org/10.1186/1471-2202-5-42",
+  "abstract": "Proposes that consciousness corresponds to the capacity of a system to integrate information, measured by Φ.",
+  "relevance_score": 0.88,
+  "key_findings": ["Consciousness = integrated information (Φ)", "Axioms-to-postulates derivation"],
+  "content_categories": ["consciousness"],
+  "source_tier": 2,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-25",
+  "domain": "philosophy-of-mind",
+  "search_cluster": "mind-theories",
+  "cards_generated": ["card-ilp-consciousness"]
+}

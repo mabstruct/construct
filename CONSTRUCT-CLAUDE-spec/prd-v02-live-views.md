@@ -2,7 +2,7 @@
 
 **Version:** 0.2.0
 **Date:** 2026-04-24 (revised 2026-04-28)
-**Status:** Draft — vision and product requirements; implementation details live in the specs below
+**Status:** Accepted (2026-05-09) — vision and product requirements; implementation details live in the specs below
 **Prerequisite:** v0.1 (Claude-native agent system — complete)
 **Companion:** [v0.1 PRD (prd.md)](prd.md)
 
@@ -112,9 +112,11 @@ These never overlap. `vite.config.js`'s `emptyOutDir: false` is the load-bearing
 
 | Trigger | When | What happens |
 |---------|------|-------------|
-| **On demand** | User says "update views" / "rebuild views" | Full data regeneration + build |
-| **Post-skill hook** | After `research-cycle`, `curation-cycle`, `synthesis` complete | Data regeneration + incremental build |
-| **Scheduled** | During `daily-cycle` workflow, after curation step | Full regeneration + build |
+| **On demand** | User says "update views" / "rebuild views" | Data regeneration (`views-generate-data` only — not `views-build`) |
+| **Post-skill hook** | After `research-cycle`, `curation-cycle`, `synthesis` complete | Data regeneration only (SPA picks up via `version.json` polling) |
+| **Scheduled** | During `daily-cycle` workflow, after curation step | Data regeneration only |
+
+**Note:** Hooks and on-demand refresh invoke `views-generate-data` only — never `views-build`. SPA source rarely changes; rebuild is a separate manual operation. See `spec-v02-hook-integration.md` §3.1.
 
 ### 3.4 Serving
 
@@ -123,13 +125,15 @@ These never overlap. `vite.config.js`'s `emptyOutDir: false` is the load-bearing
 The built site in `views/build/` is a static SPA. Served via the `serve` npm package with `--single` for SPA history-fallback:
 
 ```bash
-cd views/src && npm run serve -- -l <port>
-# In production: invoked by the construct-up skill which picks a port from 3001–3009
+./views/src/node_modules/.bin/serve views/build --single -l <port>
+# Invoked by the construct-up skill which picks a port from 3001–3009
 ```
 
-`construct-up` is the user-facing entry. It picks a free port, starts the server detached, writes `views/server.pid`, and reports the URL. `construct-down` reads the PID and stops it.
+`construct-up` is the user-facing entry. It picks a free port, starts the server detached (invoking `serve` directly — not via `npm run` — for clean single-PID management), writes `views/server.pid`, and reports the URL. `construct-down` reads the PID and stops it.
 
 **Why not `python -m http.server`:** it doesn't do SPA history fallback. Reloading at `/<workspace>/digests` would 404. We use BrowserRouter (clean URLs) which requires the server to fall back to `index.html` for unknown paths. `serve --single` does this; Python's stdlib server doesn't.
+
+**Why not `npm run serve`:** `npm run` wraps the process in `sh -c`, so the recorded PID is the npm process rather than `serve` itself. SIGTERM doesn't reliably propagate through the wrapper. Direct invocation gives a clean single-PID model.
 
 **Why not `vite preview`:** it's dev tooling, not a stable production-grade server. Used in scaffold sanity-checks only.
 
@@ -301,13 +305,13 @@ No backend API. All data is fetched at runtime as JSON files served as static as
 - Chain `views-generate-data` (separate writer, separate schedule)
 - Touch `views/build/data/` or `views/build/version.json`
 
-### 5.3 `views-serve` and `construct-up`
+### 5.3 `construct-up` / `construct-down`
 
 > **Drilled into:** `spec-v02-runtime-topology.md`.
 
-`views-serve` is the low-level "start an HTTP server on `views/build/`" primitive (`npm run serve -- -l <port>`). The user-facing entry is **`construct-up`**, which wraps it: picks a port (3001–3009), starts the server detached, writes `views/server.pid`, reports the URL.
+`construct-up` is the user-facing entry: picks a free port (3001–3009), starts `serve --single` detached (directly via `node_modules/.bin/serve`, not wrapped by npm), writes `views/server.pid`, and reports the URL. `construct-down` reads the PID and stops the server.
 
-`construct-down` reads the PID and stops the server.
+There is no separate `views-serve` skill — `construct-up` handles the full lifecycle.
 
 ### 5.4 `views-scaffold`
 
@@ -369,7 +373,7 @@ Views should support historized reports:
 | Icons | lucide-react | Matches design example |
 | Routing | react-router-dom 7.x | Matches design example |
 | Markdown rendering | react-markdown | For card content and article display |
-| Graph visualization | D3.js (force-directed) | For knowledge graph view; design example uses iframe approach |
+| Graph visualization | `react-force-graph-2d` (D3 under the hood) | React-friendly wrapper; avoids D3 imperative boilerplate. Restyled in Epic 12.2 |
 | HTTP server | `serve` (npm package) with `--single` | SPA history fallback for `BrowserRouter`; Node already required by Vite. Python `http.server` rejected (no fallback) |
 | Knowledge graph | `react-force-graph` (D3 under the hood) | React-friendly wrapper; saves D3 imperative-vs-declarative boilerplate |
 
@@ -384,7 +388,7 @@ Views should support historized reports:
 | User authentication | Not planned (local-first) |
 | Server-side API | Not planned (static SPA with baked data) |
 | Edit capabilities in views | Not planned (Claude is the editor) |
-| Search within views | v0.3 (client-side search with FTS) |
+| ~~Search within views~~ | ~~v0.3~~ — delivered in v0.2 (Wiki view has client-side substring search; Lunr.js FTS deferred until >500 cards) |
 
 ---
 
@@ -393,8 +397,8 @@ Views should support historized reports:
 1. `views-scaffold` creates a buildable Vite project from scratch
 2. `views-generate-data` reads a real multi-domain workspace and produces valid JSON data files
 3. `views-build` produces a deployable static site in `views/build/`
-4. All 6 views render correctly with real workspace data
-5. Knowledge graph displays nodes and edges from `connections.json` with interactive exploration
+4. All 10 routes render correctly with real workspace data (Landing, Workspace Dashboard, Articles list/detail, Digests list/detail, Wiki, Artifacts, Knowledge Graph, Landscape, plus NotFound)
+5. Knowledge graph displays nodes and edges from `connections.json` with interactive exploration (restyled via `react-force-graph-2d`)
 6. Domain landscape shows all configured domains with health metrics
 7. Dashboard aggregates stats accurately (cross-checked against `graph-status` skill output)
 8. Local HTTP server serves the site and all views are navigable

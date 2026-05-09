@@ -1,0 +1,18 @@
+{
+  "id": "ref-planck-2020",
+  "title": "Planck 2018 Results. VI. Cosmological Parameters",
+  "authors": ["Planck Collaboration"],
+  "year": 2020,
+  "venue": "A&A 641, A6",
+  "url": "https://arxiv.org/abs/1807.06209",
+  "abstract": "Final Planck cosmological parameters from CMB temperature, polarization, and lensing.",
+  "relevance_score": 0.88,
+  "key_findings": ["H0 = 67.36 ± 0.54 km/s/Mpc"],
+  "content_categories": ["cmb-observations"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-18",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-cmb",
+  "cards_generated": ["card-cmb-cold-spot", "card-early-universe-nucleosynthesis"]
+}

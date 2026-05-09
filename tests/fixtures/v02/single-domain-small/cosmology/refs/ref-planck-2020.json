@@ -1,0 +1,18 @@
+{
+  "id": "ref-planck-2020",
+  "title": "Planck 2018 Results. VI. Cosmological Parameters",
+  "authors": ["Planck Collaboration", "Aghanim, N.", "Akrami, Y."],
+  "year": 2020,
+  "venue": "Astronomy & Astrophysics, 641, A6",
+  "url": "https://arxiv.org/abs/1807.06209",
+  "abstract": "We present cosmological parameter results from the final full-mission Planck measurements of the CMB anisotropies, combining information from the temperature and polarization maps and the lensing reconstruction.",
+  "relevance_score": 0.88,
+  "key_findings": ["H0 = 67.36 ± 0.54 km/s/Mpc", "Ωm = 0.3153 ± 0.0073", "σ8 = 0.8111 ± 0.0060"],
+  "content_categories": ["cmb-observations"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-18",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-cmb",
+  "cards_generated": ["card-cmb-cold-spot"]
+}

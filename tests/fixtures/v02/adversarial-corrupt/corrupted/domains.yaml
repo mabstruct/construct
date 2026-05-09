@@ -1,0 +1,11 @@
+domains:
+  corrupted:
+    name: "Corrupted Test Domain"
+    description: "Test fixture for adversarial data handling"
+    status: active
+    created: 2026-04-01
+    content_categories:
+      - testing
+    source_priorities:
+      - "test data"
+    cross_domain_links: []

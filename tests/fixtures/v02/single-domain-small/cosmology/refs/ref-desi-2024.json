@@ -1,0 +1,18 @@
+{
+  "id": "ref-desi-2024",
+  "title": "DESI 2024 VI: Cosmological Constraints from Baryon Acoustic Oscillations",
+  "authors": ["DESI Collaboration", "Adame, A.G.", "Aguilar, J."],
+  "year": 2024,
+  "venue": "arXiv:2404.03002",
+  "url": "https://arxiv.org/abs/2404.03002",
+  "abstract": "We present cosmological constraints from baryon acoustic oscillation (BAO) measurements using the first year of data from DESI. Combined with CMB and supernova data, we find hints of evolving dark energy at 2.5σ significance.",
+  "relevance_score": 0.92,
+  "key_findings": ["2.5σ preference for evolving dark energy", "w0 = -0.55 ± 0.21, wa = -1.27 (+0.40/-0.34)"],
+  "content_categories": ["dark-energy"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-20",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-core",
+  "cards_generated": ["card-dark-energy-w0wa", "card-desi-bao-results"]
+}

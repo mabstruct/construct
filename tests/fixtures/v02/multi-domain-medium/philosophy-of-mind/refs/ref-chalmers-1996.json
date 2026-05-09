@@ -1,0 +1,18 @@
+{
+  "id": "ref-chalmers-1996",
+  "title": "The Conscious Mind: In Search of a Fundamental Theory",
+  "authors": ["Chalmers, David"],
+  "year": 1996,
+  "venue": "Oxford University Press",
+  "url": "https://doi.org/10.1093/acprof:oso/9780195117899.001.0001",
+  "abstract": "Foundational work formulating the hard problem of consciousness and arguing for property dualism.",
+  "relevance_score": 0.95,
+  "key_findings": ["Formulation of the hard problem", "Zombie conceivability argument", "Naturalistic dualism proposal"],
+  "content_categories": ["consciousness"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-20",
+  "domain": "philosophy-of-mind",
+  "search_cluster": "mind-consciousness",
+  "cards_generated": ["card-hard-problem", "card-zombie-argument"]
+}

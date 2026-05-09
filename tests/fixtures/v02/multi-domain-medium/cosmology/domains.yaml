@@ -1,0 +1,16 @@
+domains:
+  cosmology:
+    name: "Cosmology"
+    description: "Study of the universe's origin, structure, and evolution"
+    status: active
+    created: 2026-03-15
+    content_categories:
+      - dark-energy
+      - cosmic-inflation
+      - large-scale-structure
+      - cmb-observations
+    source_priorities:
+      - "peer-reviewed journals (arXiv, ApJ, MNRAS)"
+      - "collaboration papers (Planck, DESI, Euclid)"
+    cross_domain_links:
+      - philosophy-of-mind

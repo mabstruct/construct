@@ -1,0 +1,18 @@
+{
+  "id": "ref-ncc-review-2022",
+  "title": "Neural Correlates of Consciousness: Progress and Problems",
+  "authors": ["Koch, Christof", "Massimini, Marcello", "Boly, Melanie", "Tononi, Giulio"],
+  "year": 2022,
+  "venue": "Nature Reviews Neuroscience",
+  "url": "https://doi.org/10.1038/s41583-022-00587-4",
+  "abstract": "Comprehensive review of NCC research emphasizing no-report paradigms and adversarial collaborations between theories.",
+  "relevance_score": 0.85,
+  "key_findings": ["Posterior cortical hot zone as primary NCC", "No-report paradigms shift understanding", "IIT vs GWT adversarial collaboration results"],
+  "content_categories": ["consciousness"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-22",
+  "domain": "philosophy-of-mind",
+  "search_cluster": "mind-consciousness",
+  "cards_generated": ["card-neural-correlates"]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "updated": "2026-04-15T10:00:00Z",
+  "connection_types": ["supports"],
+  "connections": [
+    {"from": "valid-1", "to": "valid-2", "type": "supports", "note": "test"}
+  ]

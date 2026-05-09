@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "updated": "2026-04-18T10:00:00Z",
+  "connection_types": ["supports","contradicts","extends","parallels","requires","enables","challenges","inspires","gap-for"],
+  "connections": [
+    {"from": "card-dark-energy-w0wa", "to": "card-desi-bao-results", "type": "supports", "note": "DESI BAO measurements constrain w0-wa parameters"},
+    {"from": "card-hubble-tension", "to": "card-dark-energy-w0wa", "type": "challenges", "note": "Hubble tension may indicate new physics beyond w0-wa model"},
+    {"from": "card-desi-bao-results", "to": "card-hubble-tension", "type": "gap-for", "note": "BAO results hint at resolving the tension"},
+    {"from": "card-inflation-eternal", "to": "card-string-landscape", "type": "parallels", "note": "Eternal inflation connects to string landscape predictions"},
+    {"from": "card-cmb-cold-spot", "to": "card-void-lensing", "type": "requires", "note": "Cold spot interpretation requires void lensing analysis"},
+    {"from": "card-void-lensing", "to": "card-cmb-cold-spot", "type": "enables", "note": "Void lensing enables cold spot anomaly explanation"},
+    {"from": "card-modified-gravity", "to": "card-dark-energy-w0wa", "type": "contradicts", "note": "Modified gravity offers alternative to dark energy parametrization"},
+    {"from": "card-baryonic-feedback", "to": "card-void-lensing", "type": "extends", "note": "Baryonic effects modify void lensing predictions"},
+    {"from": "card-neutrino-mass-cosmo", "to": "card-cmb-cold-spot", "type": "inspires", "note": "Neutrino mass effects inspired cold spot re-analysis"},
+    {"from": "card-hubble-tension", "to": "card-modified-gravity", "type": "inspires", "note": "The tension motivates modified gravity exploration"},
+    {"from": "card-string-landscape", "to": "card-inflation-eternal", "type": "supports", "note": "String landscape provides theoretical basis for eternal inflation"},
+    {"from": "card-dark-energy-w0wa", "to": "card-modified-gravity", "type": "gap-for", "note": "w0-wa degeneracies create gap for alternative gravity tests"},
+    {"from": "card-desi-bao-results", "to": "card-baryonic-feedback", "type": "requires", "note": "BAO interpretation needs baryonic feedback modeling"},
+    {"from": "card-neutrino-mass-cosmo", "to": "card-desi-bao-results", "type": "extends", "note": "Neutrino mass bounds extend BAO cosmological constraints"},
+    {"from": "card-inflation-eternal", "to": "card-cmb-cold-spot", "type": "challenges", "note": "Some eternal inflation models predict different cold spot statistics"},
+    {"from": "card-primordial-gravitational-waves", "to": "card-inflation-eternal", "type": "supports", "note": "B-mode detection would confirm inflationary predictions"},
+    {"from": "card-dark-matter-halo", "to": "card-baryonic-feedback", "type": "requires", "note": "Halo profiles depend on baryonic feedback prescriptions"},
+    {"from": "card-early-universe-nucleosynthesis", "to": "card-neutrino-mass-cosmo", "type": "enables", "note": "BBN baryon density constraints enable neutrino mass inference"},
+    {"from": "card-phantom-crossing", "to": "card-dark-energy-w0wa", "type": "extends", "note": "Phantom crossing extends w0-wa beyond simple quintessence"},
+    {"from": "card-baryon-acoustic-peak", "to": "card-desi-bao-results", "type": "enables", "note": "BAO standard ruler enables DESI distance measurements"}
+  ]
+}

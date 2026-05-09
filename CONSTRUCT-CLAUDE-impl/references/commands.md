@@ -63,6 +63,19 @@ A single-page reference of everything you can ask CONSTRUCT to do.
 
 ---
 
+## Views & Server
+
+| Command | Skill | What it does |
+|---------|-------|-------------|
+| `scaffold views` | views-scaffold | One-time SPA template setup — copies source, installs Node deps |
+| `build views` | views-build | Vite production build into `views/build/` |
+| `update views` / `refresh data` | views-generate-data | Parse workspace files → write JSON to `views/build/data/` |
+| `start` / `show views` | construct-up | Start local server (port 3001–3009), write PID file |
+| `stop` | construct-down | Stop local server, remove PID file |
+| `reset views` | views-reset | Remove `views/src/`, `views/build/`, skill venv — clean slate |
+
+---
+
 ## Workflows (Multi-Skill Sequences)
 
 | Workflow | When to use | Sequence |

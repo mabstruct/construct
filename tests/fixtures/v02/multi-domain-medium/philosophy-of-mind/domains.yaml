@@ -1,0 +1,16 @@
+domains:
+  philosophy-of-mind:
+    name: "Philosophy of Mind"
+    description: "Study of consciousness, mental states, and the mind-body problem"
+    status: active
+    created: 2026-03-20
+    content_categories:
+      - consciousness
+      - qualia
+      - intentionality
+      - phenomenology
+    source_priorities:
+      - "peer-reviewed philosophy journals (Mind, Phil Review, JCS)"
+      - "neuroscience journals (Neuron, TICS, Nature Neuroscience)"
+    cross_domain_links:
+      - cosmology

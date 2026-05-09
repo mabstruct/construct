@@ -1,0 +1,18 @@
+{
+  "id": "ref-riess-hubble-2024",
+  "title": "A Comprehensive Measurement of the Local Value of the Hubble Constant with JWST and HST",
+  "authors": ["Riess, A.G."],
+  "year": 2024,
+  "venue": "ApJ Letters",
+  "url": "https://arxiv.org/abs/2408.11770",
+  "abstract": "Updated local H0 measurement confirming the Hubble tension at >5σ.",
+  "relevance_score": 0.9,
+  "key_findings": ["H0 = 73.17 ± 0.86 km/s/Mpc"],
+  "content_categories": ["dark-energy"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-16",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-core",
+  "cards_generated": ["card-hubble-tension"]
+}

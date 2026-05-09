@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "updated": "2026-04-18T10:00:00Z",
+  "connection_types": ["supports","contradicts","extends","parallels","requires","enables","challenges","inspires","gap-for"],
+  "connections": [
+    {"from": "card-hard-problem", "to": "card-zombie-argument", "type": "supports", "note": "The hard problem motivates the zombie conceivability argument"},
+    {"from": "card-global-workspace", "to": "card-ilp-consciousness", "type": "contradicts", "note": "GWT and IIT make different predictions about prefrontal involvement"},
+    {"from": "card-neural-correlates", "to": "card-global-workspace", "type": "enables", "note": "NCC findings inform and test GWT predictions"},
+    {"from": "card-panpsychism", "to": "card-ilp-consciousness", "type": "parallels", "note": "Panpsychism and IIT share commitments to ubiquitous consciousness"},
+    {"from": "card-qualia-inversion", "to": "card-hard-problem", "type": "extends", "note": "Inverted qualia elaborate the explanatory gap identified by the hard problem"},
+    {"from": "card-binding-problem", "to": "card-neural-correlates", "type": "gap-for", "note": "Binding remains an open gap in NCC research"},
+    {"from": "card-predictive-processing", "to": "card-global-workspace", "type": "extends", "note": "PP provides a computational mechanism compatible with global workspace broadcasting"},
+    {"from": "card-attention-schema", "to": "card-hard-problem", "type": "challenges", "note": "AST claims the hard problem dissolves under a deflationary account"},
+    {"from": "card-zombie-argument", "to": "card-global-workspace", "type": "challenges", "note": "If zombies are possible, GWT's functional account is insufficient"},
+    {"from": "card-predictive-processing", "to": "card-binding-problem", "type": "inspires", "note": "PP suggests binding through hierarchical prediction rather than synchrony"},
+    {"from": "card-ilp-consciousness", "to": "card-panpsychism", "type": "enables", "note": "IIT's mathematical framework enables formal panpsychist predictions"},
+    {"from": "card-neural-correlates", "to": "card-predictive-processing", "type": "requires", "note": "NCC research increasingly requires predictive processing analysis"}
+  ]
+}
