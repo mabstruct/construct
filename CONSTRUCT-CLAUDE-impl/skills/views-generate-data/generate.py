@@ -296,13 +296,16 @@ def _load_cached_workspace(data_dir: Path, ws_id: str) -> dict | None:
         else:
             result[key] = data
 
-    # Reconstruct refs_count from the stats if available, else 0
+    # Reconstruct refs_count from the stats if available, else 0.
+    # The canonical key is `totals.papers` (written by compute_stats.compute_workspace);
+    # `refs_count` was never persisted at the data root, so reading it always returned 0
+    # for cached workspaces.
     stats_path = ws_dir / "stats.json"
     if stats_path.is_file():
         try:
             stats_env = json.loads(stats_path.read_text(encoding="utf-8"))
             stats_data = stats_env.get("data", stats_env)
-            result["refs_count"] = stats_data.get("refs_count", 0)
+            result["refs_count"] = stats_data.get("totals", {}).get("papers", 0)
         except (json.JSONDecodeError, OSError):
             result["refs_count"] = 0
     else:
