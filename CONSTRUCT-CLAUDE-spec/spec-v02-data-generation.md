@@ -38,7 +38,7 @@ It reads workspace state from canonical files and produces the JSON contracts de
 | Implementation strategy | Procedural SKILL.md + Python helper script for the heavy lifting (file scan, frontmatter parse, JSON serialise, hashing). Claude orchestrates; script does the deterministic work |
 | Helper script location | `CONSTRUCT-CLAUDE-impl/skills/views-generate-data/generate.py` |
 | Python dependencies | Standard library only where possible. `pyyaml` and `python-frontmatter` if frontmatter parsing warrants. Listed in skill's own `requirements.txt`; resolution strategy in §3.3 |
-| Regeneration mode | **Full only for v0.2.** Always re-scan everything, always rewrite all files. Incremental regeneration deferred to v0.2.1 |
+| Regeneration mode | **Incremental.** Fingerprints each workspace's source files by mtime+size. Unchanged workspaces load from cached JSON; if nothing changed, the run exits immediately. Full re-parse for changed workspaces. Globals always recomputed. Fingerprints stored in `_build_meta.json` |
 | Workspace discovery | Scan install root for subdirectories that look like workspaces (presence of `cards/` directory OR `domains.yaml` file). Excluded: `.construct/`, `views/`, dotfiles, anything matching `.gitignore` patterns |
 | `domains.yaml` location | Honour both layouts: install-root level (preferred) AND per-workspace level (legacy v0.1). Merge into `domains.json` |
 | Failure on corrupt input | Per data-model spec §9: never silently drop. Corrupt cards excluded from `cards.json` but logged with workspace + filename + reason. Other corrupt files surface as `{"parse_status": "partial"}` envelope fields |
@@ -375,15 +375,22 @@ Every invocation re-scans every workspace, re-parses every file, recomputes ever
 
 For typical workspaces (≤500 cards), this completes in seconds.
 
-### 8.2 v0.2.1 — incremental (deferred)
+### 8.2 Incremental regeneration — IMPLEMENTED
 
-Future enhancement: track input file mtimes per output file. Skip files that haven't changed since last generation. Cache aggregates that depend on unchanged inputs.
+Per-workspace fingerprinting via `lib/fingerprint.py`:
 
-Why deferred:
-- Requires a state file mapping inputs → outputs (more state to maintain)
-- Determinism becomes harder to verify
-- v0.2 throughput is already adequate
-- Easy to retrofit once the full path is proven correct
+1. For each discovered workspace, compute an 8-char SHA-256 fingerprint from `(relative_path, mtime_ns, size)` of all source files (cards/**, connections.json, domains.yaml, digests/**, refs/**, log/events.jsonl).
+2. Also fingerprint `.construct/config.yaml` and the `articles/` directory.
+3. Compare to stored fingerprints in `views/build/data/_build_meta.json`.
+4. **If nothing changed** → exit 0 immediately with "no changes detected".
+5. **If some workspaces unchanged** → load their data from cached JSON in `views/build/data/<ws>/` instead of re-parsing. Changed workspaces get a full parse.
+6. **Global files** (domains.json, articles.json, stats.json) are always recomputed from all workspace data (whether fresh-parsed or cache-loaded).
+7. Removed workspaces (present in old meta but no longer discovered) have their `data/<ws>/` directory cleaned up.
+8. New fingerprints saved to `_build_meta.json` after successful write.
+
+**Determinism preserved:** build_id is still computed from all assembled data, so identical input produces identical build_id regardless of whether data came from cache or fresh parse.
+
+**Cache miss handling:** If cached JSON files are missing for an "unchanged" workspace (e.g., after manual deletion), the workspace falls back to full parse automatically.
 
 ---
 

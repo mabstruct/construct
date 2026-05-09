@@ -53,15 +53,22 @@ Capture stdout. Capture stderr.
 
 ### Step 4: Interpret Outcome
 
-- **Exit 0 (success):** stdout has a structured report:
-  ```
-  workspaces: 2
-    cosmology: 47 cards, 184 connections, 12 digests, 3 articles
-    climate-policy: 23 cards, 41 connections, 5 digests, 1 article
-  global: 4 articles total
-  build_id: a3f81c2d
-  warnings: 1 (cosmology/cards/orphaned-finding-2026-04-12.md: missing required field 'epistemic_type')
-  ```
+- **Exit 0 (success):** stdout has a structured report. Two forms:
+  - **Full regeneration** (at least one workspace changed):
+    ```
+    incremental: changed workspaces: cosmology
+    incremental: unchanged (cached): climate-policy
+    workspaces: 2
+      cosmology: 47 cards, 184 connections, 12 digests, 3 articles
+      climate-policy: 23 cards, 41 connections, 5 digests, 1 article
+    global: 4 articles total
+    build_id: a3f81c2d
+    warnings: none
+    ```
+  - **No-op** (nothing changed since last run):
+    ```
+    incremental: no changes detected — skipping regeneration
+    ```
   Surface this to the user verbatim (or summarised — count of cards/digests/build_id is the highlight).
 - **Exit non-zero (failure):** stderr has a single-line error message. Surface it. Do not retry; the user diagnoses.
 
@@ -95,6 +102,7 @@ Per-file parse errors are NOT skill failures. They are logged to `views/build/da
 
 ## Notes
 
+- **Incremental regeneration.** The generator fingerprints each workspace's source files (cards/*, connections.json, domains.yaml, digests/*, etc.) by mtime+size. Unchanged workspaces are loaded from the previously generated JSON cache in `views/build/data/<ws>/` instead of re-parsing. If nothing changed at all, the run exits immediately. Fingerprints are stored in `views/build/data/_build_meta.json`.
 - **Sole writer to `views/build/data/`.** Architecture-overview invariant I1. Hook-fired regenerations (research-cycle, curation-cycle, synthesis) all flow through this skill.
 - **Determinism.** Two runs on identical workspace state produce byte-identical output (modulo `generated_at`). Verified by safe-delete invariant I3 in validation.
 - **Failure isolation.** Per-file errors do not stop the run. The script writes whatever parsed cleanly and surfaces warnings. The agent's parent skill (research-cycle, etc.) is unaffected by views-generate-data warnings.

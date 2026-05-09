@@ -7,6 +7,7 @@ Sole writer to views/build/data/ and views/build/version.json
 Usage: python3 generate.py <install-root>
 """
 import json
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,7 @@ from lib import (  # noqa: E402
     compute_stats,
     discover,
     envelope,
+    fingerprint as fp,
     parse_articles,
     parse_cards,
     parse_connections,
@@ -68,31 +70,103 @@ def main() -> int:
     # 1. Discover workspaces
     workspaces = discover.discover_workspaces(install_root)
 
-    # 2. Per-workspace parsing
+    # 1b. Incremental fingerprinting — check what changed since last run
+    old_meta = fp.load_meta(data_dir)
+    old_ws_fps = old_meta.get("workspaces", {})
+    new_ws_fps: dict[str, str] = {}
+    changed_ws: set[str] = set()
+
+    for ws in workspaces:
+        ws_id = ws.name
+        new_fp = fp.workspace_fingerprint(ws)
+        new_ws_fps[ws_id] = new_fp
+        if new_fp != old_ws_fps.get(ws_id):
+            changed_ws.add(ws_id)
+
+    # Detect removed workspaces (present in old meta but no longer discovered)
+    removed_ws = set(old_ws_fps.keys()) - {ws.name for ws in workspaces}
+
+    # Also fingerprint cross-workspace inputs
+    cfg_fp = fp.config_fingerprint(install_root)
+    arts_fp = fp.articles_fingerprint(install_root)
+    config_changed = cfg_fp != old_meta.get("config_fingerprint")
+    articles_changed = arts_fp != old_meta.get("articles_fingerprint")
+
+    # If nothing changed at all, skip the entire run
+    if not changed_ws and not removed_ws and not config_changed and not articles_changed:
+        print("incremental: no changes detected — skipping regeneration")
+        return 0
+
+    # Report what changed
+    if changed_ws:
+        print(f"incremental: changed workspaces: {', '.join(sorted(changed_ws))}")
+    if removed_ws:
+        print(f"incremental: removed workspaces: {', '.join(sorted(removed_ws))}")
+    if config_changed:
+        print("incremental: config.yaml changed")
+    if articles_changed:
+        print("incremental: articles/ changed")
+    skipped = {ws.name for ws in workspaces} - changed_ws
+    if skipped:
+        print(f"incremental: unchanged (cached): {', '.join(sorted(skipped))}")
+
+    # 2. Per-workspace parsing — fresh-parse changed, cache-load unchanged
     workspace_data: dict[str, dict] = {}
     for ws in workspaces:
         ws_id = ws.name
-        cards = parse_cards.parse(ws, warnings)
-        connections = parse_connections.parse(ws, warnings)
-        parse_connections.denormalize_into_cards(cards, connections["connections"])
+        if ws_id in changed_ws:
+            # Full parse
+            cards = parse_cards.parse(ws, warnings)
+            connections = parse_connections.parse(ws, warnings)
+            parse_connections.denormalize_into_cards(cards, connections["connections"])
 
-        digests = parse_digests.parse(ws, warnings, cards=cards)
-        events = parse_events.parse(ws, warnings)
-        curation = parse_curation.parse(ws, warnings)
+            digests = parse_digests.parse(ws, warnings, cards=cards)
+            events = parse_events.parse(ws, warnings)
+            curation = parse_curation.parse(ws, warnings)
 
-        refs_dir = ws / "refs"
-        refs_count = (
-            sum(1 for _ in refs_dir.glob("*.json")) if refs_dir.is_dir() else 0
-        )
+            refs_dir = ws / "refs"
+            refs_count = (
+                sum(1 for _ in refs_dir.glob("*.json")) if refs_dir.is_dir() else 0
+            )
 
-        workspace_data[ws_id] = {
-            "cards": cards,
-            "connections": connections,
-            "digests": digests,
-            "events": events,
-            "curation": curation,
-            "refs_count": refs_count,
-        }
+            workspace_data[ws_id] = {
+                "cards": cards,
+                "connections": connections,
+                "digests": digests,
+                "events": events,
+                "curation": curation,
+                "refs_count": refs_count,
+            }
+        else:
+            # Load cached data from previously generated JSON
+            cached = _load_cached_workspace(data_dir, ws_id)
+            if cached is not None:
+                workspace_data[ws_id] = cached
+            else:
+                # Cache miss — fall back to full parse
+                print(f"incremental: cache miss for {ws_id}, re-parsing")
+                changed_ws.add(ws_id)
+                cards = parse_cards.parse(ws, warnings)
+                connections = parse_connections.parse(ws, warnings)
+                parse_connections.denormalize_into_cards(cards, connections["connections"])
+
+                digests = parse_digests.parse(ws, warnings, cards=cards)
+                events = parse_events.parse(ws, warnings)
+                curation = parse_curation.parse(ws, warnings)
+
+                refs_dir = ws / "refs"
+                refs_count = (
+                    sum(1 for _ in refs_dir.glob("*.json")) if refs_dir.is_dir() else 0
+                )
+
+                workspace_data[ws_id] = {
+                    "cards": cards,
+                    "connections": connections,
+                    "digests": digests,
+                    "events": events,
+                    "curation": curation,
+                    "refs_count": refs_count,
+                }
 
     # 3. Cross-workspace artefacts (need workspace_data populated first)
     domains = parse_domains.parse(install_root, workspace_data, warnings)
@@ -166,9 +240,75 @@ def main() -> int:
     elif warnings_path.exists():
         warnings_path.unlink()
 
-    # 10. Report
+    # 10. Save build meta for next incremental run
+    fp.save_meta(data_dir, {
+        "workspaces": new_ws_fps,
+        "config_fingerprint": cfg_fp,
+        "articles_fingerprint": arts_fp,
+        "build_id": build_id,
+    })
+
+    # 11. Clean up data dirs for removed workspaces
+    for ws_id in removed_ws:
+        removed_dir = data_dir / ws_id
+        if removed_dir.is_dir():
+            shutil.rmtree(removed_dir)
+            print(f"incremental: cleaned up data/{ws_id}/")
+
+    # 12. Report
     _print_report(workspaces, workspace_data, articles["articles"], build_id, warnings)
     return 0
+
+
+def _load_cached_workspace(data_dir: Path, ws_id: str) -> dict | None:
+    """Load previously generated per-workspace data from views/build/data/<ws>/.
+
+    Returns a workspace_data dict compatible with the fresh-parse path,
+    or None if any required file is missing.
+    """
+    ws_dir = data_dir / ws_id
+    required = {
+        "cards.json": "cards",
+        "connections.json": "connections",
+        "digests.json": "digests",
+        "events.json": "events",
+        "curation-history.json": "curation",
+    }
+    result: dict = {}
+    for filename, key in required.items():
+        path = ws_dir / filename
+        if not path.is_file():
+            return None
+        try:
+            envelope_data = json.loads(path.read_text(encoding="utf-8"))
+            data = envelope_data.get("data", envelope_data)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+        if key == "cards":
+            result[key] = data.get("cards", [])
+        elif key == "digests":
+            result[key] = data.get("digests", [])
+        elif key == "events":
+            result[key] = data.get("events", [])
+        elif key == "curation":
+            result[key] = data if isinstance(data, dict) else {"cycles": data}
+        else:
+            result[key] = data
+
+    # Reconstruct refs_count from the stats if available, else 0
+    stats_path = ws_dir / "stats.json"
+    if stats_path.is_file():
+        try:
+            stats_env = json.loads(stats_path.read_text(encoding="utf-8"))
+            stats_data = stats_env.get("data", stats_env)
+            result["refs_count"] = stats_data.get("refs_count", 0)
+        except (json.JSONDecodeError, OSError):
+            result["refs_count"] = 0
+    else:
+        result["refs_count"] = 0
+
+    return result
 
 
 def _write_atomic(path: Path, data) -> None:

@@ -111,7 +111,7 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - [x] Define parsing rules for markdown, frontmatter, JSON, and event logs → spec §5 / `lib/parse_*.py`
 - [x] Define aggregate/stat computation rules → spec §5.8 / `lib/compute_stats.py`
 - [x] Define failure behavior for partial or malformed data → spec §7 / per-parser warning emission
-- [x] Define incremental vs full regeneration → full only in v0.2 (spec §8); incremental deferred to v0.2.1
+- [x] Define incremental vs full regeneration → full only in v0.2 (spec §8); incremental deferred to v0.2.1 → **implemented post-v0.2.0** (per-workspace mtime fingerprinting, cache-load for unchanged workspaces, full-skip when nothing changed)
 - [x] Define `version.json` write semantics and `build_id` hashing → spec §6 / `lib/build_id.py`
 
 ### Epic 6: Build Pipeline — RESOLVED + IMPLEMENTED + VERIFIED
