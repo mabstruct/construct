@@ -33,7 +33,7 @@ This spec turns each route in `spec-v02-runtime-topology.md` §5 into a concrete
 |---|---|
 | Detail view pattern | **Mixed.** Full page (own URL) for digest details and article details (long-form reading). Side panel for card detail (in Artifacts) and graph node detail (in Knowledge Graph) — rapid scanning |
 | Filter UX | **Top chip toolbar** above each list view. Chips support multi-select. Heavy facets (confidence range, source-tier range) open popovers from their chip rather than living inline |
-| Knowledge graph scope | **Single workspace only in v0.2.** Cross-workspace deferred to v0.2.1 alongside bridges |
+| Knowledge graph scope | **Single workspace only in v0.2.** Cross-domain graph / bridges deferred to a later v0.2.x release. (At the data/routing layer this will still likely be implemented as cross-workspace/global scope.) |
 | Knowledge graph filters | **Epistemic type + lifecycle** (chip multi-select). Confidence rides as visual encoding (node size), not a filter |
 | Articles list style | **Magazine cards** (not table). Each article as a card with title, excerpt, metadata strip |
 | Detail-link pattern | Click a `source_cards[]` entry in an article → `/<source.workspace_id>/artifacts?card=<id>` (opens the artifacts page with that card's side panel pre-opened) |

@@ -33,7 +33,7 @@ This spec **does not** cover JSON data contracts (Epic 2 / `spec-v02-data-model.
 | Stale-detection mechanism | `views/build/version.json` polled by SPA on tab focus + every ~30s |
 | Routing root | `/` — landing dashboard with workspace switcher + cross-workspace articles |
 | Workspace routing | `/<workspace>/...` for per-workspace views |
-| MVP landing content | Switcher + per-workspace status + cross-workspace articles. Bridges and activity feed deferred to v0.2.1 |
+| MVP landing content | Switcher + per-workspace status + cross-workspace articles. Cross-domain bridges and cross-workspace activity feed deferred to a later v0.2.x release |
 
 ---
 
@@ -179,7 +179,7 @@ In order of placement on the page:
 3. **Cross-workspace articles strip** — last N published articles across all workspaces, link to `/articles`
 4. **Footer** — generation timestamp, install path, view-source link
 
-### 6.1 Deferred to v0.2.1
+### 6.1 Deferred to later v0.2.x
 
 - **Bridges panel** — cross-domain `bridge-detect` findings on the landing page
 - **Recent activity feed** — aggregated `events.jsonl` across all workspaces

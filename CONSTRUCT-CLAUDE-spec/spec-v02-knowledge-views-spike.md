@@ -296,7 +296,7 @@ No new dependencies. All data already in the existing JSON.
 
 - **Q-B1.** Inline collapsible (Option A) vs TOC sidebar (Option B)? → **Option A** (long scroll + inline collapsibles). Locked as D4.
 - **Q-B2.** Should `/:workspace` (workspace root) redirect to `/:workspace/wiki` or stay on dashboard? → **Stay on dashboard.** Wiki is an option, not the workspace default; `/:workspace` continues to land on the status overview. Locked as D5.
-- **Q-B3.** Lunr.js for full-text search, or start with naive `.includes()` substring? → **Naive substring.** Revisit at >500 cards/workspace.
+- **Q-B3.** Lunr.js for full-text search, or start with naive `.includes()` substring? → **Naive substring.** Postpone Lunr.js to a later v0.2.x release if/when >500 cards per workspace makes substring search painful.
 - **Q-B4.** Print stylesheet — in scope for v0.2 or defer? → **Defer to v0.2.1.**
 - **Q-B5.** Does the artifacts page still earn its keep once wiki exists, or merge them? → **Keep both.** Artifacts is the filter-heavy index → side-panel pattern; Wiki is the continuous reading view. Different UX, shared data.
 
@@ -356,7 +356,7 @@ Spike A locked 2026-04-30, shipped 2026-05-02. Spike B locked 2026-05-02.
 
 - Engine swap from `react-force-graph-2d` to anything else
 - iframe / per-workspace HTML generation (rejected on architectural grounds — §2.6)
-- Cross-workspace knowledge graph (already deferred to v0.2.1 per `spec-v02-views.md` §4.5)
+- Cross-domain knowledge graph (implemented as cross-workspace/global data in the SPA; deferred to a later v0.2.x release per `spec-v02-views.md` §4.5)
 - Print stylesheet (defer to v0.2.1)
 - Full-text search beyond substring (defer until card count justifies it)
 

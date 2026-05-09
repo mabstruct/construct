@@ -28,7 +28,7 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - ~~How much of `views/design-example/` is directly reusable versus only a visual reference?~~ **Resolved** — visual reference only. The example has navigation discrepancies that disqualify wholesale vendoring. A clean design prototype is the goal of Epic 4.
 - ~~Are view-generation hooks mandatory after mutating skills, or optional behind a config flag?~~ **Resolved** by `../CONSTRUCT-CLAUDE-spec/spec-v02-hook-integration.md` — conditionally automatic when `views/build/` exists; no opt-out config for v0.2 MVP. Three skills hook regen (research-cycle, curation-cycle, synthesis); card-create and card-connect explicitly excluded. domain-init lazily bootstraps construct-up.
 - ~~What is the minimum supported local serving workflow: Vite preview, static serve, or both?~~ **Resolved** by `../CONSTRUCT-CLAUDE-spec/spec-v02-runtime-topology.md` — `serve --single` via `npm run serve`.
-- Should multi-domain aggregation be first-class in v0.2 or follow after single-domain live views are solid? — open. Current direction: cross-workspace **articles** are first-class in v0.2; cross-workspace **bridges** and **activity feed** deferred to v0.2.1 (per `spec-v02-runtime-topology.md` §6).
+- Should multi-domain aggregation be first-class in v0.2 or follow after single-domain live views are solid? — open. Current direction: cross-workspace **articles** are first-class in v0.2; **cross-domain bridges** and cross-workspace **activity feed** are deferred to a later v0.2.x release (per `spec-v02-runtime-topology.md` §6).
 
 ## Epics
 
@@ -155,14 +155,14 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 
 ### Epic 8: Required Views Implementation Plan — RESOLVED
 
-**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-views.md` (Draft) — single consolidated spec covering all 9 routes (Landing, Articles list/detail, Workspace dashboard, Knowledge graph, Landscape, Artifacts, Digests list/detail) plus NotFound. Defines per-view fetched data, composition, filters, interactions, empty/loading/error states. Cross-cutting decisions: mixed detail pattern (full page for digests/articles, side panel for cards/graph nodes); top chip toolbar for filters; magazine cards for articles list; URL-backed filter state. Knowledge graph is single-workspace only in v0.2 (cross-workspace deferred to v0.2.1 with bridges).
+**Resolution:** See `../CONSTRUCT-CLAUDE-spec/spec-v02-views.md` (Draft) — single consolidated spec covering all 9 routes (Landing, Articles list/detail, Workspace dashboard, Knowledge graph, Landscape, Artifacts, Digests list/detail) plus NotFound. Defines per-view fetched data, composition, filters, interactions, empty/loading/error states. Cross-cutting decisions: mixed detail pattern (full page for digests/articles, side panel for cards/graph nodes); top chip toolbar for filters; magazine cards for articles list; URL-backed filter state. Knowledge graph is single-workspace only in v0.2 (cross-domain graph/bridges deferred to a later v0.2.x release).
 
 All sub-tasks resolved by `spec-v02-views.md`:
 
 - [x] Landing — workspace switcher + status grid + articles strip + empty state → §4.1
 - [x] Per-Workspace Dashboard — metrics, charts, activity, empty state → §4.4
 - [x] Knowledge Graph — react-force-graph, node/edge encodings, type+lifecycle filters, side-panel interactions, 500-node budget → §4.5
-- [x] Domain Landscape — health metrics, taxonomy heatmap, cross-workspace comparison deferred to v0.2.1 → §4.6
+- [x] Domain Landscape — health metrics, taxonomy heatmap, cross-domain comparison deferred to a later v0.2.x release → §4.6
 - [x] Artifacts Overview — columns, sort, chip-toolbar filters, side-panel detail with markdown body → §4.7
 - [x] Digests — list/detail behavior, date-range filter, raw-source link handling (not exposed per data-model §11.7) → §4.8 + §4.9
 - [x] Articles — magazine card list with chip filters, full-page detail with provenance trace, click-source-card → artifacts side-panel → §4.2 + §4.3
@@ -285,7 +285,7 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 - [x] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
 - [x] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
 
-**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), ~~print stylesheet (Q-B4 — v0.2.1)~~ **implemented post-v0.2.0** (full @media print block in index.css; hides chrome, forces black-on-white, expands all cards, avoids page breaks inside cards), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
+**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — postpone to a later v0.2.x release), ~~print stylesheet (Q-B4 — v0.2.1)~~ **implemented post-v0.2.0** (full @media print block in index.css; hides chrome, forces black-on-white, expands all cards, avoids page breaks inside cards), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
 
 **Remaining v0.2.1 design decisions now locked:** per-card hooks use a configurable **5s trailing-edge debounce**; concurrent direct invocations are deferred to later architecture consolidation work.
 
