@@ -1,2 +1,6 @@
 test-ws/
 tests/fixtures/v02/*/views/
+
+# Local tool config
+.vscode/
+.claude/settings.local.json
