@@ -6,3 +6,10 @@ views:
   auto_regenerate: true    # set to false to disable post-skill views hooks
   workspace_landing: dashboard  # 'dashboard' or 'wiki' — default page for /:workspace
   confirm_refresh: false   # set to true to show "✓ views updated" after successful hook regen
+
+  # Future improvement (not active yet): direct card-create/card-connect hooks
+  # can use a trailing-edge debounce instead of regenerating on every edit.
+  # per_card_hooks:
+  #   enabled: true
+  #   debounce_seconds: 5
+  #   mode: trailing

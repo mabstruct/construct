@@ -287,6 +287,8 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 
 **Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), ~~print stylesheet (Q-B4 — v0.2.1)~~ **implemented post-v0.2.0** (full @media print block in index.css; hides chrome, forces black-on-white, expands all cards, avoids page breaks inside cards), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
 
+**Remaining v0.2.1 design decisions now locked:** per-card hooks use a configurable **5s trailing-edge debounce**; concurrent direct invocations are deferred to later architecture consolidation work.
+
 ## Sequencing Proposal
 
 **Spec-first phase (current):**
