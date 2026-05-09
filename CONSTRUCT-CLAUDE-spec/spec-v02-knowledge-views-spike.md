@@ -140,8 +140,8 @@ The **lift-D3-into-React middle path** (option 2 from the prior conversation) av
 ### 2.7 Spike A questions — RESOLVED 2026-04-30
 
 - **Q-A1.** Edge labels default. **→ Auto-on when `links.length ≤ 30`, toggle override stays.** Equivalent to D2.
-- **Q-A2.** Node sizing metric. **→ Keep degree, shrunk: `4 + sqrt(deg) × 1.4` (peak ~12px).** Confidence×lifecycle considered but rejected for v0.2 — the graph's job is cluster-spotting, and degree is the right visual proxy. Equivalent to D3.
-- **Q-A3.** Drag-to-pin persistence across navigation. **→ Deferred.** Implementing requires per-workspace localStorage (or server round-trip); not in scope for the restyle. Backlog item.
+- **Q-A2.** Node sizing metric. **→ Keep degree, shrunk: `4 + sqrt(deg) × 1.4` (peak ~12px).** Confidence×lifecycle considered but rejected for v0.2 — the graph's job is cluster-spotting, and degree is the right visual proxy. Equivalent to D3. **Post-v0.2.0 update:** confidence×lifecycle multiplier now applied: `(base) × (0.6 + 0.4 × conf × lw)` where lw is seed=0.7, growing=0.85, mature=1.0, archived=0.5.
+- **Q-A3.** Drag-to-pin persistence across navigation. **→ ~~Deferred.~~** **Implemented post-v0.2.0.** Per-workspace localStorage keyed by `construct-kg-pins-{workspace}`; saved on drag-end, restored on mount, cleared on Release All.
 - **Q-A4.** Side panel collapse animation. **→ 300ms ease.** Matches design-example feel; one CSS transition on existing `CardSidePanel`.
 - **Q-A5.** Legend behaviour. **→ Click-to-toggle-type.** Drives the same `?type=…` URL state as the chip toolbar — two surfaces on one state, no duplicate logic.
 

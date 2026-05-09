@@ -129,7 +129,7 @@ Turn the `prd-v02-live-views.md` draft into an implementation-ready backlog for 
 - [x] Design `views-scaffold` skill (`SKILL.md`) → spec §3, implemented + verified
 - [x] Design `views-build` skill (`SKILL.md`) → spec §4, implemented + verified
 - [x] Define install/build commands and expected outputs → spec §5; bundle ~233kb JS, 5.8kb CSS, 0.4kb HTML
-- [x] Define stale-build detection → deferred to v0.2.1 (spec §4.6); always rebuilds for v0.2 MVP
+- [x] Define stale-build detection → deferred to v0.2.1 (spec §4.6); always rebuilds for v0.2 MVP → **implemented post-v0.2.0** (mtime comparison in views-build/SKILL.md)
 - [x] Define build-time success and error reporting → SKILL.md Failure-mode tables in both skills
 
 ### Epic 7: Runtime Topology + User-Facing Entry — RESOLVED + skills IMPLEMENTED + VERIFIED
@@ -174,7 +174,7 @@ All sub-tasks resolved by `spec-v02-views.md`:
 **Implementation (2026-05-09):** Step 8 (Views Refresh Hook) added to `research-cycle/SKILL.md`, `curation-cycle/SKILL.md`, `synthesis/SKILL.md`. Views bootstrap check added to `domain-init/SKILL.md` Step 0. `daily-cycle.md` workflow updated with auto-refresh notes.
 
 - [x] Identify all existing skills that should trigger data regeneration → spec §4 (3 skills, with rationale for excluding 2)
-- [x] Define optional vs. mandatory hook behavior → §2, §8 (conditionally automatic; opt-out deferred to v0.2.1)
+- [x] Define optional vs. mandatory hook behavior → §2, §8 (conditionally automatic; opt-out deferred to v0.2.1) → **implemented post-v0.2.0** (`.construct/config.yaml` → `views.auto_regenerate` check in all 3 hooks)
 - [x] Define hook for `research-cycle` → §4.1 → **implemented**
 - [x] Define hook for `curation-cycle` → §4.2 → **implemented**
 - [x] Define hook for `synthesis` → §4.3 → **implemented**
@@ -256,7 +256,7 @@ Goal: turn the current `react-force-graph-2d` view from "unusable at 33 cards ×
 - [x] Legend: click-to-toggle-type, drives `?type=` URL state shared with chip toolbar
 - [x] Cross-workspace edge guard: filter links to nodes present in this workspace's `cards.json` (root cause of canvas-blanks-on-drag; unblocks the locked layout dynamics)
 
-**Out of scope for 12.2** (deferred): drag-pin persistence across navigation (Q-A3), node sizing by confidence×lifecycle, cross-workspace KG, engine swap.
+**Out of scope for 12.2** (deferred): ~~drag-pin persistence across navigation (Q-A3)~~ **implemented post-v0.2.0** (localStorage keyed by workspace), ~~node sizing by confidence×lifecycle~~ **implemented post-v0.2.0** (formula: `(base) × (0.6 + 0.4 × confidence × lifecycle_weight)`), cross-workspace KG, engine swap.
 
 #### Slice 12.1 — Wiki Read-Mode View (Spike B) — DONE 2026-05-09
 
@@ -285,7 +285,7 @@ Goal: new `/:workspace/wiki` route as a long, browsable, anchor-linkable renderi
 - [x] Cross-link wiring: digest top-finding card-id → wiki anchor; article body backticked card-id → wiki anchor; KG `CardSidePanel` "Open in wiki" button; landscape category cell → `/wiki?category=X`; wiki anchor "Locate in graph" button → `/knowledge-graph?card=cardId`
 - [x] Workspace landing stays on dashboard (D5); no redirect from `/:workspace`
 
-**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), print stylesheet (Q-B4 — v0.2.1), Wiki-as-workspace-landing (D5 — revisit if positioning shifts in v0.3+).
+**Out of scope for 12.1** (deferred): topic-synthesis/compilation pages (D8 — owned by synthesis workflow), Lunr.js full-text (Q-B3 — revisit at >500 cards), print stylesheet (Q-B4 — v0.2.1), ~~Wiki-as-workspace-landing (D5)~~ **implemented post-v0.2.0** (`.construct/config.yaml` → `views.workspace_landing: wiki` redirects `/:workspace` to wiki).
 
 ## Sequencing Proposal
 

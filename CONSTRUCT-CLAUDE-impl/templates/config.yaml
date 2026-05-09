@@ -1,0 +1,7 @@
+# CONSTRUCT installation-level config
+# Lives at <install-root>/.construct/config.yaml
+# Created automatically by workspace-init; can be edited manually.
+
+views:
+  auto_regenerate: true    # set to false to disable post-skill views hooks
+  workspace_landing: dashboard  # 'dashboard' or 'wiki' — default page for /:workspace

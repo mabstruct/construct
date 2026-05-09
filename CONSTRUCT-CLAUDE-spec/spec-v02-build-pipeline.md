@@ -47,7 +47,7 @@ views-scaffold ─────► views-build ─────► views-generate-
 | `views-scaffold` content source | Template directory at `CONSTRUCT-CLAUDE-impl/skills/views-scaffold/template/` containing the full SPA source tree per `spec-v02-scaffold.md` |
 | `views-build` invocation | Manual or chained from a higher-level skill; not auto-run by `views-generate-data` (data and build are separate writers) |
 | Auto-chaining | **None in v0.2.** Each skill runs explicitly in sequence. v0.2.1 may introduce a `views-up` meta-skill that chains scaffold→build→generate-data→up |
-| Stale-build detection | **Deferred to v0.2.1.** v0.2 MVP always rebuilds when `views-build` is invoked. Vite is fast enough that this is acceptable |
+| Stale-build detection | **Implemented post-v0.2.0.** `views-build` uses `find -newer` mtime comparison to skip rebuild when source is unchanged |
 | `npm install` strategy | `views-build` runs `npm install` if `node_modules/` is missing or stale (lockfile changed); otherwise skips |
 | `emptyOutDir: false` reliance | `views-build` MUST verify this is set in `vite.config.js` before invoking Vite — guards the two-writer invariant |
 | Helper code | None required. Both skills are procedural shell wrappers around `npm` and file-copy operations |
@@ -194,9 +194,9 @@ Programmatic: invoked after `views-scaffold` (first time), or whenever the SPA s
 
 ### 4.6 Stale-build detection
 
-**Deferred to v0.2.1.** v0.2 MVP always runs the full Vite build when `views-build` is invoked. Vite production build for an app this size completes in 5–15 seconds — fast enough that skip-detection earns little.
+**Implemented post-v0.2.0.** Uses a simpler approach than originally specced: `find <install-root>/views/src/src -type f -newer <install-root>/views/build/index.html` mtime comparison. If no files are newer than the build output, the skill reports "Build is up to date — skipping." and exits early. This avoids the full Vite invocation for unchanged sources.
 
-When v0.2.1 adds detection, the canonical signal will be: `views/build/_build_meta.json` storing the hash of `views/src/{src/**/*, package.json, vite.config.js, index.html}`. If unchanged → skip Vite invocation, report "already up to date."
+The originally proposed `_build_meta.json` hash approach was not needed — mtime comparison is sufficient and simpler.
 
 ### 4.7 Failure modes
 

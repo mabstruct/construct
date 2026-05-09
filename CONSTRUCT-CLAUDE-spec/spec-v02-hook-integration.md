@@ -36,7 +36,7 @@ It also resolves the **open question** from `prd-v02-live-views.md` §6.1 / `bac
 | Failure isolation | A failed `views-generate-data` MUST NOT cause the parent skill to fail. Surfaces as a warning in the parent's report; the mutation that already happened in workspace files is preserved |
 | Detection | Each hook checks `views/build/` exists before invoking `views-generate-data`. If absent, hook is a silent no-op |
 | Config opt-out for v0.2 | None. If user doesn't want auto-regen, they don't scaffold views |
-| Config opt-out for v0.2.1+ | Optional `views.auto_regenerate` field in `<install-root>/.construct/config.yaml`, default `true`. Substrate noted in §8 but not built |
+| Config opt-out for v0.2.1+ | **Implemented.** `views.auto_regenerate` field in `<install-root>/.construct/config.yaml`, default `true`. See §8.2 |
 | Daily-cycle workflow | Updated to mention that views are auto-updated as a side effect; user can manually request rebuild |
 
 ---
@@ -214,9 +214,9 @@ Rationale:
 - Hook failures don't break parent skills (§5), so the worst case is a warning line — easy to ignore if it happens
 - We can add the config later without breaking compat
 
-### 8.2 v0.2.1+ substrate (forward hook)
+### 8.2 v0.2.1+ substrate (forward hook) — IMPLEMENTED
 
-Should the opt-out become necessary, the hook check evolves from:
+The opt-out config is now live. The hook check evolved from:
 
 ```
 if (views/build/ exists) → run hook
@@ -231,12 +231,13 @@ if (views/build/ exists AND config.views.auto_regenerate != false) → run hook
 Where `config` is read from `<install-root>/.construct/config.yaml`:
 
 ```yaml
-# <install-root>/.construct/config.yaml — added in v0.2.1+
+# <install-root>/.construct/config.yaml
 views:
   auto_regenerate: true   # default; set to false to disable hooks
+  workspace_landing: dashboard  # 'dashboard' (default) or 'wiki'
 ```
 
-The file does not exist in v0.2. Each hook's existing presence-check is the only gating mechanism.
+The template lives at `.construct/templates/config.yaml`. All three hook skills (research-cycle, curation-cycle, synthesis) check this config. The `workspace_landing` setting is also read by `views-generate-data` and injected into `domains.json` for the SPA router.
 
 ---
 

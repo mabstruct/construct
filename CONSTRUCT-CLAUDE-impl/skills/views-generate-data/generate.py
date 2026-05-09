@@ -98,6 +98,19 @@ def main() -> int:
     domains = parse_domains.parse(install_root, workspace_data, warnings)
     articles = parse_articles.parse(install_root, workspaces, workspace_data, warnings)
 
+    # 3b. Read install-level config for SPA settings
+    config_path = install_root / ".construct" / "config.yaml"
+    spa_settings = {"workspace_landing": "dashboard"}
+    if config_path.is_file():
+        try:
+            cfg = yaml.safe_load(config_path.read_text()) or {}
+            views_cfg = cfg.get("views", {})
+            if views_cfg.get("workspace_landing") in ("dashboard", "wiki"):
+                spa_settings["workspace_landing"] = views_cfg["workspace_landing"]
+        except Exception:
+            pass  # malformed config — use defaults
+    domains["settings"] = spa_settings
+
     # Decorate per-workspace data with article count for stats
     for ws_id in workspace_data:
         workspace_data[ws_id]["articles_count"] = sum(

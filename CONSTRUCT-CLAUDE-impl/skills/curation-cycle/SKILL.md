@@ -126,14 +126,14 @@ Log: `curation_cycle_complete` event.
 
 ### Step 8: Views Refresh Hook
 
-If `views/build/` exists at the install root:
+If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
 1. Run `views-generate-data` to refresh the SPA's cached JSON
 2. If it succeeds → no extra user-facing message (the SPA picks it up via `version.json` polling within 30s)
 3. If it fails → append a warning to the report:
    > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `views-generate-data` manually to refresh the views.
 4. Always preserve this skill's success status — the hook is a side effect, not a success condition
 
-If `views/build/` does not exist → skip silently (no log, no message).
+If `views/build/` does not exist, or `views.auto_regenerate` is `false`, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
 
 ---
 

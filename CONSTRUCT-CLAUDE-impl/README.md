@@ -73,6 +73,7 @@ CONSTRUCT-CLAUDE-impl/
 │
 └── templates/                     # File templates for workspace artifacts
     ├── card.md                    # Knowledge card template
+    ├── config.yaml                # Install-level config (views opt-out, landing page)
     ├── domains.yaml               # Domain taxonomy template
     ├── governance.yaml            # Governance thresholds template
     ├── model-routing.yaml         # LLM routing template
@@ -247,6 +248,10 @@ Runs `views-scaffold`: copies the SPA template into `views/src/`, installs Node 
 `construct-up` starts a local server on port 3001–3009. `construct-down` stops it. The server survives across Claude conversations.
 
 **Automatic refresh:** After `research-cycle`, `curation-cycle`, or `synthesis`, views data is regenerated automatically if `views/build/` exists. The browser shows an UPDATE flag within 30 seconds — click it to reload.
+
+**Configuration:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to customize views behavior:
+- `views.auto_regenerate: false` — disable automatic data regeneration after skills
+- `views.workspace_landing: wiki` — make `/:workspace` redirect to the wiki view instead of the dashboard
 
 **Reset everything:**
 > "Reset the views"

@@ -19,6 +19,22 @@ If unsure, walk upward from the current working directory looking for `AGENTS.md
 
 Three checks. Fail fast on any miss.
 
+**Stale-build check (informational):** Before the full precondition checks, compare modification times to advise whether a rebuild is needed. This is informational — the build still runs if forced.
+
+```bash
+# If views/build/index.html exists, compare its mtime to views/src/ tree
+if [ -f <install-root>/views/build/index.html ]; then
+  NEWEST_SRC=$(find <install-root>/views/src/src -type f -newer <install-root>/views/build/index.html | head -1)
+  if [ -z "$NEWEST_SRC" ]; then
+    echo "views/build/ is up to date — no source files changed since last build."
+    echo "Proceeding with rebuild anyway (use this info to skip if desired)."
+  fi
+fi
+```
+
+If no source files are newer → inform the user: `Build is current — no source changes detected since last build. Rebuilding anyway.`
+If source files are newer → proceed silently (rebuild is warranted).
+
 1. **`views/src/` is scaffolded:**
    ```bash
    test -f <install-root>/views/src/package.json && \

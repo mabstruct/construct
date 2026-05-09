@@ -167,16 +167,27 @@ export default function KnowledgeGraph() {
   // half-state, and every subsequent tick errors with "Attempted to assign
   // to readonly property" when it tries to mutate undefined node positions.
   // That is what blanks the canvas during drag.
+  // Lifecycle weight for node sizing — mature nodes are visually heavier.
+  const LIFECYCLE_WEIGHT = { seed: 0.7, growing: 0.85, mature: 1.0, archived: 0.5 }
+
   const graphData = useMemo(() => {
-    const nodes = allCards.map((c) => ({
-      id: c.id,
-      title: c.title,
-      type: c.epistemic_type,
-      lifecycle: c.lifecycle,
-      // Spec §2.3 D3: shrunk radius caps around 12px instead of the previous
-      // 22px, keeping nodes from touching at the 33-card / 50-edge scale.
-      r: 4 + Math.sqrt(degree.get(c.id) || 0) * 1.4,
-    }))
+    const nodes = allCards.map((c) => {
+      const deg = degree.get(c.id) || 0
+      const conf = (c.confidence || 1) / 5  // normalize to 0.2–1.0
+      const lw = LIFECYCLE_WEIGHT[c.lifecycle] || 0.7
+      // Combined sizing: degree sets the base, confidence×lifecycle scales it.
+      // This makes high-confidence mature nodes visually prominent while
+      // keeping low-confidence seeds small.
+      const r = (4 + Math.sqrt(deg) * 1.4) * (0.6 + 0.4 * conf * lw)
+      return {
+        id: c.id,
+        title: c.title,
+        type: c.epistemic_type,
+        lifecycle: c.lifecycle,
+        confidence: c.confidence,
+        r,
+      }
+    })
     const nodeIds = new Set(nodes.map((n) => n.id))
     const links = allConns
       .filter((c) => c.source && c.target)
@@ -251,11 +262,45 @@ export default function KnowledgeGraph() {
     if (fgRef.current) fgRef.current.zoomToFit(600, 40)
   }, [])
 
+  // --- Drag-pin persistence (localStorage) ---
+  // Save pinned positions so they survive navigation and page reloads.
+  const pinStorageKey = `construct-kg-pins-${workspace}`
+
+  const savePins = useCallback(() => {
+    const pins = {}
+    for (const n of graphData.nodes) {
+      if (n.fx != null && n.fy != null) {
+        pins[n.id] = { fx: n.fx, fy: n.fy }
+      }
+    }
+    if (Object.keys(pins).length > 0) {
+      try { localStorage.setItem(pinStorageKey, JSON.stringify(pins)) } catch {}
+    } else {
+      try { localStorage.removeItem(pinStorageKey) } catch {}
+    }
+  }, [graphData.nodes, pinStorageKey])
+
+  // Restore pins once when graphData changes (new dataset loaded).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(pinStorageKey)
+      if (!raw) return
+      const pins = JSON.parse(raw)
+      for (const n of graphData.nodes) {
+        if (pins[n.id]) {
+          n.fx = pins[n.id].fx
+          n.fy = pins[n.id].fy
+        }
+      }
+    } catch {}
+  }, [graphData, pinStorageKey])
+
   const releaseAll = () => {
     for (const n of graphData.nodes) {
       n.fx = null
       n.fy = null
     }
+    savePins()
     if (fgRef.current) fgRef.current.d3ReheatSimulation()
   }
 
@@ -527,6 +572,7 @@ export default function KnowledgeGraph() {
               // running for everything else, so the layout adapts around the pin.
               n.fx = n.x
               n.fy = n.y
+              savePins()
             }}
             onBackgroundClick={() => setSelected(null)}
           />
