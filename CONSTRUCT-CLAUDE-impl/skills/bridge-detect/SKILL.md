@@ -2,7 +2,7 @@
 
 **Trigger:** User says "find connections across domains", "bridge detection", "cross-domain patterns", or during curation cycle Step 5.
 **Agent:** Curator (detection) → CONSTRUCT (assessment of genuine parallels)
-**Produces:** Bridge candidates with proposed connections, event log entries
+**Produces:** Bridge candidates with proposed connections, machine-readable `log/bridge-candidates.json`, event log entries
 
 ---
 
@@ -58,7 +58,61 @@ For each bridge candidate, evaluate:
 | **Strength** | Is this a strong insight or a superficial link? |
 | **Novelty** | Is this connection already captured, or is it new? |
 
-### Step 5: Propose Connections
+Normalize each candidate into a structured record with:
+
+- `source_card_id`
+- `target_card_id`
+- `target_workspace_id`
+- `proposed_relation`
+- `candidate_strength` (`strong` or `possible`)
+- `signals.l1_structural`
+- `signals.l2_shared_categories[]`
+- `signals.l3_reasoning`
+
+Only include candidates that involve cards from different domains/workspaces.
+
+### Step 5: Persist Machine-Readable Candidate Set
+
+Before presenting results to the user, write the latest derived candidate set to:
+
+- `<workspace>/log/bridge-candidates.json`
+
+This file is a **derived artifact**, not canonical knowledge. It must always be safe to delete and regenerate.
+
+Write the full latest set, replacing any prior file for this workspace.
+
+Minimum file shape:
+
+```json
+{
+  "generated_at": "2026-05-10T10:30:00Z",
+  "workspace_id": "cosmology",
+  "candidates": [
+    {
+      "source_card_id": "observer-effects",
+      "target_card_id": "self-model-observer-loop",
+      "target_workspace_id": "philosophy-of-mind",
+      "proposed_relation": "parallels",
+      "candidate_strength": "strong",
+      "signals": {
+        "l1_structural": true,
+        "l2_shared_categories": ["observer-models", "inference"],
+        "l3_reasoning": "Both cards model an observer-dependent update loop rather than a passive measurement event."
+      }
+    }
+  ]
+}
+```
+
+Persistence rules:
+
+1. If no candidates survive assessment, still write the file with an empty `candidates` array.
+2. `workspace_id` is the workspace from which `bridge-detect` was invoked.
+3. `target_workspace_id` points to the other endpoint's workspace.
+4. Use only `strong` and `possible` for `candidate_strength` in this first cut.
+5. Do not include already confirmed bridges in `candidates`; those remain canonical in `connections.json` and can still be listed separately for the user.
+
+### Step 6: Propose Connections
 
 Present bridge candidates to the user:
 
@@ -79,16 +133,18 @@ Present bridge candidates to the user:
 
 Ask: "Would you like me to create these connections?"
 
-### Step 6: Apply Confirmed Bridges
+When you present the report, mention that the candidate set was also saved to `log/bridge-candidates.json` for views/data generation.
+
+### Step 7: Apply Confirmed Bridges
 
 For each confirmed bridge:
 1. Add edge to `connections.json`
 2. Log `detect_bridge` event
 3. Optionally: create a `connection`-type card documenting the parallel
 
-### Step 7: Report
+### Step 8: Report
 
-> "Bridge detection complete: {N} strong candidates, {N} possible. {N} new connections added."
+> "Bridge detection complete: {N} strong candidates, {N} possible. {N} new connections added. Candidate set saved to `log/bridge-candidates.json`."
 
 ---
 
@@ -98,3 +154,5 @@ For each confirmed bridge:
 - [ ] No duplicate edges proposed
 - [ ] Connection types are valid
 - [ ] Bridge reasoning is specific, not generic
+- [ ] `log/bridge-candidates.json` is written on every run, even when `candidates` is empty
+- [ ] `log/bridge-candidates.json` contains only cross-domain candidates and uses the required fields
