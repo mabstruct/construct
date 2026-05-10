@@ -17,6 +17,7 @@ _SOURCE_GLOBS = [
     "digests/**/*",
     "refs/**/*",
     "log/events.jsonl",
+    "log/bridge-candidates.json",
 ]
 
 

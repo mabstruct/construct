@@ -37,6 +37,7 @@ from lib import (  # noqa: E402
     envelope,
     fingerprint as fp,
     parse_articles,
+    parse_bridges,
     parse_cards,
     parse_connections,
     parse_curation,
@@ -197,12 +198,14 @@ def main() -> int:
         ws_id: compute_stats.compute_workspace(ws)
         for ws_id, ws in workspace_data.items()
     }
+    bridges = parse_bridges.build(workspaces, workspace_data, warnings)
 
     # 5. Assemble files (data field only; envelope wrapped after build_id)
     files: dict[str, dict] = {
         "domains.json": domains,
         "articles.json": articles,
         "stats.json": global_stats,
+        "bridges.json": bridges,
     }
     for ws_id, ws in workspace_data.items():
         files[f"{ws_id}/cards.json"] = {"cards": ws["cards"]}
