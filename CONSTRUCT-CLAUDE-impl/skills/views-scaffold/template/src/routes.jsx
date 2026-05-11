@@ -11,7 +11,7 @@ import Digests from './pages/Digests'
 import DigestDetail from './pages/DigestDetail'
 import Wiki from './pages/Wiki'
 import NotFound from './pages/NotFound'
-import useFetch from './hooks/useFetch'
+import { useFetch } from './hooks/useFetch'
 
 // Reads workspace_landing from domains.json settings and redirects
 // to wiki if configured, otherwise renders the default dashboard.
