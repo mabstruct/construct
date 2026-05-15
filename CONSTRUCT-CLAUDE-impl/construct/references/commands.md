@@ -16,50 +16,50 @@ A single-page reference of everything you can ask CONSTRUCT to do.
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `init {domain}` | workspace-init → domain-init | Create a new domain workspace and run the configuration interview |
-| `init {domain} interview` | domain-init | Re-run the domain interview to update categories, sources, and search seeds |
+| `init {domain}` | construct-workspace-init → construct-domain-init | Create a new domain workspace and run the configuration interview |
+| `init {domain} interview` | construct-domain-init | Re-run the domain interview to update categories, sources, and search seeds |
 
 ## Research
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `research {domain}` | research-cycle | Web search → extract → score → create refs and seed cards |
-| `research {topic}` | research-cycle (targeted) | Focused research on a specific topic within a domain |
-| `search adjust` | search-adjust | Tune search clusters, weights, and priorities |
+| `research {domain}` | construct-research-cycle | Web search → extract → score → create refs and seed cards |
+| `research {topic}` | construct-research-cycle (targeted) | Focused research on a specific topic within a domain |
+| `search adjust` | construct-search-adjust | Tune search clusters, weights, and priorities |
 
 ## Knowledge Operations
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `add card` | card-create | Create a new knowledge card with full epistemic metadata |
-| `edit card {id}` | card-edit | Update an existing card's content or metadata |
-| `connect {a} → {b}` | card-connect | Create a typed connection between two cards |
-| `evaluate {id}` | card-evaluate | Assess a card for promotion, decay, or archival |
-| `archive {id}` | card-archive | Move a card to archived lifecycle state |
+| `add card` | construct-card-create | Create a new knowledge card with full epistemic metadata |
+| `edit card {id}` | construct-card-edit | Update an existing card's content or metadata |
+| `connect {a} → {b}` | construct-card-connect | Create a typed connection between two cards |
+| `evaluate {id}` | construct-card-evaluate | Assess a card for promotion, decay, or archival |
+| `archive {id}` | construct-card-archive | Move a card to archived lifecycle state |
 
 ## Curation
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `curate {domain}` | curation-cycle | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect |
-| `bridges` | bridge-detect | Find cross-domain structural parallels and semantic overlaps |
-| `validate` | workspace-validate | Check workspace integrity (file structure, schema, references) |
+| `curate {domain}` | construct-curation-cycle | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect |
+| `bridges` | construct-bridge-detect | Find cross-domain structural parallels and semantic overlaps |
+| `validate` | construct-workspace-validate | Check workspace integrity (file structure, schema, references) |
 
 ## Analysis
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `status` | graph-status | Dashboard: card counts, connections, domain health, quality indicators |
-| `gaps {domain}` | gap-analysis | Coverage gaps, confidence distribution, missing categories |
-| `gaps {topic}` | gap-analysis (scoped) | Topic-specific gap report |
-| `domains` | domain-manage | List domains, show status, activate/pause |
+| `status` | construct-graph-status | Dashboard: card counts, connections, domain health, quality indicators |
+| `gaps {domain}` | construct-gap-analysis | Coverage gaps, confidence distribution, missing categories |
+| `gaps {topic}` | construct-gap-analysis (scoped) | Topic-specific gap report |
+| `domains` | construct-domain-manage | List domains, show status, activate/pause |
 
 ## Writing & Publishing
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `write {topic}` | synthesis (via co-authorship workflow) | Draft a document from accumulated knowledge with epistemic transparency |
-| `publish` | synthesis | List and manage published outputs in `publish/` |
+| `write {topic}` | construct-synthesis (via co-authorship workflow) | Draft a document from accumulated knowledge with epistemic transparency |
+| `publish` | construct-synthesis | List and manage published outputs in `publish/` |
 
 ---
 
@@ -67,14 +67,14 @@ A single-page reference of everything you can ask CONSTRUCT to do.
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `scaffold views` | views-scaffold | One-time SPA template setup — copies source, installs Node deps |
-| `build views` | views-build | Vite production build into `views/build/` |
-| `update views` / `refresh data` | views-generate-data | Parse workspace files → write JSON to `views/build/data/` |
+| `scaffold views` | construct-views-scaffold | One-time SPA template setup — copies source, installs Node deps |
+| `build views` | construct-views-build | Vite production build into `views/build/` |
+| `update views` / `refresh data` | construct-views-generate-data | Parse workspace files → write JSON to `views/build/data/` |
 | `start` / `show views` | construct-up | Start local server (port 3001–3009), write PID file |
 | `stop` | construct-down | Stop local server, remove PID file |
-| `reset views` | views-reset | Remove `views/src/`, `views/build/`, skill venv — clean slate |
+| `reset views` | construct-views-reset | Remove `views/src/`, `views/build/`, skill venv — clean slate |
 
-**Config:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to set `views.auto_regenerate: false` (disable post-skill data refresh), `views.workspace_landing: wiki` (open wiki instead of dashboard when navigating to a workspace), `views.confirm_refresh: true` (show "✓ views updated" after hook regen), or `views.per_card_hooks.*` (schedule a debounced refresh after direct card-create/card-connect edits).
+**Config:** Copy `.construct/templates/config.yaml` to `.construct/config.yaml` to set `views.auto_regenerate: false` (disable post-skill data refresh), `views.workspace_landing: wiki` (open wiki instead of dashboard when navigating to a workspace), `views.confirm_refresh: true` (show "✓ views updated" after hook regen), or `views.per_card_hooks.*` (schedule a debounced refresh after direct construct-card-create/construct-card-connect edits).
 
 ---
 
@@ -82,9 +82,9 @@ A single-page reference of everything you can ask CONSTRUCT to do.
 
 | Workflow | When to use | Sequence |
 |----------|------------|----------|
-| **Cold Start** | First-ever session | workspace-init → domain-init → research-cycle → curation-cycle → graph-status |
-| **Daily Cycle** | Regular maintenance session | research-cycle → curation-cycle → graph-status → user interaction |
-| **Co-Authorship** | Writing from knowledge | gap-analysis → [research-cycle] → synthesis → iterate → finalize |
+| **Cold Start** | First-ever session | construct-workspace-init → construct-domain-init → construct-research-cycle → construct-curation-cycle → construct-graph-status |
+| **Daily Cycle** | Regular maintenance session | construct-research-cycle → construct-curation-cycle → construct-graph-status → user interaction |
+| **Co-Authorship** | Writing from knowledge | construct-gap-analysis → [construct-research-cycle] → construct-synthesis → iterate → finalize |
 
 ---
 

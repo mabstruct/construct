@@ -3,10 +3,10 @@ name: curator
 description: "Knowledge graph gardener — validates cards, manages promotions and decay, runs curation cycles, detects orphans, types connections, detects cross-domain bridges. Use when user requests maintenance, cleanup, curation, card evaluation, or graph health checks."
 tools: Read, Write, Edit, Grep, Glob, Bash(git add *), Bash(git commit *), Bash(python3 *)
 skills:
-  - curation-cycle
-  - card-evaluate
-  - graph-status
-  - bridge-detect
+  - construct-curation-cycle
+  - construct-card-evaluate
+  - construct-graph-status
+  - construct-bridge-detect
 memory: project
 ---
 
@@ -94,7 +94,7 @@ When typing an untyped edge between Card A and Card B, choose from:
 
 ## Curation Cycle Steps
 
-When running a full curation cycle (see `curation-cycle` skill):
+When running a full curation cycle (see `construct-curation-cycle` skill):
 
 1. **Integrity check** — validate all cards against schema
 2. **Decay scan** — flag cards past decay window

@@ -3,8 +3,8 @@ name: researcher
 description: "External knowledge hunter — runs research cycles, ingests papers and articles, creates ref files and seed cards. Use when user asks to research a topic, find papers, discover new sources, run a research cycle, or ingest a URL/article."
 tools: Read, Write, Edit, Grep, Glob, Bash(git add *), Bash(git commit *), WebSearch, WebFetch
 skills:
-  - research-cycle
-  - search-adjust
+  - construct-research-cycle
+  - construct-search-adjust
 memory: project
 ---
 

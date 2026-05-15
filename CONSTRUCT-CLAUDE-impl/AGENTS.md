@@ -34,12 +34,12 @@ In this workspace you act as a **knowledge architect with agency**. You systemat
 
 | Task | Role | Skill to invoke |
 |------|------|----------------|
-| Card validation, promotion, decay | Curator | `curation-cycle` |
-| Orphan detection, integrity checks | Curator | `curation-cycle` |
-| Connection typing for untyped edges | Curator | `card-evaluate` |
-| Web search + extraction | Researcher | `research-cycle` |
-| Paper/article ingestion | Researcher | `research-cycle` |
-| Graph health reporting | Curator | `graph-status` |
+| Card validation, promotion, decay | Curator | `construct-curation-cycle` |
+| Orphan detection, integrity checks | Curator | `construct-curation-cycle` |
+| Connection typing for untyped edges | Curator | `construct-card-evaluate` |
+| Web search + extraction | Researcher | `construct-research-cycle` |
+| Paper/article ingestion | Researcher | `construct-research-cycle` |
+| Graph health reporting | Curator | `construct-graph-status` |
 
 ### Escalation Handling
 
@@ -108,13 +108,13 @@ User input arrives
   │
   ├─ Knowledge operation (add/edit/connect cards)? → Invoke appropriate skill
   │
-  ├─ Research request? → Switch to Researcher role, run research-cycle skill
+  ├─ Research request? → Switch to Researcher role, run construct-research-cycle skill
   │
-  ├─ Maintenance request (curate, clean up)? → Switch to Curator role, run curation-cycle
+  ├─ Maintenance request (curate, clean up)? → Switch to Curator role, run construct-curation-cycle
   │
-  ├─ Synthesis/drafting request? → Run synthesis skill with graph context
+  ├─ Synthesis/drafting request? → Run construct-synthesis skill with graph context
   │
-  ├─ Domain management? → Run domain-init or search-adjust skill
+  ├─ Domain management? → Run construct-domain-init or construct-search-adjust skill
   │
   └─ Conversational? → Respond directly, drawing on workspace knowledge
 ```
@@ -160,22 +160,22 @@ All skills in `.claude/skills/`, each with a `SKILL.md` procedure:
 | Skill | Purpose |
 |-------|---------|
 | `construct-help` | Context-aware suggestions and command menu |
-| `workspace-init` | Create a domain workspace subdirectory |
-| `domain-init` | Interactive domain configuration interview |
-| `domain-manage` | List, activate, pause domains |
-| `research-cycle` | Web search → refs → seed cards |
-| `search-adjust` | Tune search patterns and priorities |
-| `card-create` | Create a knowledge card |
-| `card-edit` | Update card content or metadata |
-| `card-evaluate` | Assess card for promotion/decay |
-| `card-archive` | Move card to archived state |
-| `card-connect` | Create typed connections |
-| `curation-cycle` | Full maintenance pass |
-| `bridge-detect` | Cross-domain connection discovery |
-| `gap-analysis` | Coverage and quality gap report |
-| `graph-status` | Knowledge graph dashboard |
-| `synthesis` | Draft documents from knowledge |
-| `workspace-validate` | Integrity checks |
+| `construct-workspace-init` | Create a domain workspace subdirectory |
+| `construct-domain-init` | Interactive domain configuration interview |
+| `construct-domain-manage` | List, activate, pause domains |
+| `construct-research-cycle` | Web search → refs → seed cards |
+| `construct-search-adjust` | Tune search patterns and priorities |
+| `construct-card-create` | Create a knowledge card |
+| `construct-card-edit` | Update card content or metadata |
+| `construct-card-evaluate` | Assess card for promotion/decay |
+| `construct-card-archive` | Move card to archived state |
+| `construct-card-connect` | Create typed connections |
+| `construct-curation-cycle` | Full maintenance pass |
+| `construct-bridge-detect` | Cross-domain connection discovery |
+| `construct-gap-analysis` | Coverage and quality gap report |
+| `construct-graph-status` | Knowledge graph dashboard |
+| `construct-synthesis` | Draft documents from knowledge |
+| `construct-workspace-validate` | Integrity checks |
 
 See `.construct/references/commands.md` for the full user-facing command reference.
 

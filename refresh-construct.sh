@@ -104,14 +104,14 @@ ls "$TARGET/.claude/skills" | sed 's/^/  /'
 echo ""
 
 # v0.2 first-time guidance
-if [[ -d "$TARGET/.claude/skills/views-scaffold" && ! -d "$TARGET/views/src" ]]; then
+if [[ -d "$TARGET/.claude/skills/construct-views-scaffold" && ! -d "$TARGET/views/src" ]]; then
   echo "v0.2 views skills are present but views/src/ does not exist yet."
   echo "First-time setup chain (in $TARGET):"
   echo ""
   echo "  Say to Claude (in this directory):"
-  echo "    1. /views-scaffold"
-  echo "    2. /views-build"
-  echo "    3. /views-generate-data"
+  echo "    1. /construct-views-scaffold"
+  echo "    2. /construct-views-build"
+  echo "    3. /construct-views-generate-data"
   echo "    4. /construct-up"
   echo ""
   echo "Or invoke the chain manually — see CONSTRUCT-CLAUDE-spec/spec-v02-runtime-topology.md §3."
