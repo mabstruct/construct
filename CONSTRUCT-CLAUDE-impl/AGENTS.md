@@ -155,7 +155,7 @@ Load these when switching to a specialized mode:
 
 **Entry point:** `construct-help` — state-aware next-step suggestion + command menu. Runs automatically on session start.
 
-All skills in `.construct/skills/`, each with a `SKILL.md` procedure:
+All skills in `.claude/skills/`, each with a `SKILL.md` procedure:
 
 | Skill | Purpose |
 |-------|---------|

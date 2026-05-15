@@ -1,0 +1,115 @@
+---
+description: "Generate JSON data files for the views dashboard from workspace state. Use when user says 'update views', 'rebuild views data', 'refresh data'. Also triggered after research/curation cycles."
+allowed-tools: Read, Write, Grep, Glob, Bash(python3 *), Bash(git add *), Bash(git commit *)
+---
+# Skill: Views Generate Data
+
+**Trigger:** User says "Update views", "Rebuild views data", "Refresh data", or similar. Also fired automatically by hook integration after `research-cycle`, `curation-cycle`, `synthesis` per `spec-v02-hook-integration.md` §4.
+**Agent:** CONSTRUCT (orchestrator)
+**Produces:** All 8 JSON contracts under `views/build/data/` per `spec-v02-data-model.md`, plus `views/build/version.json`. **Sole writer** to those locations (architecture-overview I1).
+**Spec:** `CONSTRUCT-CLAUDE-spec/spec-v02-data-generation.md`
+
+---
+
+## Procedure
+
+### Step 0: Resolve Install Root
+
+The install root is the directory containing `AGENTS.md` and `.construct/`. All paths below are relative to this root.
+
+If unsure, walk upward from the current working directory looking for `AGENTS.md`. If not found, fail with: `Not a CONSTRUCT installation: missing AGENTS.md.`
+
+### Step 1: Verify Preconditions
+
+`views/build/` must exist (created by `views-build`):
+
+```bash
+test -d <install-root>/views/build && echo OK || echo MISSING
+```
+
+If MISSING → fail with: `views/build/ not found. Run views-build first.`
+
+### Step 2: Verify Python Available
+
+The helper script needs Python 3.10+. PyYAML is needed too but the wrapper (Step 3) handles auto-bootstrapping a per-skill venv if system Python doesn't have it.
+
+```bash
+python3 -c "import sys; assert sys.version_info >= (3, 10)" || echo "BAD_PYTHON"
+```
+
+If `BAD_PYTHON` → fail with: `Python 3.10+ required. Install or upgrade Python.`
+
+### Step 3: Run the Generator
+
+Invoke the wrapper script — NOT `generate.py` directly. The wrapper picks the right interpreter:
+
+```bash
+bash <install-root>/.claude/skills/views-generate-data/run.sh <install-root>
+```
+
+What the wrapper does:
+1. If system `python3` has PyYAML → uses it directly.
+2. Otherwise, bootstraps a per-skill venv at `.claude/skills/views-generate-data/.venv/` (one-time, ~5s) with `pyyaml` installed via the skill's `requirements.txt`, then uses that venv's python.
+
+This avoids the macOS PEP-668 `externally-managed-environment` error users hit when trying `pip install pyyaml` against system Python.
+
+Capture stdout. Capture stderr.
+
+### Step 4: Interpret Outcome
+
+- **Exit 0 (success):** stdout has a structured report. Two forms:
+  - **Full regeneration** (at least one workspace changed):
+    ```
+    incremental: changed workspaces: cosmology
+    incremental: unchanged (cached): climate-policy
+    workspaces: 2
+      cosmology: 47 cards, 184 connections, 12 digests, 3 articles
+      climate-policy: 23 cards, 41 connections, 5 digests, 1 article
+    global: 4 articles total
+    build_id: a3f81c2d
+    warnings: none
+    ```
+  - **No-op** (nothing changed since last run):
+    ```
+    incremental: no changes detected — skipping regeneration
+    ```
+  Surface this to the user verbatim (or summarised — count of cards/digests/build_id is the highlight).
+- **Exit non-zero (failure):** stderr has a single-line error message. Surface it. Do not retry; the user diagnoses.
+
+### Step 5: Report
+
+```
+✓ Views data updated.
+  build_id: <8-char-hex>
+  workspaces: <N>
+  warnings: <N> (or "none")
+
+Browser will show UPDATE flag within 30s if open.
+```
+
+---
+
+## Failure-mode Reference
+
+| Trigger | Detection | User message |
+|---|---|---|
+| Not in a CONSTRUCT install | No `AGENTS.md` | `Not a CONSTRUCT installation: missing AGENTS.md.` |
+| Build dir missing | No `views/build/` | `views/build/ not found. Run views-build first.` |
+| Bad Python | Version <3.10 | `Python 3.10+ required.` |
+| Missing PyYAML | wrapper auto-bootstraps a per-skill venv on first run | (silent — handled) |
+| Venv bootstrap failed | wrapper exits 1 with `Error: skill venv … does not have PyYAML.` | (stderr passed through; recovery hint included) |
+| Script catastrophic | Non-zero exit | (stderr passed through verbatim) |
+
+Per-file parse errors are NOT skill failures. They are logged to `views/build/data/_generation-warnings.log` by the script and counted in the report. The skill exits zero in this case.
+
+---
+
+## Notes
+
+- **Incremental regeneration.** The generator fingerprints each workspace's source files (cards/*, connections.json, domains.yaml, digests/*, etc.) by mtime+size. Unchanged workspaces are loaded from the previously generated JSON cache in `views/build/data/<ws>/` instead of re-parsing. If nothing changed at all, the run exits immediately. Fingerprints are stored in `views/build/data/_build_meta.json`.
+- **Per-card debounced hooks.** Direct `card-create` / `card-connect` invocations can schedule this skill via `debounced-hook.sh`. The helper stores state under `.construct/state/views-hooks/`, waits for a 5s trailing-edge debounce window (configurable), then runs one regeneration in the background. This is best-effort by design; concurrency hardening is deferred.
+- **Sole writer to `views/build/data/`.** Architecture-overview invariant I1. Hook-fired regenerations (research-cycle, curation-cycle, synthesis) all flow through this skill.
+- **Determinism.** Two runs on identical workspace state produce byte-identical output (modulo `generated_at`). Verified by safe-delete invariant I3 in validation.
+- **Failure isolation.** Per-file errors do not stop the run. The script writes whatever parsed cleanly and surfaces warnings. The agent's parent skill (research-cycle, etc.) is unaffected by views-generate-data warnings.
+- **No build invocation.** This skill does NOT run `views-build`. The two are independent writers per architecture-overview §3.2 / §4 invariants.
+- **No server interaction.** Server stays running; SPA picks up fresh data on next `/version.json` poll (within 30s).

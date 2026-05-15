@@ -38,29 +38,40 @@ if [[ ! -d "$TARGET/.construct" ]]; then
   exit 1
 fi
 
-echo "Refreshing CONSTRUCT skills at: $TARGET"
+echo "Refreshing CONSTRUCT at: $TARGET"
 echo "  Source: $IMPL_DIR"
 echo ""
 
 # Track what changed for the summary
 ADDED_SKILLS=()
 EXISTING_SKILLS_BEFORE=""
-if [[ -d "$TARGET/.construct/skills" ]]; then
-  EXISTING_SKILLS_BEFORE="$(ls "$TARGET/.construct/skills" 2>/dev/null || true)"
+if [[ -d "$TARGET/.claude/skills" ]]; then
+  EXISTING_SKILLS_BEFORE="$(ls "$TARGET/.claude/skills" 2>/dev/null || true)"
 fi
 
-# Refresh each top-level subtree under .construct/
-for sub in agents skills workflows references templates; do
-  if [[ -d "$IMPL_DIR/$sub" ]]; then
+# Refresh .claude/ (Claude Code native config)
+mkdir -p "$TARGET/.claude/skills" "$TARGET/.claude/agents"
+rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' \
+  "$IMPL_DIR/claude/skills/." "$TARGET/.claude/skills/"
+echo "  ✓ refreshed .claude/skills/"
+rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' \
+  "$IMPL_DIR/claude/agents/." "$TARGET/.claude/agents/"
+echo "  ✓ refreshed .claude/agents/"
+cp "$IMPL_DIR/claude/settings.json" "$TARGET/.claude/settings.json"
+echo "  ✓ refreshed .claude/settings.json"
+
+# Refresh .construct/ (reference library)
+for sub in templates references workflows; do
+  if [[ -d "$IMPL_DIR/construct/$sub" ]]; then
     mkdir -p "$TARGET/.construct/$sub"
-    cp -R "$IMPL_DIR/$sub/." "$TARGET/.construct/$sub/"
+    cp -R "$IMPL_DIR/construct/$sub/." "$TARGET/.construct/$sub/"
     echo "  ✓ refreshed .construct/$sub/"
   fi
 done
 
 # Detect newly added skills
-if [[ -d "$TARGET/.construct/skills" ]]; then
-  for skill in $(ls "$TARGET/.construct/skills"); do
+if [[ -d "$TARGET/.claude/skills" ]]; then
+  for skill in $(ls "$TARGET/.claude/skills"); do
     if ! grep -qx "$skill" <<< "$EXISTING_SKILLS_BEFORE"; then
       ADDED_SKILLS+=("$skill")
     fi
@@ -73,11 +84,11 @@ if [[ -f "$IMPL_DIR/VERSION" ]]; then
   echo "  ✓ .construct/VERSION = $(cat "$IMPL_DIR/VERSION")"
 fi
 
-# Refresh root AGENTS.md (Claude reads this)
-if [[ -f "$IMPL_DIR/AGENTS.md" ]]; then
-  cp "$IMPL_DIR/AGENTS.md" "$TARGET/AGENTS.md"
-  echo "  ✓ refreshed AGENTS.md"
-fi
+# Refresh root files
+cp "$IMPL_DIR/AGENTS.md" "$TARGET/AGENTS.md"
+echo "  ✓ refreshed AGENTS.md"
+cp "$IMPL_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
+echo "  ✓ refreshed CLAUDE.md"
 
 echo ""
 if [[ ${#ADDED_SKILLS[@]} -gt 0 ]]; then
@@ -88,20 +99,20 @@ if [[ ${#ADDED_SKILLS[@]} -gt 0 ]]; then
   echo ""
 fi
 
-echo "All available skills:"
-ls "$TARGET/.construct/skills" | sed 's/^/  /'
+echo "All available skills (invocable as /skill-name):"
+ls "$TARGET/.claude/skills" | sed 's/^/  /'
 echo ""
 
 # v0.2 first-time guidance
-if [[ -d "$TARGET/.construct/skills/views-scaffold" && ! -d "$TARGET/views/src" ]]; then
+if [[ -d "$TARGET/.claude/skills/views-scaffold" && ! -d "$TARGET/views/src" ]]; then
   echo "v0.2 views skills are present but views/src/ does not exist yet."
   echo "First-time setup chain (in $TARGET):"
   echo ""
   echo "  Say to Claude (in this directory):"
-  echo "    1. \"Scaffold the views\""
-  echo "    2. \"Build the views\""
-  echo "    3. \"Update views\""
-  echo "    4. \"Start CONSTRUCT\""
+  echo "    1. /views-scaffold"
+  echo "    2. /views-build"
+  echo "    3. /views-generate-data"
+  echo "    4. /construct-up"
   echo ""
   echo "Or invoke the chain manually — see CONSTRUCT-CLAUDE-spec/spec-v02-runtime-topology.md §3."
 fi

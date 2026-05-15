@@ -1,0 +1,148 @@
+---
+description: "Draft a document by synthesizing knowledge from the graph. Use when user says 'draft a paper on...', 'synthesize...', 'write a briefing about...', 'summarize the state of...'."
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash(git add *), Bash(git commit *)
+---
+# Skill: Synthesis / Drafting
+
+**Trigger:** User says "draft a paper on...", "synthesize...", "write a briefing about...", "summarize the state of...", or similar.
+**Agent:** CONSTRUCT (orchestrator — frontier reasoning required)
+**Produces:** Draft document in `publish/`, drawing on graph state
+
+---
+
+## Procedure
+
+### Step 1: Understand the Request
+
+Clarify with the user if needed:
+- **Topic:** What should the draft cover?
+- **Format:** Briefing paper, essay, summary, report, annotated bibliography?
+- **Audience:** Expert, general, internal notes?
+- **Length:** Executive summary, short brief, or comprehensive?
+- **Confidence floor:** Include speculative cards or only established knowledge? (default: confidence ≥ 2)
+
+### Step 2: Gather Source Material
+
+Query the knowledge graph for relevant cards:
+1. Filter by domain(s) related to the topic
+2. Filter by content categories that match
+3. Filter by minimum confidence (from Step 1 or default ≥ 2)
+4. Include connected cards (1-hop from directly relevant cards)
+5. Sort by relevance to the specific topic
+
+Read each relevant card's full content (summary, evidence, significance).
+
+Also check `refs/` for supporting references.
+
+### Step 3: Assess Knowledge Strength
+
+Before drafting, audit the source material:
+
+```
+Source Material Assessment:
+- Cards available: {N}
+- Confidence distribution: {breakdown}
+- Source tier distribution: {breakdown}
+- Gaps identified: {list any weak areas}
+```
+
+If significant gaps exist, inform the user:
+> "The knowledge base has limited coverage on {topic area} — only {N} cards at confidence {N}. The draft will flag these sections. Want me to research these gaps first?"
+
+### Step 4: Create Outline
+
+Produce a structured outline based on the gathered cards:
+
+```markdown
+## Proposed Outline
+
+1. {Section} — based on {N} cards (avg confidence: {N})
+2. {Section} — based on {N} cards (avg confidence: {N})
+3. ...
+
+Confidence indicators:
+- Sections marked [STRONG] — well-supported (confidence 3+)
+- Sections marked [EMERGING] — limited evidence (confidence 2)
+- Sections marked [THIN] — speculative or underexplored
+```
+
+Get user approval on outline before drafting.
+
+### Step 5: Draft
+
+Write the draft following these rules:
+
+1. **Cite source cards inline** — reference card IDs or titles
+2. **Propagate confidence** — sections drawing from low-confidence cards should note this
+3. **Flag gaps** — if a section needs more evidence, say so explicitly
+4. **Use epistemic hedging** — match language certainty to confidence levels:
+   - Confidence 5: "It is well established that..."
+   - Confidence 4: "Strong evidence indicates..."
+   - Confidence 3: "Evidence supports..."
+   - Confidence 2: "Emerging research suggests..."
+   - Confidence 1: "Speculatively, it may be that..."
+5. **Cross-domain connections** — highlight when insights cross domain boundaries
+6. **List sources** — end with references linking back to cards and refs
+
+### Step 6: Write Output
+
+Save draft to `publish/{slug}.md`:
+
+```markdown
+---
+title: "{Title}"
+type: {briefing|essay|summary|report}
+date: {today}
+domains: [{domain-ids}]
+source_cards: [{card-ids used}]
+confidence_floor: {N}
+status: draft
+---
+
+# {Title}
+
+{Draft content with inline card references}
+
+---
+
+## Sources
+
+| Card | Type | Confidence | Connection |
+|------|------|-----------|-----------|
+| [{card-title}](../cards/{card-id}.md) | {type} | {N}/5 | {how it contributed} |
+```
+
+### Step 7: Review Prompt
+
+Present the draft to the user:
+> "Draft ready: publish/{slug}.md
+> - Based on {N} cards across {N} domains
+> - {N} sections marked STRONG, {N} EMERGING, {N} THIN
+>
+> Would you like to: review and edit, strengthen thin sections (I'll research), or finalize?"
+
+### Step 8: Views Refresh Hook
+
+If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
+
+**Skip check:** If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent will trigger a single regeneration after all child skills complete. This avoids redundant regeneration.
+
+If not skipped:
+1. Run `views-generate-data` to refresh the SPA's cached JSON
+2. If it succeeds → if `.construct/config.yaml` sets `views.confirm_refresh: true`, append to the report: `✓ views updated (build_id: {id})`. Otherwise, no extra user-facing message (the SPA picks it up via `version.json` polling within 30s).
+3. If it fails → append a warning to the report:
+   > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `views-generate-data` manually to refresh the views.
+4. Always preserve this skill's success status — the hook is a side effect, not a success condition
+
+If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
+
+---
+
+## Validation
+
+- [ ] Every claim in the draft traces to at least one source card
+- [ ] Confidence propagation is accurate
+- [ ] Gaps are explicitly flagged, not covered up
+- [ ] Draft uses appropriate epistemic hedging
+- [ ] Source table is complete
+- [ ] File saved to `publish/` with valid frontmatter
