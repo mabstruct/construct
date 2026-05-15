@@ -53,6 +53,14 @@ fi
 mkdir -p "$TARGET/.claude/skills" "$TARGET/.claude/agents"
 rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' \
   "$IMPL_DIR/claude/skills/." "$TARGET/.claude/skills/"
+# Remove skill directories that no longer exist in source (e.g. after rename)
+for existing in "$TARGET/.claude/skills"/*/; do
+  skill_name="$(basename "$existing")"
+  if [[ ! -d "$IMPL_DIR/claude/skills/$skill_name" ]]; then
+    rm -rf "$existing"
+    echo "  ✗ removed obsolete skill: $skill_name"
+  fi
+done
 echo "  ✓ refreshed .claude/skills/"
 rsync -a --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' \
   "$IMPL_DIR/claude/agents/." "$TARGET/.claude/agents/"
