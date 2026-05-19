@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background: deep space with subtle purple-blue tint -->
+    <radialGradient id="bg-core" cx="50%" cy="48%" r="65%" fx="48%" fy="45%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="50%" style="stop-color:#050d1a"/>
+      <stop offset="100%" style="stop-color:#010409"/>
+    </radialGradient>
+    <!-- Warm ambient glow behind the shape -->
+    <radialGradient id="ambient" cx="50%" cy="50%" r="45%">
+      <stop offset="0%" style="stop-color:#ffd700; stop-opacity:0.12"/>
+      <stop offset="50%" style="stop-color:#b8860b; stop-opacity:0.04"/>
+      <stop offset="100%" style="stop-color:#000; stop-opacity:0"/>
+    </radialGradient>
+    <!-- Rim light top-left -->
+    <radialGradient id="rim" cx="25%" cy="20%" r="40%">
+      <stop offset="0%" style="stop-color:#4a3f8a; stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#000; stop-opacity:0"/>
+    </radialGradient>
+    <!-- Edge gradients -->
+    <linearGradient id="gold-outer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b6914"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b6914"/>
+    </linearGradient>
+    <linearGradient id="gold-mid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#daa520"/>
+      <stop offset="50%" style="stop-color:#ffd700"/>
+      <stop offset="100%" style="stop-color:#daa520"/>
+    </linearGradient>
+    <linearGradient id="gold-inner" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#fff3a0"/>
+      <stop offset="100%" style="stop-color:#ffd700"/>
+    </linearGradient>
+    <linearGradient id="gold-core" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff8dc"/>
+      <stop offset="50%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#fff8dc"/>
+    </linearGradient>
+    <!-- Glow filters -->
+    <filter id="glow-sm" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-lg" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-xl" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background layers -->
+  <rect width="512" height="512" rx="64" fill="url(#bg-core)"/>
+  <rect width="512" height="512" rx="64" fill="url(#rim)"/>
+  <rect width="512" height="512" rx="64" fill="url(#ambient)"/>
+
+  <!-- === 5D Hypercube (Penteract) Projection === -->
+  <!-- Layer 1: Outermost cube — dim, atmospheric -->
+  <g opacity="0.3" stroke="url(#gold-outer)" fill="none" stroke-width="1.5">
+    <polygon points="80,150 432,150 432,410 80,410"/>
+    <polygon points="130,98 482,98 482,358 130,358"/>
+    <line x1="80" y1="150" x2="130" y2="98"/>
+    <line x1="432" y1="150" x2="482" y2="98"/>
+    <line x1="432" y1="410" x2="482" y2="358"/>
+    <line x1="80" y1="410" x2="130" y2="358"/>
+  </g>
+
+  <!-- Layer 2: Second cube -->
+  <g opacity="0.45" stroke="url(#gold-outer)" fill="none" stroke-width="2">
+    <polygon points="128,178 384,178 384,382 128,382"/>
+    <polygon points="168,138 424,138 424,342 168,342"/>
+    <line x1="128" y1="178" x2="168" y2="138"/>
+    <line x1="384" y1="178" x2="424" y2="138"/>
+    <line x1="384" y1="382" x2="424" y2="342"/>
+    <line x1="128" y1="382" x2="168" y2="342"/>
+  </g>
+
+  <!-- Layer 3: Middle cube — main visible structure -->
+  <g opacity="0.7" stroke="url(#gold-mid)" fill="none" stroke-width="2.5" filter="url(#glow-sm)">
+    <polygon points="176,206 336,206 336,354 176,354"/>
+    <polygon points="208,174 368,174 368,322 208,322"/>
+    <line x1="176" y1="206" x2="208" y2="174"/>
+    <line x1="336" y1="206" x2="368" y2="174"/>
+    <line x1="336" y1="354" x2="368" y2="322"/>
+    <line x1="176" y1="354" x2="208" y2="322"/>
+  </g>
+
+  <!-- Layer 4: Inner cube — bright -->
+  <g opacity="0.85" stroke="url(#gold-inner)" fill="none" stroke-width="3" filter="url(#glow-sm)">
+    <polygon points="216,236 300,236 300,316 216,316"/>
+    <polygon points="238,214 322,214 322,294 238,294"/>
+    <line x1="216" y1="236" x2="238" y2="214"/>
+    <line x1="300" y1="236" x2="322" y2="214"/>
+    <line x1="300" y1="316" x2="322" y2="294"/>
+    <line x1="216" y1="316" x2="238" y2="294"/>
+  </g>
+
+  <!-- Layer 5: Core cube — white-hot with translucent yellow faces -->
+  <g opacity="1" filter="url(#glow-lg)">
+    <!-- Front face -->
+    <polygon points="244,254 276,254 276,284 244,284" fill="#ffd700" fill-opacity="0.15" stroke="url(#gold-core)" stroke-width="3.5"/>
+    <!-- Back face -->
+    <polygon points="254,244 286,244 286,274 254,274" fill="#ffd700" fill-opacity="0.12" stroke="url(#gold-core)" stroke-width="3.5"/>
+    <!-- Top face -->
+    <polygon points="244,254 254,244 286,244 276,254" fill="#ffd700" fill-opacity="0.1" stroke="url(#gold-core)" stroke-width="3.5"/>
+    <!-- Bottom face -->
+    <polygon points="244,284 254,274 286,274 276,284" fill="#ffd700" fill-opacity="0.1" stroke="url(#gold-core)" stroke-width="3.5"/>
+    <!-- Left face -->
+    <polygon points="244,254 254,244 254,274 244,284" fill="#ffd700" fill-opacity="0.08" stroke="url(#gold-core)" stroke-width="3.5"/>
+    <!-- Right face -->
+    <polygon points="276,254 286,244 286,274 276,284" fill="#ffd700" fill-opacity="0.08" stroke="url(#gold-core)" stroke-width="3.5"/>
+  </g>
+
+  <!-- 5th-dimension connections (linking cube layers) -->
+  <!-- L1 → L2 -->
+  <g opacity="0.2" stroke="#8b6914" stroke-width="1" stroke-dasharray="4,4">
+    <line x1="80" y1="150" x2="128" y2="178"/>
+    <line x1="432" y1="150" x2="384" y2="178"/>
+    <line x1="432" y1="410" x2="384" y2="382"/>
+    <line x1="80" y1="410" x2="128" y2="382"/>
+  </g>
+  <!-- L2 → L3 -->
+  <g opacity="0.35" stroke="#c9a227" stroke-width="1.5">
+    <line x1="128" y1="178" x2="176" y2="206"/>
+    <line x1="384" y1="178" x2="336" y2="206"/>
+    <line x1="384" y1="382" x2="336" y2="354"/>
+    <line x1="128" y1="382" x2="176" y2="354"/>
+  </g>
+  <!-- L3 → L4 -->
+  <g opacity="0.55" stroke="#daa520" stroke-width="2">
+    <line x1="176" y1="206" x2="216" y2="236"/>
+    <line x1="336" y1="206" x2="300" y2="236"/>
+    <line x1="336" y1="354" x2="300" y2="316"/>
+    <line x1="176" y1="354" x2="216" y2="316"/>
+  </g>
+  <!-- L4 → L5 -->
+  <g opacity="0.75" stroke="#ffd700" stroke-width="2.5" filter="url(#glow-sm)">
+    <line x1="216" y1="236" x2="244" y2="254"/>
+    <line x1="300" y1="236" x2="276" y2="254"/>
+    <line x1="300" y1="316" x2="276" y2="284"/>
+    <line x1="216" y1="316" x2="244" y2="284"/>
+  </g>
+
+  <!-- Vertex highlights — glowing dots at key intersections -->
+  <!-- Core vertices (brightest) -->
+  <g filter="url(#glow-xl)">
+    <circle cx="244" cy="254" r="3" fill="#ffffff" opacity="0.95"/>
+    <circle cx="276" cy="254" r="3" fill="#ffffff" opacity="0.95"/>
+    <circle cx="276" cy="284" r="3" fill="#ffffff" opacity="0.95"/>
+    <circle cx="244" cy="284" r="3" fill="#ffffff" opacity="0.95"/>
+    <circle cx="254" cy="244" r="2.5" fill="#fff8dc" opacity="0.9"/>
+    <circle cx="286" cy="244" r="2.5" fill="#fff8dc" opacity="0.9"/>
+    <circle cx="286" cy="274" r="2.5" fill="#fff8dc" opacity="0.9"/>
+    <circle cx="254" cy="274" r="2.5" fill="#fff8dc" opacity="0.9"/>
+  </g>
+  <!-- Inner layer vertices -->
+  <g filter="url(#glow-sm)">
+    <circle cx="216" cy="236" r="2.5" fill="#ffd700" opacity="0.7"/>
+    <circle cx="300" cy="236" r="2.5" fill="#ffd700" opacity="0.7"/>
+    <circle cx="300" cy="316" r="2.5" fill="#ffd700" opacity="0.7"/>
+    <circle cx="216" cy="316" r="2.5" fill="#ffd700" opacity="0.7"/>
+    <circle cx="238" cy="214" r="2" fill="#ffd700" opacity="0.6"/>
+    <circle cx="322" cy="214" r="2" fill="#ffd700" opacity="0.6"/>
+    <circle cx="322" cy="294" r="2" fill="#ffd700" opacity="0.6"/>
+    <circle cx="238" cy="294" r="2" fill="#ffd700" opacity="0.6"/>
+  </g>
+  <!-- Mid layer vertices (subtle) -->
+  <g opacity="0.4">
+    <circle cx="176" cy="206" r="2" fill="#daa520"/>
+    <circle cx="336" cy="206" r="2" fill="#daa520"/>
+    <circle cx="336" cy="354" r="2" fill="#daa520"/>
+    <circle cx="176" cy="354" r="2" fill="#daa520"/>
+    <circle cx="208" cy="174" r="1.5" fill="#daa520"/>
+    <circle cx="368" cy="174" r="1.5" fill="#daa520"/>
+    <circle cx="368" cy="322" r="1.5" fill="#daa520"/>
+    <circle cx="208" cy="322" r="1.5" fill="#daa520"/>
+  </g>
+</svg>
