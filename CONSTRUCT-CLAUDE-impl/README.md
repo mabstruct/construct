@@ -65,6 +65,7 @@ CONSTRUCT-CLAUDE-impl/
 │   └── co-authorship.md           # Synthesis and drafting (J3)
 │
 ├── references/                    # Lookup tables and enum definitions
+│   ├── capabilities.md            # Agents, skills, workflows, users, scenarios, dependencies
 │   ├── epistemic-types.md         # 10 card types with usage guidance
 │   ├── confidence-levels.md       # 1–5 scale reference
 │   ├── source-tiers.md            # 1–5 tier reference
@@ -127,6 +128,10 @@ Claude should respond as **CONSTRUCT** — referencing knowledge architecture, e
 ---
 
 ## Basic Usage
+
+For a complete user-facing map of agents, skills, workflows, scenarios, users,
+and dependencies, see `.construct/references/capabilities.md` after setup, or
+`construct/references/capabilities.md` in this source tree.
 
 ### Cold start (first time)
 

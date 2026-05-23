@@ -2,6 +2,9 @@
 
 A single-page reference of everything you can ask CONSTRUCT to do.
 
+For a fuller capabilities guide covering agents, skills, workflows, users,
+scenarios, and dependencies, see `capabilities.md`.
+
 ---
 
 ## Starting Point
