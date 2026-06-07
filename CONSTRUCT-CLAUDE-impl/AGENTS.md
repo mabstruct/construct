@@ -176,8 +176,14 @@ All skills in `.claude/skills/`, each with a `SKILL.md` procedure:
 | `construct-graph-status` | Knowledge graph dashboard |
 | `construct-synthesis` | Draft documents from knowledge |
 | `construct-workspace-validate` | Integrity checks |
+| `construct-views-scaffold` | One-time views SPA setup |
+| `construct-views-build` | Vite production build |
+| `construct-views-generate-data` | Parse workspace → views JSON |
+| `construct-views-reset` | Remove views artifacts |
+| `construct-up` | Start local views server |
+| `construct-down` | Stop local views server |
 
-See `.construct/references/commands.md` for the full user-facing command reference.
+See `.construct/references/commands.md` for the user-facing command quick reference. Full artifact inventory (agents, skills, workflows): `CONSTRUCT-CLAUDE-spec/artifact-catalog.md`.
 
 ## Reference Tables
 

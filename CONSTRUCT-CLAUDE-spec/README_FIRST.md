@@ -48,6 +48,7 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 
 | Document | What it defines |
 |----------|----------------|
+| [artifact-catalog.md](artifact-catalog.md) | **Master inventory** — all agents, skills, workflows; CONSTRUCT03 audit matrix |
 | [data-schemas.md](data-schemas.md) | Workspace file schemas (shared with Python approach) |
 | [knowledge-card-schema.md](knowledge-card-schema.md) | Canonical card format (shared) |
 | [nfrs.md](nfrs.md) | Non-functional requirements adapted for agent-native delivery |

@@ -2,6 +2,8 @@
 
 A single-page reference of everything you can ask CONSTRUCT to do.
 
+**Master inventory:** `CONSTRUCT-CLAUDE-spec/artifact-catalog.md` (repository) — all agents, skills, workflows, and CONSTRUCT03 audit matrix. This file is the deployed user-facing subset.
+
 ---
 
 ## Starting Point
