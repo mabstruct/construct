@@ -77,6 +77,8 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 
 | Document | What it records |
 |----------|----------------|
+| [adrs/adr-0003-v03-pipeline-v04-ui.md](adrs/adr-0003-v03-pipeline-v04-ui.md) | v0.3 pipeline/API layer, v0.4 UI-primary, LLM tiers, layered runtime |
+| [adrs/adr-0002-v02-packaging.md](adrs/adr-0002-v02-packaging.md) | v0.2 in-place packaging and planning layout |
 | [adrs/adr-0001-claude-native-approach.md](adrs/adr-0001-claude-native-approach.md) | Decision to implement CONSTRUCT as Claude configuration |
 
 ---
@@ -86,6 +88,8 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 | Decision | Where recorded |
 |----------|---------------|
 | Claude-native, no custom runtime | ADR-0001 |
+| v0.3 pipeline/API then v0.4 UI-primary | ADR-0003 |
+| v0.2 in-place packaging | ADR-0002 |
 | Same workspace format as Python approach | PRD §2 |
 | Skills replace code modules | PRD §3 |
 | Validation via workspace auditing, not CI | Validation strategy |

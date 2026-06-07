@@ -23,9 +23,9 @@ CONSTRUCT systematically collects, curates, connects, and compounds knowledge ac
 |------|-------|-----|
 | Python v0.1 spec | [`archive/v01-python/spec/`](archive/v01-python/spec/) | Archived — superseded by Claude-native path |
 | Python code | [`src/construct/`](src/construct/), [`tests/`](tests/) | Dormant Phase 1 skeleton |
-| GSD planning | [`.planning/`](.planning/) | Historical Python-track state; do not drive Claude-native work |
-| v0.2 planning notes | [`CONSTRUCT-CLAUDE-v02-planning/`](CONSTRUCT-CLAUDE-v02-planning/) | Backlog bridge; specs live in `CONSTRUCT-CLAUDE-spec/spec-v02-*` |
-| v0.3 planning | [`CONSTRUCT-CLAUDE-v03-planning/`](CONSTRUCT-CLAUDE-v03-planning/) | Future UI-primary paradigm |
+| v0.3 planning (current) | [`CONSTRUCT-CLAUDE-v03-planning/`](CONSTRUCT-CLAUDE-v03-planning/) | Pipeline/API hardening — ADR-0003 |
+| v0.2 planning notes | [`CONSTRUCT-CLAUDE-v02-planning/`](CONSTRUCT-CLAUDE-v02-planning/) | Historical backlog; specs in `CONSTRUCT-CLAUDE-spec/spec-v02-*` |
+| GSD (Python track) | [`archive/v01-python/gsd/`](archive/v01-python/gsd/) | Archived — restart fresh GSD for CONSTRUCT03 impl |
 
 ---
 
@@ -42,7 +42,9 @@ v0.1 Claude impl     CONSTRUCT-CLAUDE-impl/       (chat + skills + workspace)
        ↓
 v0.2 extensions      CONSTRUCT-CLAUDE-spec/spec-v02-*  (local views, cross-domain)
        ↓
-v0.3 (planned)       CONSTRUCT-CLAUDE-v03-planning/    (UI-as-primary)
+v0.3 (planned)       Pipeline/API layer — ADR-0003; CONSTRUCT-CLAUDE-v03-planning/
+       ↓
+v0.4 (planned)       UI-as-primary shell on v0.3 API
 ```
 
 The **knowledge model and workspace file format** are shared across all versions.
@@ -73,16 +75,16 @@ Canonical schema: [`CONSTRUCT-CLAUDE-spec/knowledge-card-schema.md`](CONSTRUCT-C
 construct/
 ├── CONSTRUCT-CLAUDE-impl/         # ACTIVE — agent configuration (skills, workflows, templates)
 ├── CONSTRUCT-CLAUDE-spec/         # ACTIVE — living specification (v0.1 + v0.2)
-├── CONSTRUCT-CLAUDE-v02-planning/ # v0.2 backlog bridge (specs in CONSTRUCT-CLAUDE-spec/)
-├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 UI-primary planning
+├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 pipeline/API planning (current) — ADR-0003
+├── CONSTRUCT-CLAUDE-v02-planning/ # v0.2 backlog (historical)
 ├── test-ws/                       # Test workspace fixtures
 ├── archive/
-│   └── v01-python/                # ARCHIVED — v0.1 Python-first spec
-│       ├── README.md              # Archive guide for agents
-│       └── spec/                  # Former CONSTRUCT-spec/
+│   └── v01-python/                # ARCHIVED — v0.1 Python-first spec + GSD
+│       ├── README.md
+│       ├── spec/                  # Former CONSTRUCT-spec/
+│       └── gsd/                   # Former .planning/ (Python GSD)
 ├── src/construct/                 # DORMANT — partial Python implementation
 ├── tests/                         # DORMANT — Python tests
-├── .planning/                     # DORMANT — GSD state (Python track)
 ├── views/                         # Design examples / views assets
 ├── AGENTS.md                      # Repository-level agent instructions
 └── pyproject.toml                 # Python build config (dormant)

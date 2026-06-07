@@ -37,9 +37,15 @@ These remain at the repository root and belong to the same paused Python track:
 | [`src/construct/`](../../src/construct/) | Partial Python implementation (Phase 1 skeleton: init, validate, schemas) |
 | [`tests/`](../../tests/) | Python unit and integration tests |
 | [`pyproject.toml`](../../pyproject.toml) | Python build configuration |
-| [`.planning/`](../../.planning/) | GSD project state for the Python track (historical; internal paths may still say `CONSTRUCT-spec/`) |
+| [`gsd/`](gsd/) | `.planning/` | Frozen GSD state for Python v0.1 track (Phase 1–3 plans, research) |
 
 Do not modify these unless explicitly resuming the Python approach.
+
+---
+
+## GSD (Get Shit Done)
+
+GSD project state for the Python track is archived in [`gsd/`](gsd/). **No active `.planning/` at repo root.** Restart GSD fresh when CONSTRUCT03 implementation begins — see [`CONSTRUCT-CLAUDE-v03-planning/README.md`](../../CONSTRUCT-CLAUDE-v03-planning/README.md).
 
 ---
 
@@ -47,7 +53,7 @@ Do not modify these unless explicitly resuming the Python approach.
 
 ```text
 v0.1 Python spec (this archive)
-    → partial Python build (src/, .planning/)
+    → partial Python build (src/, gsd/)
     → Claude-native runtime pivot (ADR in CONSTRUCT-CLAUDE-spec/adrs/)
     → v0.1 Claude implementation (CONSTRUCT-CLAUDE-impl/)
     → v0.2 extensions (views, cross-domain — CONSTRUCT-CLAUDE-spec/spec-v02-*)

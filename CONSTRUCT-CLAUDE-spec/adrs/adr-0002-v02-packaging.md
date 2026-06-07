@@ -88,7 +88,7 @@ v02 implementation lives in a fresh sibling to impl/. Both run side-by-side unti
 - v0.2 work is additive: new skills, new app, new specs — no rearrangement of v0.1
 - Single source-of-truth tree per concern: impl/ for runtime, views/ for browser app, spec/ for canonical decisions
 - Cloud-deployment future stays open — the boundary is the JSON data contract between agent runtime and browser, which is independent of source layout
-- Planning directories collapse from three (`CONSTRUCT-CLAUDE-spec/`, `CONSTRUCT-CLAUDE-v02-planning/`, legacy `.planning/`) toward one canonical spec tree once cleanup completes. Python v0.1 spec archived to `archive/v01-python/spec/` (2026-06).
+- Planning surfaces: `CONSTRUCT-CLAUDE-spec/` (canonical), `CONSTRUCT-CLAUDE-v03-planning/` (active). Python GSD archived to `archive/v01-python/gsd/` (2026-06).
 
 ### Negative
 
@@ -111,7 +111,7 @@ v02 implementation lives in a fresh sibling to impl/. Both run side-by-side unti
 | `CONSTRUCT-CLAUDE-v02-planning/` | Backlog and sequencing for v0.2 only | Temporary — archived to `spec/archive/v02-backlog.md` after v0.2 ships |
 | `CONSTRUCT-CLAUDE-impl/` | v0.x runtime source (agents, skills, workflows, templates) | Permanent — current version is the version |
 | `views/` | Browser SPA source + design reference | Permanent — runtime artefact |
-| `.planning/` (legacy GSD) | Legacy planning surface from earlier project setup | Deprecate — review contents, migrate any live items into `spec/`, then remove |
+| `archive/v01-python/gsd/` | GSD state for Python v0.1 track (archived) | Permanent archive — restart fresh GSD for CONSTRUCT03 impl |
 | `archive/v01-python/spec/` | v0.1 Python-first spec (archived) | Permanent archive — for future Python runtime exploration |
 
 ### Where v0.2 work products go
@@ -131,6 +131,6 @@ The v02/ backlog currently lists Epic 1 (architecture) → Epic 2 (data model) �
 ## Open Questions Surfaced by This Decision
 
 1. **Versioning convention** — does `CONSTRUCT-CLAUDE-impl/` carry a `VERSION` file, or is the version implicit in spec/PRD references? (Recommend explicit.)
-2. **Legacy directory cleanup timing** — `.planning/` cleanup can happen now or be deferred. Python spec archive complete (`archive/v01-python/spec/`).
+2. **Legacy directory cleanup timing** — GSD archived to `archive/v01-python/gsd/` (2026-06). Python spec archive complete (`archive/v01-python/spec/`).
 3. **`views/` as future package boundary** — if `views/` ever ships as its own npm package or extracts to a separate repo, does it still co-evolve with impl/? (Defer to v0.3 — flag in v02 backlog.)
 4. **Hook attachment mechanism** — Section 6.1 of the PRD lists 5 skills that should regenerate views. Does each existing skill get edited to call `views-generate-data`, or is there a generic post-skill hook layer? (Epic 7 question — not blocked by this ADR.)

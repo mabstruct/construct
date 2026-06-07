@@ -11,7 +11,7 @@ CONSTRUCT is a local-first, agent-powered personal knowledge system. You systema
 | Track | Status | Paths |
 |-------|--------|-------|
 | **Claude-native (active)** | Current product | `CONSTRUCT-CLAUDE-impl/`, `CONSTRUCT-CLAUDE-spec/` |
-| **Python v0.1 (archived)** | Paused; preserved for future runtime work | `archive/v01-python/spec/`, `src/`, `tests/`, `.planning/` |
+| **Python v0.1 (archived)** | Paused; preserved for future runtime work | `archive/v01-python/spec/`, `archive/v01-python/gsd/`, `src/`, `tests/` |
 
 **Default:** All work uses the Claude-native track unless the user explicitly asks to resume Python runtime exploration.
 
@@ -56,7 +56,7 @@ v0.1 Python spec (archive/v01-python/) → Claude-native pivot → v0.1 impl →
 ## Guardrails
 
 - Do not introduce cloud-first, multi-user, or auth-heavy architecture into v0.1.
-- Do not modify `archive/v01-python/`, `src/`, `tests/`, or `.planning/` unless explicitly resuming the Python approach.
-- Do not let GSD `.planning/` state drive agent-native work — it tracks the archived Python track.
+- Do not modify `archive/v01-python/`, `src/`, or `tests/` unless explicitly resuming the Python approach.
+- **No active GSD.** `.planning/` was archived to `archive/v01-python/gsd/`. Do not recreate GSD state until CONSTRUCT03 implementation begins — use `CONSTRUCT-CLAUDE-v03-planning/` for planning work now.
 - Do not treat `archive/v01-python/spec/` as the living specification — use `CONSTRUCT-CLAUDE-spec/`.
 - Keep the knowledge model and workspace format shared between both approaches.

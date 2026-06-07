@@ -1,5 +1,9 @@
 # Project State
 
+> **ARCHIVED** — GSD state for the Python v0.1 track. Formerly `.planning/` at repo root.
+> Do not update. For CONSTRUCT03, start fresh GSD when implementation begins.
+> See [`gsd/README.md`](README.md) and [`CONSTRUCT-CLAUDE-v03-planning/README.md`](../../../CONSTRUCT-CLAUDE-v03-planning/README.md).
+
 ## Strategic Pause — Python Approach
 
 **Date:** 2026-04-23
