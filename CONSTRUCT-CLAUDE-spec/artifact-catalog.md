@@ -23,6 +23,7 @@ Use it when you need to:
 | Document | Role |
 |----------|------|
 | [`artifact-catalog.md`](artifact-catalog.md) | **This file** — master inventory + CONSTRUCT03 audit matrix |
+| [`../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) | User-facing capabilities handbook — agents, skills, workflows, scenarios, dependencies (deployed to `.construct/references/`) |
 | [`../CONSTRUCT-CLAUDE-impl/construct/references/commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) | User-facing quick reference (commands → skills) |
 | [`../CONSTRUCT-CLAUDE-impl/AGENTS.md`](../CONSTRUCT-CLAUDE-impl/AGENTS.md) | Runtime identity, routing, governance |
 | [`config-topology.md`](config-topology.md) | Directory layout (partially outdated — defer to this catalog for counts) |
@@ -174,9 +175,9 @@ Canonical list. Source of truth for procedures: `claude/skills/<name>/SKILL.md`.
 
 ---
 
-## Reference tables (5 + commands)
+## Reference layer (5 enums + commands + capabilities)
 
-Not executable — shared vocabulary. In CONSTRUCT03 these become **UI enums**, validation schemas, and tooltips.
+Not executable — shared vocabulary and user-facing guides. Enum tables become **UI enums**, validation schemas, and tooltips in CONSTRUCT03.
 
 | File | Purpose |
 |------|---------|
@@ -185,7 +186,8 @@ Not executable — shared vocabulary. In CONSTRUCT03 these become **UI enums**, 
 | `construct/references/source-tiers.md` | Source tier 1–5 |
 | `construct/references/connection-types.md` | 9 edge types |
 | `construct/references/lifecycle-states.md` | seed → archived |
-| `construct/references/commands.md` | User command quick-ref (subset of this catalog) |
+| `construct/references/commands.md` | User command quick-ref (syntax subset of this catalog) |
+| `construct/references/capabilities.md` | User capabilities handbook (narrative companion — personas, scenarios, dependencies) |
 
 ---
 
@@ -236,7 +238,7 @@ For each skill row above:
 5. **Mark** LLM grounding points — explicit user review before any SOT write from model output.
 6. **Update** this catalog — set `C03 target` from `TBD` to final class; link to CONSTRUCT03 spec when written.
 
-Track progress in [`../CONSTRUCT03-planning/README.md`](../CONSTRUCT03-planning/README.md).
+Track progress in [`../CONSTRUCT-CLAUDE-v03-planning/README.md`](../CONSTRUCT-CLAUDE-v03-planning/README.md).
 
 ---
 
@@ -245,9 +247,10 @@ Track progress in [`../CONSTRUCT03-planning/README.md`](../CONSTRUCT03-planning/
 When adding, renaming, or removing a skill, agent, or workflow:
 
 1. Update the skill/agent/workflow source file
-2. Update [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) if user-facing
-3. Update **this catalog** (required)
-4. Update [`AGENTS.md`](../CONSTRUCT-CLAUDE-impl/AGENTS.md) skills table if orchestrator routing changes
-5. Update [`config-topology.md`](config-topology.md) if directory layout changes
+2. Update **this catalog** (required)
+3. Update [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) if user-facing command syntax changes
+4. Update [`capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) if user-facing behavior, scenarios, or dependencies change
+5. Update [`AGENTS.md`](../CONSTRUCT-CLAUDE-impl/AGENTS.md) skills table if orchestrator routing changes
+6. Update [`config-topology.md`](config-topology.md) if directory layout changes
 
-**This file is the master.** `commands.md` is the deployed quick reference derived from it.
+**This file is the master inventory.** [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) is the deployed command quick-ref; [`capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) is the deployed user handbook derived from it.
