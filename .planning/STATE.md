@@ -10,7 +10,7 @@
 See: `CONSTRUCT-CLAUDE-spec/adrs/adr-0001-claude-native-approach.md` for the full decision record.
 
 ### What was completed (Python track)
-- Full specification suite in `CONSTRUCT-spec/` (17 documents)
+- Full v0.1 Python specification archived in `archive/v01-python/spec/` (17 documents)
 - Phase 1 partial implementation: workspace init, validation, CLI (`src/construct/`)
 - Pydantic schemas for cards, configs, workspace structure
 - Unit and integration tests

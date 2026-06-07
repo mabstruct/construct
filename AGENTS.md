@@ -6,17 +6,23 @@ Development project for CONSTRUCT.
 
 CONSTRUCT is a local-first, agent-powered personal knowledge system. You systematically collect, curate, connect, and compound knowledge across domains — and produce high-quality outputs as derived views of accumulated knowledge.
 
-**Active approach:** Claude-native agent configuration (`CONSTRUCT-CLAUDE-impl/`)
-**Active spec:** `CONSTRUCT-CLAUDE-spec/`
-**Dormant approach:** Python implementation (`src/`, `tests/`, `CONSTRUCT-spec/`) — on hold, may resume for cloud/MCP path
+## Active vs archived — do not confuse
 
-## Current Focus
+| Track | Status | Paths |
+|-------|--------|-------|
+| **Claude-native (active)** | Current product | `CONSTRUCT-CLAUDE-impl/`, `CONSTRUCT-CLAUDE-spec/` |
+| **Python v0.1 (archived)** | Paused; preserved for future runtime work | `archive/v01-python/spec/`, `src/`, `tests/`, `.planning/` |
+
+**Default:** All work uses the Claude-native track unless the user explicitly asks to resume Python runtime exploration.
+
+## Current focus
 
 Testing and validating the Claude-native agent system:
+
 - Agent identity, skills, workflows, templates, and references in `CONSTRUCT-CLAUDE-impl/`
 - Specification documents in `CONSTRUCT-CLAUDE-spec/`
 
-## Test Workspaces
+## Test workspaces
 
 `test-ws/` contains CONSTRUCT workspaces used to exercise skills, workflows, and views against real workspace state. They are not user data — treat them as fixtures.
 
@@ -26,22 +32,31 @@ Testing and validating the Claude-native agent system:
 ## Workflow
 
 When working in this repository:
+
 - Read `CONSTRUCT-CLAUDE-spec/README_FIRST.md` for spec navigation.
 - Read `CONSTRUCT-CLAUDE-impl/AGENTS.md` for the full agent identity and behavior rules.
+- Read root `README.md` for the workspace map and product lineage.
 - Treat markdown and YAML workspace files as the source of truth.
 - Skills are markdown procedures — iterate by editing text.
-- Templates in `CONSTRUCT-CLAUDE-impl/templates/` are the single source for workspace file formats (shared by both approaches).
+- Templates in `CONSTRUCT-CLAUDE-impl/construct/templates/` are the single source for workspace file formats.
 
-## Key Principles
+## Product lineage (short)
 
-- **Claude is the runtime.** No Python backend needed for v0.1.
+```text
+v0.1 Python spec (archive/v01-python/) → Claude-native pivot → v0.1 impl → v0.2 views → v0.3 planning
+```
+
+## Key principles
+
+- **Claude is the runtime.** No Python backend needed for v0.1/v0.2 Claude-native path.
 - **Markdown is canonical.** Cards, connections, configs are files.
-- **Everything else is derived.** SQLite, views, digests are rebuildable.
+- **Everything else is derived.** Views, digests, dashboards are rebuildable.
 - **Epistemic governance is non-negotiable.** Every claim has confidence, source tier, type, and lifecycle.
 
 ## Guardrails
 
 - Do not introduce cloud-first, multi-user, or auth-heavy architecture into v0.1.
-- Do not modify files under `src/`, `tests/`, or `CONSTRUCT-spec/` unless explicitly resuming the Python approach.
-- Do not let GSD `.planning/` state drive agent-native work — it tracks the Python approach only.
+- Do not modify `archive/v01-python/`, `src/`, `tests/`, or `.planning/` unless explicitly resuming the Python approach.
+- Do not let GSD `.planning/` state drive agent-native work — it tracks the archived Python track.
+- Do not treat `archive/v01-python/spec/` as the living specification — use `CONSTRUCT-CLAUDE-spec/`.
 - Keep the knowledge model and workspace format shared between both approaches.

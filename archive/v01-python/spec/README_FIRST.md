@@ -1,7 +1,12 @@
 # CONSTRUCT Product Development — Read This First
 
+> **ARCHIVED** — This is the v0.1 Python-first specification.
+> **Do not use as the active spec.**
+> For current work see [`CONSTRUCT-CLAUDE-spec/README_FIRST.md`](../../../CONSTRUCT-CLAUDE-spec/README_FIRST.md)
+> and [`archive/v01-python/README.md`](../README.md).
+
 **Project:** CONSTRUCT — an AI-native knowledge system where agents curate what you learn
-**Status:** Pre-implementation planning (gap-closing phase)
+**Status:** Archived (v0.1 Python-first planning)
 **Date:** 2026-04-20
 
 ---

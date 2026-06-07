@@ -3,13 +3,13 @@
 **Status:** Accepted
 **Date:** 2026-04-23
 **Deciders:** ;-)mab
-**Context:** CONSTRUCT product has a Python-first implementation plan (CONSTRUCT-spec/). This ADR records the decision to pursue a parallel Claude-native approach.
+**Context:** CONSTRUCT product had a Python-first implementation plan ([`archive/v01-python/spec/`](../archive/v01-python/spec/)). This ADR records the decision to pursue a Claude-native approach.
 
 ---
 
 ## Context
 
-CONSTRUCT is an agent-powered personal knowledge system. The original implementation plan (ADR-0001 in CONSTRUCT-spec/) chose a Python-first architecture: FastAPI, SQLite, NetworkX, React UI — a full custom backend where agents are Python classes calling LLM APIs.
+CONSTRUCT is an agent-powered personal knowledge system. The original implementation plan (ADR-0001 in [`archive/v01-python/spec/adrs/`](../archive/v01-python/spec/adrs/)) chose a Python-first architecture: FastAPI, SQLite, NetworkX, React UI — a full custom backend where agents are Python classes calling LLM APIs.
 
 Since that decision, Claude's capabilities have matured significantly:
 - **File operations:** Claude can read, write, and manage files in a workspace directory
@@ -35,7 +35,7 @@ Claude IS the runtime. No Python backend, no SQLite, no React UI, no FastAPI ser
 
 ### Option A: Python-First (Original Plan)
 
-Build everything as a Python application per CONSTRUCT-spec/.
+Build everything as a Python application per [`archive/v01-python/spec/`](../archive/v01-python/spec/).
 
 **Pros:**
 - Full control over runtime behavior
@@ -96,7 +96,7 @@ Build the data layer in Python, use Claude as the agent layer.
 ### Neutral
 - Both approaches can coexist — they share the workspace format
 - The Python approach can be built later as a complement (e.g., for the UI layer)
-- This decision doesn't invalidate CONSTRUCT-spec/; it adds a parallel path
+- This decision doesn't invalidate the archived Python spec; it adds the active Claude-native path
 
 ---
 
@@ -187,7 +187,9 @@ This hybrid closes nearly all the original negatives while keeping the core prin
 
 ---
 
-## Relationship to CONSTRUCT-spec/ADR-0001
+## Relationship to archived Python ADR-0001
+
+See [`archive/v01-python/spec/adrs/adr-0001-python-first-drop-openclaw.md`](../../archive/v01-python/spec/adrs/adr-0001-python-first-drop-openclaw.md).
 
 The Python-first ADR (dropping OpenClaw) remains valid for the Python approach. This new ADR doesn't supersede it — it opens a second implementation path. The knowledge model, epistemic governance, and workspace format are shared artifacts.
 

@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0
 **Date:** 2026-04-23
-**Status:** Active — canonical. Identical to CONSTRUCT-spec version for workspace interoperability.
+**Status:** Active — canonical. Aligned with archived Python spec for workspace interoperability.
 
 ---
 

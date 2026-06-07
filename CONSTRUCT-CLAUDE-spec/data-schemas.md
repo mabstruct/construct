@@ -11,7 +11,7 @@
 
 This document defines the JSON/YAML schemas for every workspace artifact except knowledge cards. These schemas are the contract between agent roles, skills, and workspace files. Skills that produce or consume these artifacts must conform to these schemas.
 
-**Shared with Python approach:** These schemas are intentionally identical to `CONSTRUCT-spec/construct-data-schemas.md` to enable workspace interoperability.
+**Shared with Python approach:** These schemas are intentionally aligned with [`archive/v01-python/spec/construct-data-schemas.md`](../archive/v01-python/spec/construct-data-schemas.md) (SOT subset) for workspace interoperability.
 
 ---
 

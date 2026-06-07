@@ -88,7 +88,7 @@ v02 implementation lives in a fresh sibling to impl/. Both run side-by-side unti
 - v0.2 work is additive: new skills, new app, new specs — no rearrangement of v0.1
 - Single source-of-truth tree per concern: impl/ for runtime, views/ for browser app, spec/ for canonical decisions
 - Cloud-deployment future stays open — the boundary is the JSON data contract between agent runtime and browser, which is independent of source layout
-- Planning directories collapse from three (`spec/`, `v02/`, legacy `.planning/` and `CONSTRUCT-spec/`) toward one canonical (`spec/`) once cleanup happens
+- Planning directories collapse from three (`CONSTRUCT-CLAUDE-spec/`, `CONSTRUCT-CLAUDE-v02-planning/`, legacy `.planning/`) toward one canonical spec tree once cleanup completes. Python v0.1 spec archived to `archive/v01-python/spec/` (2026-06).
 
 ### Negative
 
@@ -112,7 +112,7 @@ v02 implementation lives in a fresh sibling to impl/. Both run side-by-side unti
 | `CONSTRUCT-CLAUDE-impl/` | v0.x runtime source (agents, skills, workflows, templates) | Permanent — current version is the version |
 | `views/` | Browser SPA source + design reference | Permanent — runtime artefact |
 | `.planning/` (legacy GSD) | Legacy planning surface from earlier project setup | Deprecate — review contents, migrate any live items into `spec/`, then remove |
-| `CONSTRUCT-spec/` (Python-first) | Original Python-first plan, superseded by ADR-0001 | Archive — move to `spec/archive/python-first/` or remove |
+| `archive/v01-python/spec/` | v0.1 Python-first spec (archived) | Permanent archive — for future Python runtime exploration |
 
 ### Where v0.2 work products go
 
@@ -131,6 +131,6 @@ The v02/ backlog currently lists Epic 1 (architecture) → Epic 2 (data model) �
 ## Open Questions Surfaced by This Decision
 
 1. **Versioning convention** — does `CONSTRUCT-CLAUDE-impl/` carry a `VERSION` file, or is the version implicit in spec/PRD references? (Recommend explicit.)
-2. **Legacy directory cleanup timing** — `.planning/` and `CONSTRUCT-spec/` cleanup can happen now or be deferred. (Recommend a separate small cleanup ADR or just commit it as housekeeping.)
+2. **Legacy directory cleanup timing** — `.planning/` cleanup can happen now or be deferred. Python spec archive complete (`archive/v01-python/spec/`).
 3. **`views/` as future package boundary** — if `views/` ever ships as its own npm package or extracts to a separate repo, does it still co-evolve with impl/? (Defer to v0.3 — flag in v02 backlog.)
 4. **Hook attachment mechanism** — Section 6.1 of the PRD lists 5 skills that should regenerate views. Does each existing skill get edited to call `views-generate-data`, or is there a generic post-skill hook layer? (Epic 7 question — not blocked by this ADR.)

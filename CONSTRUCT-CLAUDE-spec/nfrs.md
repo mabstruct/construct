@@ -136,4 +136,4 @@ v0.1 is the first release. No backwards-compatibility obligations.
 
 ## 10. Licensing
 
-Apache-2.0 — consistent with CONSTRUCT-spec/ and prior art.
+Apache-2.0 — consistent with archived Python spec and prior art.

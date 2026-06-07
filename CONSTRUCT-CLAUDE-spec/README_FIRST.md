@@ -9,7 +9,7 @@
 
 ## What is this directory?
 
-This is the **product specification workspace** for the Claude-native implementation of CONSTRUCT. It is a parallel approach to the Python-based implementation in `CONSTRUCT-spec/`.
+This is the **product specification workspace** for the Claude-native implementation of CONSTRUCT. It superseded the v0.1 Python-first specification in [`archive/v01-python/spec/`](../archive/v01-python/spec/).
 
 **Key difference:** Instead of building a Python backend (FastAPI, SQLite, NetworkX, React), this approach configures Claude to BE the CONSTRUCT system. Claude's native capabilities — dialog, web search, file management, reasoning, session memory — replace the custom runtime entirely.
 
@@ -17,10 +17,10 @@ The solution artifacts (agent definitions, skills, workflows, templates) live in
 
 ---
 
-## Relationship to CONSTRUCT-spec/
+## Relationship to archived Python v0.1 spec
 
-| Aspect | CONSTRUCT-spec/ (Python) | This directory (Claude-native) |
-|--------|--------------------------|-------------------------------|
+| Aspect | `archive/v01-python/spec/` (archived) | This directory (Claude-native, active) |
+|--------|---------------------------------------|----------------------------------------|
 | **Runtime** | Custom Python backend | Claude IS the runtime |
 | **Storage** | SQLite + FTS5 + NetworkX | Markdown files + JSON (Claude reads/writes directly) |
 | **UI** | React + D3 + WebSocket | Claude conversation interface |

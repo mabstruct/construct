@@ -274,9 +274,9 @@ CONSTRUCT-CLAUDE-spec/   ←  This approach
 CONSTRUCT-CLAUDE-impl/              ←  Solution artifacts (config files)
                                    Deployed to: ~/.claude/
 
-CONSTRUCT-spec/                ←  Python approach (original)
-src/construct/                 ←  Solution artifacts (Python code)
-                                   Deployed via: pip install
+archive/v01-python/spec/     ←  v0.1 Python approach (archived)
+src/construct/                 ←  Partial Python implementation (dormant)
+                                   Deploy via: pip install (if resumed)
 ```
 
 **Shared:**

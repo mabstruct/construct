@@ -20,7 +20,7 @@ Unlike the Python approach (8 phases of code), the Claude-native approach is con
 |-----------|-------------|
 | **Configuration over code** | We write markdown and JSON, not Python |
 | **Validate by running** | Test a skill by invoking it, not by running pytest |
-| **Shared workspace first** | Workspace format must match CONSTRUCT-spec/ for interoperability |
+| **Shared workspace first** | Workspace format must match `archive/v01-python/spec/` for interoperability |
 | **Skills are atomic** | Each skill is independently testable and usable |
 | **Identity before skills** | Get AGENTS.md right — it governs everything else |
 

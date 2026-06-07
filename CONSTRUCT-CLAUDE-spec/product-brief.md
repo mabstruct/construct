@@ -10,7 +10,7 @@
 
 ## 1. What Is CONSTRUCT (Agent System)?
 
-CONSTRUCT is an open-source, agent-powered personal knowledge system — the same product described in `CONSTRUCT-spec/construct-product-brief.md` — but implemented entirely as **Claude agent configuration** rather than a custom Python backend.
+CONSTRUCT is an open-source, agent-powered personal knowledge system — the same product described in [`archive/v01-python/spec/construct-product-brief.md`](../archive/v01-python/spec/construct-product-brief.md) — but implemented entirely as **Claude agent configuration** rather than a custom Python backend.
 
 The user talks to Claude. Claude IS CONSTRUCT. The knowledge graph, epistemic governance, research cycles, curation, and synthesis all happen through Claude's native capabilities — file management, web search, dialog, and reasoning — guided by structured agent definitions, skills, and workflows.
 
@@ -22,7 +22,7 @@ The user talks to Claude. Claude IS CONSTRUCT. The knowledge graph, epistemic go
 
 ### The Python approach is valid but heavy
 
-The original CONSTRUCT architecture (CONSTRUCT-spec/) requires:
+The original CONSTRUCT architecture ([`archive/v01-python/spec/`](../archive/v01-python/spec/)) requires:
 - Python backend: FastAPI + Uvicorn + SQLite + FTS5 + NetworkX
 - React frontend: Vite + D3 + Zustand + TypeScript
 - Agent runtime: session management, heartbeat, LLM provider abstraction
