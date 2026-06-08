@@ -33,6 +33,10 @@ Canonize the artifact contracts and enforcement model for the current Claude-nat
 ### Support artifact status
 - **D-10:** `digests/` and `publish/` should be treated as derived outputs, not canonical graph source-of-truth artifacts.
 
+### Python runtime relationship (settled during UAT)
+- **D-11:** The Python runtime at `src/construct/` is a dormant parallel implementation from the v0.1 Python track — NOT the product. CONSTRUCT's current product implementation is the Claude-native skill set. Testing through the Python path tests a parallel implementation, not the product.
+- **D-12:** The Python runtime's role in v0.3 must be resolved: either wire skills to call it (making it the shared engine) or remove it. It cannot remain in its current ambiguous state where it's neither dead code nor the active runtime.
+
 ### the agent's Discretion
 - Exact mechanism for pre-write staging and rollback.
 - Exact format of the migration document and checklist.

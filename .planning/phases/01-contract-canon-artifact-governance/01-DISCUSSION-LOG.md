@@ -42,6 +42,11 @@
 - **Options shown:** Durable support artifacts / Purely derived outputs / Split treatment
 - **Decision:** Purely derived outputs.
 
+### Python runtime vs Claude-native skills (post-UAT)
+- **Context:** During Phase 1 UAT, we tested `construct validate .` (Python CLI) against fixture workspaces. But CONSTRUCT's product is the Claude-native skills — that IS the current implementation. The Python runtime at `src/construct/` is a dormant parallel implementation from the v0.1 Python track.
+- **Finding:** Testing through the Python runtime tests a dormant parallel implementation, not the product. The relationship is ambiguous: `src/construct/` is neither shared engine (skills don't call it) nor dead code (Phase 1 reconciled its schemas). This needs resolution in v0.3 planning: wire skills to call Python (making it the shared engine) or remove it.
+- **Implication:** Future testing should test the skill path directly, or wire skills to the Python layer and test through that.
+
 ## Outcome Summary
 
 - One canonical workspace shape: active Claude-native layout.
