@@ -159,3 +159,10 @@ def parse_card_markdown(markdown: str, *, source_path: str | Path | None = None)
             raise SchemaParseError("card id must match the markdown filename")
 
     return card, body
+
+
+def validate_card_markdown(markdown: str, *, source_path: str | Path | None = None) -> KnowledgeCard:
+    """Validate markdown card content and return the parsed card metadata."""
+
+    card, _ = parse_card_markdown(markdown, source_path=source_path)
+    return card

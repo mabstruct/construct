@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import shutil
 
 from ruamel.yaml import YAML
 
+from construct.services.validation import (
+    validate_connections_write,
+    validate_domains_write,
+    validate_event_write,
+    validate_governance_write,
+    validate_search_seeds_write,
+)
 
-TEMPLATE_DIR = Path(__file__).resolve().parents[3] / "CONSTRUCT-CLAUDE-impl" / "templates"
+
+TEMPLATE_DIR = Path(__file__).resolve().parents[3] / "CONSTRUCT-CLAUDE-impl" / "construct" / "templates"
 
 
 @dataclass(frozen=True)
@@ -38,27 +47,20 @@ def initialize_workspace(root: str | Path, domain: DomainInitInput) -> Path:
         workspace_root,
         [
             "cards",
-            f"domains/{domain.domain_id}",
             "refs",
-            "workflows",
             "log",
-            "inbox",
             "digests",
-            "db",
-            "views",
-            "publish/articles",
-            "publish/reports",
-            "publish/drafts",
-            "publish/exports",
+            "publish",
+            ".construct",
         ],
     )
 
-    shutil.copy(TEMPLATE_DIR / "model-routing.yaml", workspace_root / "model-routing.yaml")
-    shutil.copy(TEMPLATE_DIR / "governance.yaml", workspace_root / "governance.yaml")
+    shutil.copy(TEMPLATE_DIR / "model-routing.yaml", workspace_root / ".construct" / "model-routing.yaml")
 
+    _write_governance(workspace_root)
     _write_domains_registry(workspace_root, domain)
-    _write_domain_file(workspace_root, domain)
     _write_connections(workspace_root)
+    _write_search_seeds(workspace_root, domain)
     _write_events_log(workspace_root)
     _write_gitignore(workspace_root)
     _write_workspace_doc(workspace_root)
@@ -77,67 +79,66 @@ def _write_domains_registry(root: Path, domain: DomainInitInput) -> None:
         "domains": {
             domain.domain_id: {
                 "name": domain.display_name,
-                "path": f"domains/{domain.domain_id}/domain.yaml",
                 "description": domain.scope,
                 "status": "active",
-                "created": "2026-04-22",
+                "created": datetime.now(timezone.utc).date().isoformat(),
+                "content_categories": domain.taxonomy_seeds,
+                "source_priorities": domain.source_priorities,
+                "cross_domain_links": [],
             }
         }
     }
+    validate_domains_write(payload)
     with (root / "domains.yaml").open("w", encoding="utf-8") as handle:
         yaml.dump(payload, handle)
 
 
-def _write_domain_file(root: Path, domain: DomainInitInput) -> None:
-    yaml = YAML()
-    payload = {
-        "id": domain.domain_id,
-        "name": domain.display_name,
-        "description": domain.scope,
-        "status": "active",
-        "scope": domain.scope,
-        "content_categories": domain.taxonomy_seeds,
-        "source_priorities": domain.source_priorities,
-        "research_seeds": domain.research_seeds,
-        "created": "2026-04-22",
-    }
-    domain_path = root / "domains" / domain.domain_id / "domain.yaml"
-    with domain_path.open("w", encoding="utf-8") as handle:
-        yaml.dump(payload, handle)
-
-
 def _write_connections(root: Path) -> None:
-    (root / "connections.json").write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "updated": "2026-04-22",
-                "connection_types": [
-                    "supports",
-                    "contradicts",
-                    "extends",
-                    "parallels",
-                    "requires",
-                    "enables",
-                    "challenges",
-                    "inspires",
-                    "gap-for",
-                ],
-                "connections": [],
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    payload = json.loads((TEMPLATE_DIR / "connections.json").read_text(encoding="utf-8"))
+    validate_connections_write(payload)
+    (root / "connections.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _write_governance(root: Path) -> None:
+    yaml = YAML(typ="safe")
+    payload = yaml.load((TEMPLATE_DIR / "governance.yaml").read_text(encoding="utf-8"))
+    validate_governance_write(payload)
+    shutil.copy(TEMPLATE_DIR / "governance.yaml", root / "governance.yaml")
 
 
 def _write_events_log(root: Path) -> None:
-    (root / "log" / "events.jsonl").write_text("", encoding="utf-8")
+    event = validate_event_write(
+        {
+            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "agent": "construct",
+            "action": "workspace_init",
+            "target": None,
+            "detail": "Initialized canonical CONSTRUCT workspace scaffold",
+            "result": "success",
+        }
+    )
+    (root / "log" / "events.jsonl").write_text(event.model_dump_json() + "\n", encoding="utf-8")
+
+
+def _write_search_seeds(root: Path, domain: DomainInitInput) -> None:
+    payload = json.loads((TEMPLATE_DIR / "search-seeds.json").read_text(encoding="utf-8"))
+    if domain.research_seeds:
+        payload["clusters"] = [
+            {
+                "id": f"{domain.domain_id}-seed",
+                "domain": domain.domain_id,
+                "terms": domain.research_seeds,
+                "weight": 1.0,
+                "status": "active",
+                "last_queried": None,
+            }
+        ]
+    validate_search_seeds_write(payload)
+    (root / "search-seeds.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_gitignore(root: Path) -> None:
-    (root / ".gitignore").write_text("# Persistent indexes (rebuildable)\ndb/\n\n# Disposable views (heartbeat-rebuilt)\nviews/\n\n# OS / editor\n.DS_Store\n*.swp\n", encoding="utf-8")
+    (root / ".gitignore").write_text("# OS / editor\n.DS_Store\n*.swp\n", encoding="utf-8")
 
 
 def _write_workspace_doc(root: Path) -> None:
@@ -145,18 +146,16 @@ def _write_workspace_doc(root: Path) -> None:
         "# CONSTRUCT Workspace\n\n"
         "## Canonical Paths\n\n"
         "- `cards/`\n"
-        "- `domains.yaml`\n"
-        "- `domains/{domain_id}/domain.yaml`\n"
-        "- `connections.json`\n"
-        "- `governance.yaml`\n"
-        "- `model-routing.yaml`\n"
         "- `refs/`\n"
-        "- `workflows/`\n"
+        "- `connections.json`\n"
+        "- `domains.yaml`\n"
+        "- `governance.yaml`\n"
+        "- `search-seeds.json`\n"
         "- `log/events.jsonl`\n\n"
         "## Derived Paths\n\n"
-        "- `db/` contains rebuildable indexes.\n"
-        "- `views/` contains rebuildable UI read models.\n\n"
+        "- `digests/` contains rebuildable workflow summaries.\n"
+        "- `publish/` contains derived outward-facing outputs.\n\n"
         "## Support Paths\n\n"
-        "- `inbox/`, `digests/`, and `publish/` are durable workspace support areas.\n",
+        "- `.construct/model-routing.yaml` stores runtime routing guidance.\n",
         encoding="utf-8",
     )

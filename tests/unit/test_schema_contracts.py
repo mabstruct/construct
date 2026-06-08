@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -7,11 +8,11 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 
 from construct.schemas.card import SchemaParseError, parse_card_markdown
-from construct.schemas.config import DomainConfig, DomainsRegistry, GovernanceConfig, ModelRoutingConfig
+from construct.schemas.config import DomainsRegistry, GovernanceConfig, ModelRoutingConfig, SearchSeedsFile
 from construct.schemas.workspace import ConnectionsFile, WorkspaceScaffold
 
 
-FIXTURES = Path(__file__).resolve().parents[2] / "templates" / "workspace"
+FIXTURES = Path(__file__).resolve().parents[2] / "CONSTRUCT-CLAUDE-impl" / "construct" / "templates"
 
 
 def test_valid_markdown_card_validates_against_filename() -> None:
@@ -89,36 +90,27 @@ Invalid.
     assert "id" in message
 
 
-def test_root_registry_and_domain_file_parse_as_linked_models() -> None:
+def test_root_domains_registry_parses_canonical_domain_entries() -> None:
     registry = DomainsRegistry.model_validate(
         {
             "domains": {
                 "intelligent-spatial-worlds": {
                     "name": "Intelligent Spatial Worlds",
-                    "path": "domains/intelligent-spatial-worlds/domain.yaml",
                     "description": "Spatial AI systems.",
                     "status": "active",
                     "created": "2026-04-22",
+                    "content_categories": ["spatial-reasoning", "world-models"],
+                    "source_priorities": ["peer-reviewed papers", "technical reports"],
+                    "cross_domain_links": [],
                 }
             }
         }
     )
-    domain = DomainConfig.model_validate(
-        {
-            "id": "intelligent-spatial-worlds",
-            "name": "Intelligent Spatial Worlds",
-            "description": "Spatial AI systems.",
-            "status": "active",
-            "scope": "Reasoning and action in physical environments.",
-            "content_categories": ["spatial-reasoning", "world-models"],
-            "source_priorities": ["peer-reviewed papers", "technical reports"],
-            "research_seeds": ["successor representation", "vision-language-action"],
-            "created": "2026-04-22",
-        }
-    )
 
-    assert registry.domains[domain.id].path == f"domains/{domain.id}/domain.yaml"
-    assert domain.content_categories == ["spatial-reasoning", "world-models"]
+    entry = registry.domains["intelligent-spatial-worlds"]
+
+    assert entry.description == "Spatial AI systems."
+    assert entry.content_categories == ["spatial-reasoning", "world-models"]
 
 
 def test_duplicate_connection_edges_fail() -> None:
@@ -152,12 +144,12 @@ def test_workspace_scaffold_exposes_required_paths() -> None:
     scaffold = WorkspaceScaffold()
 
     assert "cards" in scaffold.required_paths
-    assert "domains" in scaffold.required_paths
-    assert "db" in scaffold.required_paths
-    assert "views" in scaffold.required_paths
+    assert "refs" in scaffold.required_paths
+    assert "search-seeds.json" in scaffold.required_paths
     assert "publish" in scaffold.required_paths
     assert "log/events.jsonl" in scaffold.required_paths
     assert "connections.json" in scaffold.required_paths
+    assert ".construct/model-routing.yaml" in scaffold.required_paths
 
 
 def test_default_templates_round_trip_through_models() -> None:
@@ -166,13 +158,16 @@ def test_default_templates_round_trip_through_models() -> None:
     domains = yaml.load((FIXTURES / "domains.yaml").read_text())
     routing = yaml.load((FIXTURES / "model-routing.yaml").read_text())
     governance = yaml.load((FIXTURES / "governance.yaml").read_text())
+    search_seeds = json.loads((FIXTURES / "search-seeds.json").read_text())
 
     domains_model = DomainsRegistry.model_validate(domains)
     routing_model = ModelRoutingConfig.model_validate(routing)
     governance_model = GovernanceConfig.model_validate(governance)
+    search_seeds_model = SearchSeedsFile.model_validate(search_seeds)
 
-    assert domains_model.domains["example-domain"].path == "domains/example-domain/domain.yaml"
+    assert domains_model.domains == {}
     assert routing_model.routing["domain_init_interview"] == "frontier"
     assert routing_model.routing["chat_conversation"] == "frontier"
     assert governance_model.promotion.seed_to_growing_confidence == 2
-    assert governance_model.heartbeat.views_interval_seconds == 30
+    assert governance_model.heartbeat is None
+    assert search_seeds_model.clusters == []
