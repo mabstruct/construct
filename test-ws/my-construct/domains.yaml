@@ -1,0 +1,59 @@
+domains:
+  cosmology:
+    name: "Cosmology"
+    description: "Study of the universe's origin, structure, and evolution"
+    status: active
+    created: 2026-03-15
+    content_categories:
+      - dark-energy
+      - cosmic-inflation
+      - large-scale-structure
+      - cmb-observations
+    source_priorities:
+      - "peer-reviewed journals (arXiv, ApJ, MNRAS)"
+      - "collaboration papers (Planck, DESI, Euclid)"
+    cross_domain_links:
+      - domain: philosophy-of-mind
+        topics:
+          - consciousness-and-cosmology
+      - domain: philosophy-of-physics
+        topics:
+          - foundations-of-physics
+  philosophy-of-mind:
+    name: "Philosophy of Mind"
+    description: "Study of consciousness, mental states, and their relationship to the physical world"
+    status: active
+    created: 2026-03-20
+    content_categories:
+      - consciousness-theories
+      - neural-correlates
+      - qualia
+    source_priorities:
+      - "peer-reviewed journals (Mind, JCS, TICS)"
+      - "monographs and anthologies"
+    cross_domain_links:
+      - domain: cosmology
+        topics:
+          - cosmological-perspectives
+      - domain: philosophy-of-physics
+        topics:
+          - physics-and-consciousness
+  philosophy-of-physics:
+    name: "Philosophy of Physics"
+    description: "Philosophical foundations and implications of physical theories"
+    status: active
+    created: 2026-04-01
+    content_categories:
+      - quantum-foundations
+      - spacetime
+      - determinism
+    source_priorities:
+      - "peer-reviewed journals (SHPMP, BJPPS)"
+      - "monographs and anthologies"
+    cross_domain_links:
+      - domain: cosmology
+        topics:
+          - cosmology-and-physics
+      - domain: philosophy-of-mind
+        topics:
+          - mind-and-physics

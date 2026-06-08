@@ -1,0 +1,18 @@
+{
+  "id": "ref-riess-hubble-2024",
+  "title": "A Comprehensive Measurement of the Local Value of the Hubble Constant",
+  "authors": ["Riess, A.G.", "et al."],
+  "year": 2024,
+  "venue": "ApJ",
+  "url": "https://arxiv.org/abs/2112.04510",
+  "abstract": "JWST Cepheid observations confirm HST calibration of the local distance ladder.",
+  "relevance_score": 0.95,
+  "key_findings": ["H0 = 73.04 ± 1.04 km/s/Mpc", "JWST confirms HST calibration"],
+  "content_categories": ["dark-energy"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-03-16",
+  "domain": "cosmology",
+  "search_cluster": "cosmology-core",
+  "cards_generated": ["card-hubble-tension"]
+}

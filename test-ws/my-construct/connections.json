@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updated": "2026-04-18",
+  "connection_types": ["supports","contradicts","extends","parallels","requires","enables","challenges","inspires","gap-for"],
+  "connections": [
+    {"from": "card-dark-energy-w0wa", "to": "card-desi-bao-results", "type": "supports", "created": "2026-04-18", "created_by": "curator", "note": "DESI BAO measurements constrain w0-wa parameters"},
+    {"from": "card-hubble-tension", "to": "card-dark-energy-w0wa", "type": "challenges", "created": "2026-04-18", "created_by": "curator", "note": "Hubble tension may indicate new physics beyond w0-wa model"},
+    {"from": "card-desi-bao-results", "to": "card-hubble-tension", "type": "gap-for", "created": "2026-04-18", "created_by": "curator", "note": "BAO results hint at resolving the tension"},
+    {"from": "card-inflation-eternal", "to": "card-string-landscape", "type": "parallels", "created": "2026-04-18", "created_by": "curator", "note": "Eternal inflation connects to string landscape predictions"},
+    {"from": "card-cmb-cold-spot", "to": "card-void-lensing", "type": "requires", "created": "2026-04-18", "created_by": "curator", "note": "Cold spot interpretation requires void lensing analysis"},
+    {"from": "card-global-workspace", "to": "card-neural-correlates", "type": "extends", "created": "2026-04-18", "created_by": "curator", "note": "Global workspace theory extends NCC research programme"},
+    {"from": "card-zombie-argument", "to": "card-hard-problem", "type": "supports", "created": "2026-04-18", "created_by": "curator", "note": "Zombie argument frames the hard problem of consciousness"},
+    {"from": "card-panpsychism", "to": "card-integrated-information", "type": "parallels", "created": "2026-04-18", "created_by": "curator", "note": "Panpsychism and IIT both address distribution of consciousness"}
+  ]
+}

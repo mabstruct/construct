@@ -1,0 +1,18 @@
+{
+  "id": "ref-chalmers-1996",
+  "title": "The Conscious Mind: In Search of a Fundamental Theory",
+  "authors": ["Chalmers, D.J."],
+  "year": 1996,
+  "venue": "Oxford University Press",
+  "url": "",
+  "abstract": "Argues for a non-reductive theory of consciousness based on the hard problem and zombie conceivability.",
+  "relevance_score": 0.98,
+  "key_findings": ["Hard problem demarcation", "Zombie argument for property dualism", "Naturalistic dualism"],
+  "content_categories": ["consciousness-theories", "qualia"],
+  "source_tier": 1,
+  "extraction_status": "complete",
+  "ingested_date": "2026-04-02",
+  "domain": "philosophy-of-mind",
+  "search_cluster": "philosophy-mind-core",
+  "cards_generated": ["card-hard-problem", "card-zombie-argument"]
+}

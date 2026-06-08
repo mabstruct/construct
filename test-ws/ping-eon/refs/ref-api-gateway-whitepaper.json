@@ -1,0 +1,18 @@
+{
+  "id": "ref-api-gateway-whitepaper",
+  "title": "API Gateway Patterns in Microservices Architectures",
+  "authors": ["Richardson, C."],
+  "year": 2023,
+  "venue": "Microservices.io",
+  "url": "https://microservices.io/patterns/apigateway.html",
+  "abstract": "Overview of API gateway patterns for microservices architectures.",
+  "relevance_score": 0.8,
+  "key_findings": ["API gateways as single entry points", "Cross-cutting concern management"],
+  "content_categories": ["architecture-patterns"],
+  "source_tier": 3,
+  "extraction_status": "complete",
+  "ingested_date": "2026-04-12",
+  "domain": "api-gateways",
+  "search_cluster": "api-gateway-core",
+  "cards_generated": ["card-api-gateway-patterns"]
+}

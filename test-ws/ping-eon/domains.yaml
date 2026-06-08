@@ -1,0 +1,13 @@
+domains:
+  api-gateways:
+    name: "API Gateways"
+    description: "API gateway architectures, patterns, and implementations"
+    status: active
+    created: 2026-04-10
+    content_categories:
+      - architecture-patterns
+      - api-management
+    source_priorities:
+      - "technical reports and white papers"
+      - "vendor documentation"
+    cross_domain_links: []
