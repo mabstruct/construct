@@ -9,10 +9,10 @@ Requirements for the first committed roadmap scope, which in this repository map
 
 ### Foundation Contracts
 
-- [ ] **FND-01**: Maintainer can define one canonical schema set for cards, refs, connections, and related workflow artifacts.
+- [x] **FND-01**: Maintainer can define one canonical schema set for cards, refs, connections, and related workflow artifacts.
 - [ ] **FND-02**: System enforces artifact validity at write time so invalid cards, refs, connections, or workflow outputs are rejected before becoming source of truth.
-- [ ] **FND-03**: User and maintainer can rely on documented canonical artifact shapes and workflow contracts that match the implementation.
-- [ ] **FND-04**: Existing specification documents are treated as authoritative groundwork for capabilities and artifacts instead of being re-invented during implementation.
+- [x] **FND-03**: User and maintainer can rely on documented canonical artifact shapes and workflow contracts that match the implementation.
+- [x] **FND-04**: Existing specification documents are treated as authoritative groundwork for capabilities and artifacts instead of being re-invented during implementation.
 - [ ] **FND-05**: Maintainer can validate core workflows and artifact contracts against the existing `test-ws/` fixture workspaces so hardening work is proven on real workspace state.
 - [ ] **FND-06**: Maintainer can define a migration strategy for existing CONSTRUCT projects and workspaces so newer runtime and workflow contracts do not strand prior users.
 
@@ -81,10 +81,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Complete |
+| FND-04 | Phase 1 | Complete |
 | FND-05 | Phase 1 | Pending |
 | FND-06 | Phase 1 | Pending |
 | WF-01 | Phase 4 | Pending |
