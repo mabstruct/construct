@@ -15,6 +15,26 @@ This document defines the JSON/YAML schemas for every workspace artifact except 
 
 ---
 
+## Workspace contract alignment
+
+This document follows the canonical artifact inventory in [`workspace-contract.md`](workspace-contract.md).
+
+Canonical non-card source-of-truth artifacts covered here:
+
+- `connections.json`
+- `domains.yaml`
+- `governance.yaml`
+- `search-seeds.json`
+- `refs/*.json`
+- `log/events.jsonl`
+
+Related artifacts outside this file:
+
+- `cards/*.md` are canonical source of truth and are defined in [`knowledge-card-schema.md`](knowledge-card-schema.md)
+- `digests/` and `publish/` are derived workflow outputs and are not canonical graph source-of-truth artifacts
+
+---
+
 ## 1. Source of Truth Layer
 
 ### 1.1 `connections.json`
@@ -114,7 +134,7 @@ Research search patterns.
 
 ---
 
-## 2. Agent Output Layer
+## 2. Canonical research artifacts
 
 ### 2.1 `refs/{id}.json`
 
@@ -151,6 +171,8 @@ Reference entry for a single external source. Written by Researcher.
 
 Research cycle summary. Written by Researcher. See `templates/digest.md` for format.
 
+**Artifact status:** derived output, not canonical source of truth.
+
 ### 2.3 `publish/{slug}.md`
 
 Curated output document. Written by synthesis skill. Contains YAML frontmatter with:
@@ -168,6 +190,8 @@ status: draft                           # draft | review | final
 ```
 
 ---
+
+**Artifact status:** derived output, not canonical source of truth.
 
 ## 3. Event Log
 
