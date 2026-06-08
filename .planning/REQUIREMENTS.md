@@ -13,6 +13,8 @@ Requirements for the first committed roadmap scope, which in this repository map
 - [ ] **FND-02**: System enforces artifact validity at write time so invalid cards, refs, connections, or workflow outputs are rejected before becoming source of truth.
 - [ ] **FND-03**: User and maintainer can rely on documented canonical artifact shapes and workflow contracts that match the implementation.
 - [ ] **FND-04**: Existing specification documents are treated as authoritative groundwork for capabilities and artifacts instead of being re-invented during implementation.
+- [ ] **FND-05**: Maintainer can validate core workflows and artifact contracts against the existing `test-ws/` fixture workspaces so hardening work is proven on real workspace state.
+- [ ] **FND-06**: Maintainer can define a migration strategy for existing CONSTRUCT projects and workspaces so newer runtime and workflow contracts do not strand prior users.
 
 ### Workflow Operability
 
@@ -79,38 +81,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase TBD | Pending |
-| FND-02 | Phase TBD | Pending |
-| FND-03 | Phase TBD | Pending |
-| FND-04 | Phase TBD | Pending |
-| WF-01 | Phase TBD | Pending |
-| WF-02 | Phase TBD | Pending |
-| WF-03 | Phase TBD | Pending |
-| WF-04 | Phase TBD | Pending |
-| ING-01 | Phase TBD | Pending |
-| ING-02 | Phase TBD | Pending |
-| ING-03 | Phase TBD | Pending |
-| ING-04 | Phase TBD | Pending |
-| ING-05 | Phase TBD | Pending |
-| ING-06 | Phase TBD | Pending |
-| RT-01 | Phase TBD | Pending |
-| RT-02 | Phase TBD | Pending |
-| RT-03 | Phase TBD | Pending |
-| RT-04 | Phase TBD | Pending |
-| ADV-01 | Phase TBD | Pending |
-| ADV-02 | Phase TBD | Pending |
-| ADV-03 | Phase TBD | Pending |
-| ADV-04 | Phase TBD | Pending |
-| SPK-01 | Phase TBD | Pending |
-| SPK-02 | Phase TBD | Pending |
-| SPK-03 | Phase TBD | Pending |
-| SPK-04 | Phase TBD | Pending |
+| FND-01 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Pending |
+| FND-04 | Phase 1 | Pending |
+| FND-05 | Phase 1 | Pending |
+| FND-06 | Phase 1 | Pending |
+| WF-01 | Phase 4 | Pending |
+| WF-02 | Phase 4 | Pending |
+| WF-03 | Phase 4 | Pending |
+| WF-04 | Phase 4 | Pending |
+| ING-01 | Phase 4 | Pending |
+| ING-02 | Phase 2 | Pending |
+| ING-03 | Phase 2 | Pending |
+| ING-04 | Phase 2 | Pending |
+| ING-05 | Phase 4 | Pending |
+| ING-06 | Phase 5 | Pending |
+| RT-01 | Phase 3 | Pending |
+| RT-02 | Phase 3 | Pending |
+| RT-03 | Phase 3 | Pending |
+| RT-04 | Phase 4 | Pending |
+| ADV-01 | Phase 5 | Pending |
+| ADV-02 | Phase 5 | Pending |
+| ADV-03 | Phase 6 | Pending |
+| ADV-04 | Phase 6 | Pending |
+| SPK-01 | Phase 6 | Pending |
+| SPK-02 | Phase 6 | Pending |
+| SPK-03 | Phase 6 | Pending |
+| SPK-04 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- v1 requirements: 28 total
+- Mapped to phases: 28
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-08*
-*Last updated: 2026-06-08 after initial definition*
+*Last updated: 2026-06-08 after roadmap creation*
