@@ -32,7 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Maintainer can trace v0.3 implementation decisions back to existing authoritative spec documents instead of re-invented contracts.
   5. Maintainer can validate contract hardening against the existing `test-ws/` fixture workspaces.
   6. Maintainer can describe how existing CONSTRUCT workspaces migrate safely to the hardened contract model.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Canonize the Phase 1 workspace/artifact contract in the authoritative spec layer.
+- [ ] 01-02-PLAN.md — Reconcile runtime schemas/init/validation to the canonical contract and add write gates.
+- [ ] 01-03-PLAN.md — Align skills/docs, prove the contract on fixtures, and publish the migration playbook.
 
 ### Phase 2: Governed Knowledge Operations
 **Goal**: Users can reliably create and maintain governed knowledge artifacts inside the existing local-first workspace format.
