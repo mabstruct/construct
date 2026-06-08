@@ -13,19 +13,15 @@ KEBAB_CASE_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 REQUIRED_PATHS = (
     "cards",
-    "domains",
-    "domains.yaml",
-    "connections.json",
-    "governance.yaml",
-    "model-routing.yaml",
     "refs",
-    "workflows",
+    "connections.json",
+    "domains.yaml",
+    "governance.yaml",
+    "search-seeds.json",
     "log/events.jsonl",
-    "inbox",
     "digests",
-    "db",
-    "views",
     "publish",
+    ".construct/model-routing.yaml",
 )
 
 
@@ -45,6 +41,7 @@ class ConnectionAuthor(str, Enum):
     curator = "curator"
     human = "human"
     researcher = "researcher"
+    construct = "construct"
 
 
 class ConnectionRecord(BaseModel):
@@ -69,7 +66,7 @@ class ConnectionsFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: int = Field(ge=1)
-    updated: date
+    updated: date | None = None
     connection_types: list[ConnectionType]
     connections: list[ConnectionRecord]
 
@@ -90,14 +87,21 @@ class WorkspaceScaffold(BaseModel):
     required_paths: tuple[str, ...] = REQUIRED_PATHS
     canonical_paths: tuple[str, ...] = (
         "cards",
-        "domains.yaml",
-        "domains/**/domain.yaml",
-        "connections.json",
-        "governance.yaml",
-        "model-routing.yaml",
+        "cards/*.md",
         "refs",
-        "workflows",
+        "refs/*.json",
+        "connections.json",
+        "domains.yaml",
+        "governance.yaml",
+        "search-seeds.json",
+        "log",
         "log/events.jsonl",
     )
-    derived_paths: tuple[str, ...] = ("db", "views")
-    support_paths: tuple[str, ...] = ("inbox", "digests", "publish")
+    derived_paths: tuple[str, ...] = ("digests", "digests/**", "publish", "publish/**")
+    support_paths: tuple[str, ...] = (
+        ".construct",
+        ".construct/**",
+        "AGENTS.md",
+        "WORKSPACE.md",
+        ".gitignore",
+    )

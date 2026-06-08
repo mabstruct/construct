@@ -1,8 +1,8 @@
-"""Workspace configuration schema models."""
+"""Workspace configuration and structured artifact schema models."""
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 import re
 
@@ -60,16 +60,19 @@ class DomainRegistryEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    path: str
     description: str | None = None
     status: DomainStatus = DomainStatus.active
     created: date | None = None
+    content_categories: list[str] = Field(default_factory=list)
+    source_priorities: list[str] = Field(default_factory=list)
+    cross_domain_links: list[CrossDomainLink] = Field(default_factory=list)
 
-    @field_validator("path")
+    @field_validator("content_categories")
     @classmethod
-    def validate_path(cls, value: str) -> str:
-        if not value.startswith("domains/") or not value.endswith("/domain.yaml"):
-            raise ValueError("path must point to domains/{domain_id}/domain.yaml")
+    def validate_content_categories(cls, value: list[str]) -> list[str]:
+        for item in value:
+            if not KEBAB_CASE_PATTERN.fullmatch(item):
+                raise ValueError("entries must be kebab-case, e.g. 'quantum-gravity' not 'quantum gravity'")
         return value
 
 
@@ -84,37 +87,10 @@ class DomainsRegistry(BaseModel):
         for domain_id, entry in value.items():
             if not KEBAB_CASE_PATTERN.fullmatch(domain_id):
                 raise ValueError("domain ids must be kebab-case")
-            expected_path = f"domains/{domain_id}/domain.yaml"
-            if entry.path != expected_path:
-                raise ValueError(f"domain {domain_id} must point to {expected_path}")
         return value
 
 
-class DomainConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    name: str
-    description: str
-    status: DomainStatus = DomainStatus.active
-    scope: str
-    content_categories: list[str] = Field(default_factory=list)
-    source_priorities: list[str] = Field(default_factory=list)
-    research_seeds: list[str] = Field(default_factory=list)
-    cross_domain_links: list[CrossDomainLink] = Field(default_factory=list)
-    created: date
-
-    @field_validator("id", "content_categories")
-    @classmethod
-    def validate_kebab_case(cls, value: str | list[str]) -> str | list[str]:
-        if isinstance(value, str):
-            if not KEBAB_CASE_PATTERN.fullmatch(value):
-                raise ValueError("value must be kebab-case, e.g. 'quantum-gravity'")
-            return value
-        for item in value:
-            if not KEBAB_CASE_PATTERN.fullmatch(item):
-                raise ValueError("entries must be kebab-case, e.g. 'quantum-gravity' not 'quantum gravity'")
-        return value
+DomainConfig = DomainRegistryEntry
 
 
 class ProviderConfig(BaseModel):
@@ -210,7 +186,7 @@ class ResearchConfig(BaseModel):
     card_creation_threshold: float
     max_papers_per_cycle: int
     lookback_days_initial: int
-    max_retries: int
+    max_retries: int | None = None
 
 
 class GovernanceConfig(BaseModel):
@@ -219,5 +195,100 @@ class GovernanceConfig(BaseModel):
     promotion: PromotionConfig
     decay: DecayConfig
     quality: QualityConfig
-    heartbeat: HeartbeatConfig
+    heartbeat: HeartbeatConfig | None = None
     research: ResearchConfig
+
+
+class SearchClusterStatus(str, Enum):
+    active = "active"
+    paused = "paused"
+    exhausted = "exhausted"
+
+
+class SearchCluster(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    domain: str
+    terms: list[str] = Field(default_factory=list)
+    weight: float = Field(ge=0.0, le=1.0)
+    status: SearchClusterStatus
+    last_queried: datetime | None = None
+
+    @field_validator("id", "domain")
+    @classmethod
+    def validate_cluster_ids(cls, value: str) -> str:
+        if not KEBAB_CASE_PATTERN.fullmatch(value):
+            raise ValueError("value must be kebab-case, e.g. 'quantum-gravity'")
+        return value
+
+
+class SearchSeedsFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: int = Field(ge=1)
+    updated: datetime | None = None
+    clusters: list[SearchCluster] = Field(default_factory=list)
+
+
+class ExtractionStatus(str, Enum):
+    complete = "complete"
+    partial = "partial"
+    skipped = "skipped"
+
+
+class ReferenceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    year: int | None = None
+    venue: str | None = None
+    url: str
+    abstract: str | None = None
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    key_findings: list[str] = Field(default_factory=list)
+    content_categories: list[str] = Field(default_factory=list)
+    source_tier: int = Field(ge=1, le=5)
+    extraction_status: ExtractionStatus
+    ingested_date: date
+    domain: str
+    search_cluster: str
+    cards_generated: list[str] = Field(default_factory=list)
+
+    @field_validator("id", "domain", "content_categories", "cards_generated")
+    @classmethod
+    def validate_reference_kebab_case(cls, value: str | list[str]) -> str | list[str]:
+        if isinstance(value, str):
+            if not KEBAB_CASE_PATTERN.fullmatch(value):
+                raise ValueError("value must be kebab-case, e.g. 'quantum-gravity'")
+            return value
+        for item in value:
+            if not KEBAB_CASE_PATTERN.fullmatch(item):
+                raise ValueError("entries must be kebab-case, e.g. 'quantum-gravity' not 'quantum gravity'")
+        return value
+
+
+class EventAgent(str, Enum):
+    construct = "construct"
+    curator = "curator"
+    researcher = "researcher"
+    human = "human"
+
+
+class EventResult(str, Enum):
+    success = "success"
+    failure = "failure"
+    escalated = "escalated"
+
+
+class EventRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ts: datetime
+    agent: EventAgent
+    action: str = Field(min_length=1)
+    target: str | None = None
+    detail: str | None = None
+    result: EventResult

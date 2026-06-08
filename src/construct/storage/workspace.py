@@ -10,7 +10,15 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from construct.schemas.config import DomainConfig, DomainsRegistry, GovernanceConfig, ModelRoutingConfig
+from construct.schemas.config import (
+    DomainConfig,
+    DomainsRegistry,
+    EventRecord,
+    GovernanceConfig,
+    ModelRoutingConfig,
+    ReferenceRecord,
+    SearchSeedsFile,
+)
 from construct.schemas.workspace import ConnectionsFile, WorkspaceScaffold
 
 
@@ -84,9 +92,9 @@ class WorkspaceLoader:
 
     def load_model_routing(self) -> ModelRoutingConfig:
         try:
-            return ModelRoutingConfig.model_validate(self.read_yaml("model-routing.yaml"))
+            return ModelRoutingConfig.model_validate(self.read_yaml(".construct/model-routing.yaml"))
         except ValidationError as exc:
-            raise WorkspaceLoadError(f"invalid model-routing.yaml: {exc}") from exc
+            raise WorkspaceLoadError(f"invalid .construct/model-routing.yaml: {exc}") from exc
 
     def load_governance(self) -> GovernanceConfig:
         try:
@@ -94,14 +102,42 @@ class WorkspaceLoader:
         except ValidationError as exc:
             raise WorkspaceLoadError(f"invalid governance.yaml: {exc}") from exc
 
+    def load_search_seeds(self) -> SearchSeedsFile:
+        try:
+            return SearchSeedsFile.model_validate(self.read_json("search-seeds.json"))
+        except ValidationError as exc:
+            raise WorkspaceLoadError(f"invalid search-seeds.json: {exc}") from exc
+
     def load_connections(self) -> ConnectionsFile:
         try:
             return ConnectionsFile.model_validate(self.read_json("connections.json"))
         except ValidationError as exc:
             raise WorkspaceLoadError(f"invalid connections.json: {exc}") from exc
 
+    def load_ref(self, relative_path: str) -> ReferenceRecord:
+        try:
+            return ReferenceRecord.model_validate(self.read_json(relative_path))
+        except ValidationError as exc:
+            raise WorkspaceLoadError(f"invalid {relative_path}: {exc}") from exc
+
+    def parse_event_line(self, line: str, *, line_number: int) -> EventRecord:
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise WorkspaceLoadError(f"invalid log/events.jsonl line {line_number}: {exc}") from exc
+        try:
+            return EventRecord.model_validate(payload)
+        except ValidationError as exc:
+            raise WorkspaceLoadError(f"invalid log/events.jsonl line {line_number}: {exc}") from exc
+
     def iter_cards(self) -> list[Path]:
         cards_dir = self.resolve("cards")
         if not cards_dir.exists():
             return []
         return sorted(cards_dir.glob("*.md"))
+
+    def iter_refs(self) -> list[Path]:
+        refs_dir = self.resolve("refs")
+        if not refs_dir.exists():
+            return []
+        return sorted(refs_dir.glob("*.json"))
