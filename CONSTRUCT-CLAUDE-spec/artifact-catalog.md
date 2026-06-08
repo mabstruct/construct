@@ -12,6 +12,13 @@
 
 This is the **single canonical inventory** of CONSTRUCT's Claude-native configuration: agents, skills, workflows, and reference layers.
 
+For workspace artifact authority, use the Phase 1 contract source set:
+
+- [`workspace-contract.md`](workspace-contract.md) — canonical workspace shape and canonical/derived/support classification
+- [`data-schemas.md`](data-schemas.md) and [`knowledge-card-schema.md`](knowledge-card-schema.md) — canonical artifact schemas
+- `CONSTRUCT-CLAUDE-impl/construct/templates/` — canonical initial file shapes
+- **this file** — ownership, audit, and synchronization matrix
+
 Use it when you need to:
 
 - see everything the system can do in one place
@@ -255,3 +262,15 @@ When adding, renaming, or removing a skill, agent, or workflow:
 6. Update [`config-topology.md`](config-topology.md) if directory layout changes
 
 **This file is the master inventory.** [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) is the deployed command quick-ref; [`capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) is the deployed user handbook derived from it.
+
+## Phase 1 authority set for workspace contracts
+
+The authoritative workspace contract source set for Phase 1 is:
+
+| Layer | Files | Responsibility |
+|------|-------|----------------|
+| Contract intent | `CONSTRUCT-CLAUDE-spec/workspace-contract.md`, `CONSTRUCT-CLAUDE-spec/data-schemas.md`, `CONSTRUCT-CLAUDE-spec/knowledge-card-schema.md` | Defines canonical workspace shape and artifact rules |
+| Initial file shape | `CONSTRUCT-CLAUDE-impl/construct/templates/*` | Shows the expected scaffold and placeholder structure |
+| Ownership and sync | `CONSTRUCT-CLAUDE-spec/artifact-catalog.md`, `CONSTRUCT-CLAUDE-spec/process.md` | Names which artifacts must be updated together |
+
+Runtime code, validators, and skill procedures must align to that authority set. When implementation behavior conflicts with the authority set, the authority set wins.

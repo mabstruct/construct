@@ -44,6 +44,16 @@ Unlike the Python approach where changes go through branches → PRs → CI → 
 4. Test full cold-start workflow to validate consistency
 5. Commit all changes together
 
+**Workspace contract changes** (canonical vs derived/support classification, workspace paths, ownership rules, write-gate boundaries):
+1. Update `workspace-contract.md`
+2. Update `artifact-catalog.md`, `data-schemas.md`, and `validation-strategy.md` if any contract boundary or ownership rule moved
+3. Update affected templates in `CONSTRUCT-CLAUDE-impl/construct/templates/`
+4. Update skill procedures that create, edit, or validate the changed artifact
+5. Update runtime validators and write helpers so implementation matches the contract source set
+6. Prove the change against the canonical fixture target and/or contract tests
+7. Update migration documentation if existing workspaces need reconciliation
+8. Commit the synchronized contract change together
+
 ---
 
 ## 2. Configuration Standards
@@ -116,9 +126,33 @@ refactor: split curation-cycle step 5 into connection-maintenance sub-steps
 - No duplication — specs reference config, config references specs
 - Keep skills self-contained — a skill reader shouldn't need to read 3 other files to understand the procedure
 
+## 6. Phase 1 contract-sync checklist
+
+Use this checklist whenever a canonical artifact contract changes.
+
+| Area | Must update | Why |
+|------|-------------|-----|
+| Spec contract | `workspace-contract.md`, `knowledge-card-schema.md`, `data-schemas.md`, `validation-strategy.md` | Defines WHAT is canonical and what is rejected before write |
+| Ownership matrix | `artifact-catalog.md` | Records the authoritative source set and maintenance obligations |
+| Templates | `CONSTRUCT-CLAUDE-impl/construct/templates/*` | Keeps scaffolded file shapes aligned to the contract |
+| Skills | Relevant `CONSTRUCT-CLAUDE-impl/claude/skills/*/SKILL.md` files | Keeps create/edit/validate procedures aligned to the contract |
+| Runtime validators | `src/construct/schemas/`, `src/construct/services/`, `src/construct/storage/` | Ensures implementation follows the contract source set |
+| Fixture proof | Canonical workspace fixtures and contract tests | Proves the contract works on real workspace state |
+| Migration docs | Phase migration guidance | Prevents existing workspaces from being stranded |
+
+## 7. Phase 1 contract-change rule
+
+The authoritative order for workspace contract changes is:
+
+1. Spec decides the contract.
+2. Templates reflect the contract.
+3. Skills and runtime validators implement the contract.
+4. Fixture proof demonstrates the contract.
+5. Migration guidance explains how older workspaces reconcile to the contract.
+
 ---
 
-## 6. State Tracking
+## 8. State Tracking
 
 ### CURRENT.md
 
