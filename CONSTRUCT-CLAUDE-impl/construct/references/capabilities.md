@@ -202,10 +202,10 @@ CONSTRUCT routes the request to the right skill.
 
 | Skill | What it does | Use when |
 |-------|--------------|----------|
-| `construct-workspace-init` | Creates a domain workspace structure from templates | Starting a new domain workspace |
+| `construct-workspace-init` | Creates a domain workspace with the canonical Phase 1 layout: `cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`, `log/events.jsonl` (source-of-truth), `digests/`/`publish/` (derived), and `.construct/model-routing.yaml` (support). Templates from `CONSTRUCT-CLAUDE-impl/construct/templates/`. | Starting a new domain workspace |
 | `construct-domain-init` | Runs the domain interview and writes domain/search configuration | Defining or revising a domain's scope, sources, and seed questions |
 | `construct-domain-manage` | Lists, activates, pauses, edits, or archives domains | Managing active and paused research areas |
-| `construct-workspace-validate` | Runs integrity checks across files, schemas, refs, and connections | Auditing a workspace or diagnosing inconsistencies |
+| `construct-workspace-validate` | Runs a 5-layer post-write audit: schema compliance, governance policy, cross-file consistency, functional health, and audit-trail completeness. Pre-write rejection is handled separately by each writing skill's validation checklist. | Auditing a workspace or diagnosing inconsistencies |
 
 ### 5.3 Card operations
 

@@ -20,7 +20,7 @@ scenarios, and dependencies, see `capabilities.md`.
 
 | Command | Skill | What it does |
 |---------|-------|-------------|
-| `init {domain}` | construct-workspace-init → construct-domain-init | Create a new domain workspace and run the configuration interview |
+| `init {domain}` | construct-workspace-init → construct-domain-init | Create a new domain workspace — canonical `cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`, `log/events.jsonl`, plus derived `digests/` and `publish/`. Templates sourced from `CONSTRUCT-CLAUDE-impl/construct/templates/`. Runs the configuration interview. |
 | `init {domain} interview` | construct-domain-init | Re-run the domain interview to update categories, sources, and search seeds |
 
 ## Research
@@ -47,7 +47,7 @@ scenarios, and dependencies, see `capabilities.md`.
 |---------|-------|-------------|
 | `curate {domain}` | construct-curation-cycle | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect |
 | `bridges` | construct-bridge-detect | Find cross-domain structural parallels and semantic overlaps |
-| `validate` | construct-workspace-validate | Check workspace integrity (file structure, schema, references) |
+| `validate` | construct-workspace-validate | Post-write audit: 5-layer workspace integrity check covering schema, governance, cross-file consistency, functional health, and audit trail. Pre-write rejection (invalid artifacts blocked before write) is handled by individual skill validation checklists and runtime helpers. |
 
 ## Analysis
 

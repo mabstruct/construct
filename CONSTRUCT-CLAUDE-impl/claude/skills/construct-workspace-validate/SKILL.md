@@ -2,6 +2,7 @@
 description: "Validate workspace integrity — check file formats, connection consistency, orphan refs. Use when user says 'validate workspace', 'audit', 'check integrity'."
 allowed-tools: Read, Grep, Glob, Bash(python3 *)
 ---
+
 # Skill: Workspace Validation
 
 **Trigger:** User says "validate workspace", "audit", "check integrity", or similar.
@@ -13,6 +14,15 @@ allowed-tools: Read, Grep, Glob, Bash(python3 *)
 ## Procedure
 
 Run all 5 validation layers. Report findings for each.
+
+### Validation boundaries (Phase 1 contract)
+
+This skill performs **post-write audit** — it checks files that have already been persisted. It does not replace **pre-write rejection**:
+
+| Gate | When | What |
+|------|------|------|
+| **Pre-write rejection** | Before a canonical artifact lands on disk | Invalid cards, refs, connections, events, and config payloads are rejected by the writing skill's validation checklist. The runtime `construct.services.validation.validate_*_write()` helpers enforce this deterministically. |
+| **Post-write audit** (this skill) | On existing workspace files | Cross-file consistency, governance compliance, graph integrity, fixture proof coverage, and audit-trail completeness are checked. |
 
 ### Layer 1: Schema Validation
 
@@ -81,7 +91,7 @@ For each `cards/*.md`:
 
 - [ ] At least one domain is active
 - [ ] At least one search cluster is active (if any domain is active)
-- [ ] `events.jsonl` has at least a `workspace_init` event
+- [ ] `log/events.jsonl` has at least a `workspace_init` event
 - [ ] Card count matches file count in `cards/`
 
 ### Layer 5: Audit Trail Check
@@ -131,3 +141,5 @@ Present findings as:
 - [ ] Every finding is specific (references exact file and field)
 - [ ] Recommendations are actionable
 - [ ] Report distinguishes errors (must fix) from warnings (should fix)
+- [ ] Pre-write rejection vs post-write audit boundary is clear to the caller
+- [ ] Fixture proof targets (`test-ws/my-construct/`, `test-ws/ping-eon/`) pass or fail only for enumerated intentional drift
