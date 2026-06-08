@@ -12,7 +12,7 @@ This roadmap hardens CONSTRUCT's Claude-native foundation first, then establishe
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Contract Canon & Artifact Governance** - Canonize schemas, write gates, and spec-aligned workflow contracts.
+- [x] **Phase 1: Contract Canon & Artifact Governance** - Canonize schemas, write gates, and spec-aligned workflow contracts. (completed 2026-06-08)
 - [ ] **Phase 2: Governed Knowledge Operations** - Make core card, ref, connection, and storage operations reliable in the existing workspace model.
 - [ ] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract.
 - [ ] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
@@ -100,7 +100,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Contract Canon & Artifact Governance | 2/3 | In Progress|  |
+| 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
 | 2. Governed Knowledge Operations | 0/TBD | Not started | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/TBD | Not started | - |
 | 4. Guided Workflow Operability | 0/TBD | Not started | - |
