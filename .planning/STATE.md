@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-contract-canon-artifact-governance-01-PLAN.md
-last_updated: "2026-06-08T20:06:21Z"
-last_activity: 2026-06-08 -- Completed Phase 01 Plan 01
+stopped_at: Completed 01-contract-canon-artifact-governance-02-PLAN.md
+last_updated: "2026-06-08T20:30:37.216Z"
+last_activity: 2026-06-08 -- Completed Phase 01 Plan 02
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -26,30 +26,34 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 ## Current Position
 
 Phase: 01 (contract-canon-artifact-governance) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-06-08 -- Completed Phase 01 Plan 01
+Last activity: 2026-06-08 -- Completed Phase 01 Plan 02
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: 1 min
-- Total execution time: 0.0 hours
+- Total plans completed: 2
+- Average duration: 4.5 min
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 1 | 1 min | 1 min |
+| 01 | 2 | 9 min | 4.5 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-contract-canon-artifact-governance-01 (1 min)
-- Trend: Started
+- Last 5 plans: 01-contract-canon-artifact-governance-01 (1 min), 01-contract-canon-artifact-governance-02 (8 min)
+- Trend: Building baseline
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01-contract-canon-artifact-governance P02 | 8 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -63,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 01]: The canonical workspace contract is the Claude-native layout, not the dormant Python-first layout.
 - [Phase 01]: Invalid canonical artifacts are rejected before write; post-write checks handle audit, consistency, and fixture proof.
 - [Phase 01]: The authority set is spec plus templates plus artifact catalog; runtime and skills must follow it.
+- [Phase 01]: Runtime domain data now lives inline in domains.yaml; archived per-domain YAML paths are no longer canonical.
+- [Phase 01]: Pre-write validation helpers reject malformed cards, refs, connections, and events before persistence.
+- [Phase 01]: Workspace init now scaffolds the canonical Claude-native layout and logs a workspace_init event.
 
 ### Pending Todos
 
@@ -81,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T20:06:21Z
-Stopped at: Completed 01-contract-canon-artifact-governance-01-PLAN.md
+Last session: 2026-06-08T20:30:37.210Z
+Stopped at: Completed 01-contract-canon-artifact-governance-02-PLAN.md
 Resume file: None
