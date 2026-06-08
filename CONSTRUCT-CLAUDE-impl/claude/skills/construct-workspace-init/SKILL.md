@@ -48,7 +48,7 @@ The canonical workspace layout per the Phase 1 contract (`CONSTRUCT-CLAUDE-spec/
 - **Derived:** `digests/`, `publish/` — rebuildable from SOT artifacts, never treated as canonical graph inputs
 - **Support:** `.construct/model-routing.yaml` — runtime guidance, not workspace knowledge state
 
-Copy initial file contents from the active templates at `CONSTRUCT-CLAUDE-impl/construct/templates/`.
+Copy initial file contents from the active templates at `.construct/templates/`. (The authoritative source is `CONSTRUCT-CLAUDE-impl/construct/templates/` at the project root; `setup-construct.sh` mirrors it to `.construct/templates/` in deployed workspaces.)
 
 ### Step 3: Pre-fill domains.yaml
 
@@ -100,6 +100,6 @@ Immediately chain to `domain-init` skill targeting the new workspace at `{domain
 - [ ] `governance.yaml` has all required threshold fields
 - [ ] `search-seeds.json` is valid JSON with empty clusters array
 - [ ] `log/events.jsonl` has the init event
-- [ ] Templates are sourced from `CONSTRUCT-CLAUDE-impl/construct/templates/` (the active template directory, not `.construct/templates/` or an archived path)
+- [ ] Templates are sourced from `.construct/templates/` (the deployed-workspace mirror of the authoritative `CONSTRUCT-CLAUDE-impl/construct/templates/` at the project root)
 - [ ] domain-init interview completed successfully
 - [ ] No archived layout assumptions (`domains/{id}/domain.yaml`, `db/`, `workflows/`, root `model-routing.yaml`) are introduced
