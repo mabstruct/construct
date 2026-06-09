@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: complete
 phase: 01-contract-canon-artifact-governance
 source:
   - 01-contract-canon-artifact-governance-01-SUMMARY.md
@@ -88,4 +88,5 @@ blocked: 0
       issue: "Correctly copies templates to .construct/templates/ (line 57) but skill doesn't reference that path"
   missing:
     - "Update SKILL.md line 51 to reference .construct/templates/ instead of CONSTRUCT-CLAUDE-impl/construct/templates/"
+  resolved_by: "37cf430 — SKILL.md lines 51 and 103 updated. Line 51 now references .construct/templates/ with an authority-chain note. Line 103 validation no longer rejects the correct path."
   debug_session: ""

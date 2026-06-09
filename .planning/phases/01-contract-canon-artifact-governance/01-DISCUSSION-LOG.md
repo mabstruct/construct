@@ -47,6 +47,13 @@
 - **Finding:** Testing through the Python runtime tests a dormant parallel implementation, not the product. The relationship is ambiguous: `src/construct/` is neither shared engine (skills don't call it) nor dead code (Phase 1 reconciled its schemas). This needs resolution in v0.3 planning: wire skills to call Python (making it the shared engine) or remove it.
 - **Implication:** Future testing should test the skill path directly, or wire skills to the Python layer and test through that.
 
+### Python runtime role (resolved 2026-06-09)
+- **Question:** What is the Python runtime's role going forward?
+- **Options shown:** Remove it / Wire skills to call it as shared engine / Hybrid (Python for deterministic work, skills for judgment)
+- **Decision:** Hybrid via MCP. Python handles deterministic operations (card CRUD, ref management, connections, validation). Skills become thin wrappers that call Python through MCP tools. Claude remains the runtime for judgment, orchestration, and workflow.
+- **Sequencing:** Phase 2 and 3 remain separate. Phase 2 builds the MCP server incrementally (starting with `workspace-validate` as proof) and adds knowledge ops handlers + MCP tools + thin skill wrappers. Phase 3 completes the capability registry and CLI parity.
+- **Implication:** MCP infrastructure is built incrementally in Phase 2, not as a separate up-front project. Each new MCP tool proves the pattern before the next is added.
+
 ## Outcome Summary
 
 - One canonical workspace shape: active Claude-native layout.
@@ -55,3 +62,5 @@
 - Explicit migration path required.
 - `test-ws/` is the primary proof target.
 - `digests/` and `publish/` are derived outputs, not canonical graph truth.
+- Python runtime role (Phase 2+): deterministic engine via MCP; skills become thin MCP-calling wrappers.
+- MCP server built incrementally in Phase 2 starting with `workspace-validate` proof.
