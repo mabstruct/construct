@@ -48,7 +48,12 @@ Plans:
   1. Ingested source files are stored in a defined workspace location that keeps them organized and traceable.
   2. User can create, edit, and archive cards and references without losing required metadata or violating artifact validity.
   3. User can create and maintain typed connections between knowledge nodes using the established connection vocabulary.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Core knowledge service layer: card CRUD, connection CRUD, event logging, workspace scaffold update
+- [ ] 02-02-PLAN.md — CLI surface: `construct knowledge` command group with card and connection subcommands
+- [ ] 02-03-PLAN.md — Source file storage (inbox routing) and skill wrappers calling Python CLI
 
 ### Phase 3: Capability Registry, CLI & MCP Spine
 **Goal**: Core deterministic capabilities run through one shared contract surface that both maintainers and Claude-native workflows can trust.
@@ -102,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
-| 2. Governed Knowledge Operations | 0/TBD | Not started | - |
+| 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/TBD | Not started | - |
 | 4. Guided Workflow Operability | 0/TBD | Not started | - |
 | 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
