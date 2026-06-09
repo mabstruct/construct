@@ -7,13 +7,19 @@ from typing import Any
 
 import pytest
 
+import json
+
 from construct.schemas.card import CardAuthor, Lifecycle
+from construct.schemas.workspace import ConnectionAuthor, ConnectionType
 from construct.services.init import DomainInitInput, initialize_workspace
 from construct.services.knowledge import (
     OperationResult,
+    add_connection,
     archive_card,
     create_card,
     edit_card,
+    list_connections,
+    remove_connection,
 )
 
 
@@ -63,6 +69,12 @@ def _read_card_raw(workspace: Path, card_id: str) -> dict:
     return data
 
 
+def _create_two_cards(workspace: Path) -> None:
+    """Create card-a and card-b for connection tests."""
+    create_card(workspace, _sample_card_data(id="card-a", title="Card A"))
+    create_card(workspace, _sample_card_data(id="card-b", title="Card B"))
+
+
 def _count_events(workspace: Path) -> int:
     events_path = workspace / "log" / "events.jsonl"
     if not events_path.exists():
@@ -84,6 +96,12 @@ def workspace_path(tmp_path: Path) -> Path:
 def init_workspace(workspace_path: Path) -> Path:
     _init_workspace(workspace_path)
     return workspace_path
+
+
+@pytest.fixture
+def workspace_with_cards(init_workspace: Path) -> Path:
+    _create_two_cards(init_workspace)
+    return init_workspace
 
 
 # ===================================================================
@@ -215,3 +233,151 @@ class TestCardArchive:
         assert raw["lifecycle"] == Lifecycle.archived.value
         assert len(raw["connects_to"]) == 1
         assert raw["connects_to"][0]["target"] == "another-card"
+
+
+# ===================================================================
+# Connection Add Tests
+# ===================================================================
+
+
+class TestConnectionAdd:
+    def test_add_connection_valid(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+
+        result = add_connection(
+            workspace,
+            "card-a",
+            "card-b",
+            ConnectionType.supports,
+            note="A supports B",
+        )
+
+        assert result.success is True
+        # Verify in connections.json
+        connections = json.loads((workspace / "connections.json").read_text(encoding="utf-8"))
+        conns = connections["connections"]
+        assert any(c["from"] == "card-a" and c["to"] == "card-b" and c["type"] == "supports" for c in conns)
+
+    def test_add_connection_duplicate(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        result = add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        assert result.success is True
+        assert "already exists" in result.message.lower()
+
+    def test_add_connection_orphan_prevention(self, init_workspace: Path) -> None:
+        result = add_connection(
+            init_workspace,
+            "existing-card",
+            "non-existent-card",
+            ConnectionType.supports,
+        )
+
+        assert result.success is False
+        assert "not found" in result.message.lower() or "exist" in result.message.lower()
+
+    def test_add_connection_invalid_type(self, workspace_with_cards: Path) -> None:
+        result = add_connection(
+            workspace_with_cards,
+            "card-a",
+            "card-b",
+            "invalid-type",  # type: ignore[arg-type]
+        )
+
+        assert result.success is False
+
+    def test_add_connection_event_logged(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        before = _count_events(workspace)
+
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        assert _count_events(workspace) == before + 1
+
+
+# ===================================================================
+# Connection Remove Tests
+# ===================================================================
+
+
+class TestConnectionRemove:
+    def test_remove_connection(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        result = remove_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        assert result.success is True
+        connections = json.loads((workspace / "connections.json").read_text(encoding="utf-8"))
+        conns = connections["connections"]
+        assert not any(c["from"] == "card-a" and c["to"] == "card-b" and c["type"] == "supports" for c in conns)
+
+    def test_remove_nonexistent_connection(self, workspace_with_cards: Path) -> None:
+        result = remove_connection(
+            workspace_with_cards,
+            "card-a",
+            "card-b",
+            ConnectionType.supports,
+        )
+
+        assert result.success is False
+        assert "not found" in result.message
+
+
+# ===================================================================
+# Connection List Tests
+# ===================================================================
+
+
+class TestConnectionList:
+    def test_list_connections(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+
+        result = list_connections(workspace)
+
+        assert result.success is True
+        assert result.data is not None
+        assert len(result.data) == 1
+
+    def test_list_connections_filter_by_card(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        # Create a third card to have a connection not involving card-a
+        create_card(workspace, _sample_card_data(id="card-c", title="Card C"))
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+        add_connection(workspace, "card-c", "card-b", ConnectionType.parallels)
+
+        result = list_connections(workspace, card_id="card-c")
+
+        assert result.success is True
+        assert result.data is not None
+        assert len(result.data) == 1
+        assert result.data[0]["from"] == "card-c"
+
+    def test_list_connections_exclude_archived(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+        # Archive card-a
+        archive_card(workspace, "card-a")
+
+        result = list_connections(workspace, include_archived=False)
+
+        assert result.success is True
+        if result.data is not None:
+            # Either no connections or none involving archived cards
+            for conn in result.data:
+                assert conn["from"] != "card-a"
+                assert conn["to"] != "card-a"
+
+    def test_list_connections_include_archived(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        add_connection(workspace, "card-a", "card-b", ConnectionType.supports)
+        archive_card(workspace, "card-a")
+
+        result = list_connections(workspace, include_archived=True)
+
+        assert result.success is True
+        assert result.data is not None
+        assert len(result.data) >= 1
