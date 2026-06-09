@@ -21,6 +21,7 @@ REQUIRED_PATHS = (
     "log/events.jsonl",
     "digests",
     "publish",
+    "inbox",
     ".construct/model-routing.yaml",
 )
 
@@ -104,4 +105,6 @@ class WorkspaceScaffold(BaseModel):
         "AGENTS.md",
         "WORKSPACE.md",
         ".gitignore",
+        "inbox",
+        "inbox/**",
     )
