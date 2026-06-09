@@ -219,6 +219,74 @@ def archive(
     _display_result(result, json_output)
 
 
+# -- Connection commands ---------------------------------------------------
+
+connection_app = typer.Typer(
+    no_args_is_help=True,
+    name="connection",
+    help="Connection CRUD operations.",
+)
+knowledge_app.add_typer(connection_app)
+
+
+@connection_app.command("add")
+def connection_add(
+    ctx: typer.Context,
+    from_id: str = typer.Argument(..., help="Source card ID"),
+    to_id: str = typer.Argument(..., help="Target card ID"),
+    conn_type: str = typer.Option(..., "--type", "-t", help=f"Connection type: {[e.value for e in ConnectionType]}"),
+    note: Optional[str] = typer.Option(None, "--note", "-n", help="Optional note about this connection"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    created_by: str = typer.Option("construct", "--by", "-b", help="Creator role"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Add a typed connection between two cards."""
+    try:
+        ctype = ConnectionType(conn_type)
+    except ValueError:
+        typer.echo(f"Invalid connection type: {conn_type}. Valid: {[e.value for e in ConnectionType]}")
+        raise typer.Exit(code=1)
+
+    result = add_connection(
+        workspace, from_id, to_id, ctype,
+        note=note, created_by=ConnectionAuthor(created_by),
+    )
+    _display_result(result, json_output)
+
+
+@connection_app.command("remove")
+def connection_remove(
+    ctx: typer.Context,
+    from_id: str = typer.Argument(..., help="Source card ID"),
+    to_id: str = typer.Argument(..., help="Target card ID"),
+    conn_type: str = typer.Option(..., "--type", "-t", help="Connection type to remove"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Remove a typed connection between two cards."""
+    try:
+        ctype = ConnectionType(conn_type)
+    except ValueError:
+        typer.echo(f"Invalid connection type: {conn_type}")
+        raise typer.Exit(code=1)
+
+    result = remove_connection(workspace, from_id, to_id, ctype)
+    _display_result(result, json_output)
+
+
+@connection_app.command("list")
+def connection_list(
+    ctx: typer.Context,
+    card_id: Optional[str] = typer.Option(None, "--card", "-c", help="Filter by card ID"),
+    include_archived: bool = typer.Option(False, "--include-archived", help="Include archived card connections"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """List typed connections. Optionally filter by card or include archived."""
+    result = list_connections(workspace, card_id=card_id, include_archived=include_archived)
+    _display_result(result, json_output)
+
+
 def main() -> None:
     """Run the CONSTRUCT CLI application."""
     app()
