@@ -6,6 +6,22 @@
 
 ---
 
+## Inputs
+
+- Active workspace with at least one domain
+- `search-seeds.json` with configured search clusters
+- `governance.yaml` with decay, promotion, and quality thresholds
+- Optionally: user specifies a domain to focus on
+
+## Outcome
+
+- Research finds new material → new refs and seed cards created; digest compiled
+- Curation identifies stale cards, orphans, promotion candidates → cards updated
+- User acts on findings → cards created, connected, or adjusted
+- All actions logged to `log/events.jsonl`
+
+---
+
 ## Overview
 
 ```
@@ -15,6 +31,14 @@ research-cycle → curation-cycle → graph-status → [user interaction]
                                         ▼               ▼               ▼
                                    card-create    gap-analysis    search-adjust
 ```
+
+This workflow can be executed via the workflow runner:
+
+```bash
+construct workflow run daily-cycle
+```
+
+The runner tracks progress, persists state, and supports resume.
 
 ---
 
@@ -111,3 +135,12 @@ If the user returns after multiple days:
 1. Run research cycle (will pick up everything since `last_queried`)
 2. Run full curation cycle (may have decay flags)
 3. Present a "catch-up" summary with everything that changed
+
+---
+
+## Error Handling
+
+- **Web search fails:** Step 2 continues with available results; research cycle reports degraded state
+- **Curation finds invalid cards:** Step 3 flags them but continues; user review needed
+- **Views refresh fails:** Warning appended to report; workspace is unaffected
+- **Workflow interrupted:** Can be resumed via `construct workflow resume`

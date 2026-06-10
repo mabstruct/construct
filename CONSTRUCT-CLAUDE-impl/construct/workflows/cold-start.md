@@ -6,6 +6,20 @@
 
 ---
 
+## Inputs
+
+- User has a topic/domain they want to explore
+- (Optional) Initial source material or research direction
+
+## Outcome
+
+- Workspace directory created with canonical layout (cards/, refs/, domains.yaml, etc.)
+- First domain configured with name, description, categories, and source priorities
+- Initial search patterns seeded in search-seeds.json
+- User interviewed about what matters in the domain
+
+---
+
 ## Overview
 
 ```

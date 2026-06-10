@@ -6,6 +6,20 @@
 
 ---
 
+## Inputs
+
+- Active workspace with knowledge cards in one or more domains
+- User request: topic, format (briefing/report/draft), depth/confidence requirements
+- Connected knowledge graph (cards with connections provide richer synthesis)
+
+## Outcome
+
+- Draft document written to workspace `publish/` directory
+- Document cites source cards throughout with confidence propagation
+- LLM tracks which claims come from which cards
+
+---
+
 ## Overview
 
 ```
