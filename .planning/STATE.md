@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Phase 4 Plan 04 complete (Skill Migrations Batch 2 + Workflow Docs)
-last_updated: "2026-06-10T20:39:30.000Z"
+last_updated: "2026-06-10T20:39:20.657Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 10
-  percent: 33
+  completed_plans: 11
+  percent: 50
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 
 Phase: 04 (guided-workflow-operability) — EXECUTING
 Plan: 4 of 4 (Plan 04 complete)
-Status: All Phase 04 plans complete
+Status: Phase complete — ready for verification
 Last activity: 2026-06-10
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -85,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Composed skill pattern: curation-cycle delegates to card-evaluate skill for promotion scan
 - [Phase 04]: construct ingest source is the CLI entry point for ref/seed card creation
 - [Phase 04]: Workflow docs get additive Inputs/Outcome/Error Handling sections; existing procedure preserved
+- [Phase 04]: help CLI command renamed to help_cmd to avoid shadowing Python built-in
+- [Phase 04]: Note text stored as abstract on ReferenceRecord (no dedicated note field)
 - [Phase ?]: completed_steps counts only successful steps, enabling resume from the failed step
 
 ### Pending Todos
@@ -106,6 +108,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-10T20:39:30.000Z
-Stopped at: Phase 4 Plan 04 complete (Skill Migrations Batch 2 + Workflow Docs)
+Last session: 2026-06-10T21:00:00.000Z
+Stopped at: Completed Plan 04-02 (Ingestion + Help + CLI Wiring)
 Resume file: None

@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Contract Canon & Artifact Governance** - Canonize schemas, write gates, and spec-aligned workflow contracts. (completed 2026-06-08)
 - [ ] **Phase 2: Governed Knowledge Operations** - Make core card, ref, connection, and storage operations reliable in the existing workspace model.
 - [ ] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract.
-- [ ] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
+- [x] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
 - [ ] **Phase 5: Grounded Synthesis & Graph Reasoning** - Add bounded question-answering, synthesis, and bridge detection on top of a reliable graph.
 - [ ] **Phase 6: Derived Data, Ops UI & Governed Spikes** - Prepare v0.4-facing contracts and evaluate local UI/graph-analysis spikes without changing canonical truth.
 
@@ -84,7 +84,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Workflow runner: state machine, step execution, resume support, state file persistence
-- [ ] 04-02-PLAN.md — Ingestion pipeline + Help CLI + CLI/capability wiring
+- [x] 04-02-PLAN.md — Ingestion pipeline + Help CLI + CLI/capability wiring
 - [x] 04-03-PLAN.md — Skill migrations batch 1: graph-status, card-evaluate, curation-cycle
 - [x] 04-04-PLAN.md — Skill migrations batch 2: research-cycle, gap-analysis + workflow documentation
 
@@ -120,6 +120,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
-| 4. Guided Workflow Operability | 3/4 | In Progress|  |
+| 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
