@@ -63,7 +63,12 @@ Plans:
   1. Maintainer can define a shared capability registry once and use it as the contract source for runtime surfaces.
   2. User can invoke core deterministic capabilities through a stable Python CLI surface.
   3. Claude-native workflows can invoke MCP tools with the same schemas and behaviors as the CLI instead of relying on fragile inline file behavior.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Capability Registry Foundation
+- [ ] 03-02-PLAN.md — CLI Registry Refactoring + PIPE Handlers
+- [ ] 03-03-PLAN.md — MCP Server + Contract Tests + Skill Migration
 
 ### Phase 4: Guided Workflow Operability
 **Goal**: Users can run, resume, and understand Claude-native workflows with dependable next-step guidance and observable progress.
@@ -108,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
-| 3. Capability Registry, CLI & MCP Spine | 0/TBD | Not started | - |
+| 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
 | 4. Guided Workflow Operability | 0/TBD | Not started | - |
 | 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
