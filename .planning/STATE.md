@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-08)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
-**Current focus:** Phase 03 — capability-registry-cli-mcp-spine
+**Current focus:** Phase 04 — guided-workflow-operability
 
 ## Current Position
 
-Phase: 03 (capability-registry-cli-mcp-spine) — PLANNED
-Plan: 2 of 3
-Status: Ready to execute
+Phase: 04 (guided-workflow-operability) — EXECUTING
+Plan: 3 of 4 (Plan 03 complete)
+Status: Skill Migrations Batch 1 done — 3 skills migrated to CLI/MCP
 Last activity: 2026-06-10
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 57%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
-- Average duration: 5 min
-- Total execution time: 0.5 hours
+- Total plans completed: 8
+- Average duration: 6 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -46,14 +46,12 @@ Progress: [██████░░░░] 64%
 |-------|-------|-------|----------|
 | 01 | 3 | 15 min | 5 min |
 | 02 | 3 | 55 min | 18 min |
+| 04 | 1 | 7 min | 7 min |
 
 **Recent Trend:**
 
-- Last 5 plans: Phase 2 plans completed
-- Trend: Phase 2 complete, Phase 3 planned
-
-| Phase 04 P03 | 7 | 3 tasks | 3 files |
-| Phase 04 P01 | 12min | - tasks | - files |
+- Last plans: Phase 04 Plan 03 (Skill Migrations Batch 1) complete
+- Trend: Phase 04 in progress — 1 of 4 plans complete
 
 ## Accumulated Context
 
@@ -81,7 +79,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Handler dispatch uses direct callable references (D-03).
 - [Phase 03]: MCP server at src/construct/mcp/server.py uses stdio transport (D-09).
 - [Phase 03]: `construct-workspace-validate` is the first skill migrated to MCP (D-07).
-- [Phase ?]: Skill migration pattern established: allowed-tools restricted, CLI/MCP invocation, INPUT/OUTPUT documentation
+- [Phase 04]: Skill migration pattern established: allowed-tools restricted, CLI/MCP invocation, INPUT/OUTPUT documentation
 - [Phase 04]: governance.yaml reading preserved as Read (config file, not data scanning)
 - [Phase 04]: LLM-judgment sections preserved for ambiguous promotions and connection typing
 - [Phase 04]: Composed skill pattern: curation-cycle delegates to card-evaluate skill for promotion scan
@@ -89,6 +87,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- Execute remaining Phase 04 plans (Plan 04: Skill Migrations Batch 2)
 - Execute Phase 3 plans (registry → CLI refactor → MCP server)
 
 ### Blockers/Concerns
@@ -100,10 +99,10 @@ Recent decisions affecting current work:
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | Product Expansion | Full v0.4 browser-first shell | Deferred to v2 | 2026-06-08 |
-| Phase 3 | Full skill migration beyond construct-workspace-validate | Phase 4 | 2026-06-10 |
+| Phase 3 | Full skill migration beyond construct-workspace-validate | Batch 1 complete (Phase 04 P03) | 2026-06-10 |
 
 ## Session Continuity
 
-Last session: 2026-06-10T20:32:00.997Z
-Stopped at: Phase 3 planned
+Last session: 2026-06-10T22:34:00.000Z
+Stopped at: Phase 4 Plan 03 complete (Skill Migrations Batch 1)
 Resume file: None
