@@ -12,17 +12,10 @@ import typer
 from construct.schemas.card import CardAuthor, Lifecycle
 from construct.schemas.workspace import ConnectionAuthor, ConnectionType
 from construct.services.init import DomainInitInput, WorkspaceInitError, initialize_workspace
-from construct.services.knowledge import (
-    OperationResult,
-    add_connection,
-    archive_card,
-    create_card,
-    edit_card,
-    list_connections,
-    remove_connection,
-)
-from construct.services.validation import validate_workspace
-from construct.storage.workspace import WorkspaceLoader
+from construct.services.knowledge import OperationResult
+from construct.capabilities.catalog import get_registry
+from construct.mcp.server import run_server
+from construct.pipelines.workflow_runner import WorkflowRunner
 
 
 app = typer.Typer(no_args_is_help=True)
@@ -65,7 +58,12 @@ def init(path: Path) -> None:
 @app.command()
 def validate(path: Path) -> None:
     """Validate a CONSTRUCT workspace."""
-    report = validate_workspace(path)
+    try:
+        cap = get_registry().get("workspace.validate")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    report = cap.handler(path)
     for finding in report.errors:
         typer.echo(f"ERROR {finding.path}: {finding.message}")
     for finding in report.warnings:
@@ -78,16 +76,52 @@ def validate(path: Path) -> None:
 @app.command()
 def status(path: Path) -> None:
     """Show workspace ownership categories."""
-    loader = WorkspaceLoader(path)
+    try:
+        cap = get_registry().get("workspace.status")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    items = cap.handler(path)
     categories = {
         "canonical": "Canonical",
         "support": "Support",
         "derived": "Derived",
     }
-    for item in loader.inspect_workspace():
+    for item in items:
         label = categories.get(item.category, "Unknown")
         state = "present" if item.exists else "missing"
         typer.echo(f"{label}: {item.relative_path} [{state}]")
+
+
+@app.command()
+def mcp() -> None:
+    """Start the MCP stdio server for agentic tool invocation.
+
+    Runs until stdin is closed. Tools are auto-registered from the
+    capability registry — no manual wiring needed.
+    """
+    run_server()
+
+
+@app.command(name="help")
+def help_cmd(
+    ctx: typer.Context,
+    suggest: bool = typer.Option(False, "--suggest", help="Show workspace-aware next-step suggestions"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Show help information and workspace-aware suggestions."""
+    if suggest:
+        try:
+            cap = get_registry().get("help.suggest")
+        except KeyError:
+            typer.echo("ERROR: Capability not found.")
+            raise typer.Exit(code=1)
+        result = cap.handler(workspace)
+        _display_result(result, json_output)
+    else:
+        typer.echo("Run `construct help --suggest` for workspace-aware suggestions.")
+        typer.echo("Use `construct --help` to see all commands.")
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +169,110 @@ def _display_result(result: OperationResult, json_output: bool) -> None:
         raise typer.Exit(code=1)
 
 
+# ---------------------------------------------------------------------------
+# Workflow command group
+# ---------------------------------------------------------------------------
+
+workflow_app = typer.Typer(
+    no_args_is_help=True,
+    name="workflow",
+    help="Run and manage multi-step workflows.",
+)
+app.add_typer(workflow_app)
+
+
+def _get_workflow_steps_from_registry(runner: WorkflowRunner) -> list:
+    """Get workflow step definitions. For Phase 4, return curation-cycle steps."""
+    from construct.capabilities.catalog import _get_workflow_steps
+    # Try loading from state file
+    s = runner.status()
+    if s.success and s.data and s.data.get("state"):
+        name = s.data["state"].get("workflow_name", "curation-cycle")
+        return _get_workflow_steps(name)
+    return _get_workflow_steps("curation-cycle")
+
+
+@workflow_app.command()
+def run(
+    ctx: typer.Context,
+    workflow_name: str = typer.Argument("curation-cycle", help="Workflow name to run"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    start_step: int = typer.Option(0, "--step", "-s", help="Start from this step index"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Run a multi-step workflow with state persistence and resume support."""
+    try:
+        cap = get_registry().get("workflow.run")
+    except KeyError:
+        typer.echo("ERROR: Capability not found.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, workflow_name=workflow_name, start_step=start_step)
+    _display_result(result, json_output)
+
+
+@workflow_app.command()
+def status(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Check active workflow status."""
+    try:
+        cap = get_registry().get("workflow.status")
+    except KeyError:
+        typer.echo("ERROR: Capability not found.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace)
+    _display_result(result, json_output)
+
+
+@workflow_app.command()
+def resume(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Resume a paused or failed workflow from the last saved state."""
+    try:
+        runner = WorkflowRunner(workspace)
+        steps = _get_workflow_steps_from_registry(runner)
+        result = runner.resume(steps)
+    except Exception as exc:
+        result = OperationResult(success=False, message=str(exc))
+    _display_result(result, json_output)
+
+
+# ---------------------------------------------------------------------------
+# Ingest command group
+# ---------------------------------------------------------------------------
+
+ingest_app = typer.Typer(
+    no_args_is_help=True,
+    name="ingest",
+    help="Ingest source material into the workspace.",
+)
+app.add_typer(ingest_app)
+
+
+@ingest_app.command()
+def source(
+    ctx: typer.Context,
+    source: str = typer.Argument(..., help="Source: file path, URL, note text, or 'research:query'"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    domain: str = typer.Option(None, "--domain", "-d", help="Target domain hint"),
+    author: str = typer.Option("construct", "--author", "-a"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Ingest a source (file, URL, note, or web research) into the workspace."""
+    try:
+        cap = get_registry().get("ingest.source")
+    except KeyError:
+        typer.echo("ERROR: Capability not found.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, source=source, domain_hint=domain, author=author)
+    _display_result(result, json_output)
+
+
 # -- Card commands -------------------------------------------------------
 
 
@@ -168,7 +306,12 @@ def create(
     if summary:
         card_data["_summary"] = summary
 
-    result = create_card(workspace, card_data, author=CardAuthor(author))
+    try:
+        cap = get_registry().get("knowledge.card.create")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, card_data, author=CardAuthor(author))
     _display_result(result, json_output)
 
 
@@ -202,7 +345,12 @@ def edit(
         typer.echo("No updates provided. Use --title, --confidence, etc. to specify changes.")
         raise typer.Exit(code=1)
 
-    result = edit_card(workspace, card_id, updates, author=CardAuthor(author))
+    try:
+        cap = get_registry().get("knowledge.card.edit")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, card_id, updates, author=CardAuthor(author))
     _display_result(result, json_output)
 
 
@@ -215,7 +363,12 @@ def archive(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Archive a knowledge card. Preserves connections."""
-    result = archive_card(workspace, card_id, author=CardAuthor(author))
+    try:
+        cap = get_registry().get("knowledge.card.archive")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, card_id, author=CardAuthor(author))
     _display_result(result, json_output)
 
 
@@ -247,7 +400,12 @@ def connection_add(
         typer.echo(f"Invalid connection type: {conn_type}. Valid: {[e.value for e in ConnectionType]}")
         raise typer.Exit(code=1)
 
-    result = add_connection(
+    try:
+        cap = get_registry().get("knowledge.connection.add")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(
         workspace, from_id, to_id, ctype,
         note=note, created_by=ConnectionAuthor(created_by),
     )
@@ -270,7 +428,12 @@ def connection_remove(
         typer.echo(f"Invalid connection type: {conn_type}")
         raise typer.Exit(code=1)
 
-    result = remove_connection(workspace, from_id, to_id, ctype)
+    try:
+        cap = get_registry().get("knowledge.connection.remove")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, from_id, to_id, ctype)
     _display_result(result, json_output)
 
 
@@ -283,7 +446,12 @@ def connection_list(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """List typed connections. Optionally filter by card or include archived."""
-    result = list_connections(workspace, card_id=card_id, include_archived=include_archived)
+    try:
+        cap = get_registry().get("knowledge.connection.list")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, card_id=card_id, include_archived=include_archived)
     _display_result(result, json_output)
 
 
