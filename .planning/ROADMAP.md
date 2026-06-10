@@ -83,9 +83,9 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Workflow runner: state machine, step execution, resume support, state file persistence
+- [x] 04-01-PLAN.md — Workflow runner: state machine, step execution, resume support, state file persistence
 - [ ] 04-02-PLAN.md — Ingestion pipeline + Help CLI + CLI/capability wiring
-- [ ] 04-03-PLAN.md — Skill migrations batch 1: graph-status, card-evaluate, curation-cycle
+- [x] 04-03-PLAN.md — Skill migrations batch 1: graph-status, card-evaluate, curation-cycle
 - [ ] 04-04-PLAN.md — Skill migrations batch 2: research-cycle, gap-analysis + workflow documentation
 
 ### Phase 5: Grounded Synthesis & Graph Reasoning
@@ -120,6 +120,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
-| 4. Guided Workflow Operability | 0/4 | Planned | - |
+| 4. Guided Workflow Operability | 2/4 | In Progress|  |
 | 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |

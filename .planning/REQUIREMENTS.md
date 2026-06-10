@@ -20,8 +20,8 @@ Requirements for the first committed roadmap scope, which in this repository map
 
 - [ ] **WF-01**: User can ask the help flow what to do next and receive a clear state-aware next-step recommendation.
 - [ ] **WF-02**: User can follow documented workflows for the current Claude-native skills and understand expected inputs, outputs, and outcomes.
-- [ ] **WF-03**: User can resume work from persisted workspace state without losing the current workflow context.
-- [ ] **WF-04**: User-facing commands and workflow outputs are clear enough that a power user can understand what happened and what action is available next.
+- [x] **WF-03**: User can resume work from persisted workspace state without losing the current workflow context.
+- [x] **WF-04**: User-facing commands and workflow outputs are clear enough that a power user can understand what happened and what action is available next.
 
 ### Knowledge Ingestion And Integrity
 
@@ -29,7 +29,7 @@ Requirements for the first committed roadmap scope, which in this repository map
 - [ ] **ING-02**: System assigns ingested files to a defined workspace storage location so source artifacts remain organized and traceable.
 - [ ] **ING-03**: User can create, edit, and archive knowledge cards and references while preserving required metadata and artifact validity.
 - [ ] **ING-04**: User can create and maintain typed connections between knowledge nodes using the established connection vocabulary.
-- [ ] **ING-05**: User can trust graph-health and gap-analysis outputs to identify weak coverage, missing links, or next areas to strengthen.
+- [x] **ING-05**: User can trust graph-health and gap-analysis outputs to identify weak coverage, missing links, or next areas to strengthen.
 - [ ] **ING-06**: User can generate grounded synthesis outputs that stay tied to the graph knowledge base and preserve confidence-aware reasoning.
 
 ### Runtime Transition
@@ -37,7 +37,7 @@ Requirements for the first committed roadmap scope, which in this repository map
 - [ ] **RT-01**: Maintainer can define a shared capability registry for core system operations so runtime surfaces use the same contracts.
 - [ ] **RT-02**: User can invoke core deterministic capabilities through a stable Python CLI surface.
 - [ ] **RT-03**: Claude-native workflows can invoke stable MCP tools with schema parity to the CLI instead of depending on fragile inline behavior.
-- [ ] **RT-04**: System can execute multi-step workflows through a structured runner that records progress and outcomes.
+- [x] **RT-04**: System can execute multi-step workflows through a structured runner that records progress and outcomes.
 
 ### Advanced Graph Leverage
 
@@ -89,18 +89,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-06 | Phase 1 | Complete |
 | WF-01 | Phase 4 | Pending |
 | WF-02 | Phase 4 | Pending |
-| WF-03 | Phase 4 | Pending |
-| WF-04 | Phase 4 | Pending |
+| WF-03 | Phase 4 | Complete |
+| WF-04 | Phase 4 | Complete |
 | ING-01 | Phase 4 | Pending |
 | ING-02 | Phase 2 | Pending |
 | ING-03 | Phase 2 | Pending |
 | ING-04 | Phase 2 | Pending |
-| ING-05 | Phase 4 | Pending |
+| ING-05 | Phase 4 | Complete |
 | ING-06 | Phase 5 | Pending |
 | RT-01 | Phase 3 | Pending |
 | RT-02 | Phase 3 | Pending |
 | RT-03 | Phase 3 | Pending |
-| RT-04 | Phase 4 | Pending |
+| RT-04 | Phase 4 | Complete |
 | ADV-01 | Phase 5 | Pending |
 | ADV-02 | Phase 5 | Pending |
 | ADV-03 | Phase 6 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 planned
-last_updated: "2026-06-10T20:25:46.407Z"
-last_activity: 2026-06-10 -- Phase 04 planning complete
+stopped_at: Phase 4 Plan 03 complete (Skill Migrations Batch 1)
+last_updated: "2026-06-10T22:34:00.000Z"
+last_activity: 2026-06-10 -- Phase 04 Plan 03 (Skill Migrations Batch 1) complete
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 7
-  percent: 33
+  completed_plans: 8
+  percent: 57
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 ## Current Position
 
 Phase: 03 (capability-registry-cli-mcp-spine) — PLANNED
-Plan: 0 of 3
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 04 planning complete
+Last activity: 2026-06-10
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
@@ -51,6 +51,9 @@ Progress: [██████████] 100%
 
 - Last 5 plans: Phase 2 plans completed
 - Trend: Phase 2 complete, Phase 3 planned
+
+| Phase 04 P03 | 7 | 3 tasks | 3 files |
+| Phase 04 P01 | 12min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -78,6 +81,11 @@ Recent decisions affecting current work:
 - [Phase 03]: Handler dispatch uses direct callable references (D-03).
 - [Phase 03]: MCP server at src/construct/mcp/server.py uses stdio transport (D-09).
 - [Phase 03]: `construct-workspace-validate` is the first skill migrated to MCP (D-07).
+- [Phase ?]: Skill migration pattern established: allowed-tools restricted, CLI/MCP invocation, INPUT/OUTPUT documentation
+- [Phase 04]: governance.yaml reading preserved as Read (config file, not data scanning)
+- [Phase 04]: LLM-judgment sections preserved for ambiguous promotions and connection typing
+- [Phase 04]: Composed skill pattern: curation-cycle delegates to card-evaluate skill for promotion scan
+- [Phase ?]: completed_steps counts only successful steps, enabling resume from the failed step
 
 ### Pending Todos
 
@@ -96,6 +104,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-10
+Last session: 2026-06-10T20:32:00.997Z
 Stopped at: Phase 3 planned
 Resume file: None
