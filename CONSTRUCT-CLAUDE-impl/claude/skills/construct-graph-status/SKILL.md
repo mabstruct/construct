@@ -1,64 +1,67 @@
 ---
-description: "Show knowledge graph health dashboard — card counts, connection density, lifecycle distribution. Use when user says 'graph status', 'how's the graph?', 'knowledge stats', 'dashboard'."
-allowed-tools: Read, Grep, Glob, Bash(python3 *)
+description: "Show knowledge graph health dashboard — card counts, lifecycle distribution, domain coverage, connection types. Use when user says 'status', 'graph health', 'how are things?', 'dashboard'."
+allowed-tools: MCP(connect), Bash(construct)
 ---
 # Skill: Graph Status
 
-**Trigger:** User says "graph status", "how's the graph?", "knowledge stats", "dashboard", or similar.
+**Trigger:** User says "status", "graph health", "how are things?", "dashboard", or similar.
 **Agent:** Curator (or CONSTRUCT for interpretation)
-**Produces:** Natural language health summary
+**Produces:** Natural language health summary with structured data from CLI/MCP
 
 ---
 
+## Prerequisites
+
+The CONSTRUCT MCP server must be running, or the CLI must be available on `$PATH`:
+
+```bash
+construct mcp &
+```
+
+If the MCP server is not started, CLI commands fall back to `construct status --json`.
+
 ## Procedure
 
-### Step 1: Gather Stats
+### Step 1: Invoke Graph Status
 
-Read workspace files and compute:
+Run the MCP tool `construct_graph_status` with the workspace path:
 
-**Card counts:**
-- Total cards (excluding archived)
-- By lifecycle: seed / growing / mature / archived
-- By epistemic type: finding / claim / concept / method / paper / theme / gap / provocation / question / connection
-- By domain
-- By confidence level (1–5 distribution)
+```json
+{
+  "tool": "construct_graph_status",
+  "arguments": {
+    "path": "<workspace_root>"
+  }
+}
+```
 
-**Connection counts:**
-- Total edges in `connections.json`
-- By type: supports / contradicts / extends / parallels / requires / enables / challenges / inspires / gap-for
-- Average connections per card
-- Max connected card (hub)
-- Cards with zero connections (orphans)
+**Fallback (CLI):** If MCP is unavailable, use:
 
-**Domain health:**
-- Cards per domain
-- Average confidence per domain
-- Category coverage per domain (categories with ≥1 card vs. total categories)
+```bash
+construct status --workspace . --json
+```
 
-**Research activity:**
-- Total refs in `refs/`
-- Latest digest date per domain
-- Active vs. paused search clusters in `search-seeds.json`
+The command returns structured JSON with:
 
-**Quality indicators:**
-- Cards past decay window
-- Orphan cards past tolerance
-- Integrity issues (if recently checked)
+- **cards**: total count, by lifecycle (seed/growing/mature/archived), by domain
+- **connections**: total count, by type (supports/contradicts/extends/parallels/requires/enables/challenges/inspires/gap-for)
+- **domains**: total count, domain names
+- **quality**: stale cards, orphan cards, confidence distribution
 
-### Step 2: Present Summary
+### Step 2: Render Health Report
 
-Format as a readable dashboard:
+Present the structured data in a readable format:
 
 ```
 ## CONSTRUCT Knowledge Graph — Status
 
 ### Cards: {total}
 | Lifecycle | Count |
-|----------|-------|
-| Seed     | {N}   |
-| Growing  | {N}   |
-| Mature   | {N}   |
-| Archived | {N}   |
+|-----------|-------|
+| Seed      | {N}   |
+| Growing   | {N}   |
+| Mature    | {N}   |
+| Archived  | {N}   |
 
 ### Connections: {total}
 - Average per card: {N.N}
@@ -90,6 +93,7 @@ If the user wants more than stats, add interpretation:
 ### Step 4: Suggest Actions
 
 Based on findings:
+
 - High orphan count → "Consider connecting orphan cards or archiving irrelevant ones"
 - Many seeds → "Run `evaluate cards` to check for promotions"
 - Low research activity → "Run a research cycle to bring in fresh material"
@@ -100,7 +104,9 @@ Based on findings:
 
 ## Validation
 
-- [ ] All counts are accurate against actual files
+- [ ] MCP `construct_graph_status` tool called with correct workspace path
+- [ ] All counts are accurate against CLI/MCP output
 - [ ] No double-counting (archived cards separate from totals)
-- [ ] Domain names match `domains.yaml`
+- [ ] Domain names match CLI/MCP output
 - [ ] Percentages are calculated correctly
+- [ ] Interpretation references actual data, not guesswork
