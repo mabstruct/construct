@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 Plan 03 complete (Skill Migrations Batch 1)
-last_updated: "2026-06-10T22:34:00.000Z"
-last_activity: 2026-06-10 -- Phase 04 Plan 03 (Skill Migrations Batch 1) complete
+stopped_at: Phase 4 Plan 04 complete (Skill Migrations Batch 2 + Workflow Docs)
+last_updated: "2026-06-10T20:39:30.000Z"
+last_activity: 2026-06-10
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 8
-  percent: 57
+  completed_plans: 10
+  percent: 33
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 ## Current Position
 
 Phase: 04 (guided-workflow-operability) — EXECUTING
-Plan: 3 of 4 (Plan 03 complete)
-Status: Skill Migrations Batch 1 done — 3 skills migrated to CLI/MCP
+Plan: 4 of 4 (Plan 04 complete)
+Status: All Phase 04 plans complete
 Last activity: 2026-06-10
 
-Progress: [███████░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
+- Total plans completed: 10
 - Average duration: 6 min
-- Total execution time: 0.6 hours
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -46,12 +46,12 @@ Progress: [███████░░░] 57%
 |-------|-------|-------|----------|
 | 01 | 3 | 15 min | 5 min |
 | 02 | 3 | 55 min | 18 min |
-| 04 | 1 | 7 min | 7 min |
+| 04 | 4 | 24 min | 6 min |
 
 **Recent Trend:**
 
-- Last plans: Phase 04 Plan 03 (Skill Migrations Batch 1) complete
-- Trend: Phase 04 in progress — 1 of 4 plans complete
+- Last plans: Phase 04 Plan 04 (Skill Migrations Batch 2 + Workflow Docs) complete
+- Trend: Phase 04 complete — all 4 plans finished
 
 ## Accumulated Context
 
@@ -83,12 +83,14 @@ Recent decisions affecting current work:
 - [Phase 04]: governance.yaml reading preserved as Read (config file, not data scanning)
 - [Phase 04]: LLM-judgment sections preserved for ambiguous promotions and connection typing
 - [Phase 04]: Composed skill pattern: curation-cycle delegates to card-evaluate skill for promotion scan
+- [Phase 04]: construct ingest source is the CLI entry point for ref/seed card creation
+- [Phase 04]: Workflow docs get additive Inputs/Outcome/Error Handling sections; existing procedure preserved
 - [Phase ?]: completed_steps counts only successful steps, enabling resume from the failed step
 
 ### Pending Todos
 
-- Execute remaining Phase 04 plans (Plan 04: Skill Migrations Batch 2)
 - Execute Phase 3 plans (registry → CLI refactor → MCP server)
+- Execute Phase 05 (runtime pipeline hardening)
 
 ### Blockers/Concerns
 
@@ -99,10 +101,11 @@ Recent decisions affecting current work:
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | Product Expansion | Full v0.4 browser-first shell | Deferred to v2 | 2026-06-08 |
-| Phase 3 | Full skill migration beyond construct-workspace-validate | Batch 1 complete (Phase 04 P03) | 2026-06-10 |
+| Phase 3 | Full skill migration beyond construct-workspace-validate | Batch 2 complete (Phase 04 P04) | 2026-06-10 |
+| Phase 04 | construct knowledge card list CLI command | Not yet implemented (documented in gap-analysis as target pattern) | 2026-06-10 |
 
 ## Session Continuity
 
-Last session: 2026-06-10T22:34:00.000Z
-Stopped at: Phase 4 Plan 03 complete (Skill Migrations Batch 1)
+Last session: 2026-06-10T20:39:30.000Z
+Stopped at: Phase 4 Plan 04 complete (Skill Migrations Batch 2 + Workflow Docs)
 Resume file: None

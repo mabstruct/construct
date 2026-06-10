@@ -19,13 +19,13 @@ Requirements for the first committed roadmap scope, which in this repository map
 ### Workflow Operability
 
 - [ ] **WF-01**: User can ask the help flow what to do next and receive a clear state-aware next-step recommendation.
-- [ ] **WF-02**: User can follow documented workflows for the current Claude-native skills and understand expected inputs, outputs, and outcomes.
+- [x] **WF-02**: User can follow documented workflows for the current Claude-native skills and understand expected inputs, outputs, and outcomes.
 - [x] **WF-03**: User can resume work from persisted workspace state without losing the current workflow context.
 - [x] **WF-04**: User-facing commands and workflow outputs are clear enough that a power user can understand what happened and what action is available next.
 
 ### Knowledge Ingestion And Integrity
 
-- [ ] **ING-01**: User can ingest source material from files, notes, URLs, and web research into the system through a reliable governed flow.
+- [x] **ING-01**: User can ingest source material from files, notes, URLs, and web research into the system through a reliable governed flow.
 - [ ] **ING-02**: System assigns ingested files to a defined workspace storage location so source artifacts remain organized and traceable.
 - [ ] **ING-03**: User can create, edit, and archive knowledge cards and references while preserving required metadata and artifact validity.
 - [ ] **ING-04**: User can create and maintain typed connections between knowledge nodes using the established connection vocabulary.
@@ -88,10 +88,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-05 | Phase 1 | Complete |
 | FND-06 | Phase 1 | Complete |
 | WF-01 | Phase 4 | Pending |
-| WF-02 | Phase 4 | Pending |
+| WF-02 | Phase 4 | Complete |
 | WF-03 | Phase 4 | Complete |
 | WF-04 | Phase 4 | Complete |
-| ING-01 | Phase 4 | Pending |
+| ING-01 | Phase 4 | Complete |
 | ING-02 | Phase 2 | Pending |
 | ING-03 | Phase 2 | Pending |
 | ING-04 | Phase 2 | Pending |
