@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 — complete
-last_updated: "2026-06-10T10:45:00.000Z"
-last_activity: 2026-06-10 -- Phase 03 planned
+stopped_at: Phase 3 planned
+last_updated: "2026-06-10T20:25:46.407Z"
+last_activity: 2026-06-10 -- Phase 04 planning complete
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 10
+  total_plans: 14
   completed_plans: 7
   percent: 33
 ---
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 Phase: 03 (capability-registry-cli-mcp-spine) — PLANNED
 Plan: 0 of 3
 Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 03 planned
+Last activity: 2026-06-10 -- Phase 04 planning complete
 
 Progress: [██████████] 100%
 

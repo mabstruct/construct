@@ -75,12 +75,18 @@ Plans:
 **Depends on**: Phase 3
 **Requirements**: WF-01, WF-02, WF-03, WF-04, ING-01, ING-05, RT-04
 **Success Criteria** (what must be TRUE):
-  1. User can ask what to do next and receive a clear recommendation based on current workspace and workflow state.
-  2. User can follow documented workflows for current Claude-native skills and understand expected inputs, outputs, and outcomes.
-  3. User can resume work from persisted workspace state without losing the current workflow context.
-  4. User can ingest files, notes, URLs, and web research through a governed flow and understand what happened at each step.
-  5. User can trust workflow progress, graph-health, and gap-analysis outputs to show weak coverage, missing links, and available next actions.
-**Plans**: TBD
+   1. User can ask what to do next and receive a clear recommendation based on current workspace and workflow state.
+   2. User can follow documented workflows for current Claude-native skills and understand expected inputs, outputs, and outcomes.
+   3. User can resume work from persisted workspace state without losing the current workflow context.
+   4. User can ingest files, notes, URLs, and web research through a governed flow and understand what happened at each step.
+   5. User can trust workflow progress, graph-health, and gap-analysis outputs to show weak coverage, missing links, and available next actions.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Workflow runner: state machine, step execution, resume support, state file persistence
+- [ ] 04-02-PLAN.md — Ingestion pipeline + Help CLI + CLI/capability wiring
+- [ ] 04-03-PLAN.md — Skill migrations batch 1: graph-status, card-evaluate, curation-cycle
+- [ ] 04-04-PLAN.md — Skill migrations batch 2: research-cycle, gap-analysis + workflow documentation
 
 ### Phase 5: Grounded Synthesis & Graph Reasoning
 **Goal**: Users can ask bounded domain questions and produce grounded synthesis outputs from a reliable knowledge graph.
@@ -114,6 +120,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
-| 4. Guided Workflow Operability | 0/TBD | Not started | - |
+| 4. Guided Workflow Operability | 0/4 | Planned | - |
 | 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
