@@ -1,7 +1,10 @@
 ---
 description: "Identify coverage gaps and quality holes in the knowledge graph. Use when user says 'what gaps do you see?', 'what's missing?', 'gap analysis', 'find holes'."
-allowed-tools: Read, Grep, Glob
+allowed-tools: Bash(construct), MCP(connect), Read
 ---
+
+> **Updated for Phase 4:** Graph data now acquired via CLI commands. Analysis and recommendations remain LLM-driven. Each step documents its INPUT and OUTPUT.
+
 # Skill: Gap Analysis
 
 **Trigger:** User says "what gaps do you see?", "what's missing?", "gap analysis", "find holes", or similar.
@@ -14,13 +17,45 @@ allowed-tools: Read, Grep, Glob
 
 ### Step 1: Load Graph State
 
-Read:
-- All `cards/*.md` files (frontmatter + summary sections)
-- `connections.json` — the edge list
-- `domains.yaml` — domain definitions with content categories
-- `governance.yaml` — quality thresholds
+**INPUT:** Workspace knowledge graph files
+**OUTPUT:** Structured card list, connection list, domain config, governance thresholds, graph health summary
+
+Acquire graph data via CLI commands:
+
+1. **Card data:**
+   ```bash
+   construct knowledge card list --workspace . --json
+   ```
+   Returns all cards with frontmatter fields (id, title, epistemic_type, confidence, source_tier, domains, content_categories, lifecycle, created, updated).
+
+2. **Connection data:**
+   ```bash
+   construct knowledge connection list --workspace . --json
+   ```
+   Returns the edge list with source card, target card, relation type, and metadata.
+
+3. **Domain config:**
+   ```bash
+   Read domains.yaml
+   ```
+   (Config file — small, special access appropriate)
+
+4. **Governance rules:**
+   ```bash
+   Read governance.yaml
+   ```
+   (Config file — small, special access appropriate)
+
+5. **Graph health summary:**
+   ```bash
+   construct status --workspace . --json
+   ```
+   Returns aggregate stats: card count by domain, connection count, lifecycle distribution, stale card count.
 
 ### Step 2: Coverage Analysis
+
+**INPUT:** Card list, connection list, domain config from Step 1
+**OUTPUT:** Identified category gaps, depth gaps, and integration gaps per domain
 
 For each active domain:
 
@@ -40,7 +75,10 @@ For each active domain:
 - Categories with below-average connection density are **integration gaps**
 - Cards that are mature but poorly connected may be islands
 
-### Step 3: Structural Gap Detection
+### Step 3: Quality Assessment
+
+**INPUT:** Card list, connection list, governance rules from Step 1
+**OUTPUT:** Identified bridge gaps, epistemic type gaps, evidence gaps, stale areas
 
 **Missing cross-domain links:**
 - Domains listed in `cross_domain_links` in domains.yaml → check if actual connections exist
@@ -56,12 +94,14 @@ For each active domain:
 - Count cards by `source_tier` per domain
 - Domains relying entirely on tier 3+ sources → **evidence gap**
 
-### Step 4: Temporal Gaps
-
+**Temporal gaps:**
 - Identify domains or categories where newest card is old (> 30 days)
 - These may indicate **stale areas** where research has stopped
 
-### Step 5: Synthesize Findings
+### Step 4: Synthesize Recommendations
+
+**INPUT:** All gap findings from Steps 2–3
+**OUTPUT:** Structured gap report with prioritized recommendations
 
 Produce a structured gap report:
 
@@ -87,7 +127,10 @@ Produce a structured gap report:
 4. Create: {card types that are missing — gap cards, theme cards, etc.}
 ```
 
-### Step 6: Offer Follow-up
+### Step 5: Offer Follow-up
+
+**INPUT:** Gap report from Step 4
+**OUTPUT:** User engagement — next actionable step
 
 > "I found {N} gaps. Would you like me to:
 > - Research the most critical ones? (I'll run targeted search cycles)
@@ -102,3 +145,6 @@ Produce a structured gap report:
 - [ ] Gap classifications are specific and actionable
 - [ ] Recommendations reference concrete cards or categories
 - [ ] No false positives (a domain with 2 cards is too young, not gapped)
+- [ ] `construct knowledge card list` returned valid JSON
+- [ ] `construct knowledge connection list` returned valid JSON
+- [ ] `construct status` returned valid JSON
