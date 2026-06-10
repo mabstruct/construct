@@ -1,7 +1,10 @@
 ---
 description: "Create a knowledge card from user input, URL, or research finding. Use when user says 'add a card', 'capture this', 'note this finding', or pastes a URL/paper."
-allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *)
+allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *), Bash(construct knowledge *)
 ---
+
+> **Updated for Phase 2:** File operations now delegate to `construct knowledge` CLI. The skill drives the conversation; Python enforces contracts.
+
 # Skill: Create Knowledge Card
 
 **Trigger:** User says "add a card", "capture this", "note this finding", pastes a URL/paper, or similar.
@@ -40,46 +43,27 @@ If user provides enough context, draft without asking. If ambiguous, ask only wh
 - Check uniqueness against existing `cards/` filenames
 - Example: "Successor Representation for Spatial Reasoning" → `successor-representation-spatial`
 
-### Step 4: Write Card File
+### Step 4: Call Python CLI to Create Card
 
-Create `cards/{id}.md` using the card template:
+After drafting the card content, invoke the Python CLI:
 
-```yaml
----
-id: {id}
-title: "{title}"
-epistemic_type: {type}
-created: {today}
-confidence: {1-5}
-source_tier: {1-5}
-domains:
-  - {domain-id}
-content_categories:
-  - {category}
-lifecycle: seed
-sources:
-  - type: {paper|url|observation|conversation}
-    ref: "{reference}"
-    title: "{source title}"
-author: {construct|researcher|human}
----
-
-## Summary
-
-{1-3 paragraphs}
-
-## Evidence
-
-{citations, data points — optional for seeds}
-
-## Significance
-
-{why this matters — optional for seeds}
-
-## Open Questions
-
-{what's unresolved — optional}
+```bash
+construct knowledge card create \
+  --title "$TITLE" \
+  --type "$EPISTEMIC_TYPE" \
+  --domains "$DOMAINS" \
+  --confidence "$CONFIDENCE" \
+  --source-tier "$SOURCE_TIER" \
+  --categories "$CATEGORIES" \
+  --summary "$SUMMARY" \
+  --author "construct" \
+  --json
 ```
+
+**If the CLI succeeds:** Parse JSON output. The card file is already written.
+**If the CLI fails:** Parse JSON error output. Display structured errors to the user:
+> "The card couldn't be created: {field}: {reason}. {suggestion}"
+Offer the user a chance to fix.
 
 ### Step 5: Suggest Connections
 
@@ -91,14 +75,14 @@ Scan existing cards for potential connections:
 If connections found, propose them:
 > "This card might connect to '{other-card-title}'. Relation: {type}. Add this connection?"
 
-If user confirms, update `connections.json`.
-
-### Step 6: Log Event
-
-Append to `log/events.jsonl`:
-```json
-{"event": "create_card", "timestamp": "{ISO-8601}", "card_id": "{id}", "epistemic_type": "{type}", "confidence": {N}, "author": "{who}"}
+If user confirms, add the connection via CLI:
+```bash
+construct knowledge connection add "$CARD_ID" "$OTHER_ID" --type "$TYPE" --json
 ```
+
+### Step 6: Event Logging
+
+The CLI automatically logs the `create_card` event. No manual log entry needed.
 
 ### Step 7: Views Refresh Hook (Direct Invocation Only)
 
@@ -123,6 +107,7 @@ If this skill was invoked directly by the user (not as part of `research-cycle`,
 
 ## Validation
 
+- [ ] CLI returned success with valid JSON output
 - [ ] Card ID is unique
 - [ ] All required YAML fields present
 - [ ] Domain exists in `domains.yaml`

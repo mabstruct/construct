@@ -1,7 +1,10 @@
 ---
 description: "Create, remove, or query typed connections between cards. Use when user says 'connect A to B', 'remove connection', 'what's connected to card', or similar."
-allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *)
+allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *), Bash(construct knowledge *)
 ---
+
+> **Updated for Phase 2:** File operations now delegate to `construct knowledge` CLI. The skill drives the conversation; Python enforces contracts.
+
 # Skill: Manage Connections
 
 **Trigger:** User says "connect {A} to {B}", "remove connection", "what's connected to {card}", or similar.
@@ -39,35 +42,34 @@ If not specified → propose a type:
 3. Propose:
    > "I'd suggest '{relation}': {reasoning}. Confirm, or specify a different type?"
 
-### Step 4: For ADD — Write Connection
+### Step 4: For ADD — Call Python CLI
 
-Add to `connections.json`:
-```json
-{
-  "from": "{card-a-id}",
-  "to": "{card-b-id}",
-  "type": "{relation}",
-  "note": "{optional note from user or generated}",
-  "created": "{today}",
-  "created_by": "{curator|human}"
-}
+Add the connection via CLI:
+
+```bash
+construct knowledge connection add "$FROM" "$TO" --type "$TYPE" --note "$NOTE" --json
 ```
 
-Increment `connections.json` `version`.
+**If the CLI succeeds:** Connection is created.
+**If the CLI fails:** Display structured error, offer retry.
 
-Optionally update the source card's `connects_to` frontmatter for portability.
+### Step 5: For REMOVE — Call Python CLI
 
-### Step 5: For REMOVE — Delete Connection
+Remove a connection via CLI:
 
-1. Find the matching edge in `connections.json`
-2. Remove it
-3. Increment version
-4. Update the card's `connects_to` frontmatter if it was listed there
+```bash
+construct knowledge connection remove "$FROM" "$TO" --type "$TYPE"
+```
 
-### Step 6: For LIST — Show Connections
+### Step 6: For LIST — Call Python CLI
 
-Read `connections.json` and filter for edges involving the specified card:
+List connections via CLI:
 
+```bash
+construct knowledge connection list --card "$CARD_ID" --json
+```
+
+Format the output for the user:
 ```
 Connections for '{card-title}':
 
@@ -85,28 +87,14 @@ Show direction (→ outgoing, ← incoming, ↔ symmetric).
 
 ### Step 7: For TYPE — Assign Relation
 
-1. Find the existing edge
+1. Find the existing edge via CLI: `construct knowledge connection list --card "$CARD_ID" --json`
 2. Read both cards' content
 3. Propose a relation type with reasoning
-4. On confirmation, update the edge's `type` field
-5. Increment version
+4. On confirmation, remove the old edge and add the new: `construct knowledge connection remove` then `construct knowledge connection add`
 
-### Step 8: Log Event
+### Step 8: Event Logging
 
-For add:
-```json
-{"ts": "{ISO-8601}", "agent": "{who}", "action": "add_connection", "target": "{from} → {to}", "detail": "type: {relation}", "result": "success"}
-```
-
-For remove:
-```json
-{"ts": "{ISO-8601}", "agent": "{who}", "action": "remove_connection", "target": "{from} → {to}", "detail": "type: {relation}", "result": "success"}
-```
-
-For type:
-```json
-{"ts": "{ISO-8601}", "agent": "{who}", "action": "type_connection", "target": "{from} → {to}", "detail": "type: {relation}", "result": "success"}
-```
+The CLI automatically logs connection events. No manual log entry needed.
 
 ### Step 9: Views Refresh Hook (Direct Invocation Only)
 
@@ -127,9 +115,8 @@ If this skill was invoked directly by the user (not as part of `curation-cycle`,
 
 ## Validation
 
+- [ ] CLI returned success with valid JSON output
 - [ ] `connections.json` is valid JSON after modification
 - [ ] No duplicate edges (same from + to + type)
 - [ ] All card references exist as files
 - [ ] Relation type is valid enum
-- [ ] Version incremented
-- [ ] Event logged

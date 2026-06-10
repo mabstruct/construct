@@ -1,7 +1,10 @@
 ---
 description: "Archive a knowledge card (set lifecycle to archived). Use when user says 'archive card', 'remove card', 'this card is outdated', or similar."
-allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *)
+allowed-tools: Read, Write, Edit, Bash(git add *), Bash(git commit *), Bash(construct knowledge *)
 ---
+
+> **Updated for Phase 2:** File operations now delegate to `construct knowledge` CLI. The skill drives the conversation; Python enforces contracts.
+
 # Skill: Archive Knowledge Card
 
 **Trigger:** User says "archive card {name}", "remove {card}", "this card is outdated", or similar.
@@ -41,25 +44,26 @@ If dependencies exist, warn the user:
 Ask if another card supersedes this one:
 > "Does a newer card replace this one? If so, provide the card ID and I'll set the `supersedes` field."
 
-### Step 3: Archive the Card
+### Step 3: Call Python CLI to Archive Card
 
-Update the card's YAML frontmatter:
-- Set `lifecycle: archived`
-- Set `last_verified: {today}`
-- If superseded, note the superseding card in `supersedes` field on the NEW card
+Archive the card via the Python CLI:
+
+```bash
+construct knowledge card archive "$CARD_ID" --author "curator" --json
+```
+
+The CLI updates lifecycle to archived and preserves all connections.
+
+**If the CLI succeeds:** Card is archived. Parse JSON output for confirmation.
+**If the CLI fails:** Display structured error and offer retry.
 
 ### Step 4: Handle Connections
 
-For each connection involving this card in `connections.json`:
-- **Keep the connections** — they're historical record
-- **Optionally add note:** "target archived on {date}"
-- If user wants connections removed → remove them and decrement version
+Connections are preserved automatically by the CLI — they remain in `connections.json` as historical record. Graph views and queries filter archived card connections by default but can include them on request.
 
-### Step 5: Log Event
+### Step 5: Event Logging
 
-```json
-{"ts": "{ISO-8601}", "agent": "{who}", "action": "archive_card", "target": "{card-id}", "detail": "lifecycle → archived{, superseded by card-X}", "result": "success"}
-```
+The CLI automatically logs the `archive_card` event. No manual log entry needed.
 
 ### Step 6: Confirm
 
@@ -69,8 +73,8 @@ For each connection involving this card in `connections.json`:
 
 ## Validation
 
+- [ ] CLI returned success with valid JSON output
 - [ ] Card lifecycle is now "archived"
 - [ ] connections.json is still valid JSON
 - [ ] No new dangling references created
-- [ ] Event logged
-- [ ] If superseded, the new card's `supersedes` field is set
+- [ ] Event logged by CLI

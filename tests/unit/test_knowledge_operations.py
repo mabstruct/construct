@@ -20,6 +20,7 @@ from construct.services.knowledge import (
     edit_card,
     list_connections,
     remove_connection,
+    route_source_to_domain,
 )
 
 
@@ -381,3 +382,147 @@ class TestConnectionList:
         assert result.success is True
         assert result.data is not None
         assert len(result.data) >= 1
+
+
+# ===================================================================
+# Source Routing Tests
+# ===================================================================
+
+
+class TestSourceRouting:
+    def test_route_source_to_domain(self, workspace_path: Path) -> None:
+        """Source file in inbox gets routed to matching domain via content_categories."""
+        from construct.services.init import DomainInitInput, initialize_workspace
+
+        domain = DomainInitInput(
+            domain_id="physics",
+            display_name="Physics",
+            scope="Test scope for physics",
+            taxonomy_seeds=["quantum"],
+            source_priorities=["peer-reviewed papers"],
+            research_seeds=["quantum mechanics"],
+        )
+        initialize_workspace(workspace_path, domain)
+
+        # Create inbox source file
+        inbox_dir = workspace_path / "inbox"
+        inbox_dir.mkdir(exist_ok=True)
+        source_file = inbox_dir / "quantum-entanglement-paper.pdf"
+        source_file.write_text("dummy content")
+
+        result = route_source_to_domain(workspace_path, source_file)
+        assert result.success, f"Routing failed: {result.message} {result.errors}"
+        assert result.data is not None
+        assert result.data["domain"] == "physics"
+
+        # Verify file was routed
+        assert (workspace_path / "physics" / "inbox" / "raw" / "quantum-entanglement-paper.pdf").exists()
+
+        # Verify ref was created
+        refs = list((workspace_path / "refs").glob("*.json"))
+        assert len(refs) >= 1
+
+    def test_route_source_no_domain_match(self, workspace_path: Path) -> None:
+        """Source with no domain match returns suggestion to create domain."""
+        from construct.services.init import DomainInitInput, initialize_workspace
+
+        domain = DomainInitInput(
+            domain_id="physics",
+            display_name="Physics",
+            scope="Test scope for physics",
+            taxonomy_seeds=["quantum"],
+            source_priorities=["peer-reviewed papers"],
+            research_seeds=["quantum mechanics"],
+        )
+        initialize_workspace(workspace_path, domain)
+
+        inbox_dir = workspace_path / "inbox"
+        inbox_dir.mkdir(exist_ok=True)
+        source_file = inbox_dir / "xyz-nonmatching-file.pdf"
+        source_file.write_text("dummy content")
+
+        result = route_source_to_domain(workspace_path, source_file)
+        assert not result.success  # Should fail — no matching domain
+        # Should suggest domain creation
+        assert any("domain" in e.suggestion.lower() for e in result.errors)
+
+    def test_route_source_with_domain_hint(self, workspace_path: Path) -> None:
+        """Domain hint overrides auto-detection even when filename doesn't match."""
+        from construct.services.init import DomainInitInput, initialize_workspace
+
+        initialize_workspace(
+            workspace_path,
+            DomainInitInput(
+                domain_id="physics",
+                display_name="Physics",
+                scope="Test scope for physics",
+                taxonomy_seeds=["quantum"],
+                source_priorities=["peer-reviewed papers"],
+                research_seeds=["quantum mechanics"],
+            ),
+        )
+
+        inbox_dir = workspace_path / "inbox"
+        inbox_dir.mkdir(exist_ok=True)
+        source_file = inbox_dir / "cooking-recipes.pdf"
+        source_file.write_text("dummy content")
+
+        result = route_source_to_domain(workspace_path, source_file, domain_hint="physics")
+        assert result.success, f"Routing with hint failed: {result.message}"
+        assert result.data is not None
+        assert result.data["domain"] == "physics"
+
+        # File should be in physics/inbox/raw/ despite filename not matching
+        assert (workspace_path / "physics" / "inbox" / "raw" / "cooking-recipes.pdf").exists()
+
+    def test_route_source_logs_event(self, workspace_path: Path) -> None:
+        """Source routing logs ingest_paper event."""
+        from construct.services.init import DomainInitInput, initialize_workspace
+
+        initialize_workspace(
+            workspace_path,
+            DomainInitInput(
+                domain_id="physics",
+                display_name="Physics",
+                scope="Test scope for physics",
+                taxonomy_seeds=["quantum"],
+                source_priorities=["peer-reviewed papers"],
+                research_seeds=["quantum mechanics"],
+            ),
+        )
+
+        inbox_dir = workspace_path / "inbox"
+        inbox_dir.mkdir(exist_ok=True)
+        source_file = inbox_dir / "physics-paper.pdf"
+        source_file.write_text("dummy content")
+
+        result = route_source_to_domain(workspace_path, source_file)
+        assert result.success, f"Routing failed: {result.message} {result.errors}"
+        event_log = workspace_path / "log" / "events.jsonl"
+        assert event_log.exists()
+        assert any("ingest_paper" in line for line in event_log.read_text().splitlines())
+
+    def test_route_source_invalid_domain_hint(self, workspace_path: Path) -> None:
+        """Invalid domain hint returns structured error."""
+        from construct.services.init import DomainInitInput, initialize_workspace
+
+        initialize_workspace(
+            workspace_path,
+            DomainInitInput(
+                domain_id="physics",
+                display_name="Physics",
+                scope="Test scope",
+                taxonomy_seeds=["quantum"],
+                source_priorities=["peer-reviewed papers"],
+                research_seeds=["quantum mechanics"],
+            ),
+        )
+
+        inbox_dir = workspace_path / "inbox"
+        inbox_dir.mkdir(exist_ok=True)
+        source_file = inbox_dir / "test-article.pdf"
+        source_file.write_text("dummy")
+
+        result = route_source_to_domain(workspace_path, source_file, domain_hint="nonexistent-domain")
+        assert not result.success
+        assert any("domain_hint" in e.field for e in result.errors)

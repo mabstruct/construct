@@ -7,6 +7,7 @@ from datetime import date, datetime, timezone
 from io import StringIO
 from pathlib import Path
 import re
+import shutil
 from typing import Any
 import json
 
@@ -20,18 +21,26 @@ from construct.schemas.card import (
     SchemaParseError,
     parse_card_markdown,
 )
-from construct.schemas.config import EventAgent, EventResult
+from construct.schemas.config import (
+    DomainRegistryEntry,
+    DomainsRegistry,
+    EventAgent,
+    EventResult,
+    ExtractionStatus,
+    ReferenceRecord,
+)
 from construct.schemas.workspace import (
     ConnectionAuthor,
     ConnectionRecord,
     ConnectionType,
     ConnectionsFile,
 )
-from construct.services.event_log import append_card_event, append_connection_event
+from construct.services.event_log import append_card_event, append_connection_event, append_event
 from construct.services.validation import (
     ArtifactValidationError,
     validate_card_write,
     validate_connections_write,
+    validate_ref_write,
 )
 from construct.storage.workspace import WorkspaceLoadError, WorkspaceLoader
 
@@ -569,5 +578,212 @@ def _get_archived_card_ids(root: Path) -> set[str]:
         except (SchemaParseError, PydanticValidationError, OSError):
             continue
     return archived
+
+
+# ---------------------------------------------------------------------------
+# Source Routing
+# ---------------------------------------------------------------------------
+
+
+def _suggest_domain(registry: DomainsRegistry, filename: str) -> str | None:
+    """Find the first domain whose name, description, or content_categories
+    appears as a case-insensitive substring of *filename*.
+
+    Returns the domain ID of the first match, or ``None``.
+    """
+    filename_lower = filename.lower()
+    for domain_id, entry in registry.domains.items():
+        # Check domain name
+        if entry.name and entry.name.lower() in filename_lower:
+            return domain_id
+        # Check description
+        if entry.description and entry.description.lower() in filename_lower:
+            return domain_id
+        # Check content categories
+        for category in entry.content_categories:
+            if category.lower() in filename_lower:
+                return domain_id
+    return None
+
+
+def _generate_ref_id(title: str, workspace_root: Path) -> str:
+    """Convert *title* to a kebab-case ref ID and deduplicate against
+    existing ``refs/*.json`` files.
+
+    If the desired ID already exists, append ``-2``, ``-3``, etc.
+    """
+    ref_id = _to_kebab_case(title)
+    if not ref_id:
+        ref_id = "untitled"
+
+    existing = {p.stem for p in workspace_root.glob("refs/*.json")}
+    resolved = ref_id
+    counter = 1
+    while resolved in existing:
+        counter += 1
+        resolved = f"{ref_id}-{counter}"
+    return resolved
+
+
+def route_source_to_domain(
+    workspace_root: str | Path,
+    source_path: str | Path,
+    domain_hint: str | None = None,
+) -> OperationResult:
+    """Route a source file from the workspace ``inbox/`` to its target domain.
+
+    Steps:
+        1. Verify the source file exists.
+        2. Load the domain registry.
+        3. Determine the target domain (hint, auto-detect, or fail).
+        4. Copy the file to ``{domain}/inbox/raw/{filename}``.
+        5. Create and validate a ``ReferenceRecord``.
+        6. Write the ref to ``refs/{ref_id}.json``.
+        7. Log an ``ingest_paper`` event.
+    """
+    root = Path(workspace_root).resolve()
+    src = Path(source_path)
+
+    # If source_path is relative, resolve it against the workspace root
+    if not src.is_absolute():
+        src = (root / src).resolve()
+
+    # Verify source file exists
+    if not src.is_file():
+        return OperationResult(
+            success=False,
+            message=f"Source file not found: {src}",
+            errors=[OperationError(reason=f"No such file: {src}", suggestion="Check the path and try again.")],
+        )
+
+    # Load domains registry
+    try:
+        loader = WorkspaceLoader(root)
+        registry = loader.load_domains_registry()
+    except WorkspaceLoadError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not load domain registry: {exc}",
+            errors=[OperationError(reason=str(exc), suggestion="Ensure domains.yaml exists and is valid.")],
+        )
+
+    # Determine target domain
+    filename = src.name
+    matched_domain: str | None = None
+
+    if domain_hint is not None:
+        # Explicit domain hint — validate it exists
+        if domain_hint in registry.domains:
+            matched_domain = domain_hint
+        else:
+            return OperationResult(
+                success=False,
+                message=f"Domain hint '{domain_hint}' does not exist in domains.yaml",
+                errors=[
+                    OperationError(
+                        field="domain_hint",
+                        reason=f"Unknown domain: '{domain_hint}'",
+                        suggestion=f"Create the '{domain_hint}' domain first, or use an existing domain: {', '.join(sorted(registry.domains))}",
+                    )
+                ],
+            )
+    else:
+        # Auto-detect from filename
+        matched_domain = _suggest_domain(registry, filename)
+        if matched_domain is None:
+            return OperationResult(
+                success=False,
+                message=f"No matching domain found for source '{filename}'",
+                errors=[
+                    OperationError(
+                        reason=f"No domain matched '{filename}'",
+                        suggestion="Create a new domain or specify --domain-hint to route to an existing domain.",
+                    )
+                ],
+            )
+
+    # Create target directory
+    target_dir = root / matched_domain / "inbox" / "raw"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy source file to target
+    target_path = target_dir / filename
+    try:
+        shutil.copy2(str(src), str(target_path))
+    except OSError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not copy source file: {exc}",
+            errors=[OperationError(reason=str(exc), suggestion="Check filesystem permissions and disk space.")],
+        )
+
+    # Generate ref ID and create ReferenceRecord
+    source_title = src.stem.replace("-", " ").replace("_", " ").title()
+    ref_id = _generate_ref_id(src.stem, root)
+    today = date.today()
+
+    try:
+        ref = ReferenceRecord(
+            id=ref_id,
+            title=source_title,
+            url=f"inbox://{filename}",
+            relevance_score=0.5,
+            source_tier=5,
+            extraction_status=ExtractionStatus.partial,
+            ingested_date=today,
+            domain=matched_domain,
+            search_cluster="manual-ingest",
+        )
+    except (PydanticValidationError, ValueError) as exc:
+        return OperationResult(
+            success=False,
+            message=f"Invalid reference record: {exc}",
+            errors=[OperationError(reason=str(exc), suggestion="Check reference metadata fields.")],
+        )
+
+    # Validate ref write
+    try:
+        validate_ref_write(ref.model_dump(), relative_path=f"refs/{ref_id}.json")
+    except (ArtifactValidationError, PydanticValidationError, ValueError) as exc:
+        return OperationResult(
+            success=False,
+            message=f"Ref validation failed: {exc}",
+            errors=[OperationError(reason=str(exc), suggestion="Fix the ref metadata and try again.")],
+        )
+
+    # Write ref JSON
+    ref_path = root / "refs" / f"{ref_id}.json"
+    try:
+        ref_path.parent.mkdir(parents=True, exist_ok=True)
+        ref_path.write_text(
+            json.dumps(ref.model_dump(mode="json"), indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not write ref file: {exc}",
+            errors=[OperationError(reason=str(exc), suggestion="Check filesystem permissions.")],
+        )
+
+    # Log event
+    append_event(
+        root,
+        EventAgent.construct,
+        "ingest_paper",
+        target=ref_id,
+        detail=f"routed {filename} to {matched_domain}/inbox/raw/",
+    )
+
+    return OperationResult(
+        success=True,
+        message=f"Source '{filename}' routed to domain '{matched_domain}' as ref '{ref_id}'",
+        data={
+            "ref_id": ref_id,
+            "domain": matched_domain,
+            "source_path": str(target_path),
+            "ref_path": f"refs/{ref_id}.json",
+        },
+    )
 
 
