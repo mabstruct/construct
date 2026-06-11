@@ -24,6 +24,13 @@ from construct.services.knowledge import (
 from construct.services.validation import ValidationReport, validate_workspace
 from construct.storage.workspace import WorkspaceLoader
 
+# ── Ask Domain imports (Phase 5) ──
+from construct.llm.ask_domain import (
+    AskDomainInput,
+    AskDomainOutput,
+    run_gate as ask_domain_gate,
+)
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -279,6 +286,24 @@ def create_registry() -> CapabilityRegistry:
         handler=lambda workspace: help_suggest(workspace),
         cli_name="help.suggest",
         mcp_tool_name="construct_help_suggest",
+    ))
+
+    # ── Ask Domain gate (Phase 5) ──
+    registry.register(CapabilityRecord(
+        id="ask.domain",
+        name="Ask Domain",
+        description="Grounded Q&A with citations over workspace knowledge cards for a domain",
+        input_model=AskDomainInput,
+        output_model=AskDomainOutput,
+        handler=lambda **kwargs: (
+            lambda result: OperationResult(
+                success=result.answer is not None,
+                message=result.answer or "No answer could be generated from available cards.",
+                data=result.model_dump(mode="json"),
+            )
+        )(ask_domain_gate("ask.domain", AskDomainInput(**kwargs))),
+        cli_name="ask.domain",
+        mcp_tool_name="construct_ask_domain",
     ))
 
     return registry

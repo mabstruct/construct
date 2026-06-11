@@ -273,6 +273,46 @@ def source(
     _display_result(result, json_output)
 
 
+# ---------------------------------------------------------------------------
+# Ask command group (Phase 5)
+# ---------------------------------------------------------------------------
+
+ask_app = typer.Typer(
+    no_args_is_help=True,
+    name="ask",
+    help="Ask questions grounded in workspace knowledge.",
+)
+app.add_typer(ask_app)
+
+
+@ask_app.command()
+def domain(
+    ctx: typer.Context,
+    question: str = typer.Option(..., "--question", "-q", help="Your question about this domain"),
+    domain_id: str = typer.Option(..., "--domain", "-d", help="Domain ID to query"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    max_cards: int = typer.Option(20, "--max-cards", help="Max cards to consider (1-50)"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Ask a grounded question about a domain's knowledge cards.
+
+    Uses the LangGraph L2 gate to retrieve relevant cards, synthesize
+    an answer, and return structured citations with confidence scores.
+    """
+    try:
+        cap = get_registry().get("ask.domain")
+    except KeyError:
+        typer.echo("ERROR: Capability 'ask.domain' not found. Ensure Phase 5 is complete.")
+        raise typer.Exit(code=1)
+    result = cap.handler(
+        workspace_path=str(workspace),
+        domain_id=domain_id,
+        question=question,
+        max_cards=max_cards,
+    )
+    _display_result(result, json_output)
+
+
 # -- Card commands -------------------------------------------------------
 
 
