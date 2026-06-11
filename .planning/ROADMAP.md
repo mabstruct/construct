@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract.
 - [x] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
 - [x] **Phase 5: Grounded Synthesis & Graph Reasoning** - Add bounded question-answering, synthesis, and bridge detection on top of a reliable graph. (completed 2026-06-11)
-- [ ] **Phase 6: Derived Data, Ops UI & Governed Spikes** - Prepare v0.4-facing contracts and evaluate local UI/graph-analysis spikes without changing canonical truth.
+- [x] **Phase 6: Derived Data, Ops UI & Governed Spikes** - Prepare v0.4-facing contracts and evaluate local UI/graph-analysis spikes without changing canonical truth. (completed 2026-06-11)
 
 ## Phase Details
 
@@ -119,7 +119,7 @@ Plans:
 - [x] 06-01-PLAN.md — Views Data Contracts: JSON Schema declarations, version fields, contract tests (ADV-03)
 - [x] 06-02-PLAN.md — Streamlit Ops UI: Dashboard, Gate Review, Capability Runner panels (ADV-04)
 - [x] 06-03-PLAN.md — Spike Framework: Isolation runner CLI + documented SKILL.md procedures (SPK-01, SPK-04)
-- [ ] 06-04-PLAN.md — CLI Integration + Tag Pipeline: CLI commands, tag extraction, curation cycle wiring (SPK-02, SPK-03)
+- [x] 06-04-PLAN.md — CLI Integration + Tag Pipeline: CLI commands, tag extraction, curation cycle wiring (SPK-02, SPK-03)
 **UI hint**: yes
 
 ## Progress
@@ -134,4 +134,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
-| 6. Derived Data, Ops UI & Governed Spikes | 3/4 | In Progress|  |
+| 6. Derived Data, Ops UI & Governed Spikes | 4/4 | Complete   | 2026-06-11 |

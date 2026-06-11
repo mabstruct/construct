@@ -49,8 +49,8 @@ Requirements for the first committed roadmap scope, which in this repository map
 ### Governed Exploration Spikes
 
 - [x] **SPK-01**: Maintainer can run governed spikes on external graph-analysis tools without changing the established CONSTRUCT governance model or canonical workspace contracts.
-- [ ] **SPK-02**: Maintainer can evaluate whether Graphify-style ingestion analysis is useful for producing candidate tags and keywords during document ingestion.
-- [ ] **SPK-03**: Maintainer can route candidate tags and keywords from ingestion analysis into the curation cycle as reviewable inputs for adapting search patterns rather than auto-accepted knowledge.
+- [x] **SPK-02**: Maintainer can evaluate whether Graphify-style ingestion analysis is useful for producing candidate tags and keywords during document ingestion.
+- [x] **SPK-03**: Maintainer can route candidate tags and keywords from ingestion analysis into the curation cycle as reviewable inputs for adapting search patterns rather than auto-accepted knowledge.
 - [x] **SPK-04**: Maintainer can evaluate graph-guided exploration patterns inspired by tools such as InfraNodus for future UI and insight workflows without replacing typed knowledge cards and governed connections.
 
 ## v2 Requirements
@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADV-03 | Phase 6 | Complete |
 | ADV-04 | Phase 6 | Complete |
 | SPK-01 | Phase 6 | Complete |
-| SPK-02 | Phase 6 | Pending |
-| SPK-03 | Phase 6 | Pending |
+| SPK-02 | Phase 6 | Complete |
+| SPK-03 | Phase 6 | Complete |
 | SPK-04 | Phase 6 | Complete |
 
 **Coverage:**
