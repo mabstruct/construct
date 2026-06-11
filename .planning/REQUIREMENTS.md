@@ -42,7 +42,7 @@ Requirements for the first committed roadmap scope, which in this repository map
 ### Advanced Graph Leverage
 
 - [ ] **ADV-01**: User can ask grounded domain questions through a bounded reasoning gate that cites relevant knowledge artifacts.
-- [ ] **ADV-02**: User can detect promising cross-domain bridges more systematically once graph integrity is reliable.
+- [x] **ADV-02**: User can detect promising cross-domain bridges more systematically once graph integrity is reliable.
 - [ ] **ADV-03**: System can emit stable derived-data contracts that a future UI layer can consume without redefining the knowledge model.
 - [ ] **ADV-04**: Maintainer can exercise capabilities through a local ops UI spike without making that spike the source of truth.
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RT-03 | Phase 3 | Pending |
 | RT-04 | Phase 4 | Complete |
 | ADV-01 | Phase 5 | Pending |
-| ADV-02 | Phase 5 | Pending |
+| ADV-02 | Phase 5 | Complete |
 | ADV-03 | Phase 6 | Pending |
 | ADV-04 | Phase 6 | Pending |
 | SPK-01 | Phase 6 | Pending |

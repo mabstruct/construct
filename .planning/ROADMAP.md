@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Governed Knowledge Operations** - Make core card, ref, connection, and storage operations reliable in the existing workspace model.
 - [ ] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract.
 - [x] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
-- [ ] **Phase 5: Grounded Synthesis & Graph Reasoning** - Add bounded question-answering, synthesis, and bridge detection on top of a reliable graph.
+- [x] **Phase 5: Grounded Synthesis & Graph Reasoning** - Add bounded question-answering, synthesis, and bridge detection on top of a reliable graph. (completed 2026-06-11)
 - [ ] **Phase 6: Derived Data, Ops UI & Governed Spikes** - Prepare v0.4-facing contracts and evaluate local UI/graph-analysis spikes without changing canonical truth.
 
 ## Phase Details
@@ -101,7 +101,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Core LLM infrastructure: dependencies, llm/ package, config loader, test scaffolding
 - [x] 05-02-PLAN.md — ask.domain LangGraph L2 gate: StateGraph, capability registration, CLI, tests
-- [ ] 05-03-PLAN.md — Bridge detection pipeline: L1/L2/L3 multi-level detection, CLI, scoring, bridges.json
+- [x] 05-03-PLAN.md — Bridge detection pipeline: L1/L2/L3 multi-level detection, CLI, scoring, bridges.json
 - [x] 05-04-PLAN.md — Synthesis skill update: CLI command references, confidence propagation documentation
 
 ### Phase 6: Derived Data, Ops UI & Governed Spikes
@@ -127,5 +127,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
-| 5. Grounded Synthesis & Graph Reasoning | 3/4 | In Progress|  |
+| 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
