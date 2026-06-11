@@ -31,6 +31,9 @@ from construct.llm.ask_domain import (
     run_gate as ask_domain_gate,
 )
 
+# ── Bridge Detection imports (Phase 5) ──
+from construct.pipelines.bridge_detect import bridge_detect
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -131,6 +134,12 @@ class ValidateOutput(BaseModel):
 
 class StatusOutput(BaseModel):
     items: list[dict]
+
+
+class BridgeDetectInput(BaseModel):
+    """Input for bridge.detect pipeline."""
+    model_config = {"extra": "forbid"}
+    workspace_path: str
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +313,18 @@ def create_registry() -> CapabilityRegistry:
         )(ask_domain_gate("ask.domain", AskDomainInput(**kwargs))),
         cli_name="ask.domain",
         mcp_tool_name="construct_ask_domain",
+    ))
+
+    # ── Bridge detection (Phase 5) ──
+    registry.register(CapabilityRecord(
+        id="bridge.detect",
+        name="Bridge Detect",
+        description="Detect cross-domain bridges via L1 structural, L2 category, and L3 semantic assessment pipeline",
+        input_model=BridgeDetectInput,
+        output_model=OperationResult,
+        handler=lambda **kwargs: bridge_detect(kwargs.get("workspace_path", "")),
+        cli_name="bridge.detect",
+        mcp_tool_name="construct_bridge_detect",
     ))
 
     return registry

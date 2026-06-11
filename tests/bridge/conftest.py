@@ -86,7 +86,7 @@ def cross_domain_workspace(tmp_path: Path) -> Path:
     _write_connections(ws, [
         {"from": "cosmo-1", "to": "phil-1", "type": "parallels",
          "created": "2025-01-01", "created_by": "construct",
-         "notes": "Both address fundamental questions of existence."},
+         "note": "Both address fundamental questions of existence."},
     ])
 
     return ws

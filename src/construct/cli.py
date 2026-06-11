@@ -313,6 +313,39 @@ def domain(
     _display_result(result, json_output)
 
 
+# ---------------------------------------------------------------------------
+# Bridge command group (Phase 5)
+# ---------------------------------------------------------------------------
+
+bridge_app = typer.Typer(
+    no_args_is_help=True,
+    name="bridge",
+    help="Cross-domain bridge detection and management.",
+)
+app.add_typer(bridge_app)
+
+
+@bridge_app.command()
+def detect(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Detect cross-domain bridges via L1->L2->L3 pipeline.
+
+    Runs deterministic (L1 structural edges, L2 category overlap) and
+    optional LLM-assisted (L3 semantic) assessment for promising candidates.
+    Results are written to log/bridge-candidates.json.
+    """
+    try:
+        cap = get_registry().get("bridge.detect")
+    except KeyError:
+        typer.echo("ERROR: Capability 'bridge.detect' not found. Ensure Phase 5 is complete.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace_path=str(workspace))
+    _display_result(result, json_output)
+
+
 # -- Card commands -------------------------------------------------------
 
 

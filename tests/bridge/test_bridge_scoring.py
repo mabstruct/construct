@@ -6,28 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-
-# The scoring function will be in bridge_detect.py — test against spec weights
-def _compute_bridge_score(
-    l1_structural: bool,
-    l2_shared_categories: list[str],
-    l3_candidate_strength: str | None,
-) -> tuple[float, str]:
-    """Replicate from spec for early testing. Overridden by Plan 03 import."""
-    l1_score = 1.0 if l1_structural else 0.0
-    l2_score = min(1.0, len(l2_shared_categories) / 3.0) if l2_shared_categories else 0.0
-    l3_map = {"strong": 1.0, "possible": 0.6}
-    l3_score = l3_map.get(l3_candidate_strength, 0.0) if l3_candidate_strength else 0.0
-    score = round((0.30 * l1_score) + (0.20 * l2_score) + (0.50 * l3_score), 2)
-    if l1_structural:
-        band = "strong"
-    elif score >= 0.70:
-        band = "strong"
-    elif score >= 0.45:
-        band = "medium"
-    else:
-        band = "weak"
-    return score, band
+from construct.pipelines.bridge_detect import _compute_bridge_score
 
 
 class TestBridgeScoring:
