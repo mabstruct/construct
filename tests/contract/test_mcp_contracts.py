@@ -39,5 +39,6 @@ def test_mcp_tool_count() -> None:
         "construct_workflow_run",
         "construct_ingest_source",
         "construct_help_suggest",
+        "construct_ask_domain",
     }
     assert tool_names == expected
