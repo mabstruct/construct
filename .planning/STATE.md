@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 4 Plan 04 complete (Skill Migrations Batch 2 + Workflow Docs)
-last_updated: "2026-06-10T20:39:20.657Z"
-last_activity: 2026-06-10
+status: executing
+stopped_at: Phase 5 context gathered
+last_updated: "2026-06-11T13:45:53.266Z"
+last_activity: 2026-06-11
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 14
-  completed_plans: 11
+  total_plans: 18
+  completed_plans: 14
   percent: 50
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-08)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
-**Current focus:** Phase 04 — guided-workflow-operability
+**Current focus:** Phase 05 — grounded-synthesis-graph-reasoning
 
 ## Current Position
 
-Phase: 04 (guided-workflow-operability) — EXECUTING
-Plan: 4 of 4 (Plan 04 complete)
-Status: Phase complete — ready for verification
-Last activity: 2026-06-10
+Phase: 05 (grounded-synthesis-graph-reasoning) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-11
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -56,6 +56,8 @@ Progress: [████████░░] 79%
 ## Accumulated Context
 
 ### Decisions
+- [Phase 05-02]: Models defined in ask_domain.py (not catalog.py) to avoid circular imports between catalog and run_gate handler
+- [Phase 05-02]: Domain filter checks domain_id in card.domains list (KnowledgeCard schema has plural list)
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
@@ -108,6 +110,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-10T21:00:00.000Z
-Stopped at: Completed Plan 04-02 (Ingestion + Help + CLI Wiring)
+Last session: 2026-06-11T13:45:53.260Z
+Stopped at: Phase 5 context gathered
 Resume file: None
