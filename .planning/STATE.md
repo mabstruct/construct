@@ -4,7 +4,7 @@ milestone: v0.3
 milestone_name: milestone
 status: executing
 stopped_at: Phase 5 execution complete
-last_updated: "2026-06-11T20:10:27.250Z"
+last_updated: "2026-06-11T20:33:07.932Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 6
@@ -54,6 +54,7 @@ Progress: [████████░░] 82%
 - Trend: Phase 04 complete — all 4 plans finished
 
 | Phase 05 P03 | 12 min | - tasks | - files |
+| Phase 06-derived-data-ops-ui-governed-spikes P06-03 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 04]: help CLI command renamed to help_cmd to avoid shadowing Python built-in
 - [Phase 04]: Note text stored as abstract on ReferenceRecord (no dedicated note field)
 - [Phase ?]: completed_steps counts only successful steps, enabling resume from the failed step
+- [Phase ?]: No SpikeRunner class — functional module-level pattern matches existing pipelines (bridge_detect, ingestion)
+- [Phase ?]: Command injection safety via shlex.quote() + shlex.split() → subprocess.run without shell=True
+- [Phase ?]: register_spike_commands() kept decoupled from cli.py — CLI wiring deferred to future integration
 
 ### Pending Todos
 
