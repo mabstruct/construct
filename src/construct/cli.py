@@ -346,6 +346,340 @@ def detect(
     _display_result(result, json_output)
 
 
+# ---------------------------------------------------------------------------
+# Views command group (Phase 6)
+# ---------------------------------------------------------------------------
+
+views_app = typer.Typer(
+    no_args_is_help=True,
+    name="views",
+    help="Validate and manage views data contracts.",
+)
+app.add_typer(views_app)
+
+
+@views_app.command()
+def validate(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Validate views data files against their Pydantic schemas.
+
+    Reads views/build/data/*.json and validates each file against its
+    declared contract model. Reports per-file pass/fail.
+    """
+    from construct.views.models import (
+        ArticlesFile,
+        BridgesFile,
+        CardsFile,
+        ConnectionsFile,
+        DigestsFile,
+        DomainsFile,
+        EventsFile,
+        StatsFile,
+        schema_for,
+        validate_data,
+    )
+
+    build_data_dir = workspace / "views" / "build" / "data"
+    if not build_data_dir.is_dir():
+        typer.echo(f"ERROR: No views data directory at {build_data_dir}")
+        raise typer.Exit(code=1)
+
+    # Map relative paths to their contract models
+    model_map: dict[str, type] = {
+        "bridges.json": BridgesFile,
+        "domains.json": DomainsFile,
+        "articles.json": ArticlesFile,
+        "stats.json": StatsFile,
+    }
+
+    results: list[dict] = []
+    all_passed = True
+
+    # Global files
+    for filename, model_class in model_map.items():
+        file_path = build_data_dir / filename
+        if not file_path.exists():
+            results.append({"file": filename, "status": "missing", "errors": []})
+            all_passed = False
+            continue
+        try:
+            import json
+            raw = json.loads(file_path.read_text(encoding="utf-8"))
+            data = raw if isinstance(raw, dict) else {}
+            # Unwrap from envelope if needed
+            payload = data.get("data", data)
+            validate_data(model_class, payload)
+            results.append({"file": filename, "status": "pass", "errors": []})
+        except Exception as exc:
+            results.append({"file": filename, "status": "fail", "errors": [str(exc)]})
+            all_passed = False
+
+    # Per-workspace files (walk workspace subdirs)
+    for ws_dir in sorted(build_data_dir.iterdir()):
+        if not ws_dir.is_dir():
+            continue
+        ws_files: list[tuple[str, type]] = [
+            ("cards.json", CardsFile),
+            ("connections.json", ConnectionsFile),
+            ("digests.json", DigestsFile),
+            ("events.json", EventsFile),
+        ]
+        for fname, mclass in ws_files:
+            fpath = ws_dir / fname
+            if not fpath.exists():
+                continue
+            try:
+                import json
+                raw = json.loads(fpath.read_text(encoding="utf-8"))
+                data = raw if isinstance(raw, dict) else {}
+                payload = data.get("data", data)
+                validate_data(mclass, payload)
+                rel = f"{ws_dir.name}/{fname}"
+                results.append({"file": rel, "status": "pass", "errors": []})
+            except Exception as exc:
+                rel = f"{ws_dir.name}/{fname}"
+                results.append({"file": rel, "status": "fail", "errors": [str(exc)]})
+                all_passed = False
+
+    if json_output:
+        typer.echo(json.dumps({"results": results, "all_passed": all_passed}, indent=2))
+    else:
+        passed = sum(1 for r in results if r["status"] == "pass")
+        failed = sum(1 for r in results if r["status"] == "fail")
+        missing = sum(1 for r in results if r["status"] == "missing")
+        typer.echo(f"Views data validation: {passed} passed, {failed} failed, {missing} missing")
+        for r in results:
+            if r["status"] == "pass":
+                typer.echo(f"  ✓ {r['file']}")
+            elif r["status"] == "fail":
+                typer.secho(f"  ✗ {r['file']}", fg=typer.colors.RED)
+                for err in r.get("errors", []):
+                    typer.echo(f"    {err}")
+            else:
+                typer.echo(f"  ? {r['file']} (missing)")
+
+    if not all_passed:
+        raise typer.Exit(code=1)
+
+
+# ---------------------------------------------------------------------------
+# Spike command group (Phase 6)
+# ---------------------------------------------------------------------------
+
+spike_app = typer.Typer(
+    no_args_is_help=True,
+    name="spike",
+    help="Run external graph-analysis tools on isolated workspace copies.",
+)
+app.add_typer(spike_app)
+
+
+@spike_app.command()
+def list(
+    ctx: typer.Context,
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """List available spike types."""
+    from construct.pipelines.spike_runner import list_spikes
+    spikes = list_spikes()
+    if json_output:
+        typer.echo(json.dumps(spikes, indent=2))
+    else:
+        if not spikes:
+            typer.echo("No spike types registered.")
+            return
+        typer.echo("Available spike types:")
+        for s in spikes:
+            typer.echo(f"  {s['name']}: {s['description']}")
+
+
+@spike_app.command()
+def run(
+    ctx: typer.Context,
+    tool_name: str = typer.Argument(..., help="Spike tool name (graphify, infranodus, etc.)"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w", help="Workspace to copy and run against"),
+    tool_path: Optional[str] = typer.Option(None, "--tool-path", help="Path to external tool binary"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Run an external spike tool on an isolated workspace copy.
+
+    Creates a temp copy of the workspace, runs the tool in isolation,
+    captures output to log/spike-results/, then cleans up.
+    """
+    from construct.pipelines.spike_runner import run_spike, SpikeResult
+
+    result = run_spike(
+        tool_name=tool_name,
+        workspace=workspace,
+        tool_path=tool_path,
+    )
+    if json_output:
+        typer.echo(
+            json.dumps({
+                "success": result.success,
+                "tool_name": result.tool_name,
+                "duration_seconds": result.duration_seconds,
+                "error": result.error,
+                "outputs": result.outputs,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            }, indent=2, default=str)
+        )
+    else:
+        if result.success:
+            typer.secho(
+                f"✓ Spike '{result.tool_name}' completed in {result.duration_seconds}s",
+                fg=typer.colors.GREEN,
+            )
+        else:
+            typer.secho(
+                f"✗ Spike '{result.tool_name}' failed: {result.error}",
+                fg=typer.colors.RED,
+            )
+        if result.outputs:
+            typer.echo(f"  Captured outputs: {', '.join(result.outputs)}")
+        if result.stdout:
+            lines = result.stdout.splitlines()
+            show = lines[:20]
+            typer.echo("  stdout:")
+            for line in show:
+                typer.echo(f"    {line}")
+            if len(lines) > 20:
+                typer.echo("  (stdout truncated)")
+        if result.stderr:
+            lines = result.stderr.splitlines()
+            show = lines[:10]
+            typer.echo("  stderr:")
+            for line in show:
+                typer.echo(f"    {line}")
+            if len(lines) > 10:
+                typer.echo("  (stderr truncated)")
+
+
+# ---------------------------------------------------------------------------
+# Tag command group (Phase 6)
+# ---------------------------------------------------------------------------
+
+tag_app = typer.Typer(
+    no_args_is_help=True,
+    name="tag",
+    help="Extract and manage candidate tags from source material.",
+)
+app.add_typer(tag_app)
+
+
+@tag_app.command()
+def extract(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Extract candidate tags/keywords from refs source material.
+
+    Reads refs/*.json from the workspace, uses hybrid extraction
+    to identify candidate tags, and writes results to log/tag-candidates.json.
+    Candidates are NEVER auto-accepted per D-08.
+    """
+    from construct.pipelines.tag_extraction import extract_candidates
+
+    result = extract_candidates(workspace)
+    if json_output:
+        typer.echo(
+            json.dumps({
+                "success": result.success,
+                "total_candidates": result.total_candidates,
+                "new_candidates": result.new_candidates,
+                "existing_seeds_skipped": result.existing_seeds_skipped,
+                "error": result.error,
+                "candidates": [
+                    {"id": c.id, "tag": c.tag, "domain_id": c.domain_id,
+                     "confidence": c.confidence, "status": c.status}
+                    for c in result.candidates
+                ],
+            }, indent=2, default=str)
+        )
+    else:
+        if not result.success:
+            typer.secho(f"✗ {result.error}", fg=typer.colors.RED)
+            raise typer.Exit(code=1)
+        typer.secho(
+            f"✓ Extracted {result.total_candidates} candidates "
+            f"({result.new_candidates} new, {result.existing_seeds_skipped} skipped)",
+            fg=typer.colors.GREEN,
+        )
+        if result.candidates:
+            typer.echo("  Candidates:")
+            for c in result.candidates[:20]:
+                typer.echo(
+                    f"  [{c.id}] {c.tag} "
+                    f"(domain: {c.domain_id or '?'}, confidence: {c.confidence:.2f}, "
+                    f"status: {c.status})"
+                )
+            if len(result.candidates) > 20:
+                typer.echo(f"  ... and {len(result.candidates) - 20} more")
+        typer.echo(f"Results written to {workspace}/log/tag-candidates.json")
+
+
+@tag_app.command()
+def approve(
+    ctx: typer.Context,
+    candidate_ids: str = typer.Argument(..., help="Comma-separated tag candidate IDs to approve"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Approve tag candidates and write to search-seeds.json.
+
+    Only approved candidates update search-seeds.json --
+    never auto-accepted per D-08.
+    """
+    from construct.services.knowledge import approve_tag_candidates
+
+    ids_list = [i.strip() for i in candidate_ids.split(",") if i.strip()]
+    result = approve_tag_candidates(workspace, ids_list)
+    _display_result(result, json_output)
+
+
+@tag_app.command()
+def list(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    status: Optional[str] = typer.Option(None, "--status", help="Filter by status: pending, approved, rejected"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """List tag candidates from log/tag-candidates.json."""
+    from construct.services.knowledge import list_tag_candidates
+
+    result = list_tag_candidates(workspace, status=status)
+    if json_output:
+        typer.echo(
+            json.dumps({
+                "success": result.success,
+                "message": result.message,
+                "data": result.data,
+            }, indent=2, default=str)
+        )
+    else:
+        if not result.success:
+            typer.secho(f"✗ {result.message}", fg=typer.colors.RED)
+            return
+        data = result.data or {}
+        candidates = data.get("candidates", [])
+        if not candidates:
+            typer.echo("No tag candidates found.")
+            return
+        typer.echo(f"Tag candidates ({len(candidates)}):")
+        for c in candidates:
+            typer.echo(
+                f"  [{c.get('id', '?')}] {c.get('tag', '?')} "
+                f"(domain: {c.get('domain_id', '?')}, "
+                f"confidence: {c.get('confidence', 0):.2f}, "
+                f"status: {c.get('status', '?')})"
+            )
+
+
 # -- Card commands -------------------------------------------------------
 
 
