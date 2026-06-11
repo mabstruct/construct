@@ -9,11 +9,17 @@ description = "Local-first, agent-powered personal knowledge system"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "langchain-anthropic>=1.1.0",
+  "langchain-core>=0.3",
+  "langgraph>=0.2",
+  "mcp>=1.0",
   "pydantic>=2.7",
-  "pytest>=8.0",
   "ruamel.yaml>=0.18",
   "typer>=0.12",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 construct = "construct.cli:main"
