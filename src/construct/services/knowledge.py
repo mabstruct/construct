@@ -28,6 +28,9 @@ from construct.schemas.config import (
     EventResult,
     ExtractionStatus,
     ReferenceRecord,
+    SearchCluster,
+    SearchClusterStatus,
+    SearchSeedsFile,
 )
 from construct.schemas.workspace import (
     ConnectionAuthor,
@@ -784,6 +787,313 @@ def route_source_to_domain(
             "source_path": str(target_path),
             "ref_path": f"refs/{ref_id}.json",
         },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tag candidate approval pipeline (Phase 6 — SPK-02, SPK-03)
+# ---------------------------------------------------------------------------
+
+# D-08: Tags are NEVER auto-accepted. All candidates must pass through the
+# curation review cycle. The functions below handle approval, rejection,
+# and listing of tag candidates.
+
+
+def _load_tag_candidates_file(workspace: Path) -> dict:
+    """Load log/tag-candidates.json, returning an empty structure if missing."""
+    path = workspace / "log" / "tag-candidates.json"
+    if not path.is_file():
+        return {"candidates": [], "generated_at": "", "total": 0}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger = __import__("logging").getLogger(__name__)
+        logger.warning("Could not read tag-candidates.json: %s", exc)
+        return {"candidates": [], "generated_at": "", "total": 0}
+
+
+def _write_tag_candidates_file(workspace: Path, payload: dict) -> OperationResult:
+    """Write tag-candidates.json atomically."""
+    path = workspace / "log" / "tag-candidates.json"
+    tmp = path.with_suffix(".tmp")
+    try:
+        tmp.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        tmp.replace(path)
+    except OSError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not write tag-candidates.json: {exc}",
+            errors=[OperationError(reason=str(exc))],
+        )
+    return OperationResult(success=True)
+
+
+def approve_tag_candidates(
+    workspace_root: str | Path,
+    candidate_ids: list[str],
+) -> OperationResult:
+    """Approve tag candidates and write them to search-seeds.json.
+
+    D-08 enforcement: Only explictly approved candidates (passed by ID)
+    are written to search-seeds.json. Candidates start as "pending" and
+    are never auto-accepted.
+
+    Steps:
+      1. Load tag-candidates.json
+      2. Filter candidates by ID, skip non-pending
+      3. Update matched candidates to "approved"
+      4. Load existing search-seeds.json
+      5. Add new SearchCluster entries for each approved tag
+      6. Write updated tag-candidates.json
+      7. Write updated search-seeds.json
+      8. Log event
+    """
+    root = Path(workspace_root)
+    data = _load_tag_candidates_file(root)
+    candidates = data.get("candidates", [])
+
+    if not candidates:
+        return OperationResult(
+            success=False,
+            message="No tag candidates found in log/tag-candidates.json",
+            errors=[OperationError(reason="Empty candidates list")],
+        )
+
+    # Build lookup by ID
+    candidate_map = {c.get("id", ""): c for c in candidates if "id" in c}
+    matched: list[dict] = []
+    skipped: list[str] = []
+
+    for cid in candidate_ids:
+        c = candidate_map.get(cid)
+        if c is None:
+            skipped.append(f"{cid}: not found")
+        elif c.get("status") != "pending":
+            skipped.append(f"{cid}: status is '{c.get('status')}' (not pending)")
+        else:
+            c["status"] = "approved"
+            matched.append(c)
+
+    if not matched:
+        return OperationResult(
+            success=False,
+            message=f"No pending candidates matched the given IDs. Skipped: {', '.join(skipped)}",
+            errors=[
+                OperationError(
+                    reason="No valid pending candidates found",
+                    suggestion="Run `construct tag list --status pending` to see available candidates.",
+                )
+            ],
+        )
+
+    # Load existing search-seeds.json
+    seeds_path = root / "search-seeds.json"
+    existing_seeds: dict = {"version": 1, "updated": None, "clusters": []}
+    if seeds_path.is_file():
+        try:
+            existing_seeds = json.loads(seeds_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger = __import__("logging").getLogger(__name__)
+            logger.warning("Could not parse search-seeds.json: %s", exc)
+
+    existing_clusters = existing_seeds.get("clusters", [])
+    existing_terms: set[str] = set()
+    for cluster in existing_clusters:
+        for term in cluster.get("terms", []):
+            existing_terms.add(term.lower().strip())
+
+    # Add new clusters for approved tags
+    now_iso = datetime.now(timezone.utc).isoformat()
+    new_clusters: list[dict] = []
+    for c in matched:
+        tag = c.get("tag", "").strip()
+        if not tag:
+            continue
+        if tag.lower() in existing_terms:
+            continue  # dedup — already seeded
+
+        domain_id = c.get("domain_id") or "general"
+        cluster_id = f"tag-{_to_kebab_case(tag)}"
+
+        new_cluster = {
+            "id": cluster_id,
+            "domain": domain_id,
+            "terms": [tag],
+            "weight": min(c.get("confidence", 0.5) * 0.8 + 0.2, 1.0),
+            "status": SearchClusterStatus.active.value,
+            "last_queried": None,
+        }
+        new_clusters.append(new_cluster)
+        existing_terms.add(tag.lower())
+
+    # Update search-seeds.json
+    existing_seeds["clusters"] = existing_clusters + new_clusters
+    existing_seeds["updated"] = now_iso
+
+    # Write search-seeds.json atomically (T-06-12 mitigation)
+    tmp_seeds = seeds_path.with_suffix(".tmp")
+    try:
+        tmp_seeds.write_text(
+            json.dumps(existing_seeds, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        tmp_seeds.replace(seeds_path)
+    except OSError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not write search-seeds.json: {exc}",
+            errors=[OperationError(reason=str(exc))],
+        )
+
+    # Write updated tag-candidates.json
+    data["total"] = len(candidates)
+    write_result = _write_tag_candidates_file(root, data)
+    if not write_result.success:
+        return write_result
+
+    # Log event (T-06-11 — accountability via audit trail)
+    append_event(
+        root,
+        EventAgent.construct,
+        "tag_candidates_approved",
+        target=",".join(c.get("id", "") for c in matched),
+        detail=(
+            f"Approved {len(matched)} tag candidate(s), "
+            f"added {len(new_clusters)} new search cluster(s) to search-seeds.json"
+        ),
+    )
+
+    return OperationResult(
+        success=True,
+        message=(
+            f"Approved {len(matched)} tag candidate(s), "
+            f"added {len(new_clusters)} search cluster(s). "
+            + (f"Skipped: {', '.join(skipped)}" if skipped else "")
+        ),
+        data={
+            "approved_count": len(matched),
+            "new_clusters_count": len(new_clusters),
+            "skipped": skipped,
+        },
+    )
+
+
+def reject_tag_candidates(
+    workspace_root: str | Path,
+    candidate_ids: list[str],
+) -> OperationResult:
+    """Reject tag candidates — sets status to "rejected".
+
+    Does NOT update search-seeds.json. Per D-08, candidates stay
+    as reviewable artifacts but are marked rejected.
+
+    Steps:
+      1. Load tag-candidates.json
+      2. Filter candidates by ID, skip non-pending
+      3. Update matched candidates to "rejected"
+      4. Write updated tag-candidates.json
+      5. Log event
+    """
+    root = Path(workspace_root)
+    data = _load_tag_candidates_file(root)
+    candidates = data.get("candidates", [])
+
+    if not candidates:
+        return OperationResult(
+            success=False,
+            message="No tag candidates found in log/tag-candidates.json",
+        )
+
+    candidate_map = {c.get("id", ""): c for c in candidates if "id" in c}
+    matched: list[dict] = []
+    skipped: list[str] = []
+
+    for cid in candidate_ids:
+        c = candidate_map.get(cid)
+        if c is None:
+            skipped.append(f"{cid}: not found")
+        elif c.get("status") != "pending":
+            skipped.append(f"{cid}: status is '{c.get('status')}' (not pending)")
+        else:
+            c["status"] = "rejected"
+            matched.append(c)
+
+    if not matched:
+        return OperationResult(
+            success=False,
+            message="No pending candidates matched the given IDs",
+            errors=[OperationError(
+                reason="No valid pending candidates to reject",
+                suggestion="Run `construct tag list --status pending` to see available candidates.",
+            )],
+        )
+
+    # Write updated tag-candidates.json
+    data["total"] = len(candidates)
+    write_result = _write_tag_candidates_file(root, data)
+    if not write_result.success:
+        return write_result
+
+    # Log event
+    append_event(
+        root,
+        EventAgent.construct,
+        "tag_candidates_rejected",
+        target=",".join(c.get("id", "") for c in matched),
+        detail=f"Rejected {len(matched)} tag candidate(s)",
+    )
+
+    return OperationResult(
+        success=True,
+        message=(
+            f"Rejected {len(matched)} tag candidate(s)."
+            + (f" Skipped: {', '.join(skipped)}" if skipped else "")
+        ),
+        data={"rejected_count": len(matched), "skipped": skipped},
+    )
+
+
+def list_tag_candidates(
+    workspace_root: str | Path,
+    status: str | None = None,
+) -> OperationResult:
+    """List tag candidates from log/tag-candidates.json.
+
+    Args:
+        workspace_root: Path to workspace root.
+        status: Optional filter — "pending", "approved", or "rejected".
+
+    Returns:
+        OperationResult with candidates list in data.
+    """
+    root = Path(workspace_root)
+    data = _load_tag_candidates_file(root)
+    candidates = data.get("candidates", [])
+
+    if status is not None:
+        status_filter = status.lower().strip()
+        valid_statuses = {"pending", "approved", "rejected"}
+        if status_filter not in valid_statuses:
+            return OperationResult(
+                success=False,
+                message=f"Invalid status filter '{status}'. Valid: {', '.join(sorted(valid_statuses))}",
+                errors=[OperationError(
+                    reason=f"Unknown status: {status}",
+                    suggestion="Use --status pending, --status approved, or --status rejected.",
+                )],
+            )
+        candidates = [c for c in candidates if c.get("status") == status_filter]
+
+    # Sort by confidence descending
+    candidates = sorted(candidates, key=lambda c: c.get("confidence", 0), reverse=True)
+
+    return OperationResult(
+        success=True,
+        message=f"Found {len(candidates)} tag candidate(s)",
+        data={"candidates": candidates, "total": len(candidates)},
     )
 
 
