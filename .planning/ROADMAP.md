@@ -96,7 +96,13 @@ Plans:
   1. User can generate synthesis outputs that remain tied to cards, refs, and graph structure with confidence-aware reasoning.
   2. User can ask grounded domain questions and receive bounded answers that cite relevant knowledge artifacts.
   3. User can identify promising cross-domain bridges more systematically once graph integrity is strong enough to support them.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Core LLM infrastructure: dependencies, llm/ package, config loader, test scaffolding
+- [ ] 05-02-PLAN.md — ask.domain LangGraph L2 gate: StateGraph, capability registration, CLI, tests
+- [ ] 05-03-PLAN.md — Bridge detection pipeline: L1/L2/L3 multi-level detection, CLI, scoring, bridges.json
+- [ ] 05-04-PLAN.md — Synthesis skill update: CLI command references, confidence propagation documentation
 
 ### Phase 6: Derived Data, Ops UI & Governed Spikes
 **Goal**: Maintainers can expose stable derived-data contracts for future UI work and safely test local ops UI and graph-analysis spikes without replacing canonical CONSTRUCT behavior.
@@ -121,5 +127,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Governed Knowledge Operations | 0/3 | Being planned | - |
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
-| 5. Grounded Synthesis & Graph Reasoning | 0/TBD | Not started | - |
+| 5. Grounded Synthesis & Graph Reasoning | 0/4 | Planned | - |
 | 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
