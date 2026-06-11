@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from construct.schemas.card import SchemaParseError, parse_card_markdown
 from construct.schemas.config import (
     DomainConfig,
     DomainsRegistry,
@@ -135,6 +136,26 @@ class WorkspaceLoader:
         if not cards_dir.exists():
             return []
         return sorted(cards_dir.glob("*.md"))
+
+    def load_cards(self) -> list[dict]:
+        """Load and parse all cards from the workspace.
+
+        Returns a list of dicts with card metadata and body text.
+        Unparseable cards are skipped with a warning.
+        """
+        cards: list[dict] = []
+        for card_path in self.iter_cards():
+            try:
+                markdown = card_path.read_text(encoding="utf-8")
+                card, body = parse_card_markdown(markdown, source_path=card_path)
+                card_data = card.model_dump()
+                card_data["body"] = body
+                cards.append(card_data)
+            except (SchemaParseError, OSError):
+                import warnings
+                warnings.warn(f"Skipping unparseable card: {card_path}")
+                continue
+        return cards
 
     def iter_refs(self) -> list[Path]:
         refs_dir = self.resolve("refs")
