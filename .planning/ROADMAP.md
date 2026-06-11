@@ -113,7 +113,13 @@ Plans:
   2. Maintainer can exercise capabilities through a local ops UI spike without making that UI the source of truth.
   3. Maintainer can run external graph-analysis spikes without changing canonical workspace contracts or CONSTRUCT governance.
   4. Candidate tags, keywords, and graph-guided exploration outputs are routed into reviewable curation inputs rather than auto-accepted knowledge.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Views Data Contracts: JSON Schema declarations, version fields, contract tests (ADV-03)
+- [ ] 06-02-PLAN.md — Streamlit Ops UI: Dashboard, Gate Review, Capability Runner panels (ADV-04)
+- [ ] 06-03-PLAN.md — Spike Framework: Isolation runner CLI + documented SKILL.md procedures (SPK-01, SPK-04)
+- [ ] 06-04-PLAN.md — CLI Integration + Tag Pipeline: CLI commands, tag extraction, curation cycle wiring (SPK-02, SPK-03)
 **UI hint**: yes
 
 ## Progress
@@ -128,4 +134,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
-| 6. Derived Data, Ops UI & Governed Spikes | 0/TBD | Not started | - |
+| 6. Derived Data, Ops UI & Governed Spikes | 0/4 | Being planned | - |
