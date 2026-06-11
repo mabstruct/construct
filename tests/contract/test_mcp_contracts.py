@@ -40,5 +40,6 @@ def test_mcp_tool_count() -> None:
         "construct_ingest_source",
         "construct_help_suggest",
         "construct_ask_domain",
+        "construct_bridge_detect",
     }
     assert tool_names == expected
