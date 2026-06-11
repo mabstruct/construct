@@ -4,7 +4,7 @@ milestone: v0.3
 milestone_name: milestone
 status: executing
 stopped_at: Phase 5 execution complete
-last_updated: "2026-06-11T20:33:07.932Z"
+last_updated: "2026-06-11T21:08:27.687Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 6
@@ -55,6 +55,7 @@ Progress: [████████░░] 82%
 
 | Phase 05 P03 | 12 min | - tasks | - files |
 | Phase 06-derived-data-ops-ui-governed-spikes P06-03 | 12min | 2 tasks | 2 files |
+| Phase 06 P06-02 | 9 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase ?]: No SpikeRunner class — functional module-level pattern matches existing pipelines (bridge_detect, ingestion)
 - [Phase ?]: Command injection safety via shlex.quote() + shlex.split() → subprocess.run without shell=True
 - [Phase ?]: register_spike_commands() kept decoupled from cli.py — CLI wiring deferred to future integration
+- [Phase ?]: Streamlit: add streamlit>=1.35 as hard dependency
+- [Phase ?]: Capability runner: dynamic form from JSON Schema per PRD 10.2
+- [Phase ?]: Gate review: approve/reject with typed handler arguments
 
 ### Pending Todos
 
