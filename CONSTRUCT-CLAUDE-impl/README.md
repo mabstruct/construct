@@ -24,6 +24,8 @@ Instead of building a Python backend with FastAPI, SQLite, and NetworkX, we conf
 
 ## Source Structure
 
+**New user?** Start with [`USER_GUIDE.md`](USER_GUIDE.md) — quickstart, use cases, example scenarios, and full command reference.
+
 This is the development source. For deployment, the setup script assembles a self-contained directory.
 
 ```

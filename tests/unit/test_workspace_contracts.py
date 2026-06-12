@@ -20,6 +20,7 @@ def _write_canonical_workspace(root: Path) -> Path:
     (root / "log").mkdir()
     (root / "digests").mkdir()
     (root / "publish").mkdir()
+    (root / "inbox").mkdir()
     (root / ".construct").mkdir()
 
     (root / "connections.json").write_text((TEMPLATE_DIR / "connections.json").read_text(), encoding="utf-8")
@@ -104,5 +105,6 @@ def test_workspace_scaffold_names_canonical_derived_and_support_paths() -> None:
         "log/events.jsonl",
         "digests",
         "publish",
+        "inbox",
         ".construct/model-routing.yaml",
     )

@@ -53,7 +53,7 @@ The **knowledge model and workspace file format** are shared across all versions
 
 ## Getting started
 
-See [`CONSTRUCT-CLAUDE-impl/README.md`](CONSTRUCT-CLAUDE-impl/README.md) for installation and usage.
+See [`CONSTRUCT-CLAUDE-impl/USER_GUIDE.md`](CONSTRUCT-CLAUDE-impl/USER_GUIDE.md) for the user guide and quickstart. Installation details in [`CONSTRUCT-CLAUDE-impl/README.md`](CONSTRUCT-CLAUDE-impl/README.md).
 
 ---
 

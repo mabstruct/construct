@@ -48,11 +48,9 @@ def test_init_writes_registry_and_domain_detail_file(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.stdout
     domains_yaml = (workspace / "domains.yaml").read_text()
-    domain_yaml = (workspace / "domains" / "example-domain" / "domain.yaml").read_text()
-    assert "domains/example-domain/domain.yaml" in domains_yaml
-    assert "id: example-domain" in domain_yaml
-    assert "content_categories:" in domain_yaml
-    assert "research_seeds:" in domain_yaml
+    assert "example-domain:" in domains_yaml
+    assert "content_categories:" in domains_yaml
+    assert "examples" in domains_yaml
 
 
 def test_init_normalizes_taxonomy_seeds_to_kebab_case(tmp_path: Path) -> None:
@@ -66,10 +64,10 @@ def test_init_normalizes_taxonomy_seeds_to_kebab_case(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0, result.stdout
-    domain_yaml = (workspace / "domains" / "physics" / "domain.yaml").read_text()
-    assert "- quantum-gravity" in domain_yaml
-    assert "- string-theory" in domain_yaml
-    assert "- general-relativity" in domain_yaml
+    domains_yaml = (workspace / "domains.yaml").read_text()
+    assert "- quantum-gravity" in domains_yaml
+    assert "- string-theory" in domains_yaml
+    assert "- general-relativity" in domains_yaml
 
 
 def test_init_normalizes_domain_slug_to_kebab_case(tmp_path: Path) -> None:
@@ -83,7 +81,6 @@ def test_init_normalizes_domain_slug_to_kebab_case(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0, result.stdout
-    assert (workspace / "domains" / "quantum-gravity" / "domain.yaml").exists()
     domains_yaml = (workspace / "domains.yaml").read_text()
     assert "quantum-gravity:" in domains_yaml
 
@@ -115,13 +112,11 @@ def test_validate_reports_errors_with_nonzero_exit(tmp_path: Path) -> None:
         ["init", str(workspace)],
         input="example-domain\nExample Domain\nExample scope\nexamples\npeer-reviewed papers\nexample seed\n",
     )
-    (workspace / "domains" / "example-domain" / "domain.yaml").unlink()
     (workspace / "cards" / "broken-card.md").write_text("---\nid: broken-card\ntitle: [broken\n---\n")
 
     result = runner.invoke(app, ["validate", str(workspace)])
 
     assert result.exit_code == 1
-    assert "ERROR domains/example-domain/domain.yaml" in result.stdout
     assert "ERROR cards/broken-card.md" in result.stdout
 
 
@@ -139,5 +134,5 @@ def test_status_labels_canonical_and_derived_paths(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Canonical: cards [present]" in result.stdout
     assert "Canonical: domains.yaml [present]" in result.stdout
-    assert "Derived: db [present]" in result.stdout
-    assert "Derived: views [present]" in result.stdout
+    assert "Derived: digests [present]" in result.stdout
+    assert "Derived: publish [present]" in result.stdout

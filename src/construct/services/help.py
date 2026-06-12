@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from construct.capabilities.catalog import get_registry
 from construct.pipelines.workflow_runner import WorkflowRunner
 from construct.services.knowledge import OperationError, OperationResult
 from construct.storage.workspace import WorkspaceLoadError, WorkspaceLoader
@@ -118,6 +117,7 @@ def suggest(workspace_root: str | Path) -> OperationResult:
     domain_priorities.sort(key=lambda x: x[0])
 
     # Get global status via capability registry
+    from construct.capabilities.catalog import get_registry
     registry_caps = get_registry()
     workspace_id = str(root)
     graph_data = None
