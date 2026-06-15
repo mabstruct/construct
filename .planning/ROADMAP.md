@@ -135,3 +135,21 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | 4/4 | Complete   | 2026-06-11 |
+
+### Phase 7: Close v0.3 blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring
+
+**Goal:** Close the three v0.3 milestone-audit blockers so the milestone re-audits to a legitimate green close, without adding new capability.
+**Requirements**: RT-03, ING-02, ING-05 (remediation of audit-verified gaps; see `.planning/v0.3-MILESTONE-AUDIT.md`)
+**Depends on:** Phase 6
+**Success Criteria** (what must be TRUE):
+  1. All MCP tools are invocable with their advertised schema (no TypeError); a contract test invokes each handler.
+  2. `construct ingest source` then `construct validate` passes E2E on a clean workspace and the test-ws fixtures.
+  3. `graph.status` (CLI + MCP) returns the real graph-health report and `help.suggest` surfaces it.
+  4. REQUIREMENTS.md traceability + SUMMARY frontmatter match audit-verified reality.
+  5. `/gsd:audit-milestone` re-run shows 0 unsatisfied requirements.
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — RT-03 adapter shims + ING-05 graph.status wiring (catalog.py + help.py) + handler-invocation contract test
+- [ ] 07-02-PLAN.md — ING-02 reserved-cluster seeding at init + test-ws fixtures + ingest→validate E2E
+- [ ] 07-03-PLAN.md — Traceability sync: REQUIREMENTS.md status reconciliation + SUMMARY requirements_completed backfill
