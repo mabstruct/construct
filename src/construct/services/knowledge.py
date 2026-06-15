@@ -95,13 +95,18 @@ def _resolve_id(workspace_root: Path, desired_id: str) -> str:
     return resolved
 
 
-def _card_dict_to_markdown(card_dict: dict[str, Any]) -> str:
-    """Convert a card-data dictionary to canonical markdown with YAML frontmatter."""
+def _card_dict_to_markdown(card_dict: dict[str, Any], body: str | None = None) -> str:
+    """Convert a card-data dictionary to canonical markdown with YAML frontmatter.
+
+    When *body* is provided it is used verbatim as the markdown body; otherwise a
+    canonical empty section template is emitted.
+    """
     buf = StringIO()
     _yaml.dump(card_dict, buf)
     frontmatter_text = buf.getvalue()
 
-    body = "## Summary\n\n\n\n## Evidence\n\n\n\n## Significance\n\n\n\n## Open Questions\n\n"
+    if body is None:
+        body = "## Summary\n\n\n\n## Evidence\n\n\n\n## Significance\n\n\n\n## Open Questions\n\n"
     return f"---\n{frontmatter_text}---\n\n{body}"
 
 
@@ -132,6 +137,7 @@ def create_card(
     workspace_root: str | Path,
     card_data: dict[str, Any],
     author: CardAuthor = CardAuthor.construct,
+    body: str | None = None,
 ) -> OperationResult:
     """Create a new knowledge card in the workspace.
 
@@ -141,6 +147,9 @@ def create_card(
     3. Convert to markdown and validate via *validate_card_write*
     4. Write ``cards/{id}.md``
     5. Log a *create_card* event
+
+    *body* is the markdown body placed after the frontmatter; when omitted a
+    canonical empty section template is used.
     """
     root = Path(workspace_root)
     data = dict(card_data)
@@ -168,7 +177,7 @@ def create_card(
 
     # Convert to markdown and validate
     try:
-        markdown = _card_dict_to_markdown(data)
+        markdown = _card_dict_to_markdown(data, body=body)
         validate_card_write(markdown)
     except (ArtifactValidationError, PydanticValidationError, ValueError) as exc:
         reason = str(exc)

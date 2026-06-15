@@ -50,6 +50,15 @@ def ingest_source(
     source: str,
     domain_hint: str | None = None,
     author: str = "construct",
+    *,
+    title: str | None = None,
+    relevance: float | None = None,
+    source_tier: int | None = None,
+    key_findings: list[str] | None = None,
+    content_categories: list[str] | None = None,
+    year: int | None = None,
+    venue: str | None = None,
+    search_cluster: str | None = None,
 ) -> OperationResult:
     """Ingest a source into the workspace through the governed ingestion pipeline.
 
@@ -57,9 +66,26 @@ def ingest_source(
     capture source → detect type → classify domain → create ref record → generate seed card → log event
 
     Each step is deterministic and can be re-run.
+
+    CONSTRUCT is agent-driven: extraction is the orchestrator's job, the CLI
+    persists. The optional metadata params (``title``, ``relevance``,
+    ``source_tier``, ``key_findings``, ``content_categories``, ``year``,
+    ``venue``, ``search_cluster``) let the caller record what it already
+    extracted, rather than the pipeline fetching pages itself. When omitted the
+    pipeline falls back to conservative defaults (relevance 0.5, tier 5).
     """
     root = Path(workspace_root).resolve()
     source_type = detect_source_type(source)
+
+    # Normalize caller-supplied metadata (agent-extracted; CLI/MCP persists it)
+    key_findings = list(key_findings) if key_findings else []
+    content_categories = [_to_kebab_case(c) for c in content_categories] if content_categories else []
+    resolved_relevance = relevance if relevance is not None else 0.5
+    resolved_tier = source_tier if source_tier is not None else 5
+    # An agent that supplied findings or an explicit title has done extraction.
+    extraction = (
+        ExtractionStatus.complete if (key_findings or title) else ExtractionStatus.partial
+    )
 
     # Step 1: Load workspace context
     if not root.exists():
@@ -97,8 +123,11 @@ def ingest_source(
         domain_id = result.data.get("domain") if result.data else None
 
     elif source_type == SourceType.URL:
-        # Create ref record for URL — no file to route
-        source_title = source.replace("https://", "").replace("http://", "").split("/")[0].title()
+        # Create ref record for URL — no file to route.
+        # Prefer a caller-supplied title; derive the ref_id from it so distinct
+        # pages on the same host don't collide into the hostname slug.
+        hostname = source.replace("https://", "").replace("http://", "").split("/")[0].title()
+        source_title = title or hostname
         ref_id = _to_kebab_case(source_title)
         deduped = _deduplicate_ref_id(root, ref_id)
         if deduped[1] is not None:
@@ -121,12 +150,16 @@ def ingest_source(
                 id=ref_id,
                 title=source_title,
                 url=source,
-                relevance_score=0.5,
-                source_tier=5,
-                extraction_status=ExtractionStatus.partial,
+                relevance_score=resolved_relevance,
+                source_tier=resolved_tier,
+                key_findings=key_findings,
+                content_categories=content_categories,
+                year=year,
+                venue=venue,
+                extraction_status=extraction,
                 ingested_date=today,
                 domain=domain_id,
-                search_cluster="web-ingest",
+                search_cluster=search_cluster or "web-ingest",
             )
             validate_ref_write(ref.model_dump(), relative_path=f"refs/{ref_id}.json")
             _write_ref_file(root, ref_id, ref)
@@ -143,9 +176,9 @@ def ingest_source(
         note_text = source
         if source_type == SourceType.RESEARCH:
             note_text = source[len("research:"):].strip()
-            source_title = "Research: " + note_text[:60]
+            source_title = title or ("Research: " + note_text[:60])
         else:
-            source_title = note_text[:60].strip() if note_text else "Untitled Note"
+            source_title = title or (note_text[:60].strip() if note_text else "Untitled Note")
 
         ref_id = _to_kebab_case(source_title[:40])
         deduped = _deduplicate_ref_id(root, ref_id)
@@ -163,12 +196,16 @@ def ingest_source(
                 title=source_title,
                 url=f"note://{ref_id}",
                 abstract=note_text,
-                relevance_score=0.5,
-                source_tier=5,
-                extraction_status=ExtractionStatus.partial,
+                relevance_score=resolved_relevance,
+                source_tier=resolved_tier,
+                key_findings=key_findings,
+                content_categories=content_categories,
+                year=year,
+                venue=venue,
+                extraction_status=extraction,
                 ingested_date=today,
                 domain=domain_id or "_general",
-                search_cluster="manual-ingest",
+                search_cluster=search_cluster or "manual-ingest",
             )
             validate_ref_write(ref.model_dump(), relative_path=f"refs/{ref_id}.json")
             _write_ref_file(root, ref_id, ref)
@@ -180,18 +217,21 @@ def ingest_source(
             )
         source_detail = f"note '{source_title}'"
 
-    # Step 3: Create seed card from the ref
+    # Step 3: Create seed card from the ref.
+    # NB: no "summary" key here — KnowledgeCard is extra="forbid"; the summary
+    # text belongs in the markdown body, not the frontmatter (see card_body).
     card_data = {
         "title": source_title or "Untitled",
         "epistemic_type": "finding",
         "domains": [domain_id] if domain_id else [],
         "confidence": 1,
-        "source_tier": 5,
-        "content_categories": [],
+        "source_tier": resolved_tier,
+        "content_categories": content_categories,
+        "sources": [{"type": _card_source_type(source_type), "ref": ref_id}] if ref_id else [],
         "author": author,
-        "summary": f"Seed card from ingested {source_type}: {source_title}",
     }
-    card_result = create_card(str(root), card_data, author=CardAuthor(author))
+    card_body = _seed_card_body(source_title or "Untitled", source_type, key_findings)
+    card_result = create_card(str(root), card_data, author=CardAuthor(author), body=card_body)
 
     # Step 4: Log event
     append_event(
@@ -229,6 +269,35 @@ def ingest_source(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _card_source_type(source_type: str) -> str:
+    """Map an ingestion source type to a card ``CardSource.type`` value."""
+    return {
+        SourceType.URL: "url",
+        SourceType.FILE: "paper",
+        SourceType.RESEARCH: "digest",
+        SourceType.NOTE: "observation",
+    }.get(source_type, "observation")
+
+
+def _seed_card_body(title: str, source_type: str, key_findings: list[str]) -> str:
+    """Build the markdown body for a seed card, placing the summary in-body.
+
+    The frontmatter cannot carry free text (the card schema forbids extras), so
+    extracted findings land in the ``## Summary`` section. When no findings were
+    supplied, a short provenance line keeps the section non-empty.
+    """
+    if key_findings:
+        summary = "\n".join(f"- {finding}" for finding in key_findings)
+    else:
+        summary = f"Seed card from ingested {source_type}: {title}."
+    return (
+        f"## Summary\n\n{summary}\n\n"
+        "## Evidence\n\n\n\n"
+        "## Significance\n\n\n\n"
+        "## Open Questions\n\n"
+    )
 
 
 def _deduplicate_ref_id(root: Path, desired_id: str) -> tuple[str, None] | tuple[None, OperationResult]:

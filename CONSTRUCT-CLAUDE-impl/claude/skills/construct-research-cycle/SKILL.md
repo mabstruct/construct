@@ -100,26 +100,40 @@ For each result:
 
 For each finding above the relevance threshold, run the ingestion pipeline via CLI:
 
+**Pass the metadata you extracted in Step 4 via flags** — CONSTRUCT is agent-driven: extraction is your job, the CLI persists what you give it. If you omit the flags the ref falls back to conservative defaults (title = hostname, relevance 0.5, tier 5, no findings), which is the un-enriched stub you want to avoid.
+
 For URL-based findings (papers, articles, web pages):
 ```bash
 construct ingest source {finding_url} \
   --workspace . \
   --domain {domain} \
-  --author researcher
+  --author researcher \
+  --title "{finding_title}" \
+  --relevance {relevance_score} \
+  --tier {source_tier} \
+  --year {year} --venue "{venue}" \
+  --cluster {search_cluster} \
+  --finding "{key_finding_1}" --finding "{key_finding_2}" \
+  --category {content_category_1} --category {content_category_2}
 ```
+Repeat `--finding` / `--category` once per item. Omit flags you genuinely don't have (e.g. `--year`/`--venue` for a non-paper). The `--title` flag also drives the `ref_id`, so distinct papers on the same host no longer collide.
 
 For research-note findings (findings extracted from conversation or non-URL sources):
 ```bash
 construct ingest source "research:{finding_title}: {finding_summary}" \
   --workspace . \
   --domain {domain} \
-  --author researcher
+  --author researcher \
+  --relevance {relevance_score} \
+  --tier {source_tier} \
+  --finding "{key_finding}" \
+  --category {content_category}
 ```
 
 The `construct ingest source` command handles:
 - Source type detection (URL vs research note vs paper)
-- Ref record creation with metadata (title, authors, year, venue, URL, relevance score, key findings, content categories)
-- Seed card creation with initial content (if relevance ≥ `card_creation_threshold`)
+- Ref record creation, persisting the metadata you pass (title, year, venue, relevance score, source tier, key findings, content categories) — defaults applied for anything omitted
+- Seed card creation, with your key findings written into the card's `## Summary` section and linked back to the ref
 - Event logging to `log/events.jsonl`
 
 **Benefits:** Consistent ref/card format, deterministic validation, traceable event log entries.

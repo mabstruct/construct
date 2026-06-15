@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -283,15 +283,40 @@ def source(
     workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
     domain: str = typer.Option(None, "--domain", "-d", help="Target domain hint"),
     author: str = typer.Option("construct", "--author", "-a"),
+    title: str = typer.Option(None, "--title", "-t", help="Title to record (also used to derive the ref id)"),
+    relevance: float = typer.Option(None, "--relevance", help="Relevance score 0.0-1.0"),
+    tier: int = typer.Option(None, "--tier", help="Source tier 1 (best) - 5 (unverified)"),
+    finding: Optional[List[str]] = typer.Option(None, "--finding", help="Key finding (repeatable)"),
+    category: Optional[List[str]] = typer.Option(None, "--category", help="Content category (repeatable)"),
+    year: int = typer.Option(None, "--year", help="Publication year"),
+    venue: str = typer.Option(None, "--venue", help="Publication venue"),
+    cluster: str = typer.Option(None, "--cluster", help="Search cluster label"),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
-    """Ingest a source (file, URL, note, or web research) into the workspace."""
+    """Ingest a source (file, URL, note, or web research) into the workspace.
+
+    Metadata flags let the orchestrator persist what it already extracted from a
+    source instead of relying on the pipeline's conservative defaults.
+    """
     try:
         cap = get_registry().get("ingest.source")
     except KeyError:
         typer.echo("ERROR: Capability not found.")
         raise typer.Exit(code=1)
-    result = cap.handler(workspace, source=source, domain_hint=domain, author=author)
+    result = cap.handler(
+        workspace,
+        source=source,
+        domain_hint=domain,
+        author=author,
+        title=title,
+        relevance=relevance,
+        source_tier=tier,
+        key_findings=finding or None,
+        content_categories=category or None,
+        year=year,
+        venue=venue,
+        search_cluster=cluster,
+    )
     _display_result(result, json_output)
 
 

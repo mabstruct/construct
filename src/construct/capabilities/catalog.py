@@ -114,6 +114,15 @@ class IngestSourceInput(BaseModel):
     source: str
     domain_hint: str | None = None
     author: str = "construct"
+    # Optional agent-extracted metadata persisted onto the ref/seed card.
+    title: str | None = None
+    relevance: float | None = None
+    source_tier: int | None = None
+    key_findings: list[str] | None = None
+    content_categories: list[str] | None = None
+    year: int | None = None
+    venue: str | None = None
+    search_cluster: str | None = None
 
 
 class HelpSuggestInput(BaseModel):
