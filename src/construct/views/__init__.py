@@ -1,8 +1,13 @@
-"""Views data contract models and generator pipeline."""
+"""Views data contract models and generator pipeline.
+
+Versioning lives in two intentional, separate places: the views
+data-contract version (the ``schema_version`` field on ``ViewsEnvelope``)
+and the package version (``construct.__version__``). This module
+deliberately carries no ``__version__`` of its own, so there is no third
+version to drift.
+"""
 
 from __future__ import annotations
-
-__version__ = "0.1.0"
 
 from .models import (
     ArticleRecord,

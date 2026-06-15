@@ -43,6 +43,11 @@ mkdir -p "$TARGET"
 # Deploy root files
 cp "$IMPL_DIR/AGENTS.md" "$TARGET/AGENTS.md"
 cp "$IMPL_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
+cp "$IMPL_DIR/USER_GUIDE.md" "$TARGET/USER_GUIDE.md"
+
+# Register the CONSTRUCT MCP server (project-scoped, committed with the workspace).
+# Claude Code prompts to approve it on first load.
+cp "$IMPL_DIR/.mcp.json" "$TARGET/.mcp.json"
 
 # Deploy .claude/ (Claude Code native configuration)
 mkdir -p "$TARGET/.claude"
@@ -58,10 +63,14 @@ cp -r "$IMPL_DIR/construct/templates"  "$TARGET/.construct/"
 cp -r "$IMPL_DIR/construct/references" "$TARGET/.construct/"
 cp -r "$IMPL_DIR/construct/workflows"  "$TARGET/.construct/"
 
-# Copy VERSION marker
-if [[ -f "$IMPL_DIR/VERSION" ]]; then
-  cp "$IMPL_DIR/VERSION" "$TARGET/.construct/VERSION"
+# Stamp VERSION marker from the single source of truth (src/construct/__init__.py).
+# Avoids a hand-maintained VERSION file drifting from the engine version.
+VERSION="$(sed -nE 's/^__version__ = "([^"]+)"/\1/p' "$SCRIPT_DIR/src/construct/__init__.py")"
+if [[ -z "$VERSION" ]]; then
+  echo "Error: could not read __version__ from src/construct/__init__.py"
+  exit 1
 fi
+printf '%s\n' "$VERSION" > "$TARGET/.construct/VERSION"
 
 echo ""
 echo "Done. Structure:"
@@ -69,6 +78,8 @@ echo ""
 echo "  $TARGET/"
 echo "  ├── AGENTS.md              # Operating mode definition"
 echo "  ├── CLAUDE.md              # Claude Code entry point (imports AGENTS.md)"
+echo "  ├── USER_GUIDE.md          # End-user guide"
+echo "  ├── .mcp.json              # CONSTRUCT MCP server (approve on first load)"
 echo "  ├── .claude/               # Claude Code native config"
 echo "  │   ├── settings.json      # Permission pre-approvals"
 echo "  │   ├── skills/            # Invocable as /skill-name"

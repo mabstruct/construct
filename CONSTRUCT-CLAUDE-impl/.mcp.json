@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "construct": {
+      "type": "stdio",
+      "command": "construct",
+      "args": ["mcp"]
+    }
+  }
+}

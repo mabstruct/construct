@@ -23,6 +23,28 @@ app = typer.Typer(no_args_is_help=True)
 KEBAB_CASE_SANITIZE_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        from construct import __version__
+
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the CONSTRUCT version and exit.",
+    ),
+) -> None:
+    """CONSTRUCT — local-first, agent-powered personal knowledge system."""
+
+
 def _parse_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
