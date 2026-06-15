@@ -13,8 +13,8 @@ This roadmap hardens CONSTRUCT's Claude-native foundation first, then establishe
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Contract Canon & Artifact Governance** - Canonize schemas, write gates, and spec-aligned workflow contracts. (completed 2026-06-08)
-- [ ] **Phase 2: Governed Knowledge Operations** - Make core card, ref, connection, and storage operations reliable in the existing workspace model.
-- [ ] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract.
+- [x] **Phase 2: Governed Knowledge Operations** - Make core card, ref, connection, and storage operations reliable in the existing workspace model. (completed 2026-06-10)
+- [x] **Phase 3: Capability Registry, CLI & MCP Spine** - Expose deterministic capabilities through one shared runtime contract. (completed 2026-06-12)
 - [x] **Phase 4: Guided Workflow Operability** - Make help, ingestion, workflow execution, and resume behavior state-aware and dependable.
 - [x] **Phase 5: Grounded Synthesis & Graph Reasoning** - Add bounded question-answering, synthesis, and bridge detection on top of a reliable graph. (completed 2026-06-11)
 - [x] **Phase 6: Derived Data, Ops UI & Governed Spikes** - Prepare v0.4-facing contracts and evaluate local UI/graph-analysis spikes without changing canonical truth. (completed 2026-06-11)
@@ -35,10 +35,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans (3 original + 1 gap closure)
 
 Plans:
-- [ ] 01-01-PLAN.md — Canonize the Phase 1 workspace/artifact contract in the authoritative spec layer.
-- [ ] 01-02-PLAN.md — Reconcile runtime schemas/init/validation to the canonical contract and add write gates.
-- [ ] 01-03-PLAN.md — Align skills/docs, prove the contract on fixtures, and publish the migration playbook.
-- [ ] 01-04-PLAN.md — Fix construct-workspace-init template path for deployed workspaces (gap closure).
+- [x] 01-01-PLAN.md — Canonize the Phase 1 workspace/artifact contract in the authoritative spec layer.
+- [x] 01-02-PLAN.md — Reconcile runtime schemas/init/validation to the canonical contract and add write gates.
+- [x] 01-03-PLAN.md — Align skills/docs, prove the contract on fixtures, and publish the migration playbook.
+- [x] 01-04-PLAN.md — Fix construct-workspace-init template path for deployed workspaces (gap closure).
 
 ### Phase 2: Governed Knowledge Operations
 **Goal**: Users can reliably create and maintain governed knowledge artifacts inside the existing local-first workspace format.
@@ -51,9 +51,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Core knowledge service layer: card CRUD, connection CRUD, event logging, workspace scaffold update
-- [ ] 02-02-PLAN.md — CLI surface: `construct knowledge` command group with card and connection subcommands
-- [ ] 02-03-PLAN.md — Source file storage (inbox routing) and skill wrappers calling Python CLI
+- [x] 02-01-PLAN.md — Core knowledge service layer: card CRUD, connection CRUD, event logging, workspace scaffold update
+- [x] 02-02-PLAN.md — CLI surface: `construct knowledge` command group with card and connection subcommands
+- [x] 02-03-PLAN.md — Source file storage (inbox routing) and skill wrappers calling Python CLI
 
 ### Phase 3: Capability Registry, CLI & MCP Spine
 **Goal**: Core deterministic capabilities run through one shared contract surface that both maintainers and Claude-native workflows can trust.
@@ -66,9 +66,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Capability Registry Foundation
-- [ ] 03-02-PLAN.md — CLI Registry Refactoring + PIPE Handlers
-- [ ] 03-03-PLAN.md — MCP Server + Contract Tests + Skill Migration
+- [x] 03-01-PLAN.md — Capability Registry Foundation
+- [x] 03-02-PLAN.md — CLI Registry Refactoring + PIPE Handlers
+- [x] 03-03-PLAN.md — MCP Server + Contract Tests + Skill Migration
 
 ### Phase 4: Guided Workflow Operability
 **Goal**: Users can run, resume, and understand Claude-native workflows with dependable next-step guidance and observable progress.
@@ -129,9 +129,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Contract Canon & Artifact Governance | 3/3 | Complete   | 2026-06-08 |
-| 2. Governed Knowledge Operations | 0/3 | Being planned | - |
-| 3. Capability Registry, CLI & MCP Spine | 0/3 | Planned | - |
+| 1. Contract Canon & Artifact Governance | 4/4 | Complete   | 2026-06-08 |
+| 2. Governed Knowledge Operations | 3/3 | Complete   | 2026-06-10 |
+| 3. Capability Registry, CLI & MCP Spine | 3/3 | Complete   | 2026-06-12 |
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | 4/4 | Complete   | 2026-06-11 |
