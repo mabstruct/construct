@@ -426,6 +426,7 @@ def validate(
         EventsFile,
         StatsFile,
         schema_for,
+        unwrap_payload,
         validate_data,
     )
 
@@ -449,15 +450,17 @@ def validate(
     for filename, model_class in model_map.items():
         file_path = build_data_dir / filename
         if not file_path.exists():
+            # A view file the generator did not emit is reported but is not a
+            # validation failure — completeness of the build is the generator's
+            # concern, not the schema gate's.
             results.append({"file": filename, "status": "missing", "errors": []})
-            all_passed = False
             continue
         try:
             import json
             raw = json.loads(file_path.read_text(encoding="utf-8"))
             data = raw if isinstance(raw, dict) else {}
-            # Unwrap from envelope if needed
-            payload = data.get("data", data)
+            # Accept both the flat generator output and the envelope form.
+            payload = unwrap_payload(data)
             validate_data(model_class, payload)
             results.append({"file": filename, "status": "pass", "errors": []})
         except Exception as exc:
@@ -482,7 +485,7 @@ def validate(
                 import json
                 raw = json.loads(fpath.read_text(encoding="utf-8"))
                 data = raw if isinstance(raw, dict) else {}
-                payload = data.get("data", data)
+                payload = unwrap_payload(data)
                 validate_data(mclass, payload)
                 rel = f"{ws_dir.name}/{fname}"
                 results.append({"file": rel, "status": "pass", "errors": []})

@@ -33,6 +33,7 @@ from construct.views.models import (
     StatsFile,
     ViewsEnvelope,
     schema_for,
+    unwrap_payload,
     validate_data,
 )
 
@@ -120,6 +121,50 @@ class TestBridgesFromFixture:
         bridges = BridgesFile.model_validate(payload)
         # BridgesFile as data payload does not have version; ViewsEnvelope does.
         assert hasattr(bridges, "model_config")
+
+
+# ---------------------------------------------------------------------------
+# 1b. Payload unwrap — flat generator output vs envelope (regression: Bug 06-UAT #2)
+# ---------------------------------------------------------------------------
+
+
+class TestUnwrapPayload:
+    """`unwrap_payload` must accept both the flat generator output and the
+    envelope form so the strict ``extra='forbid'`` models validate either way.
+
+    Regression for the Phase 6 UAT issue where real bridges.json was rejected
+    because its top-level metadata fields (version/generated/workspace) were
+    fed straight into BridgesFile.
+    """
+
+    def test_flat_file_strips_metadata(self) -> None:
+        raw = {
+            "version": "1.0.0",
+            "generated": "2026-06-15T00:00:00Z",
+            "workspace": "my-construct",
+            "bridges": [],
+            "summary": {"totals": {"confirmed": 0}},
+        }
+        payload = unwrap_payload(raw)
+        assert set(payload) == {"bridges", "summary"}
+        # And the stripped payload validates against the strict model.
+        validate_data(BridgesFile, payload)
+
+    def test_envelope_file_returns_data(self) -> None:
+        raw = {
+            "schema_version": "0.2.0",
+            "generated_at": "2026-06-15T00:00:00Z",
+            "build_id": "b1",
+            "version": "1.0.0",
+            "data": {"bridges": [], "summary": {"totals": {}}},
+        }
+        payload = unwrap_payload(raw)
+        assert set(payload) == {"bridges", "summary"}
+        validate_data(BridgesFile, payload)
+
+    def test_real_fixture_validates_through_unwrap(self, bridges_raw: dict) -> None:
+        """The real flat bridges.json validates once routed through unwrap_payload."""
+        validate_data(BridgesFile, unwrap_payload(bridges_raw))
 
 
 # ---------------------------------------------------------------------------

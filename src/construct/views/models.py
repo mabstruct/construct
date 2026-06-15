@@ -267,6 +267,39 @@ class EventsFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# Top-level metadata keys carried by views data files. The generator emits
+# *flat* files where these sit alongside the payload (e.g. bridges.json:
+# {version, generated, workspace, bridges, summary}); the ViewsEnvelope form
+# nests the payload under ``data`` instead. Both are recognised on read.
+ENVELOPE_METADATA_KEYS = frozenset(
+    {
+        "version",
+        "generated",
+        "workspace",
+        "schema_version",
+        "generated_at",
+        "build_id",
+        "workspace_id",
+    }
+)
+
+
+def unwrap_payload(raw: dict) -> dict:
+    """Return the contract payload from a raw views data dict.
+
+    Supports both shapes produced/consumed across the pipeline:
+
+    * **Envelope** — ``{..metadata.., "data": {<payload>}}`` → returns ``raw["data"]``.
+    * **Flat** — ``{<metadata fields>, <payload fields>}`` (what the generator
+      currently writes) → returns the payload with the known metadata keys
+      stripped, so it validates against the strict ``extra="forbid"`` models.
+    """
+    inner = raw.get("data")
+    if isinstance(inner, dict):
+        return inner
+    return {k: v for k, v in raw.items() if k not in ENVELOPE_METADATA_KEYS}
+
+
 def schema_for(model_type: type[BaseModel]) -> dict:
     """Return the JSON Schema dict for *model_type* via ``model_json_schema()``."""
     return model_type.model_json_schema()
