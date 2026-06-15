@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: milestone
-status: verifying
-stopped_at: Phase 6 execution complete — v0.3 milestone complete
-last_updated: "2026-06-11T21:18:50.022Z"
+milestone_name: "blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring"
+status: gaps_found
+stopped_at: Phase 7 context gathered
+last_updated: "2026-06-15T20:28:46.610Z"
 last_activity: 2026-06-11
 progress:
   total_phases: 6
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 
 Phase: 06 (derived-data-ops-ui-governed-spikes) — EXECUTING
 Plan: 4 of 4
-Status: Phase complete — ready for verification
+Status: gaps_found
 Last activity: 2026-06-11
 
 Progress: [█████████░] 86%
@@ -59,6 +59,10 @@ Progress: [█████████░] 86%
 | Phase 06-derived-data-ops-ui-governed-spikes P06-04 | 186s | 3 tasks | 3 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 7 added: Close v0.3 blockers (RT-03 MCP parity, ING-02 ingest cluster, ING-05 graph.status) — from milestone audit 2026-06-15
 
 ### Decisions
 
@@ -125,6 +129,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-11T21:18:50.015Z
-Stopped at: Phase 6 execution complete — v0.3 milestone complete
-Resume file: .planning/phases/06-derived-data-ops-ui-governed-spikes/06-CONTEXT.md
+Last session: 2026-06-15T20:28:46.604Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl/07-CONTEXT.md
