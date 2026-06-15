@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: "blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring"
+milestone_name: milestone
 status: gaps_found
 stopped_at: Phase 7 context gathered
 last_updated: "2026-06-15T20:28:46.610Z"
