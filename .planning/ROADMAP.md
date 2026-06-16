@@ -125,7 +125,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | 4/4 | Complete   | 2026-06-11 |
-| 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | 3/3 | Ready for Verification | — |
+| 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | 3/3 | Complete   | 2026-06-16 |
 
 ### Phase 7: Close v0.3 blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring
 
