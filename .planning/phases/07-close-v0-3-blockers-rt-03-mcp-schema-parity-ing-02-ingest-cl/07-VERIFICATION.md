@@ -1,20 +1,21 @@
 ---
 phase: 07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl
 verified: 2026-06-16T00:00:00Z
-status: human_needed
-score: 4/5 must-haves verified
+status: passed
+score: 5/5 must-haves verified
 overrides_applied: 0
 human_verification:
   - test: "Re-run /gsd:audit-milestone against the current codebase"
     expected: "0 unsatisfied requirements; the three former blockers (RT-03, ING-02, ING-05) show satisfied; RT-01/RT-02 show Partial"
     why_human: "Milestone audit is a full-stack integration check that requires human orchestration of the gsd-verifier tool and review of its JSON output — cannot be meaningfully substituted with grep or pytest"
+    result: "PASSED — /gsd:audit-milestone re-run 2026-06-16 returned status tech_debt with 0 unsatisfied requirements; RT-03/ING-02/ING-05 satisfied, RT-01/RT-02 Partial (v0.4). See .planning/v0.3-MILESTONE-AUDIT.md."
 ---
 
 # Phase 7: Close v0.3 Blockers Verification Report
 
 **Phase Goal:** Close the three v0.3 milestone-audit blockers (RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring) so the milestone re-audits to a legitimate green close, without adding new capability.
 **Verified:** 2026-06-16
-**Status:** human_needed
+**Status:** passed (5/5 — human item resolved via milestone re-audit 2026-06-16)
 **Re-verification:** No — initial verification
 
 ---
