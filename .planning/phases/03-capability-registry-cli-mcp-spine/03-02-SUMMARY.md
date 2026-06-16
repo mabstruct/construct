@@ -3,6 +3,7 @@ phase: 03-capability-registry-cli-mcp-spine
 plan: 02
 type: execute
 tags: [cli-delegation, pipe-handlers, graph-status, views-data, RT-01, RT-02]
+requirements_completed: [RT-01, RT-02]
 requires: [03-01]
 affects: [mcp-server, skill-migrations]
 key-files:

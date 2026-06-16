@@ -3,6 +3,7 @@ phase: 03-capability-registry-cli-mcp-spine
 plan: 03
 type: execute
 tags: [mcp-server, stdio, contract-tests, skill-migration, RT-02, RT-03]
+requirements_completed: [RT-03]
 requires: [03-01, 03-02]
 affects: [phase-04-skill-migrations]
 key-files:

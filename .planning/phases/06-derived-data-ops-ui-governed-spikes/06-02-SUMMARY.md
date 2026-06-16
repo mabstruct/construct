@@ -4,6 +4,7 @@ plan: 06-02
 type: execute
 subsystem: ui
 tags: [streamlit, ops-dashboard, capability-runner, gate-review, d-03, d-04]
+requirements_completed: [ADV-04]
 provides: [Streamlit ops dashboard panels]
 affects: [capability_registry, workspace_sot]
 tech-stack:

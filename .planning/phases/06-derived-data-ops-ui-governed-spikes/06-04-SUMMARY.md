@@ -9,6 +9,7 @@ tags:
   - tag-extraction
   - curation-cycle
   - search-seeds
+requirements_completed: [SPK-02, SPK-03]
 requires: [06-01, 06-03]
 provides: [cli-views-validate, cli-spike-run, cli-tag-pipeline]
 affects:

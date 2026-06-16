@@ -9,6 +9,7 @@ tags:
   - capability-registration
   - cli
   - tdd
+requirements_completed: [ADV-01]
 requires:
   - 05-01
 provides:

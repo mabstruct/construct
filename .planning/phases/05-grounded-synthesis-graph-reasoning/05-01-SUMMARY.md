@@ -3,6 +3,7 @@ phase: 05-grounded-synthesis-graph-reasoning
 plan: 01
 subsystem: LLM Infrastructure
 tags: [langgraph, langchain, provider-config, test-infrastructure, mock-llm]
+requirements_completed: [ING-06]
 requires: []
 provides: [llm-package, provider-config, test-fixtures, pyproject-deps]
 affects: [pyproject.toml, src/construct/llm/]

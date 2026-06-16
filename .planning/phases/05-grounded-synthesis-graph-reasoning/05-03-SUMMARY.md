@@ -10,6 +10,7 @@ tags:
   - L3
   - scoring
   - multi-level-detection
+requirements_completed: [ADV-02]
 requires:
   - 05-02 (ask.domain gate, provider config)
 provides:

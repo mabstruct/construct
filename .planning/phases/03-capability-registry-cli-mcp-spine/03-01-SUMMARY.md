@@ -3,6 +3,7 @@ phase: 03-capability-registry-cli-mcp-spine
 plan: 01
 type: execute
 tags: [capability-registry, contract-surface, json-schema, mcp-tools, RT-01]
+requirements_completed: [RT-01]
 requires: [02-governed-knowledge-operations]
 affects: [cli-registry-delegation, mcp-server]
 key-files:
