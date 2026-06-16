@@ -12,19 +12,21 @@ The system must reliably turn source material into connected, explorable knowled
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Harden the Claude-native skills and workflows so they are reliable and consistently follow defined data formats — v0.3 (canonical contract + pre-write gates, Phases 1–2).
+- ✓ Make the current agentic user experience clearer through documented workflows and dependable next-step guidance — v0.3 (guided workflow operability + help.suggest, Phase 4; graph-health surfacing, Phase 7).
+- ✓ Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.4 — v0.3 (capability/CLI/MCP runtime spine + derived-data contracts, Phases 3, 5, 6).
 
 ### Active
 
-- [ ] Harden the Claude-native skills and workflows so they are reliable and consistently follow defined data formats.
-- [ ] Make the current agentic user experience clearer through documented workflows and dependable next-step guidance.
-- [ ] Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.4.
+- [ ] Unify the runtime dispatch surface (RT-01/RT-02): route views/spike/tag command groups through the capability registry so MCP/UI see them — carried from v0.3 audit.
+- [ ] Complete deferred runtime behavior: curation-cycle workflow steps (currently no-ops), `views.generate_data`, and view-file emission (ADV-03).
+- [ ] Stand up the v0.4 UI-primary experience (browser-first shell) on top of the hardened v0.3 runtime.
+- [ ] Close v0.3 verification debt: per-phase VERIFICATION.md, Nyquist VALIDATION.md, and SECURITY.md coverage where missing.
 
 ### Out of Scope
 
-- Full v0.4 browser UI in the current milestone — v0.3 must harden the runtime and workflow foundation first.
 - Replacing the existing knowledge model or workspace format — continuity across versions is a core constraint.
-- Breaking current Claude-native workflows during hardening or migration — existing user flows must remain usable.
+- Breaking current Claude-native workflows during the v0.4 UI build — existing user flows must remain usable.
 
 ## Context
 
@@ -35,6 +37,8 @@ The product vision extends beyond the current prototype. The Claude-native appro
 The desired user experience in the near term is still guided by Claude-native skills, especially with clear documentation, stronger workflow contracts, and a dependable help skill that can suggest the next sensible step. In the longer term, v0.4 should present these same underlying capabilities through more obvious UI interactions so the product becomes easier for a broader audience to use.
 
 There are already relevant analyses in the latest specification documents covering capabilities and artifacts. Those documents should inform requirements and roadmap structure rather than re-deriving the product from scratch.
+
+**Current state (after v0.3, 2026-06-16):** v0.3 shipped across 7 phases / 25 plans. The runtime is a Python package (`src/construct/`) with a capability registry, a Click CLI, and a stdio MCP server as the agentic surface; Claude-native skills are thin wrappers over those capabilities. Knowledge lives in a governed workspace (cards/refs/connections + search-seeds/domains/governance YAML) behind pre-write validation gates. Grounded Q&A, synthesis, and bridge detection run on the graph; a Streamlit ops dashboard and view data contracts prepare v0.4. Test suite: 224 passing. The v0.3 milestone audit closes at 0 unsatisfied requirements with documented tech debt (registry-bypass paths RT-01/RT-02, curation no-ops, views emission, verification-coverage gaps) carried into v0.4. Next: scope the v0.4 UI-primary experience.
 
 ## Constraints
 
@@ -47,9 +51,11 @@ There are already relevant analyses in the latest specification documents coveri
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Treat the current Claude-native system as the production-defining prototype, not a throwaway experiment | The existing implementation already embodies the core knowledge workflow and should shape future versions | — Pending |
-| Use v0.3 to harden workflows and runtime contracts before building the v0.4 UI-primary experience | A clearer UI only helps if the underlying capabilities are reliable and well-bounded | — Pending |
-| Preserve the knowledge model and workspace format across versions | Cross-version continuity is central to the product architecture and migration story | — Pending |
+| Treat the current Claude-native system as the production-defining prototype, not a throwaway experiment | The existing implementation already embodies the core knowledge workflow and should shape future versions | ✓ Good — v0.3 hardened it into a Python runtime + MCP spine with skills as thin wrappers |
+| Use v0.3 to harden workflows and runtime contracts before building the v0.4 UI-primary experience | A clearer UI only helps if the underlying capabilities are reliable and well-bounded | ✓ Good — v0.3 shipped the hardened runtime; v0.4 UI now sits on proven foundations |
+| Preserve the knowledge model and workspace format across versions | Cross-version continuity is central to the product architecture and migration story | ✓ Good — workspace format preserved; Phase 1 published a migration playbook |
+| Python is the deterministic enforcement layer; skills orchestrate flow; the capability registry is the single contract behind CLI + MCP | Keeps behavior testable and gives agents and (future) UI one surface | ⚠️ Revisit — registry is canonical for core ops, but views/spike/tag groups still bypass it (RT-01/RT-02, v0.4) |
+| Fix governed-ingest validation by conforming the data to the gate, not weakening the gate | Keeps validation strict so canonical truth stays trustworthy | ✓ Good — v0.3 (Phase 7, ING-02) |
 
 ## Evolution
 
@@ -69,4 +75,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-08 after initialization*
+*Last updated: 2026-06-16 after v0.3 milestone*

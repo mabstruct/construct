@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: "blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring"
-status: milestone_complete
-stopped_at: Milestone complete (Phase 07 was final phase)
-last_updated: 2026-06-16T13:06:27.185Z
-last_activity: 2026-06-16
+milestone_name: "Claude-Native Runtime & Workflow Hardening"
+status: Awaiting next milestone
+stopped_at: Milestone v0.3 completed and archived (7 phases, 25 plans)
+last_updated: "2026-06-16T13:43:20.682Z"
+last_activity: 2026-06-16 — Milestone v0.3 completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 3
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 25
   completed_plans: 25
   percent: 100
 ---
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-16
-
-Progress: [██████████] 100%
+Phase: Milestone v0.3 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-16 — Milestone v0.3 completed and archived
 
 ## Performance Metrics
 
@@ -138,9 +136,16 @@ Recent decisions affecting current work:
 | Product Expansion | Full v0.4 browser-first shell | Deferred to v2 | 2026-06-08 |
 | Phase 3 | Full skill migration beyond construct-workspace-validate | Batch 2 complete (Phase 04 P04) | 2026-06-10 |
 | Phase 04 | construct knowledge card list CLI command | Not yet implemented (documented in gap-analysis as target pattern) | 2026-06-10 |
+| UAT | Phase 06 06-UAT.md [partial] — 1 issue / 1 blocked, 0 pending scenarios | Acknowledged at v0.3 close | 2026-06-16 |
+| UAT | Phase 07 07-HUMAN-UAT.md [passed] — milestone re-audit item resolved, 0 pending | Acknowledged at v0.3 close | 2026-06-16 |
+| Tech debt (v0.4) | RT-01/RT-02 registry-bypass + direct-import groups; curation no-ops; views.generate_data stub; ADV-03 emission; SPK-04 entry point; CR-02 help.py layout; per-phase VERIFICATION/Nyquist/SECURITY coverage | See milestones/v0.3-MILESTONE-AUDIT.md | 2026-06-16 |
 
 ## Session Continuity
 
 Last session: 2026-06-16T11:30:00Z
 Stopped at: Completed 07-03-PLAN.md (v0.3 traceability reconciled); Phase 07 all 3 plans complete — ready for verification
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
