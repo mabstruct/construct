@@ -9,6 +9,22 @@
       "weight": 0.7,
       "status": "active",
       "last_queried": null
+    },
+    {
+      "id": "manual-ingest",
+      "domain": "api-gateways",
+      "terms": [],
+      "weight": 0.0,
+      "status": "active",
+      "last_queried": null
+    },
+    {
+      "id": "web-ingest",
+      "domain": "api-gateways",
+      "terms": [],
+      "weight": 0.0,
+      "status": "active",
+      "last_queried": null
     }
   ]
 }
