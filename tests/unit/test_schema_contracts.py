@@ -170,4 +170,8 @@ def test_default_templates_round_trip_through_models() -> None:
     assert routing_model.routing["chat_conversation"] == "frontier"
     assert governance_model.promotion.seed_to_growing_confidence == 2
     assert governance_model.heartbeat is None
-    assert search_seeds_model.clusters == []
+    # The init template seeds reserved ingest clusters (ING-02): governed ingest
+    # stamps refs with search_cluster manual-ingest/web-ingest, so those clusters
+    # must exist for validation.py:205 to pass. The placeholder "ingest" domain is
+    # rewritten to the workspace domain at init time (init.py:_write_search_seeds).
+    assert {c.id for c in search_seeds_model.clusters} == {"manual-ingest", "web-ingest"}

@@ -85,11 +85,12 @@ def test_template_backed_files_round_trip_through_updated_models_and_loader(work
     assert domains_model.domains == {}
     assert governance_model.promotion.seed_to_growing_confidence == 2
     assert routing_model.routing["chat_conversation"] == "frontier"
-    assert search_seeds_model.clusters == []
+    # Template seeds reserved ingest clusters (ING-02) — see init.py:_write_search_seeds.
+    assert {c.id for c in search_seeds_model.clusters} == {"manual-ingest", "web-ingest"}
     assert loader.load_domains_registry().domains == {}
     assert loader.load_governance().research.relevance_threshold == 0.3
     assert loader.load_model_routing().providers.frontier.provider.value == "anthropic"
-    assert loader.load_search_seeds().clusters == []
+    assert {c.id for c in loader.load_search_seeds().clusters} == {"manual-ingest", "web-ingest"}
 
 
 def test_workspace_scaffold_names_canonical_derived_and_support_paths() -> None:

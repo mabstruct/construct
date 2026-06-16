@@ -24,7 +24,16 @@ def _write_valid_workspace(root: Path) -> Path:
     shutil.copy(TEMPLATE_DIR / "domains.yaml", root / "domains.yaml")
     shutil.copy(TEMPLATE_DIR / "model-routing.yaml", root / ".construct" / "model-routing.yaml")
     shutil.copy(TEMPLATE_DIR / "governance.yaml", root / "governance.yaml")
-    shutil.copy(TEMPLATE_DIR / "search-seeds.json", root / "search-seeds.json")
+
+    # The template seeds reserved ingest clusters (manual-ingest/web-ingest) with a
+    # placeholder "ingest" domain that init.py rewrites to the workspace domain
+    # (init.py:_write_search_seeds). This valid-workspace fixture has a single domain
+    # "example-domain", so mirror init by rewriting the reserved clusters' domain —
+    # otherwise validation.py:148 would flag an unknown-domain error.
+    seeds = json.loads((TEMPLATE_DIR / "search-seeds.json").read_text())
+    for cluster in seeds.get("clusters", []):
+        cluster["domain"] = "example-domain"
+    (root / "search-seeds.json").write_text(json.dumps(seeds, indent=2) + "\n")
 
     (root / "domains.yaml").write_text(
         """domains:
