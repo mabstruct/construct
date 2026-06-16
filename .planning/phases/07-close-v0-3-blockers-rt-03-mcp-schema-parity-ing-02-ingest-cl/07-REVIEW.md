@@ -20,8 +20,30 @@ findings:
   warning: 7
   info: 4
   total: 12
-status: issues_found
+status: partially_resolved
+resolved: [CR-01, WR-06]
+open: [WR-01, WR-02, WR-03, WR-04, WR-05, WR-07, IN-01, IN-02, IN-03, IN-04, CR-02]
 ---
+
+> **Resolution addendum (2026-06-16, commit 880d9e8):**
+> - **CR-01 — RESOLVED.** `help.py` now reads the `clusters` key (was `search_clusters`)
+>   and aggregates `last_queried` across non-reserved research clusters instead of
+>   `clusters[0]`. Reserved ingest clusters are excluded via `_RESERVED_INGEST_CLUSTERS`.
+>   Added `_score_domain` tier-4/5 regression tests. Suite: 224 passed.
+> - **WR-06 — RESOLVED.** `ingestion.py` NOTE/RESEARCH path now returns a clean
+>   `OperationResult` failure when no domain resolves, instead of stamping the
+>   validation-failing `_general` domain.
+> - **CR-02 — NEW (deferred, out of scope for this fix):** `help.py:suggest` resolves
+>   per-domain stats from `root/<domain_id>/` subdirs (cards, refs, connections,
+>   search-seeds.json), but the canonical `init` layout writes a single domain at the
+>   workspace root (`root/cards/`, `root/search-seeds.json`). Two layouts coexist in
+>   `test-ws/` (`semantic*/cosmology/` matches help.py; `ping-eon`/`my-construct` do
+>   not). For canonical single-domain workspaces, help.suggest's per-domain card/ref/
+>   connection/staleness stats all read 0 / not-found. This is a pre-existing
+>   architectural inconsistency surfaced while fixing CR-01; it needs its own decision
+>   (normalize the layout, or make help.py layout-aware). Not addressed here.
+> - Remaining warnings/info (WR-01..WR-05, WR-07, IN-01..IN-04) left as tracked
+>   follow-ups per the user's scoped decision (fix BLOCKER + WR-06 only).
 
 # Phase 7: Code Review Report
 
