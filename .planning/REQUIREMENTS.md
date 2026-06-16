@@ -18,7 +18,7 @@ Requirements for the first committed roadmap scope, which in this repository map
 
 ### Workflow Operability
 
-- [ ] **WF-01**: User can ask the help flow what to do next and receive a clear state-aware next-step recommendation.
+- [x] **WF-01**: User can ask the help flow what to do next and receive a clear state-aware next-step recommendation.
 - [x] **WF-02**: User can follow documented workflows for the current Claude-native skills and understand expected inputs, outputs, and outcomes.
 - [x] **WF-03**: User can resume work from persisted workspace state without losing the current workflow context.
 - [x] **WF-04**: User-facing commands and workflow outputs are clear enough that a power user can understand what happened and what action is available next.
@@ -26,22 +26,22 @@ Requirements for the first committed roadmap scope, which in this repository map
 ### Knowledge Ingestion And Integrity
 
 - [x] **ING-01**: User can ingest source material from files, notes, URLs, and web research into the system through a reliable governed flow.
-- [ ] **ING-02**: System assigns ingested files to a defined workspace storage location so source artifacts remain organized and traceable.
-- [ ] **ING-03**: User can create, edit, and archive knowledge cards and references while preserving required metadata and artifact validity.
-- [ ] **ING-04**: User can create and maintain typed connections between knowledge nodes using the established connection vocabulary.
+- [x] **ING-02**: System assigns ingested files to a defined workspace storage location so source artifacts remain organized and traceable.
+- [x] **ING-03**: User can create, edit, and archive knowledge cards and references while preserving required metadata and artifact validity.
+- [x] **ING-04**: User can create and maintain typed connections between knowledge nodes using the established connection vocabulary.
 - [x] **ING-05**: User can trust graph-health and gap-analysis outputs to identify weak coverage, missing links, or next areas to strengthen.
-- [ ] **ING-06**: User can generate grounded synthesis outputs that stay tied to the graph knowledge base and preserve confidence-aware reasoning.
+- [x] **ING-06**: User can generate grounded synthesis outputs that stay tied to the graph knowledge base and preserve confidence-aware reasoning.
 
 ### Runtime Transition
 
-- [ ] **RT-01**: Maintainer can define a shared capability registry for core system operations so runtime surfaces use the same contracts.
-- [ ] **RT-02**: User can invoke core deterministic capabilities through a stable Python CLI surface.
+- [ ] **RT-01**: Maintainer can define a shared capability registry for core system operations so runtime surfaces use the same contracts. (partial — v0.4 backlog: registry-bypass paths remain)
+- [ ] **RT-02**: User can invoke core deterministic capabilities through a stable Python CLI surface. (partial — v0.4 backlog: direct-import command groups remain)
 - [x] **RT-03**: Claude-native workflows can invoke stable MCP tools with schema parity to the CLI instead of depending on fragile inline behavior.
 - [x] **RT-04**: System can execute multi-step workflows through a structured runner that records progress and outcomes.
 
 ### Advanced Graph Leverage
 
-- [ ] **ADV-01**: User can ask grounded domain questions through a bounded reasoning gate that cites relevant knowledge artifacts.
+- [x] **ADV-01**: User can ask grounded domain questions through a bounded reasoning gate that cites relevant knowledge artifacts.
 - [x] **ADV-02**: User can detect promising cross-domain bridges more systematically once graph integrity is reliable.
 - [x] **ADV-03**: System can emit stable derived-data contracts that a future UI layer can consume without redefining the knowledge model.
 - [x] **ADV-04**: Maintainer can exercise capabilities through a local ops UI spike without making that spike the source of truth.
@@ -87,21 +87,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-04 | Phase 1 | Complete |
 | FND-05 | Phase 1 | Complete |
 | FND-06 | Phase 1 | Complete |
-| WF-01 | Phase 4 | Pending |
+| WF-01 | Phase 4 | Complete |
 | WF-02 | Phase 4 | Complete |
 | WF-03 | Phase 4 | Complete |
 | WF-04 | Phase 4 | Complete |
 | ING-01 | Phase 4 | Complete |
-| ING-02 | Phase 2 | Pending |
-| ING-03 | Phase 2 | Pending |
-| ING-04 | Phase 2 | Pending |
+| ING-02 | Phase 2 | Complete |
+| ING-03 | Phase 2 | Complete |
+| ING-04 | Phase 2 | Complete |
 | ING-05 | Phase 4 | Complete |
-| ING-06 | Phase 5 | Pending |
-| RT-01 | Phase 3 | Pending |
-| RT-02 | Phase 3 | Pending |
+| ING-06 | Phase 5 | Complete |
+| RT-01 | Phase 3 | Partial |
+| RT-02 | Phase 3 | Partial |
 | RT-03 | Phase 7 | Complete |
 | RT-04 | Phase 4 | Complete |
-| ADV-01 | Phase 5 | Pending |
+| ADV-01 | Phase 5 | Complete |
 | ADV-02 | Phase 5 | Complete |
 | ADV-03 | Phase 6 | Complete |
 | ADV-04 | Phase 6 | Complete |
@@ -114,7 +114,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 28 total
 - Mapped to phases: 28
 - Unmapped: 0 ✓
+- Complete: 26
+- Partial (v0.4 backlog): 2 (RT-01 registry-bypass paths, RT-02 direct-import command groups)
+- Pending: 0
+
+Status reconciled against `.planning/v0.3-MILESTONE-AUDIT.md` (audited 2026-06-15). RT-01/RT-02 remain Partial: their core registry/CLI surfaces ship, but registry-bypass and direct-import command groups are explicitly deferred to the v0.4 backlog and are NOT counted Complete.
 
 ---
 *Requirements defined: 2026-06-08*
-*Last updated: 2026-06-08 after roadmap creation*
+*Last updated: 2026-06-16 — traceability reconciled to v0.3 milestone audit (Phase 07 Plan 03)*
