@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: "blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring"
 status: executing
-stopped_at: Completed 07-01-PLAN.md (RT-03 + ING-05 closed); 07-02 next
-last_updated: "2026-06-16T10:57:11.446Z"
-last_activity: 2026-06-16 -- Phase 07 Plan 01 complete
+stopped_at: Completed 07-02-PLAN.md (ING-02 closed); 07-03 next
+last_updated: "2026-06-16T11:18:00.000Z"
+last_activity: 2026-06-16 -- Phase 07 Plan 02 complete
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-08)
 ## Current Position
 
 Phase: 07 (close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 07 (Plan 01 complete: RT-03 + ING-05 closed)
-Last activity: 2026-06-16 -- Phase 07 Plan 01 complete
+Plan: 3 of 3
+Status: Executing Phase 07 (Plans 01-02 complete: RT-03 + ING-05 + ING-02 closed)
+Last activity: 2026-06-16 -- Phase 07 Plan 02 complete
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 86%
 | Phase 06 P06-02 | 9 | 3 tasks | 6 files |
 | Phase 06-derived-data-ops-ui-governed-spikes P06-04 | 186s | 3 tasks | 3 files |
 | Phase 07 P07-01 | 11min | 3 tasks | 2 files |
+| Phase 07 P07-02 | 18min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Progress: [█████████░] 86%
 - [Phase 05-02]: Domain filter checks domain_id in card.domains list (KnowledgeCard schema has plural list)
 - [Phase 07-01]: RT-03 shims are dual-mode — positional CLI calls pass straight through to the service fn, keyword MCP calls are marshalled — so one registry handler serves both surfaces without touching cli.py or the service layer
 - [Phase 07-01]: graph.status handler uses `lambda workspace: graph_status(workspace)` so a single param binds both positional (help.py) and keyword (MCP) callers
+- [Phase 07-02]: ING-02 fixed by seeding the data (reserved manual-ingest/web-ingest clusters) to conform to the gate, not by weakening validation.py:205
+- [Phase 07-02]: validation.py:148 DOES cross-check cluster.domain against domains.yaml (plan interface note was wrong) — reserved clusters' placeholder "ingest" domain is rewritten to the workspace domain at init; fixtures reuse an existing domain
+- [Phase 07-02]: research_seeds override now APPENDS the domain seed cluster rather than replacing payload["clusters"], so reserved clusters survive research-seeded init
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
@@ -132,6 +136,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-16T06:34:37Z
-Stopped at: Completed 07-01-PLAN.md (RT-03 MCP schema parity + ING-05 graph.status wiring closed)
-Resume file: .planning/phases/07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl/07-02-PLAN.md
+Last session: 2026-06-16T11:18:00Z
+Stopped at: Completed 07-02-PLAN.md (ING-02 ingest cluster validation closed)
+Resume file: .planning/phases/07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl/07-03-PLAN.md

@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Guided Workflow Operability | 4/4 | Complete   | 2026-06-10 |
 | 5. Grounded Synthesis & Graph Reasoning | 4/4 | Complete   | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | 4/4 | Complete   | 2026-06-11 |
-| 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | 1/3 | In Progress | — |
+| 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | 2/3 | In Progress | — |
 
 ### Phase 7: Close v0.3 blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring
 
@@ -152,5 +152,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 Plans:
 - [x] 07-01-PLAN.md — RT-03 adapter shims + ING-05 graph.status wiring (catalog.py + help.py) + handler-invocation contract test
-- [ ] 07-02-PLAN.md — ING-02 reserved-cluster seeding at init + test-ws fixtures + ingest→validate E2E
+- [x] 07-02-PLAN.md — ING-02 reserved-cluster seeding at init + test-ws fixtures + ingest→validate E2E
 - [ ] 07-03-PLAN.md — Traceability sync: REQUIREMENTS.md status reconciliation + SUMMARY requirements_completed backfill
