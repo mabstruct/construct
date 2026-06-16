@@ -272,7 +272,10 @@ def create_registry() -> CapabilityRegistry:
         description="Produce graph health report for a workspace",
         input_model=GraphStatusInput,
         output_model=OperationResult,
-        handler=lambda **kwargs: OperationResult(success=False, message="Not yet implemented — see Plan 02"),
+        # ING-05: wire the real graph_status() report. Accepts workspace both
+        # positionally (help.py:126 calls handler(workspace_id)) and by keyword
+        # (GraphStatusInput / MCP pass workspace=...).
+        handler=lambda workspace: graph_status(workspace),
         mcp_tool_name="construct_graph_status",
     ))
     registry.register(CapabilityRecord(
