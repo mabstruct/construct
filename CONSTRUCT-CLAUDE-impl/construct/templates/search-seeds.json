@@ -1,5 +1,22 @@
 {
   "version": 1,
   "updated": null,
-  "clusters": []
+  "clusters": [
+    {
+      "id": "manual-ingest",
+      "domain": "ingest",
+      "terms": [],
+      "weight": 0.0,
+      "status": "active",
+      "last_queried": null
+    },
+    {
+      "id": "web-ingest",
+      "domain": "ingest",
+      "terms": [],
+      "weight": 0.0,
+      "status": "active",
+      "last_queried": null
+    }
+  ]
 }

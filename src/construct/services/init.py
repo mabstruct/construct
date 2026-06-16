@@ -122,8 +122,21 @@ def _write_events_log(root: Path) -> None:
 
 def _write_search_seeds(root: Path, domain: DomainInitInput) -> None:
     payload = json.loads((TEMPLATE_DIR / "search-seeds.json").read_text(encoding="utf-8"))
+
+    # Reserved ingest clusters (manual-ingest / web-ingest) are seeded from the
+    # template so governed ingest output passes validation.py:205. validation.py
+    # also cross-checks each cluster.domain against domains.yaml (validation.py:148),
+    # so the template's placeholder domain must be rewritten to the workspace's own
+    # domain — otherwise a freshly-init'd workspace would fail validation with
+    # "cluster 'manual-ingest' references unknown domain 'ingest'".
+    reserved_clusters = payload.get("clusters", [])
+    for cluster in reserved_clusters:
+        cluster["domain"] = domain.domain_id
+
     if domain.research_seeds:
-        payload["clusters"] = [
+        # Append the domain seed cluster; do NOT drop the reserved clusters, or
+        # ingested refs in a research-seeded workspace would fail validation.
+        reserved_clusters.append(
             {
                 "id": f"{domain.domain_id}-seed",
                 "domain": domain.domain_id,
@@ -132,7 +145,9 @@ def _write_search_seeds(root: Path, domain: DomainInitInput) -> None:
                 "status": "active",
                 "last_queried": None,
             }
-        ]
+        )
+    payload["clusters"] = reserved_clusters
+
     validate_search_seeds_write(payload)
     (root / "search-seeds.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
