@@ -177,7 +177,7 @@ def create_registry() -> CapabilityRegistry:
         input_model=WorkspacePathInput,
         output_model=ValidateOutput,
         # RT-03 adapter: WorkspacePathInput.path → validate_workspace(root=...)
-        handler=lambda **kwargs: validate_workspace(kwargs["path"]),
+        handler=_validate_shim,
         cli_name="validate",
         mcp_tool_name="construct_validate",
     ))
@@ -197,11 +197,7 @@ def create_registry() -> CapabilityRegistry:
         input_model=CardCreateInput,
         output_model=OperationResult,
         # RT-03 adapter: build card_data dict from schema fields (mirrors cli.py:754-771)
-        handler=lambda **kwargs: create_card(
-            kwargs["workspace"],
-            _build_card_data(kwargs),
-            author=CardAuthor(kwargs.get("author", "construct")),
-        ),
+        handler=_create_card_shim,
         cli_name="knowledge.card.create",
         mcp_tool_name="construct_create_card",
     ))
@@ -212,12 +208,7 @@ def create_registry() -> CapabilityRegistry:
         input_model=CardEditInput,
         output_model=OperationResult,
         # RT-03 adapter: build updates dict from provided non-None fields (mirrors cli.py:789-799)
-        handler=lambda **kwargs: edit_card(
-            kwargs["workspace"],
-            kwargs["card_id"],
-            _build_card_updates(kwargs),
-            author=CardAuthor(kwargs.get("author", "curator")),
-        ),
+        handler=_edit_card_shim,
         cli_name="knowledge.card.edit",
         mcp_tool_name="construct_edit_card",
     ))
@@ -237,14 +228,7 @@ def create_registry() -> CapabilityRegistry:
         input_model=ConnectionAddInput,
         output_model=OperationResult,
         # RT-03 adapter: map schema workspace → workspace_root, coerce conn_type/created_by enums
-        handler=lambda **kwargs: add_connection(
-            kwargs["workspace"],
-            kwargs["from_id"],
-            kwargs["to_id"],
-            ConnectionType(kwargs["conn_type"]),
-            note=kwargs.get("note"),
-            created_by=ConnectionAuthor(kwargs.get("created_by", "construct")),
-        ),
+        handler=_add_connection_shim,
         cli_name="knowledge.connection.add",
         mcp_tool_name="construct_add_connection",
     ))
@@ -318,9 +302,7 @@ def create_registry() -> CapabilityRegistry:
         output_model=OperationResult,
         # RT-03 adapter: IngestSourceInput.workspace → ingest_source(workspace_root=...);
         # remaining IngestSourceInput fields already match ingest_source keyword params.
-        handler=lambda **kwargs: ingest_source(
-            kwargs.pop("workspace"), **kwargs
-        ),
+        handler=_ingest_source_shim,
         cli_name="ingest.source",
         mcp_tool_name="construct_ingest_source",
     ))
@@ -366,6 +348,88 @@ def create_registry() -> CapabilityRegistry:
     ))
 
     return registry
+
+
+def _validate_shim(*args, **kwargs):
+    """RT-03 adapter for workspace.validate. Accepts the MCP keyword form
+    (``path=`` from WorkspacePathInput) and the CLI positional form
+    (cli.py:88 calls ``handler(path)``)."""
+    if args:
+        return validate_workspace(args[0])
+    return validate_workspace(kwargs["path"])
+
+
+def _create_card_shim(*args, **kwargs):
+    """RT-03 adapter for knowledge.card.create.
+
+    - MCP keyword form: schema fields (workspace, title, epistemic_type, …) are
+      marshalled into a card_data dict mirroring cli.py:754-764.
+    - CLI positional form (cli.py:771): ``handler(workspace, card_data, author=…)``
+      is already marshalled — pass straight through to create_card.
+    """
+    if args:
+        return create_card(*args, **kwargs)
+    return create_card(
+        kwargs["workspace"],
+        _build_card_data(kwargs),
+        author=CardAuthor(kwargs.get("author", "construct")),
+    )
+
+
+def _edit_card_shim(*args, **kwargs):
+    """RT-03 adapter for knowledge.card.edit.
+
+    - MCP keyword form: provided non-None schema fields marshalled into an
+      updates dict mirroring cli.py:789-799.
+    - CLI positional form (cli.py:810): ``handler(workspace, card_id, updates,
+      author=…)`` is already marshalled — pass straight through to edit_card.
+    """
+    if args:
+        return edit_card(*args, **kwargs)
+    return edit_card(
+        kwargs["workspace"],
+        kwargs["card_id"],
+        _build_card_updates(kwargs),
+        author=CardAuthor(kwargs.get("author", "curator")),
+    )
+
+
+def _add_connection_shim(*args, **kwargs):
+    """RT-03 adapter for knowledge.connection.add.
+
+    - MCP keyword form: schema fields (workspace, from_id, to_id, conn_type, …);
+      conn_type/created_by are coerced to their enums and workspace maps to
+      workspace_root.
+    - CLI positional form (cli.py:865-868): ``handler(workspace, from_id, to_id,
+      ctype, note=…, created_by=…)`` already passes a ConnectionType — pass
+      straight through to add_connection.
+    """
+    if args:
+        return add_connection(*args, **kwargs)
+    return add_connection(
+        kwargs["workspace"],
+        kwargs["from_id"],
+        kwargs["to_id"],
+        ConnectionType(kwargs["conn_type"]),
+        note=kwargs.get("note"),
+        created_by=ConnectionAuthor(kwargs.get("created_by", "construct")),
+    )
+
+
+def _ingest_source_shim(*args, **kwargs):
+    """RT-03 adapter for ingest.source.
+
+    - MCP keyword form: IngestSourceInput.workspace maps to ingest_source's
+      ``workspace_root`` positional; remaining fields already match its keyword
+      params.
+    - CLI positional form (cli.py:306): ``handler(workspace, source, …)`` passes
+      straight through to ingest_source.
+    """
+    if args:
+        return ingest_source(*args, **kwargs)
+    rest = dict(kwargs)
+    workspace = rest.pop("workspace")
+    return ingest_source(workspace, **rest)
 
 
 def _build_card_data(kwargs: dict) -> dict:
