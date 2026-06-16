@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: milestone
-status: gaps_found
-stopped_at: Phase 7 planned (3 plans, verified PASSED)
-last_updated: "2026-06-15T20:43:05.703Z"
-last_activity: 2026-06-11
+milestone_name: "blockers: RT-03 MCP schema parity, ING-02 ingest cluster validation, ING-05 graph.status wiring"
+status: executing
+stopped_at: Completed 07-01-PLAN.md (RT-03 + ING-05 closed); 07-02 next
+last_updated: "2026-06-16T10:57:11.446Z"
+last_activity: 2026-06-16 -- Phase 07 Plan 01 complete
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-08)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
-**Current focus:** Phase 06 — derived-data-ops-ui-governed-spikes
+**Current focus:** Phase 07 — close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl
 
 ## Current Position
 
-Phase: 06 (derived-data-ops-ui-governed-spikes) — EXECUTING
-Plan: 4 of 4
-Status: gaps_found
-Last activity: 2026-06-11
+Phase: 07 (close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 07 (Plan 01 complete: RT-03 + ING-05 closed)
+Last activity: 2026-06-16 -- Phase 07 Plan 01 complete
 
 Progress: [█████████░] 86%
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 86%
 | Phase 06-derived-data-ops-ui-governed-spikes P06-03 | 12min | 2 tasks | 2 files |
 | Phase 06 P06-02 | 9 | 3 tasks | 6 files |
 | Phase 06-derived-data-ops-ui-governed-spikes P06-04 | 186s | 3 tasks | 3 files |
+| Phase 07 P07-01 | 11min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Progress: [█████████░] 86%
 
 - [Phase 05-02]: Models defined in ask_domain.py (not catalog.py) to avoid circular imports between catalog and run_gate handler
 - [Phase 05-02]: Domain filter checks domain_id in card.domains list (KnowledgeCard schema has plural list)
+- [Phase 07-01]: RT-03 shims are dual-mode — positional CLI calls pass straight through to the service fn, keyword MCP calls are marshalled — so one registry handler serves both surfaces without touching cli.py or the service layer
+- [Phase 07-01]: graph.status handler uses `lambda workspace: graph_status(workspace)` so a single param binds both positional (help.py) and keyword (MCP) callers
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
@@ -129,6 +132,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-15T20:43:05.695Z
-Stopped at: Phase 7 planned (3 plans, verified PASSED)
-Resume file: .planning/phases/07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl/07-01-PLAN.md
+Last session: 2026-06-16T06:34:37Z
+Stopped at: Completed 07-01-PLAN.md (RT-03 MCP schema parity + ING-05 graph.status wiring closed)
+Resume file: .planning/phases/07-close-v0-3-blockers-rt-03-mcp-schema-parity-ing-02-ingest-cl/07-02-PLAN.md

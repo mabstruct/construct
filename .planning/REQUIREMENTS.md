@@ -36,7 +36,7 @@ Requirements for the first committed roadmap scope, which in this repository map
 
 - [ ] **RT-01**: Maintainer can define a shared capability registry for core system operations so runtime surfaces use the same contracts.
 - [ ] **RT-02**: User can invoke core deterministic capabilities through a stable Python CLI surface.
-- [ ] **RT-03**: Claude-native workflows can invoke stable MCP tools with schema parity to the CLI instead of depending on fragile inline behavior.
+- [x] **RT-03**: Claude-native workflows can invoke stable MCP tools with schema parity to the CLI instead of depending on fragile inline behavior.
 - [x] **RT-04**: System can execute multi-step workflows through a structured runner that records progress and outcomes.
 
 ### Advanced Graph Leverage
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ING-06 | Phase 5 | Pending |
 | RT-01 | Phase 3 | Pending |
 | RT-02 | Phase 3 | Pending |
-| RT-03 | Phase 3 | Pending |
+| RT-03 | Phase 7 | Complete |
 | RT-04 | Phase 4 | Complete |
 | ADV-01 | Phase 5 | Pending |
 | ADV-02 | Phase 5 | Complete |
