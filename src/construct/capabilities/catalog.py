@@ -23,6 +23,8 @@ from construct.services.knowledge import (
 )
 from construct.services.validation import ValidationReport, validate_workspace
 from construct.storage.workspace import WorkspaceLoader
+from construct.schemas.workspace import ConnectionType
+from construct.pipelines.graph_status import graph_status
 
 # ── Ask Domain imports (Phase 5) ──
 from construct.llm.ask_domain import (
@@ -174,7 +176,8 @@ def create_registry() -> CapabilityRegistry:
         description="Validate a CONSTRUCT workspace for structural correctness",
         input_model=WorkspacePathInput,
         output_model=ValidateOutput,
-        handler=validate_workspace,
+        # RT-03 adapter: WorkspacePathInput.path → validate_workspace(root=...)
+        handler=lambda **kwargs: validate_workspace(kwargs["path"]),
         cli_name="validate",
         mcp_tool_name="construct_validate",
     ))
@@ -193,7 +196,12 @@ def create_registry() -> CapabilityRegistry:
         description="Create a new knowledge card in the workspace",
         input_model=CardCreateInput,
         output_model=OperationResult,
-        handler=create_card,
+        # RT-03 adapter: build card_data dict from schema fields (mirrors cli.py:754-771)
+        handler=lambda **kwargs: create_card(
+            kwargs["workspace"],
+            _build_card_data(kwargs),
+            author=CardAuthor(kwargs.get("author", "construct")),
+        ),
         cli_name="knowledge.card.create",
         mcp_tool_name="construct_create_card",
     ))
@@ -203,7 +211,13 @@ def create_registry() -> CapabilityRegistry:
         description="Edit an existing knowledge card",
         input_model=CardEditInput,
         output_model=OperationResult,
-        handler=edit_card,
+        # RT-03 adapter: build updates dict from provided non-None fields (mirrors cli.py:789-799)
+        handler=lambda **kwargs: edit_card(
+            kwargs["workspace"],
+            kwargs["card_id"],
+            _build_card_updates(kwargs),
+            author=CardAuthor(kwargs.get("author", "curator")),
+        ),
         cli_name="knowledge.card.edit",
         mcp_tool_name="construct_edit_card",
     ))
@@ -222,7 +236,15 @@ def create_registry() -> CapabilityRegistry:
         description="Add a typed connection between two cards",
         input_model=ConnectionAddInput,
         output_model=OperationResult,
-        handler=add_connection,
+        # RT-03 adapter: map schema workspace → workspace_root, coerce conn_type/created_by enums
+        handler=lambda **kwargs: add_connection(
+            kwargs["workspace"],
+            kwargs["from_id"],
+            kwargs["to_id"],
+            ConnectionType(kwargs["conn_type"]),
+            note=kwargs.get("note"),
+            created_by=ConnectionAuthor(kwargs.get("created_by", "construct")),
+        ),
         cli_name="knowledge.connection.add",
         mcp_tool_name="construct_add_connection",
     ))
@@ -291,7 +313,11 @@ def create_registry() -> CapabilityRegistry:
         description="Ingest a file, URL, note, or research source into the workspace",
         input_model=IngestSourceInput,
         output_model=OperationResult,
-        handler=ingest_source,
+        # RT-03 adapter: IngestSourceInput.workspace → ingest_source(workspace_root=...);
+        # remaining IngestSourceInput fields already match ingest_source keyword params.
+        handler=lambda **kwargs: ingest_source(
+            kwargs.pop("workspace"), **kwargs
+        ),
         cli_name="ingest.source",
         mcp_tool_name="construct_ingest_source",
     ))
@@ -337,6 +363,44 @@ def create_registry() -> CapabilityRegistry:
     ))
 
     return registry
+
+
+def _build_card_data(kwargs: dict) -> dict:
+    """Marshal CardCreateInput schema kwargs into a create_card card_data dict.
+
+    Mirrors the CLI marshalling at cli.py:754-764: summary maps to the
+    ``_summary`` key when non-empty; author is carried in card_data too.
+    """
+    card_data: dict[str, object] = {
+        "title": kwargs.get("title"),
+        "epistemic_type": kwargs.get("epistemic_type"),
+        "domains": kwargs.get("domains", []),
+        "confidence": kwargs.get("confidence"),
+        "source_tier": kwargs.get("source_tier"),
+        "content_categories": kwargs.get("content_categories", []),
+        "author": kwargs.get("author", "construct"),
+    }
+    summary = kwargs.get("summary")
+    if summary:
+        card_data["_summary"] = summary
+    return card_data
+
+
+def _build_card_updates(kwargs: dict) -> dict:
+    """Marshal CardEditInput schema kwargs into an edit_card updates dict.
+
+    Mirrors the CLI marshalling at cli.py:789-799: only provided non-None
+    fields are included; summary maps to the ``_summary`` key.
+    """
+    updates: dict[str, object] = {}
+    for field in ("title", "confidence", "source_tier", "lifecycle"):
+        value = kwargs.get(field)
+        if value is not None:
+            updates[field] = value
+    summary = kwargs.get("summary")
+    if summary is not None:
+        updates["_summary"] = summary
+    return updates
 
 
 def _get_workflow_steps(name: str) -> list:
