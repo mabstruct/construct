@@ -189,6 +189,18 @@ def ingest_source(
         today = date.today()
 
         domain_id = domain_hint or _get_first_domain(root)
+        if not domain_id:
+            # A synthetic "_general" domain is not defined in domains.yaml, so the
+            # written ref would hard-fail validate_workspace — reintroducing the
+            # exact validation failure ING-02 closed. Fail cleanly instead.
+            return OperationResult(
+                success=False,
+                message=(
+                    "Cannot ingest note: no domain configured in this workspace. "
+                    "Initialize a domain or pass an explicit domain hint."
+                ),
+                errors=[OperationError(reason="no domain resolved for note ingest")],
+            )
 
         try:
             ref = ReferenceRecord(
@@ -204,7 +216,7 @@ def ingest_source(
                 venue=venue,
                 extraction_status=extraction,
                 ingested_date=today,
-                domain=domain_id or "_general",
+                domain=domain_id,
                 search_cluster=search_cluster or "manual-ingest",
             )
             validate_ref_write(ref.model_dump(), relative_path=f"refs/{ref_id}.json")

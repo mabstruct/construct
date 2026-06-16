@@ -13,6 +13,10 @@ from construct.storage.workspace import WorkspaceLoadError, WorkspaceLoader
 
 SuggestionPriority = list[dict[str, str]]
 
+# Reserved ingest clusters (seeded at init) always carry last_queried=None and
+# must be excluded from research-staleness scoring — see init._write_search_seeds.
+_RESERVED_INGEST_CLUSTERS = frozenset({"manual-ingest", "web-ingest"})
+
 # Priority levels matching the construct-help skill ordering
 PRIORITY_MAP = [
     ("no_workspace", "No workspace exists"),
@@ -83,16 +87,27 @@ def suggest(workspace_root: str | Path) -> OperationResult:
         if seeds_file.exists():
             try:
                 seeds = json.loads(seeds_file.read_text(encoding="utf-8"))
-                clusters = seeds.get("search_clusters", [])
-                if clusters:
-                    last_queried = clusters[0].get("last_queried")
-                    if last_queried:
-                        try:
-                            last = datetime.fromisoformat(last_queried)
-                            research_stale_days = (datetime.now(timezone.utc) - last).days if last.tzinfo else (datetime.now() - last).days
-                            research_stale_days = max(0, research_stale_days)
-                        except (ValueError, TypeError):
-                            pass
+                clusters = seeds.get("clusters", [])
+                # Staleness reflects the most recently queried *research* cluster.
+                # Reserved ingest clusters always carry last_queried=None; the
+                # research seed cluster is appended last by init, so a fixed index
+                # (e.g. clusters[0]) reads the wrong cluster — aggregate instead.
+                queried = [
+                    c.get("last_queried")
+                    for c in clusters
+                    if c.get("id") not in _RESERVED_INGEST_CLUSTERS and c.get("last_queried")
+                ]
+                if queried:
+                    try:
+                        last = max(datetime.fromisoformat(q) for q in queried)
+                        research_stale_days = (
+                            (datetime.now(timezone.utc) - last).days
+                            if last.tzinfo
+                            else (datetime.now() - last).days
+                        )
+                        research_stale_days = max(0, research_stale_days)
+                    except (ValueError, TypeError):
+                        pass
             except (json.JSONDecodeError, OSError):
                 pass
 
