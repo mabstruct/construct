@@ -63,6 +63,26 @@ def test_card_create_cli(init_workspace: Path, cli_runner: CliRunner) -> None:
     assert "Test Card" in result.stdout
 
 
+def test_card_create_cli_writes_summary_to_body(init_workspace: Path, cli_runner: CliRunner) -> None:
+    summary = "Caching embeddings at the gateway reduces repeat-LLM-call latency."
+
+    result = cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", "Semantic caching cuts gateway latency",
+        "--type", "finding",
+        "--domains", "test",
+        "--confidence", "3",
+        "--source-tier", "2",
+        "--summary", summary,
+        "--workspace", str(init_workspace),
+    ])
+
+    assert result.exit_code == 0, result.stdout
+    content = (init_workspace / "cards" / "semantic-caching-cuts-gateway-latency.md").read_text(encoding="utf-8")
+    assert "_summary" not in content
+    assert f"## Summary\n\n{summary}" in content
+
+
 def test_card_create_cli_invalid(init_workspace: Path, cli_runner: CliRunner) -> None:
     result = cli_runner.invoke(app, [
         "knowledge", "card", "create",
@@ -119,6 +139,36 @@ def test_card_edit_cli(init_workspace: Path, cli_runner: CliRunner) -> None:
     # Verify
     content = card_files[0].read_text()
     assert "Edited Title" in content
+
+
+def test_card_edit_cli_updates_summary_without_losing_body(init_workspace: Path, cli_runner: CliRunner) -> None:
+    cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", "Editable Summary",
+        "--type", "finding", "--domains", "test",
+        "--confidence", "3", "--source-tier", "3",
+        "--summary", "Original summary.",
+        "--workspace", str(init_workspace),
+    ])
+
+    card_path = init_workspace / "cards" / "editable-summary.md"
+    content = card_path.read_text(encoding="utf-8")
+    card_path.write_text(
+        content.replace("## Evidence\n\n", "## Evidence\n\nEvidence line.\n\n"),
+        encoding="utf-8",
+    )
+
+    result = cli_runner.invoke(app, [
+        "knowledge", "card", "edit", "editable-summary",
+        "--summary", "Updated summary.",
+        "--workspace", str(init_workspace),
+    ])
+
+    assert result.exit_code == 0, result.stdout
+    content = card_path.read_text(encoding="utf-8")
+    assert "_summary" not in content
+    assert "Updated summary." in content
+    assert "Evidence line." in content
 
 
 def test_card_archive_cli(init_workspace: Path, cli_runner: CliRunner) -> None:

@@ -63,11 +63,10 @@ cp -r "$IMPL_DIR/construct/templates"  "$TARGET/.construct/"
 cp -r "$IMPL_DIR/construct/references" "$TARGET/.construct/"
 cp -r "$IMPL_DIR/construct/workflows"  "$TARGET/.construct/"
 
-# Stamp VERSION marker from the single source of truth (src/construct/__init__.py).
-# Avoids a hand-maintained VERSION file drifting from the engine version.
-VERSION="$(sed -nE 's/^__version__ = "([^"]+)"/\1/p' "$SCRIPT_DIR/src/construct/__init__.py")"
+# Stamp VERSION marker from the installed engine (release + build stamp).
+VERSION="$(python -c 'from construct import __version__; print(__version__)')"
 if [[ -z "$VERSION" ]]; then
-  echo "Error: could not read __version__ from src/construct/__init__.py"
+  echo "Error: could not read version from construct package"
   exit 1
 fi
 printf '%s\n' "$VERSION" > "$TARGET/.construct/VERSION"

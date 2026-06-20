@@ -110,6 +110,23 @@ def _card_dict_to_markdown(card_dict: dict[str, Any], body: str | None = None) -
     return f"---\n{frontmatter_text}---\n\n{body}"
 
 
+def _summary_to_body(summary: str) -> str:
+    """Build the canonical card body with a populated summary section."""
+    return f"## Summary\n\n{summary}\n\n## Evidence\n\n\n\n## Significance\n\n\n\n## Open Questions\n\n"
+
+
+def _replace_summary_section(body: str, summary: str) -> str:
+    """Replace the canonical Summary section while preserving the rest of the body."""
+    replacement = f"## Summary\n\n{summary}\n\n"
+    prefix_len = len(body) - len(body.lstrip("\n"))
+    prefix = body[:prefix_len]
+    stripped_body = body[prefix_len:]
+    pattern = re.compile(r"(?s)^## Summary\n\n.*?(?=\n## |\Z)")
+    if pattern.search(stripped_body):
+        return prefix + pattern.sub(replacement.rstrip("\n"), stripped_body, count=1)
+    return f"{prefix}{replacement}{stripped_body.lstrip()}"
+
+
 def _read_card_file(workspace_root: Path, card_id: str) -> tuple[KnowledgeCard, str, dict[str, Any]]:
     """Read and parse a card file, returning (card, body, raw_frontmatter_dict)."""
     card_path = workspace_root / "cards" / f"{card_id}.md"
@@ -153,6 +170,9 @@ def create_card(
     """
     root = Path(workspace_root)
     data = dict(card_data)
+    summary = data.pop("_summary", None)
+    if body is None and summary:
+        body = _summary_to_body(str(summary))
 
     # Set defaults
     data.setdefault("created", date.today().isoformat())
@@ -230,10 +250,11 @@ def edit_card(
     and writes the result back.  Fields not mentioned in *updates* are preserved.
     """
     root = Path(workspace_root)
+    updates = dict(updates)
 
     # Read existing card
     try:
-        _, _, raw = _read_card_file(root, card_id)
+        _, body, raw = _read_card_file(root, card_id)
     except FileNotFoundError as exc:
         return OperationResult(success=False, message=str(exc), errors=[OperationError(reason=str(exc))])
     except (SchemaParseError, PydanticValidationError, ValueError, OSError) as exc:
@@ -243,12 +264,17 @@ def edit_card(
             errors=[OperationError(reason=str(exc), suggestion="The card file may be corrupt.")],
         )
 
+    updated_fields = list(updates.keys())
+    summary = updates.pop("_summary", None)
+    if summary is not None:
+        body = _replace_summary_section(body, str(summary))
+
     # Apply updates (field-level — do not wipe unmentioned fields)
     raw.update(updates)
 
     # Validate updated card
     try:
-        markdown = _card_dict_to_markdown(raw)
+        markdown = _card_dict_to_markdown(raw, body=body)
         validate_card_write(markdown)
     except (ArtifactValidationError, PydanticValidationError, ValueError) as exc:
         reason = str(exc)
@@ -274,7 +300,6 @@ def edit_card(
         )
 
     # Log event
-    updated_fields = list(updates.keys())
     append_card_event(
         root,
         EventAgent.construct,

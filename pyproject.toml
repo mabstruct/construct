@@ -26,7 +26,10 @@ dev = ["pytest>=8.0"]
 construct = "construct.cli:main"
 
 [tool.hatch.version]
-path = "src/construct/__init__.py"
+path = "src/construct/_release.py"
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/construct"]

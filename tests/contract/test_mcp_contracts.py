@@ -94,11 +94,13 @@ def _payload_for(tool_name: str, ws: str) -> dict:
             "domains": ["cosmology"],
             "confidence": 3,
             "source_tier": 4,
+            "summary": "Contract summary.",
         },
         "construct_edit_card": {
             "card_id": "contract-test-card",
             "workspace": ws,
             "title": "Contract Test Card Edited",
+            "summary": "Edited contract summary.",
         },
         "construct_add_connection": {
             "from_id": "contract-test-card",
