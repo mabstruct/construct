@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: executing
-stopped_at: Phase 8 context gathered
-last_updated: "2026-06-21T16:01:14.382Z"
-last_activity: 2026-06-21 -- Phase 8 planning complete
+status: ready_to_plan
+stopped_at: Phase 08 complete (3/3) — ready to discuss Phase 9
+last_updated: 2026-06-21T16:16:14.758Z
+last_activity: 2026-06-21 -- Phase 08 execution started
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** v0.4 Agent Workflows — Phase 8 Search Provider Spine + Contract Foundation
+**Current focus:** Phase 9 — llm provider factory + research.score
 
 ## Current Position
 
-Phase: 8 of 13 overall / 1 of 6 in v0.4 (Search Provider Spine + Contract Foundation)  
-Plan: Not planned yet  
-Status: Ready to execute
-Last activity: 2026-06-21 -- Phase 8 planning complete
+Phase: 9
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-21
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,6 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 8 | TBD | - | - |
+| 08 | 3 | - | - |
 
 **Recent Trend:**
 

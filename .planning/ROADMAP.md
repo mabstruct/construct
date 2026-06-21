@@ -33,7 +33,7 @@ Full phase detail (goals, success criteria, plans) archived in
 
 **Milestone Goal:** Move CONSTRUCT's highest-value multi-step workflows from opaque Claude-native procedures into testable, model-agnostic LangGraph/LangChain pipelines while preserving the existing workspace format and current skill UX.
 
-- [ ] **Phase 8: Search Provider Spine + Contract Foundation** — provider-agnostic `research.search`, normalized search contracts, config/caps, degraded errors, and offline provider tests.
+- [x] **Phase 8: Search Provider Spine + Contract Foundation** — provider-agnostic `research.search`, normalized search contracts, config/caps, degraded errors, and offline provider tests. (completed 2026-06-21)
 - [ ] **Phase 9: LLM Provider Factory + research.score** — model-agnostic structured scoring that turns normalized search results into governed finding proposals.
 - [ ] **Phase 10: Durable Human Review + research.run** — reviewed, resumable research workflow with deduplication, approved ingest, digest, seed updates, and events.
 - [ ] **Phase 11: Curation PIPE Steps** — real deterministic curation checks and reports replace v0.3 placeholder success responses.
@@ -65,15 +65,15 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Search module core: SearchConfig schema, errors, ABC, mock provider, factory
+- [x] 08-01-PLAN.md — Search module core: SearchConfig schema, errors, ABC, mock provider, factory
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Capability wiring: research.search handler, registry, CLI, config load/validation/init
+- [x] 08-02-PLAN.md — Capability wiring: research.search handler, registry, CLI, config load/validation/init
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 08-03-PLAN.md — Contract tests, MCP parity update, Tavily adapter, full regression
+- [x] 08-03-PLAN.md — Contract tests, MCP parity update, Tavily adapter, full regression
 
 ### Phase 9: LLM Provider Factory + research.score
 
@@ -170,7 +170,7 @@ Plans:
 | 5. Grounded Synthesis & Graph Reasoning | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
-| 8. Search Provider Spine + Contract Foundation | v0.4 | 0/3 | Not started | - |
+| 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 0/TBD | Not started | - |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
