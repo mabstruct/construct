@@ -8,7 +8,8 @@ import pytest
 from ruamel.yaml import YAML
 
 from construct.schemas.config import SearchConfig
-from construct.search.errors import RateLimitError
+from construct.search.errors import ProviderUnavailableError, RateLimitError
+from construct.search.providers.tavily import normalize_tavily_response
 from construct.search.registry import SearchProviderFactory
 from tests.search.conftest import SEARCH_TEMPLATE
 
@@ -80,3 +81,72 @@ def test_search_by_seed_cluster(search_workspace: Path, mock_fixtures_dir: Path)
     assert len(output.results) >= 1
     assert seeds_path.read_text(encoding="utf-8") == before_text
     assert seeds_path.stat().st_mtime_ns == before_mtime
+
+
+def test_tavily_normalization() -> None:
+    fixture_path = Path(__file__).resolve().parents[1] / "fixtures" / "search" / "tavily_basic.json"
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    raw_response = payload["response"]
+    raw_results = raw_response["results"]
+    sdk_response = {
+        "results": [
+            {
+                "title": item["title"],
+                "url": item["url"],
+                "content": item.get("content", item.get("snippet", "")),
+                "score": item["score"],
+                **{
+                    key: value
+                    for key, value in item.get("provider_specific", {}).items()
+                },
+            }
+            for item in raw_results
+        ]
+    }
+
+    output = normalize_tavily_response(
+        sdk_response,
+        max_results=5,
+        query=payload["query"],
+        cluster_id=None,
+        provider_name="tavily",
+    )
+
+    assert output.provider_name == "tavily"
+    assert output.query == "api gateway patterns"
+    assert len(output.results) == 1
+
+    result = output.results[0]
+    assert result.title == "Tavily Sample Result"
+    assert result.url.startswith("https://")
+    assert "normalization" in result.snippet.lower()
+    assert result.source_tier == 3
+    assert result.score == 0.85
+    assert result.provider_specific.get("published_date") == "2025-06-01"
+
+
+def test_tavily_factory_unavailable_without_sdk(
+    mock_fixtures_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    yaml = YAML(typ="safe")
+    payload = yaml.load(SEARCH_TEMPLATE.read_text())
+    payload["default_provider"] = "tavily"
+    config = SearchConfig.model_validate(payload)
+
+    def _raise_unavailable() -> tuple[object, ...]:
+        raise ProviderUnavailableError(
+            provider_name="tavily",
+            message="Install with: pip install -e '.[search]'",
+        )
+
+    monkeypatch.setattr(
+        "construct.search.providers.tavily._import_tavily_sdk",
+        _raise_unavailable,
+    )
+
+    with pytest.raises(ProviderUnavailableError) as exc_info:
+        SearchProviderFactory.create(config)
+
+    assert exc_info.value.provider_name == "tavily"
+    assert "search" in exc_info.value.message.lower()

@@ -1,5 +1,6 @@
 .construct/
 .construct/model-routing.yaml
+.construct/search.yaml
 .gitignore
 WORKSPACE.md
 cards/

@@ -100,13 +100,9 @@ class SearchProviderFactory:
                     provider_name=provider_key,
                     message=f"provider block for '{provider_key}' is not type tavily",
                 )
-            raise ProviderUnavailableError(
-                provider_name=provider_key,
-                message=(
-                    "Tavily adapter not installed yet — install with "
-                    "pip install 'construct[search]' (Plan 08-03)"
-                ),
-            )
+            from construct.search.providers.tavily import TavilySearchProvider
+
+            provider = TavilySearchProvider(provider_config, provider_name=provider_key)
         else:
             raise ProviderUnavailableError(
                 provider_name=provider_key,
