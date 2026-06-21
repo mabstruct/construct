@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3
-milestone_name: "Claude-Native Runtime & Workflow Hardening"
-status: Awaiting next milestone
-stopped_at: Milestone v0.3 officially closed; acknowledged UAT items accepted; ready to merge before v0.4
-last_updated: "2026-06-21T12:22:42Z"
-last_activity: 2026-06-21 — Final v0.3 close-out; UAT items acknowledged and accepted
+milestone: v0.4
+milestone_name: "Agent Workflows"
+status: Defining requirements
+stopped_at: Milestone v0.4 started; defining requirements and roadmap
+last_updated: "2026-06-21T14:21:32Z"
+last_activity: 2026-06-21 — Milestone v0.4 started
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 25
-  completed_plans: 25
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-08)
+See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
-**Current focus:** Milestone complete; merge v0.3 before starting v0.4
+**Current focus:** v0.4 Agent Workflows — model-agnostic research/curation pipelines and thin skill migrations
 
 ## Current Position
 
-Phase: Milestone v0.3 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone after release merge
-Last activity: 2026-06-21 — Final v0.3 close-out; UAT items acknowledged and accepted
+Status: Defining requirements
+Last activity: 2026-06-21 — Milestone v0.4 started
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Last activity: 2026-06-21 — Final v0.3 close-out; UAT items acknowledged and a
 ### Roadmap Evolution
 
 - Phase 7 added: Close v0.3 blockers (RT-03 MCP parity, ING-02 ingest cluster, ING-05 graph.status) — from milestone audit 2026-06-15
+- v0.4 started as Agent Workflows milestone: search provider spine, research.run, curation.run, thin skill migrations, and daily-cycle composition. v0.5 UI and unrelated v0.3 carry-over debt remain deferred unless directly required.
 
 ### Decisions
 
@@ -122,7 +123,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- None for v0.3 close. Start **v0.4 agent workflows** with `/gsd-new-milestone` using `CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md`. **v0.5 UI-primary** follows v0.4.
+- Define v0.4 milestone requirements in `.planning/REQUIREMENTS.md`.
+- Create v0.4 roadmap continuing phase numbering from v0.3.
+- After roadmap approval, start the first v0.4 phase with `/gsd-plan-phase 8`.
 
 ### Blockers/Concerns
 
@@ -142,10 +145,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-21T12:22:42Z
-Stopped at: v0.3 final close-out complete; acknowledge-all decision recorded; merge to `main` before v0.4 planning
+Last session: 2026-06-21T14:21:32Z
+Stopped at: v0.4 milestone start; requirements and roadmap pending
 Resume file: None
 
 ## Operator Next Steps
 
-- Merge `v03ph01-feature` to `main`, then start **v0.4** (agent workflows) with `/gsd-new-milestone`. Plan **v0.5** UI-primary after v0.4 workflows ship.
+- Complete `/gsd-new-milestone` requirements and roadmap gates, then start Phase 8 with `/gsd-plan-phase 8`.

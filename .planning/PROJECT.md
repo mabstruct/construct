@@ -8,6 +8,17 @@ CONSTRUCT is a local-first knowledge management system that helps a user collabo
 
 The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
 
+## Current Milestone: v0.4 Agent Workflows
+
+**Goal:** Move CONSTRUCT's highest-value multi-step workflows from opaque Claude-native procedures into testable, model-agnostic LangGraph/LangChain pipelines while preserving the existing workspace format and current skill UX.
+
+**Target features:**
+- Search provider spine with Tavily/default mockable provider and normalized search result contracts.
+- `research.search`, `research.score`, and `research.run` with L3 scoring, human review, governed ingest, events, and CLI/MCP parity.
+- `curation.run` with real integrity/decay/orphan/report steps plus promotion/connection gates, replacing v0.3 placeholder no-ops.
+- Thin skill migrations for research and curation so they delegate to CLI/MCP and remove direct `WebSearch` / `WebFetch`.
+- Daily-cycle composition after research and curation stabilize.
+
 ## Requirements
 
 ### Validated
@@ -18,16 +29,18 @@ The system must reliably turn source material into connected, explorable knowled
 
 ### Active
 
-- [ ] **v0.4 — Agent workflows:** Migrate research/curation (and related) skill workflows to LangGraph/LangChain Python pipelines; model-agnostic web search (Tavily). Baseline spec: [`CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md).
-- [ ] Unify the runtime dispatch surface (RT-01/RT-02): route views/spike/tag command groups through the capability registry so MCP/UI see them — carried from v0.3 audit.
-- [ ] Complete deferred runtime behavior: curation-cycle workflow steps (currently no-ops), `views.generate_data`, and view-file emission (ADV-03).
-- [ ] **v0.5 — UI-primary experience:** Browser-first shell on top of the hardened v0.4 workflow runtime (HTTP API, capability buttons, LLM modals).
-- [ ] Close v0.3 verification debt: per-phase VERIFICATION.md, Nyquist VALIDATION.md, and SECURITY.md coverage where missing.
+- [ ] **Search provider spine:** Add provider-agnostic search contracts, Tavily/default provider configuration, mock provider support, and CLI/MCP-accessible `research.search`.
+- [ ] **Research workflow:** Implement `research.score` and `research.run` so search results are scored by structured gates, reviewed before ingest, persisted through governed ingest, and logged with events.
+- [ ] **Curation workflow:** Implement `curation.run` with real integrity, decay, orphan, promotion, connection-maintenance, report, and optional views-refresh behavior instead of v0.3 placeholder no-ops.
+- [ ] **Thin skill migrations:** Update research and curation Claude-native skills to invoke CLI/MCP capabilities and remove direct `WebSearch` / `WebFetch` orchestration.
+- [ ] **Daily-cycle composition:** Extend the daily-cycle workflow after research and curation stabilize so the user can run a real model-agnostic daily maintenance path.
 
 ### Out of Scope
 
 - Replacing the existing knowledge model or workspace format — continuity across versions is a core constraint.
 - Breaking current Claude-native workflows during the v0.5 UI build — existing user flows must remain usable.
+- Pulling the v0.5 browser-primary shell into v0.4 — UI-primary work waits for stable workflow capabilities.
+- Treating RT-01/RT-02 registry unification for views/spike/tag, full `views.generate_data` emission, or milestone-wide verification/security debt as primary v0.4 scope — these remain tracked follow-ups unless directly required by agent workflow delivery.
 
 ## Context
 
@@ -39,7 +52,7 @@ The desired user experience in the near term is still guided by Claude-native sk
 
 There are already relevant analyses in the latest specification documents covering capabilities and artifacts. Those documents should inform requirements and roadmap structure rather than re-deriving the product from scratch.
 
-**Current state (after v0.3, 2026-06-16):** v0.3 shipped across 7 phases / 25 plans. The runtime is a Python package (`src/construct/`) with a capability registry, a Click CLI, and a stdio MCP server as the agentic surface; Claude-native skills are thin wrappers over those capabilities. Knowledge lives in a governed workspace (cards/refs/connections + search-seeds/domains/governance YAML) behind pre-write validation gates. Grounded Q&A, synthesis, and bridge detection run on the graph; a Streamlit ops dashboard and view data contracts prepare **v0.5**. Test suite: 228 passing. The v0.3 milestone audit closes at 0 unsatisfied requirements with documented tech debt carried into **v0.4** (workflows, registry) and **v0.5** (UI shell). **Next:** scope v0.4 agent workflows per [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md).
+**Current state (starting v0.4, 2026-06-21):** v0.3 shipped across 7 phases / 25 plans. The runtime is a Python package (`src/construct/`) with a capability registry, a Click CLI, and a stdio MCP server as the agentic surface; Claude-native skills are thin wrappers over those capabilities. Knowledge lives in a governed workspace (cards/refs/connections + search-seeds/domains/governance YAML) behind pre-write validation gates. Grounded Q&A, synthesis, and bridge detection run on the graph; a Streamlit ops dashboard and view data contracts prepare **v0.5**. The v0.3 milestone audit closes at 0 unsatisfied requirements. **v0.4 now scopes the workflow-specific next step:** model-agnostic research and curation workflows per [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md), with non-workflow carry-over debt deferred unless it blocks this delivery.
 
 ## Constraints
 
@@ -57,6 +70,7 @@ There are already relevant analyses in the latest specification documents coveri
 | Preserve the knowledge model and workspace format across versions | Cross-version continuity is central to the product architecture and migration story | ✓ Good — workspace format preserved; Phase 1 published a migration playbook |
 | Python is the deterministic enforcement layer; skills orchestrate flow; the capability registry is the single contract behind CLI + MCP | Keeps behavior testable and gives agents and (future) UI one surface | ⚠️ Revisit — registry is canonical for core ops, but views/spike/tag groups still bypass it (RT-01/RT-02, v0.4 backlog) |
 | Fix governed-ingest validation by conforming the data to the gate, not weakening the gate | Keeps validation strict so canonical truth stays trustworthy | ✓ Good — v0.3 (Phase 7, ING-02) |
+| Scope v0.4 to agent workflows first, not all accepted v0.3 carry-over debt | Research and curation workflows are the highest leverage path to model-agnostic operation and v0.5 readiness; unrelated debt can obscure that goal | — Pending — milestone just started |
 
 ## Evolution
 
@@ -76,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — v0.4 agent workflows / v0.5 UI sequencing*
+*Last updated: 2026-06-21 — started v0.4 Agent Workflows milestone*
