@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: "Claude-Native Runtime & Workflow Hardening"
 status: Awaiting next milestone
-stopped_at: Milestone v0.3 completed and archived (7 phases, 25 plans)
-last_updated: "2026-06-16T13:43:20.682Z"
-last_activity: 2026-06-16 — Milestone v0.3 completed and archived
+stopped_at: Milestone v0.3 officially closed; acknowledged UAT items accepted; ready to merge before v0.4
+last_updated: "2026-06-21T12:22:42Z"
+last_activity: 2026-06-21 — Final v0.3 close-out; UAT items acknowledged and accepted
 progress:
   total_phases: 7
   completed_phases: 7
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-08)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
-**Current focus:** Milestone complete
+**Current focus:** Milestone complete; merge v0.3 before starting v0.4
 
 ## Current Position
 
 Phase: Milestone v0.3 complete
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-16 — Milestone v0.3 completed and archived
+Status: Awaiting next milestone after release merge
+Last activity: 2026-06-21 — Final v0.3 close-out; UAT items acknowledged and accepted
 
 ## Performance Metrics
 
@@ -122,12 +122,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Execute Phase 3 plans (registry → CLI refactor → MCP server)
-- Execute Phase 05 (runtime pipeline hardening)
+- None for v0.3 close. Start v0.4 with `/gsd-new-milestone` only after v0.3 is merged to `main`.
 
 ### Blockers/Concerns
 
-- `views-generate-data` skill-embedded Python (~2140 lines) needs porting to `src/construct/pipelines/` — currently wrapped but not fully migrated
+- No close blockers. Accepted follow-up work is tracked under Deferred Items.
 
 ## Deferred Items
 
@@ -142,10 +141,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-16T11:30:00Z
-Stopped at: Completed 07-03-PLAN.md (v0.3 traceability reconciled); Phase 07 all 3 plans complete — ready for verification
+Last session: 2026-06-21T12:22:42Z
+Stopped at: v0.3 final close-out complete; acknowledge-all decision recorded; merge to `main` before v0.4 planning
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Merge `v03ph01-feature` to `main`, then start v0.4 with `/gsd-new-milestone`.

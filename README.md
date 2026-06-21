@@ -14,6 +14,8 @@ CONSTRUCT systematically collects, curates, connects, and compounds knowledge ac
 |------|-------|
 | Specification | [`CONSTRUCT-CLAUDE-spec/`](CONSTRUCT-CLAUDE-spec/) — read [`README_FIRST.md`](CONSTRUCT-CLAUDE-spec/README_FIRST.md) first |
 | Implementation | [`CONSTRUCT-CLAUDE-impl/`](CONSTRUCT-CLAUDE-impl/) — skills, workflows, templates; read [`AGENTS.md`](CONSTRUCT-CLAUDE-impl/AGENTS.md) for runtime behavior |
+| Runtime/API layer | [`src/construct/`](src/construct/) and [`tests/`](tests/) — active v0.3 pipeline, CLI, MCP, LLM gate, and contract tests |
+| GSD state | [`.planning/`](.planning/) — v0.3 shipped; v0.4 is next |
 | Test fixtures | [`test-ws/`](test-ws/) — not user data |
 | Agent rules (repo) | [`AGENTS.md`](AGENTS.md) |
 
@@ -22,10 +24,9 @@ CONSTRUCT systematically collects, curates, connects, and compounds knowledge ac
 | What | Where | Why |
 |------|-------|-----|
 | Python v0.1 spec | [`archive/v01-python/spec/`](archive/v01-python/spec/) | Archived — superseded by Claude-native path |
-| Python code | [`src/construct/`](src/construct/), [`tests/`](tests/) | Dormant Phase 1 skeleton |
-| v0.3 planning (current) | [`CONSTRUCT-CLAUDE-v03-planning/`](CONSTRUCT-CLAUDE-v03-planning/) | Pipeline/API hardening — ADR-0003 |
+| v0.3 planning notes | [`CONSTRUCT-CLAUDE-v03-planning/`](CONSTRUCT-CLAUDE-v03-planning/) | Historical planning — shipped state is in `.planning/` |
 | v0.2 planning notes | [`CONSTRUCT-CLAUDE-v02-planning/`](CONSTRUCT-CLAUDE-v02-planning/) | Historical backlog; specs in `CONSTRUCT-CLAUDE-spec/spec-v02-*` |
-| GSD (Python track) | [`archive/v01-python/gsd/`](archive/v01-python/gsd/) | Archived — restart fresh GSD for CONSTRUCT03 impl |
+| GSD (Python track) | [`archive/v01-python/gsd/`](archive/v01-python/gsd/) | Archived — historical Python v0.1 planning run |
 
 ---
 
@@ -42,9 +43,9 @@ v0.1 Claude impl     CONSTRUCT-CLAUDE-impl/       (chat + skills + workspace)
        ↓
 v0.2 extensions      CONSTRUCT-CLAUDE-spec/spec-v02-*  (local views, cross-domain)
        ↓
-v0.3 (planned)       Pipeline/API layer — ADR-0003; CONSTRUCT-CLAUDE-v03-planning/
+v0.3 shipped         Pipeline/API layer — src/construct/; .planning/milestones/v0.3-*
        ↓
-v0.4 (planned)       UI-as-primary shell on v0.3 API
+v0.4 next            UI-as-primary shell on v0.3 API
 ```
 
 The **knowledge model and workspace file format** are shared across all versions.
@@ -75,29 +76,34 @@ Canonical schema: [`CONSTRUCT-CLAUDE-spec/knowledge-card-schema.md`](CONSTRUCT-C
 construct/
 ├── CONSTRUCT-CLAUDE-impl/         # ACTIVE — agent configuration (skills, workflows, templates)
 ├── CONSTRUCT-CLAUDE-spec/         # ACTIVE — living specification (v0.1 + v0.2)
-├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 pipeline/API planning (current) — ADR-0003
+├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 pipeline/API planning notes (shipped)
 ├── CONSTRUCT-CLAUDE-v02-planning/ # v0.2 backlog (historical)
+├── .planning/                     # ACTIVE — GSD state; v0.3 closed, v0.4 next
 ├── test-ws/                       # Test workspace fixtures
 ├── archive/
 │   └── v01-python/                # ARCHIVED — v0.1 Python-first spec + GSD
 │       ├── README.md
 │       ├── spec/                  # Former CONSTRUCT-spec/
 │       └── gsd/                   # Former .planning/ (Python GSD)
-├── src/construct/                 # DORMANT — partial Python implementation
-├── tests/                         # DORMANT — Python tests
+├── src/construct/                 # ACTIVE — v0.3 pipeline/API runtime
+├── tests/                         # ACTIVE — runtime contract/unit/integration tests
 ├── views/                         # Design examples / views assets
 ├── AGENTS.md                      # Repository-level agent instructions
-└── pyproject.toml                 # Python build config (dormant)
+└── pyproject.toml                 # Python build config
 ```
 
 ---
 
-## Python runtime (archived / dormant)
+## Python runtime
 
-The original v0.1 plan was a Python application (FastAPI, SQLite, React UI). That path is **paused**, not deleted:
+The original v0.1 plan was a full Python application (FastAPI, SQLite, React UI). That path is **paused**, not deleted:
 
 - **Spec:** [`archive/v01-python/spec/`](archive/v01-python/spec/)
-- **Code:** [`src/construct/`](src/construct/) — `construct init`, `construct validate`, `construct status`
-- **May resume for:** cloud deployment, MCP server, SQLite indexing, custom UI backend
+- **May resume for:** cloud deployment, SQLite indexing, custom UI backend
+
+The v0.3 milestone revived the Python layer surgically as the deterministic runtime for pipeline, CLI, MCP, LLM-gated, and ops-UI capabilities:
+
+- **Runtime:** [`src/construct/`](src/construct/)
+- **Tests:** [`tests/`](tests/)
 
 Both approaches share the same workspace format on disk.
