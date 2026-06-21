@@ -49,76 +49,102 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 ## Phase Details
 
 ### Phase 8: Search Provider Spine + Contract Foundation
+
 **Goal**: Users and agents can run provider-agnostic research search through the existing CONSTRUCT contract without workspace source-of-truth writes.
 **Depends on**: Phase 7
 **Requirements**: SRCH-01, SRCH-02, SRCH-03, SRCH-04
 **Success Criteria** (what must be TRUE):
+
   1. User can run `research.search` from the `construct` CLI and stdio MCP server through the shared capability registry and receive normalized search results without refs/cards/seeds/events source-of-truth writes.
   2. Developer can configure search provider selection, API-key environment variables, query caps, and result caps without changing workflow code.
   3. Developer can run the search contract test suite offline with a mock provider and fixture responses.
   4. User receives structured degraded-state errors when a provider fails, times out, or hits configured caps.
+
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 08-01-PLAN.md — Search module core: SearchConfig schema, errors, ABC, mock provider, factory
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 08-02-PLAN.md — Capability wiring: research.search handler, registry, CLI, config load/validation/init
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 08-03-PLAN.md — Contract tests, MCP parity update, Tavily adapter, full regression
 
 ### Phase 9: LLM Provider Factory + research.score
+
 **Goal**: Users can turn normalized search results into governance-aware finding proposals through a model-agnostic scoring gate.
 **Depends on**: Phase 8
 **Requirements**: RSCH-01
 **Success Criteria** (what must be TRUE):
+
   1. User can run `research.score` from the `construct` CLI and stdio MCP server through the shared capability registry.
   2. User receives structured finding proposals with relevance score, source tier, ingest action, and reasoning for each scored search result.
   3. User can see governance thresholds reflected in `skip`, `ref_only`, and `ref_and_card` recommendations before any workspace writes occur.
   4. Developer can verify the score gate offline with mock LLM providers, invalid-output fixtures, and degraded-state tests.
+
 **Plans**: TBD
 
 ### Phase 10: Durable Human Review + research.run
+
 **Goal**: Users can run research as a durable reviewed workflow that ingests only approved findings and can resume safely.
 **Depends on**: Phase 9
 **Requirements**: RSCH-02, RSCH-03, RSCH-04, RSCH-05
 **Success Criteria** (what must be TRUE):
+
   1. User can run `research.run` from the `construct` CLI and stdio MCP server to execute search, deduplication, scoring, review, approved ingest, digest creation, seed updates, and event logging as one workflow.
   2. User can review, approve, or reject research findings before any refs, cards, seed timestamps, or digest artifacts are written.
   3. User can resume or inspect a paused research workflow with pending review state preserved across process restarts.
   4. User can rerun research safely without duplicating URLs, refs, rejected findings, or partially completed batch writes.
   5. User can see run status, gate IDs, approved ingest counts, digest path, seed update status, and emitted events in the workflow result.
+
 **Plans**: TBD
 
 ### Phase 11: Curation PIPE Steps
+
 **Goal**: Users can run curation and receive real deterministic integrity, decay, orphan, connection-health, and report results instead of placeholder success responses.
 **Depends on**: Phase 10
 **Requirements**: CUR-01
 **Success Criteria** (what must be TRUE):
+
   1. User can run `curation.run` from the `construct` CLI and stdio MCP server and receive real integrity, decay, orphan, connection-health, and report output.
   2. User can distinguish completed deterministic checks, degraded checks, and skipped optional views refresh in the curation result.
   3. User no longer receives placeholder success messages for deterministic curation steps; each reported step includes concrete findings, counts, or an explicit degraded/skipped state.
+
 **Plans**: TBD
 
 ### Phase 12: Curation L3 Gates + Review Application
+
 **Goal**: Users can review lifecycle and connection proposals before any high-impact curation writes occur, and research/curation skills delegate to the runtime.
 **Depends on**: Phase 11
 **Requirements**: CUR-02, CUR-03, CUR-04, CUR-05, API-04
 **Success Criteria** (what must be TRUE):
+
   1. User can run a structured `card.evaluate` gate that proposes promote, hold, or escalate decisions with evidence.
   2. User can approve or reject lifecycle and connection proposals before canonical card or connection writes occur.
   3. User can inspect curation workflow status, degraded states, pending reviews, review outcomes, and emitted events for deterministic steps and review gates.
   4. Developer can verify curation behavior offline with tests that fail if placeholder handlers or unreviewed canonical writes remain.
   5. User can run migrated research and curation Claude-native skills that delegate to CLI/MCP capabilities instead of direct `WebSearch`, `WebFetch`, or workspace writes.
+
 **Plans**: TBD
 
 ### Phase 13: Daily-Cycle Composition
+
 **Goal**: Users can run a daily maintenance workflow that composes stable research and curation capabilities while proving final registry, CLI/MCP, and v0.3 compatibility parity.
 **Depends on**: Phase 12
 **Requirements**: DAY-01, DAY-02, DAY-03, API-01, API-02, API-03, API-05
 **Success Criteria** (what must be TRUE):
+
   1. User can run a daily-cycle workflow from the `construct` CLI and stdio MCP server that composes stable research and curation child workflows instead of duplicating their logic.
   2. User can see parent and child workflow status, pending reviews, degraded states, and final graph-health summary in the daily-cycle result.
   3. User can run daily-cycle safely when research or curation pauses for review, fails partially, or skips optional views refresh without receiving a false completed result.
   4. User and agent can invoke every new v0.4 workflow capability through the same registry-backed handler from CLI and MCP, and developer can verify registry metadata plus CLI/MCP schema/result parity for research, curation, gate, and daily-cycle capabilities.
   5. Existing v0.3 CLI, MCP, Streamlit, validation, ingestion, graph, and ask-domain behavior continues to pass after all v0.4 workflow capabilities are added.
+
 **Plans**: TBD
 
 ## Coverage

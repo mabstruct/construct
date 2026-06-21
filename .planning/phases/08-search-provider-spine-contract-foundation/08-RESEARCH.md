@@ -530,21 +530,16 @@ class ProviderUnavailableError(SearchError): ...
 | A4 | `.construct/search.yaml` is copied at init but not added to `REQUIRED_PATHS` until a follow-up — validation warns if missing when search invoked | Config | Init/validate behavior ambiguity |
 | A5 | Phase 8 does not emit `research_search_complete` events (deferred with other writes) | Scope | Accidental scope creep |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Default provider for newly initialized workspaces: `mock` or `tavily`?**
-   - What we know: Template should enable offline dev; real research needs Tavily + env key.
-   - What's unclear: Whether init defaults to mock with commented Tavily block vs active Tavily stub.
-   - Recommendation: Default `mock` in template; document switching to `tavily` in USER_GUIDE; validation passes either if schema valid.
+1. **Default provider for newly initialized workspaces: `mock` or `tavily`?** — **RESOLVED: `mock`**
+   - Resolution: Init template sets `default_provider: mock` for offline-first dev/CI. USER_GUIDE documents switching to `tavily` with `TAVILY_API_KEY`. Validation accepts either when schema-valid. (Plan 08-01 template, Plan 08-02 init copy.)
 
-2. **Should `search_by_seed_cluster` reject reserved clusters (`manual-ingest`, `web-ingest`)?**
-   - What we know: Reserved clusters exist for ingest validation; help.py excludes them from staleness.
-   - What's unclear: Whether research search should block querying them.
-   - Recommendation: Allow read/search but document they are not research targets; optional warning in output metadata.
+2. **Should `search_by_seed_cluster` reject reserved clusters (`manual-ingest`, `web-ingest`)?** — **RESOLVED: allow with warning metadata**
+   - Resolution: Do not block search on reserved clusters. When `cluster_id` is `manual-ingest` or `web-ingest`, include optional `warnings: ["cluster is reserved for ingest, not a research target"]` in OperationResult data. (Plan 08-02 handler.)
 
-3. **Reconcile CONTEXT MCP name `construct_search` vs spec `construct_research_search`**
-   - What we know: Spec §9.1 and MCP naming convention use capability prefix.
-   - Recommendation: Use `construct_research_search` per spec; flag A1 for user confirmation if CONTEXT shorthand was intentional.
+3. **Reconcile CONTEXT MCP name `construct_search` vs spec `construct_research_search`** — **RESOLVED: `construct_research_search`**
+   - Resolution: Use spec §9.1 name `construct_research_search` via `CapabilityRecord.mcp_tool_name`. CONTEXT D-05 shorthand overridden by spec convention. (Plan 08-02 catalog registration.)
 
 ## Environment Availability
 
@@ -692,11 +687,12 @@ class ProviderUnavailableError(SearchError): ...
 | Architecture | HIGH | Mirrors existing llm/config + catalog + MCP patterns with explicit CONTEXT locks |
 | Pitfalls | HIGH | Cross-checked spec, PITFALLS.md, and codebase RT-03/MCP test patterns |
 
-### Open Questions
+### Open Questions (RESOLVED)
 
-- Default template provider: mock vs tavily (recommend mock).
-- MCP tool naming: `construct_research_search` vs CONTEXT shorthand `construct_search` (recommend spec name).
+- Default template provider: **mock** (offline-first init template).
+- Reserved clusters: **allow search, emit warning metadata** for `manual-ingest` / `web-ingest`.
+- MCP tool naming: **`construct_research_search`** per spec §9.1.
 
 ### Ready for Planning
 
-Research complete. Planner can now create PLAN.md files.
+Research complete. All open questions resolved in plans 08-01 through 08-03.
