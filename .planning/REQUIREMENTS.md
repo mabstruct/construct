@@ -88,34 +88,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRCH-01 | TBD | Pending |
-| SRCH-02 | TBD | Pending |
-| SRCH-03 | TBD | Pending |
-| SRCH-04 | TBD | Pending |
-| RSCH-01 | TBD | Pending |
-| RSCH-02 | TBD | Pending |
-| RSCH-03 | TBD | Pending |
-| RSCH-04 | TBD | Pending |
-| RSCH-05 | TBD | Pending |
-| CUR-01 | TBD | Pending |
-| CUR-02 | TBD | Pending |
-| CUR-03 | TBD | Pending |
-| CUR-04 | TBD | Pending |
-| CUR-05 | TBD | Pending |
-| API-01 | TBD | Pending |
-| API-02 | TBD | Pending |
-| API-03 | TBD | Pending |
-| API-04 | TBD | Pending |
-| API-05 | TBD | Pending |
-| DAY-01 | TBD | Pending |
-| DAY-02 | TBD | Pending |
-| DAY-03 | TBD | Pending |
+| SRCH-01 | Phase 8 | Pending |
+| SRCH-02 | Phase 8 | Pending |
+| SRCH-03 | Phase 8 | Pending |
+| SRCH-04 | Phase 8 | Pending |
+| RSCH-01 | Phase 9 | Pending |
+| RSCH-02 | Phase 10 | Pending |
+| RSCH-03 | Phase 10 | Pending |
+| RSCH-04 | Phase 10 | Pending |
+| RSCH-05 | Phase 10 | Pending |
+| CUR-01 | Phase 11 | Pending |
+| CUR-02 | Phase 12 | Pending |
+| CUR-03 | Phase 12 | Pending |
+| CUR-04 | Phase 12 | Pending |
+| CUR-05 | Phase 12 | Pending |
+| API-01 | Phase 13 | Pending |
+| API-02 | Phase 13 | Pending |
+| API-03 | Phase 13 | Pending |
+| API-04 | Phase 12 | Pending |
+| API-05 | Phase 13 | Pending |
+| DAY-01 | Phase 13 | Pending |
+| DAY-02 | Phase 13 | Pending |
+| DAY-03 | Phase 13 | Pending |
 
 **Coverage:**
 - v0.4 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 warning
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-21*
-*Last updated: 2026-06-21 after v0.4 milestone requirements definition*
+*Last updated: 2026-06-21 after v0.4 roadmap creation and traceability mapping*
