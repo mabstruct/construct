@@ -1,6 +1,9 @@
 test-ws/
 tests/fixtures/v02/*/views/
 
+# Python local environments
+.venv/
+
 # Local tool config
 .vscode/
 .claude/settings.local.json
