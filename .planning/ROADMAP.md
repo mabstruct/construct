@@ -57,7 +57,12 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   2. Developer can configure search provider selection, API-key environment variables, query caps, and result caps without changing workflow code.
   3. Developer can run the search contract test suite offline with a mock provider and fixture responses.
   4. User receives structured degraded-state errors when a provider fails, times out, or hits configured caps.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Search module core: SearchConfig schema, errors, ABC, mock provider, factory
+- [ ] 08-02-PLAN.md — Capability wiring: research.search handler, registry, CLI, config load/validation/init
+- [ ] 08-03-PLAN.md — Contract tests, MCP parity update, Tavily adapter, full regression
 
 ### Phase 9: LLM Provider Factory + research.score
 **Goal**: Users can turn normalized search results into governance-aware finding proposals through a model-agnostic scoring gate.
@@ -139,7 +144,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 5. Grounded Synthesis & Graph Reasoning | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
-| 8. Search Provider Spine + Contract Foundation | v0.4 | 0/TBD | Not started | - |
+| 8. Search Provider Spine + Contract Foundation | v0.4 | 0/3 | Not started | - |
 | 9. LLM Provider Factory + research.score | v0.4 | 0/TBD | Not started | - |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
