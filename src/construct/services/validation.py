@@ -130,6 +130,12 @@ def validate_workspace(root: str | Path) -> ValidationReport:
         except WorkspaceLoadError as exc:
             report.add_error(".construct/model-routing.yaml", str(exc))
 
+    if loader.resolve(".construct/search.yaml").exists():
+        try:
+            loader.load_search_config()
+        except WorkspaceLoadError as exc:
+            report.add_error(".construct/search.yaml", str(exc))
+
     if loader.resolve("governance.yaml").exists():
         try:
             loader.load_governance()

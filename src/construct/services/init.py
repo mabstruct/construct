@@ -56,6 +56,7 @@ def initialize_workspace(root: str | Path, domain: DomainInitInput) -> Path:
     )
 
     shutil.copy(TEMPLATE_DIR / "model-routing.yaml", workspace_root / ".construct" / "model-routing.yaml")
+    shutil.copy(TEMPLATE_DIR / "search.yaml", workspace_root / ".construct" / "search.yaml")
 
     _write_governance(workspace_root)
     _write_domains_registry(workspace_root, domain)
@@ -171,6 +172,7 @@ def _write_workspace_doc(root: Path) -> None:
         "- `digests/` contains rebuildable workflow summaries.\n"
         "- `publish/` contains derived outward-facing outputs.\n\n"
         "## Support Paths\n\n"
-        "- `.construct/model-routing.yaml` stores runtime routing guidance.\n",
+        "- `.construct/model-routing.yaml` stores runtime routing guidance.\n"
+        "- `.construct/search.yaml` stores search provider configuration.\n",
         encoding="utf-8",
     )

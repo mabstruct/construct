@@ -8,6 +8,8 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 
 from construct.schemas.config import SearchConfig, SearchProviderName
+from construct.services.validation import validate_workspace
+from construct.storage.workspace import WorkspaceLoader
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SEARCH_TEMPLATE = REPO_ROOT / "CONSTRUCT-CLAUDE-impl" / "construct" / "templates" / "search.yaml"
@@ -54,3 +56,21 @@ def test_template_does_not_contain_literal_api_key() -> None:
     template_text = SEARCH_TEMPLATE.read_text()
     assert "api_key:" not in template_text
     assert "TAVILY_API_KEY" in template_text
+
+
+def test_workspace_loader_load_search_config(search_workspace: Path) -> None:
+    config = WorkspaceLoader(search_workspace).load_search_config()
+    assert config.default_provider == SearchProviderName.mock
+    assert config.default_provider.value == "mock"
+
+
+def test_validate_workspace_reports_invalid_search_yaml(search_workspace: Path) -> None:
+    search_yaml = search_workspace / ".construct" / "search.yaml"
+    search_yaml.write_text("default_provider: tavily\nproviders: {}\n", encoding="utf-8")
+
+    report = validate_workspace(search_workspace)
+    assert not report.ok
+    assert any(
+        finding.path == ".construct/search.yaml" and finding.severity == "error"
+        for finding in report.findings
+    )

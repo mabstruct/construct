@@ -18,6 +18,7 @@ from construct.schemas.config import (
     GovernanceConfig,
     ModelRoutingConfig,
     ReferenceRecord,
+    SearchConfig,
     SearchSeedsFile,
 )
 from construct.schemas.workspace import ConnectionsFile, WorkspaceScaffold
@@ -96,6 +97,12 @@ class WorkspaceLoader:
             return ModelRoutingConfig.model_validate(self.read_yaml(".construct/model-routing.yaml"))
         except ValidationError as exc:
             raise WorkspaceLoadError(f"invalid .construct/model-routing.yaml: {exc}") from exc
+
+    def load_search_config(self) -> SearchConfig:
+        try:
+            return SearchConfig.model_validate(self.read_yaml(".construct/search.yaml"))
+        except ValidationError as exc:
+            raise WorkspaceLoadError(f"invalid .construct/search.yaml: {exc}") from exc
 
     def load_governance(self) -> GovernanceConfig:
         try:
