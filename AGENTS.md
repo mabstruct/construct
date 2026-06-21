@@ -36,6 +36,9 @@ When working in this repository:
 - Read `CONSTRUCT-CLAUDE-spec/README_FIRST.md` for spec navigation.
 - Read `CONSTRUCT-CLAUDE-impl/AGENTS.md` for the full agent identity and behavior rules.
 - Read root `README.md` for the workspace map and product lineage.
+- Use the repository-local `.venv/` for all Python runtime dependencies, CLI commands, developer tools, and tests.
+- Run pytest as `.venv/bin/python -m pytest` from the repository root. Do not use bare `pytest` or system `python -m pytest` unless `.venv` is already activated.
+- Refresh Python dependencies with `.venv/bin/python -m pip install -e '.[dev]'` if the local environment is missing packages.
 - Treat markdown and YAML workspace files as the source of truth.
 - Skills are markdown procedures — iterate by editing text.
 - Templates in `CONSTRUCT-CLAUDE-impl/construct/templates/` are the single source for workspace file formats.

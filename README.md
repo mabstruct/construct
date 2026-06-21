@@ -58,6 +58,31 @@ See [`CONSTRUCT-CLAUDE-impl/USER_GUIDE.md`](CONSTRUCT-CLAUDE-impl/USER_GUIDE.md)
 
 ---
 
+## Developer environment
+
+Python runtime dependencies, developer tools, and tests are managed through the repository-local `.venv/`. Do not rely on globally installed `python`, `pytest`, or `construct` when working in this repo.
+
+Use the venv directly from the repository root:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+If the venv needs dependencies refreshed:
+
+```bash
+.venv/bin/python -m pip install -e '.[dev]'
+```
+
+Activating the venv is also fine, but the effective commands should still resolve to `.venv`:
+
+```bash
+source .venv/bin/activate
+python -m pytest
+```
+
+---
+
 ## Knowledge model
 
 - **10 epistemic types** — finding, claim, concept, method, paper, theme, gap, provocation, question, connection
