@@ -18,6 +18,7 @@ runner = CliRunner()
 def _snapshot_sot_paths(workspace: Path) -> dict[str, str]:
     paths: list[Path] = [
         workspace / "search-seeds.json",
+        workspace / "connections.json",
         workspace / "log" / "events.jsonl",
     ]
     paths.extend(sorted((workspace / "refs").glob("*.json")))
@@ -34,11 +35,9 @@ def _snapshot_sot_paths(workspace: Path) -> dict[str, str]:
 def test_research_search_normalized(search_workspace: Path) -> None:
     before = _snapshot_sot_paths(search_workspace)
 
-    result = research_search(
-        ResearchSearchInput(
-            workspace_path=str(search_workspace),
-            query="quantum gravity",
-        )
+    result = get_registry().get("research.search").handler(
+        workspace_path=str(search_workspace),
+        query="quantum gravity",
     )
 
     after = _snapshot_sot_paths(search_workspace)
@@ -57,7 +56,36 @@ def test_research_search_normalized(search_workspace: Path) -> None:
     assert before == after
 
 
-def test_research_search_rate_limit_error(search_workspace: Path) -> None:
+def test_research_search_seed_cluster(search_workspace: Path) -> None:
+    seeds_path = search_workspace / "search-seeds.json"
+    payload = json.loads(seeds_path.read_text(encoding="utf-8"))
+    payload["clusters"].append(
+        {
+            "id": "quantum-research",
+            "domain": "test-domain",
+            "terms": ["quantum", "gravity"],
+            "weight": 1.0,
+            "status": "active",
+            "last_queried": None,
+        }
+    )
+    seeds_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    result = research_search(
+        ResearchSearchInput(
+            workspace_path=str(search_workspace),
+            cluster_id="quantum-research",
+        )
+    )
+
+    assert result.success is True
+    assert result.data is not None
+    assert len(result.data["batches"]) == 1
+    assert result.data["batches"][0]["cluster_id"] == "quantum-research"
+    assert len(result.data["batches"][0]["results"]) >= 1
+
+
+def test_research_search_degraded_error(search_workspace: Path) -> None:
     result = research_search(
         ResearchSearchInput(
             workspace_path=str(search_workspace),
@@ -101,7 +129,7 @@ def test_research_search_mcp_tool_registered() -> None:
     assert "construct_research_search" in tool_names
 
 
-def test_research_search_cli_json(search_workspace: Path) -> None:
+def test_cli_research_search(search_workspace: Path) -> None:
     result = runner.invoke(
         app,
         [

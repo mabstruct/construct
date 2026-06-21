@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from construct.capabilities.catalog import get_registry
+from tests.search.conftest import overlay_mock_search_config
 
 FIXTURE_WS = Path(__file__).resolve().parents[2] / "test-ws" / "my-construct"
 
@@ -66,6 +67,7 @@ def test_mcp_tool_count() -> None:
         "construct_help_suggest",
         "construct_ask_domain",
         "construct_bridge_detect",
+        "construct_research_search",
     }
     assert tool_names == expected
 
@@ -80,6 +82,7 @@ def workspace(tmp_path: Path) -> str:
     """A throwaway copy of the canonical fixture so write tools cannot mutate it."""
     dest = tmp_path / "my-construct"
     shutil.copytree(FIXTURE_WS, dest)
+    overlay_mock_search_config(dest)
     return str(dest)
 
 
@@ -115,6 +118,10 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         "construct_help_suggest": {"workspace": ws},
         "construct_ask_domain": {"workspace_path": ws, "domain_id": "cosmology", "question": "What is known?"},
         "construct_bridge_detect": {"workspace_path": ws},
+        "construct_research_search": {
+            "workspace_path": ws,
+            "query": "contract test query",
+        },
     }
     return payloads[tool_name]
 
