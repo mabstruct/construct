@@ -65,7 +65,7 @@
 
 ## Deferred Ideas
 
-- Full v0.4 browser UI — explicitly out of scope.
+- Full v0.5 browser UI — explicitly out of scope.
 - Embedding-based retrieval for ask.domain — still deferred.
 
 ---

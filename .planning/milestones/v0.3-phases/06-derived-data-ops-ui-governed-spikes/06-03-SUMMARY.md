@@ -16,7 +16,7 @@ provides:
   - Spike isolation runner — copies workspace to temp dir, executes external tool, captures output, cleans up
   - Documented SKILL.md procedures for Graphify and InfraNodus spike types
   - CLI command group pattern for spike operations
-affects: future plans needing external tool evaluation, tag extraction pipeline, v0.4 UI design input
+affects: future plans needing external tool evaluation, tag extraction pipeline, v0.5 UI design input
 
 # Tech tracking
 tech-stack:
@@ -120,7 +120,7 @@ None — no external service configuration required. External spike tools (graph
 - Spike runner is ready for CLI integration (wiring `register_spike_commands` into cli.py)
 - SKILL.md documents both spike types for immediate use
 - Graphify spike foundation ready for tag extraction pipeline (future Phase 6 plan)
-- InfraNodus evaluation framework ready for v0.4 UI design input
+- InfraNodus evaluation framework ready for v0.5 UI design input
 
 ---
 *Phase: 06-derived-data-ops-ui-governed-spikes*

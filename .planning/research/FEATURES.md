@@ -57,7 +57,7 @@ Features that should be explicitly deferred because they would distract from the
 
 | Anti-Feature / Deferral | Why Avoid Now | What to Do Instead |
 |-------------------------|----------------|--------------------|
-| Full browser-first product shell | The project explicitly says v0.3 must harden runtime/workflows before v0.4 UI-primary work | Keep interfaces text-first; define contracts the future UI can rely on |
+| Full browser-first product shell | v0.4 agent workflows must land before **v0.5** UI-primary work | Keep interfaces text-first; define contracts the future UI can rely on |
 | Rich graph visualization as a milestone driver | Visual graph browsing is valuable but not the current bottleneck | Use text-based graph status and keep view-generation contracts stable |
 | Replacing the current workspace format or knowledge model | Breaks continuity across prototype, v0.3, and future UI/runtime layers | Harden and document the existing model instead |
 | Aggressive autonomous background agents / heartbeat scheduling | The Claude-native system is human-triggered and should stay predictable | Improve daily-cycle guidance and session-start suggestions |

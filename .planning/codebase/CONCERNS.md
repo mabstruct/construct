@@ -55,7 +55,7 @@
 ### v0.3 Tranche 1 Not Implemented — Zero Code Exists
 
 - Problem: The approved tranche-1 scope (`tranche-1-mvp.md`) requires: capability registry (`src/construct/capabilities/`), PIPE handlers (`src/construct/pipelines/`), CLI `run` subcommands (`construct run validate`, `construct run graph-status`, `construct run views-generate-data`), MCP stdio server (`src/construct/mcp/`), LangGraph L2 gate (`src/construct/llm/`), Streamlit spike (`src/construct/ui/`), and workflow runner skeleton. None of these paths exist.
-- Blocks: All v0.3 success criteria. v0.4 UI cannot start until v0.3 tranche 1 ships.
+- Blocks: All v0.3 success criteria. **v0.5** UI cannot start until v0.4 agent workflows ship.
 
 ### `test-ws/` Fixture Workspaces Missing
 

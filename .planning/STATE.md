@@ -83,7 +83,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - [Roadmap]: Harden Claude-native contracts and workflows before expanding UI surface.
-- [Roadmap]: Use v0.3 to establish shared runtime contracts, then prepare v0.4-facing derived data.
+- [Roadmap]: Use v0.3–v0.4 to establish shared runtime contracts and LangGraph workflows, then prepare v0.5-facing derived data and UI.
 - [Phase 01]: The canonical workspace contract is the Claude-native layout, not the dormant Python-first layout.
 - [Phase 01]: Invalid canonical artifacts are rejected before write; post-write checks handle audit, consistency, and fixture proof.
 - [Phase 01]: The authority set is spec plus templates plus artifact catalog; runtime and skills must follow it.
@@ -122,7 +122,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- None for v0.3 close. Start v0.4 with `/gsd-new-milestone` only after v0.3 is merged to `main`.
+- None for v0.3 close. Start **v0.4 agent workflows** with `/gsd-new-milestone` using `CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md`. **v0.5 UI-primary** follows v0.4.
 
 ### Blockers/Concerns
 
@@ -132,12 +132,13 @@ Recent decisions affecting current work:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Product Expansion | Full v0.4 browser-first shell | Deferred to v2 | 2026-06-08 |
+| Product Expansion | Full v0.5 browser-first shell | Deferred to v2 | 2026-06-08 |
 | Phase 3 | Full skill migration beyond construct-workspace-validate | Batch 2 complete (Phase 04 P04) | 2026-06-10 |
 | Phase 04 | construct knowledge card list CLI command | Not yet implemented (documented in gap-analysis as target pattern) | 2026-06-10 |
 | UAT | Phase 06 06-UAT.md [partial] — 1 issue / 1 blocked, 0 pending scenarios | Acknowledged at v0.3 close | 2026-06-16 |
 | UAT | Phase 07 07-HUMAN-UAT.md [passed] — milestone re-audit item resolved, 0 pending | Acknowledged at v0.3 close | 2026-06-16 |
 | Tech debt (v0.4) | RT-01/RT-02 registry-bypass + direct-import groups; curation no-ops; views.generate_data stub; ADV-03 emission; SPK-04 entry point; CR-02 help.py layout; per-phase VERIFICATION/Nyquist/SECURITY coverage | See milestones/v0.3-MILESTONE-AUDIT.md | 2026-06-16 |
+| Product (v0.5) | UI-primary browser shell (HTTP, capability buttons, LLM modals) | After v0.4 agent workflows | 2026-06-21 |
 
 ## Session Continuity
 
@@ -147,4 +148,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Merge `v03ph01-feature` to `main`, then start v0.4 with `/gsd-new-milestone`.
+- Merge `v03ph01-feature` to `main`, then start **v0.4** (agent workflows) with `/gsd-new-milestone`. Plan **v0.5** UI-primary after v0.4 workflows ship.

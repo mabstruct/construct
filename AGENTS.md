@@ -75,8 +75,8 @@ CONSTRUCT is a local-first knowledge management system that helps a user collabo
 
 ### Constraints
 
-- **Product continuity**: Preserve the existing knowledge model and workspace format across prototype, v0.3, and v0.4 — the system's continuity depends on shared semantics and files.
-- **Sequencing**: Do not pull v0.4 UI-primary work ahead of v0.3 runtime and workflow hardening — the UI must sit on proven foundations.
+- **Product continuity**: Preserve the existing knowledge model and workspace format across prototype, v0.3, v0.4, and v0.5 — the system's continuity depends on shared semantics and files.
+- **Sequencing**: Do not pull **v0.5** UI-primary work ahead of **v0.4** workflow/runtime hardening — the UI must sit on proven LangGraph pipelines and capabilities.
 - **Compatibility**: Protect existing Claude-native workflows while hardening and migrating them — users should not lose current capabilities.
 - **Implementation posture**: v0.3 should still be usable through the Claude-native skill/workflow model even as it prepares a richer runtime and interface layer.
 <!-- GSD:project-end -->
@@ -283,7 +283,7 @@ CONSTRUCT is a local-first knowledge management system that helps a user collabo
 - Location: `src/construct/cli.py` (current); planned `src/construct/mcp/` and `src/construct/api/`
 - Contains: CLI subcommands (`init`, `validate`; more in v0.3); planned MCP tool definitions; planned HTTP routes
 - Depends on: Layer 2 pipeline runtime; all surfaces share one capability registry
-- Used by: CLI callers, Claude/Cursor MCP clients, browser UI (v0.4); skills in `CONSTRUCT-CLAUDE-impl/` become thin adapters calling these surfaces
+- Used by: CLI callers, Claude/Cursor MCP clients, browser UI (v0.5); skills in `CONSTRUCT-CLAUDE-impl/` become thin adapters calling these surfaces
 - Purpose: Read-only browser dashboard rendering derived state; never writes back to SOT
 - Location: `{workspace}/views/build/` (compiled); source scaffold at `CONSTRUCT-CLAUDE-impl/claude/skills/construct-views-scaffold/template/`
 - Contains: React + Vite SPA; pages, components, hooks, lib; polls `version.json` for data freshness

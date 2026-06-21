@@ -48,7 +48,7 @@
 - Location: `src/construct/cli.py` (current); planned `src/construct/mcp/` and `src/construct/api/`
 - Contains: CLI subcommands (`init`, `validate`; more in v0.3); planned MCP tool definitions; planned HTTP routes
 - Depends on: Layer 2 pipeline runtime; all surfaces share one capability registry
-- Used by: CLI callers, Claude/Cursor MCP clients, browser UI (v0.4); skills in `CONSTRUCT-CLAUDE-impl/` become thin adapters calling these surfaces
+- Used by: CLI callers, Claude/Cursor MCP clients, browser UI (v0.5); skills in `CONSTRUCT-CLAUDE-impl/` become thin adapters calling these surfaces
 
 **Layer 3b — Views SPA (Presentation):**
 - Purpose: Read-only browser dashboard rendering derived state; never writes back to SOT
@@ -57,7 +57,7 @@
 - Depends on: Layer 2b JSON cache (HTTP GET only); no server writes
 - Used by: End users; refreshed by re-running `construct-views-generate-data`
 
-**Layer 4 — UI Shell (v0.4, planned):**
+**Layer 4 — UI Shell (v0.5, planned):**
 - Purpose: UI-as-primary-interface; structured controls invoke Layer 3 capabilities
 - Location: TBD — extend `views/` SPA, adopt CoPilotKit, or hybrid (decided post-Streamlit spike in v0.3)
 - Contains: Capability buttons, progress/result panels, LLM modal overlays for L1/L2/L3 gates

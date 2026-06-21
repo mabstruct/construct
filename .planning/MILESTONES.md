@@ -4,7 +4,7 @@
 
 **Phases completed:** 7 phases (1–7), 25 plans
 **Git range:** d62de4a (first commit) → v0.3 tag, retagged to include build hooks/versioning
-**Definition of done:** Harden CONSTRUCT's Claude-native runtime and workflow foundation — one canonical artifact contract, reliable knowledge operations, a shared capability/CLI/MCP runtime spine, dependable guided workflows, grounded graph reasoning, and v0.4-facing derived-data contracts — without pulling browser-UI work ahead of proven backend behavior.
+**Definition of done:** Harden CONSTRUCT's Claude-native runtime and workflow foundation — one canonical artifact contract, reliable knowledge operations, a shared capability/CLI/MCP runtime spine, dependable guided workflows, grounded graph reasoning, and v0.5-facing derived-data contracts — without pulling browser-UI work ahead of proven backend behavior.
 
 **Key accomplishments:**
 

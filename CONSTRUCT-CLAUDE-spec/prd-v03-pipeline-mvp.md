@@ -304,7 +304,7 @@ All capability **inputs** extend a base request; all **outputs** extend a base r
 
 ### 5.2 `graph.status`
 
-**Purpose:** Compute knowledge graph health metrics. Implements `construct-graph-status` Step 1 (Gather Stats) as structured JSON; Step 3 interpretation remains L2/`ask.domain` or v0.4 UI.
+**Purpose:** Compute knowledge graph health metrics. Implements `construct-graph-status` Step 1 (Gather Stats) as structured JSON; Step 3 interpretation remains L2/`ask.domain` or v0.5 UI.
 
 **Input** — `GraphStatusInput`:
 
@@ -998,7 +998,7 @@ Pipeline events add optional structured fields without removing base requirement
 
 ## 10. Streamlit spike specification
 
-**Purpose:** Localhost ops console to run capabilities and preview L2 gate review — informs v0.4 modal pattern. **Not** product UI.
+**Purpose:** Localhost ops console to run capabilities and preview L2 gate review — informs **v0.5** modal pattern. **Not** product UI.
 
 **Launch:**
 

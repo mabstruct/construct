@@ -11,7 +11,7 @@ CONSTRUCT should keep the architecture already locked by ADR-0003: **workspace S
 
 ```text
 Layer 4  UI shell / graph-wiki browser / review modals
-         React/Vite views now, richer UI in v0.4
+         React/Vite views now, richer UI in v0.5
          Never writes workspace files directly
 
 Layer 3  Invoke surfaces
@@ -33,7 +33,7 @@ Layer 0  Skill and workflow specs
          SKILL.md, workflows, artifact catalog = authoritative WHAT
 ```
 
-This is the right structure for CONSTRUCT because it preserves the current Claude-native prototype, hardens deterministic behavior in code, and gives v0.4 a stable backend instead of a chat-shaped one.
+This is the right structure for CONSTRUCT because it preserves the current Claude-native prototype, hardens deterministic behavior in code, and gives v0.5 a stable backend instead of a chat-shaped one.
 
 ## Component Boundaries
 
@@ -49,7 +49,7 @@ This is the right structure for CONSTRUCT because it preserves the current Claud
 | **Derived-data generator** | Rebuilds views/report JSON from workspace files | Pipeline handlers, UI |
 | **CLI adapter** | Dev, CI, contract-test invoke surface | Capability registry |
 | **MCP server** | Agent tool surface with same contracts as CLI | Capability registry |
-| **HTTP API** | v0.4 browser surface; localhost first | Capability registry |
+| **HTTP API** | v0.5 browser surface; localhost first | Capability registry |
 | **Claude skills / thin adapters** | Preserve current UX while delegating deterministic work to MCP/CLI | MCP or CLI |
 | **UI shell** | Browse graph/wiki views, launch capabilities, review gated outputs | HTTP first; Streamlit spike may call CLI/MCP locally |
 
@@ -94,7 +94,7 @@ Workflow trigger
    -> return report + next actions
 ```
 
-### 4. v0.4 UI flow
+### 4. v0.5 UI flow
 
 ```text
 Browser UI
@@ -115,7 +115,7 @@ Browser UI
 ### Pattern 2: Files as canonical state, everything else derived
 **What:** Keep markdown/JSON/YAML workspace files as the only durable source of truth.
 **When:** Always.
-**Why:** It preserves continuity across Claude-native, v0.3, and v0.4 and avoids migration churn.
+**Why:** It preserves continuity across Claude-native, v0.3, v0.4, and v0.5 and avoids migration churn.
 
 ### Pattern 3: LLM at named gates only
 **What:** Use LangGraph only for `ask.domain`, promotion/review decisions, ambiguity resolution, and synthesis-style steps.
@@ -129,7 +129,7 @@ Browser UI
 
 ### Pattern 5: Derived browser views sit above the runtime
 **What:** UI reads derived JSON/report data and invokes backend capabilities; it never edits workspace files directly.
-**When:** Streamlit spike in v0.3 and full UI in v0.4.
+**When:** Streamlit spike in v0.3 and full UI in v0.5.
 **Why:** Streamlit's documented client-server model is fine for a localhost ops shell, but it should remain a shell over backend capabilities, not become the business-logic layer. Confidence: HIGH.
 
 ## Anti-Patterns to Avoid
@@ -196,7 +196,7 @@ This is the build order that best reduces risk **for this repo specifically**:
    - No direct SOT writes.
    - **Why seventh:** Lets the team learn UI interaction patterns after backend contracts exist.
 
-8. **Only then design v0.4 UI-primary shell**
+8. **Only then design v0.5 UI-primary shell**
    - React/Vite views extension, CoPilotKit, or hybrid based on spike evidence.
    - HTTP becomes the primary UI transport.
    - **Why last:** UI should consume proven contracts, not define them.
@@ -205,14 +205,14 @@ This is the build order that best reduces risk **for this repo specifically**:
 
 | Interface | Why it must stay stable | Version scope |
 |-----------|-------------------------|---------------|
-| **Workspace file formats** (`cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`) | Core continuity promise across Claude-native, v0.3, and v0.4 | v0.2 -> v0.4 |
+| **Workspace file formats** (`cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`) | Core continuity promise across Claude-native, v0.3, v0.4, and v0.5 | v0.2 -> v0.5 |
 | **Capability IDs** | Lets skills, tests, MCP tools, and UI all target the same operations | v0.3+ |
 | **Capability JSON schemas** | Prevents adapter drift and protects UI generation/testing | v0.3+ |
 | **Error catalog / status semantics** | Required for reliable UI and agent handling | v0.3+ |
 | **Event schema in `events.jsonl`** | Needed for workflow progress, auditability, and future UI activity feeds | v0.3+ |
 | **LLM gate input/output contracts** | Allows provider swaps and UI review modals without rewriting workflow logic | v0.3+ |
 | **Provider config shape** | Keeps model routing configurable rather than hard-coded | v0.3+ |
-| **Derived views data contract** | Shields the UI shell from backend refactors | v0.3 -> v0.4 |
+| **Derived views data contract** | Shields the UI shell from backend refactors | v0.3 -> v0.5 |
 
 ## Roadmap Implications
 
@@ -221,8 +221,8 @@ This is the build order that best reduces risk **for this repo specifically**:
 - **Phase 3 should be MCP migration for existing Claude skills**, preserving current workflows while reducing prompt fragility.
 - **Phase 4 should add workflow orchestration and eventing**, because composition is safer after atomic ops are stable.
 - **Phase 5 should add bounded LangGraph gates**, starting with read-mostly `ask.domain`.
-- **Phase 6 should be the Streamlit spike**, explicitly as a decision-support artifact for v0.4.
-- **Phase 7+ can plan the UI-primary shell**, once HTTP and derived-data contracts are clear.
+- **Phase 6 should be the Streamlit spike**, explicitly as a decision-support artifact for **v0.5**.
+- **Phase 7+ can plan the UI-primary shell (v0.5)**, once HTTP and derived-data contracts are clear.
 
 ## Source-Backed Conclusions
 

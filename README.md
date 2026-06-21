@@ -15,7 +15,7 @@ CONSTRUCT systematically collects, curates, connects, and compounds knowledge ac
 | Specification | [`CONSTRUCT-CLAUDE-spec/`](CONSTRUCT-CLAUDE-spec/) — read [`README_FIRST.md`](CONSTRUCT-CLAUDE-spec/README_FIRST.md) first |
 | Implementation | [`CONSTRUCT-CLAUDE-impl/`](CONSTRUCT-CLAUDE-impl/) — skills, workflows, templates; read [`AGENTS.md`](CONSTRUCT-CLAUDE-impl/AGENTS.md) for runtime behavior |
 | Runtime/API layer | [`src/construct/`](src/construct/) and [`tests/`](tests/) — active v0.3 pipeline, CLI, MCP, LLM gate, and contract tests |
-| GSD state | [`.planning/`](.planning/) — v0.3 shipped; v0.4 is next |
+| GSD state | [`.planning/`](.planning/) — v0.3 shipped; v0.4 agent workflows next; v0.5 UI-primary |
 | Test fixtures | [`test-ws/`](test-ws/) — not user data |
 | Agent rules (repo) | [`AGENTS.md`](AGENTS.md) |
 
@@ -45,7 +45,9 @@ v0.2 extensions      CONSTRUCT-CLAUDE-spec/spec-v02-*  (local views, cross-domai
        ↓
 v0.3 shipped         Pipeline/API layer — src/construct/; .planning/milestones/v0.3-*
        ↓
-v0.4 next            UI-as-primary shell on v0.3 API
+v0.4 next            Agent workflows — LangGraph/LangChain; model-agnostic search (see spec-v04-agentworkflows.md)
+       ↓
+v0.5 planned         UI-as-primary shell on hardened v0.4 runtime
 ```
 
 The **knowledge model and workspace file format** are shared across all versions.
@@ -103,7 +105,7 @@ construct/
 ├── CONSTRUCT-CLAUDE-spec/         # ACTIVE — living specification (v0.1 + v0.2)
 ├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 pipeline/API planning notes (shipped)
 ├── CONSTRUCT-CLAUDE-v02-planning/ # v0.2 backlog (historical)
-├── .planning/                     # ACTIVE — GSD state; v0.3 closed, v0.4 next
+├── .planning/                     # ACTIVE — GSD state; v0.3 closed; v0.4 workflows next; v0.5 UI
 ├── test-ws/                       # Test workspace fixtures
 ├── archive/
 │   └── v01-python/                # ARCHIVED — v0.1 Python-first spec + GSD

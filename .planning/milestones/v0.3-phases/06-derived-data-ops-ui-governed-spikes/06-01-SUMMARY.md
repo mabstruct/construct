@@ -14,7 +14,7 @@ provides:
   - Contract test suite validating fixture data against declared schemas
 affects:
   - Phase 06 Plan 04 (tag/keyword pipeline) — will consume these models
-  - Future v0.4 UI layer — will consume these contracts as stable API
+  - Future v0.5 UI layer — will consume these contracts as stable API
 
 tech-stack:
   added: [pydantic v2 Generics — ViewsEnvelope[T]]

@@ -146,7 +146,7 @@ Evaluate the spike output against the evaluation criteria for each spike type (s
 
 **Purpose:** Evaluate whether InfraNodus-style graph-guided exploration reveals insight patterns that could inform future UI and workflow design.
 
-**Per D-09:** This is evaluated **via the spike framework only** — it is NOT built as a permanent feature in Phase 6. All findings feed into design input for v0.4 UI patterns.
+**Per D-09:** This is evaluated **via the spike framework only** — it is NOT built as a permanent feature in Phase 6. All findings feed into design input for v0.5 UI patterns.
 
 **How to run:**
 
@@ -168,12 +168,12 @@ Evaluate the spike output against the evaluation criteria for each spike type (s
 
 | Finding | Implication |
 |---------|-------------|
-| Useful structural patterns | Document as UI spec input for v0.4 — consider graph metrics dashboard |
+| Useful structural patterns | Document as UI spec input for v0.5 — consider graph metrics dashboard |
 | Redundant with bridge pipeline | Note as lower priority; current pipeline already covers this |
 | Requires heavy external tooling | Document as deferred — may not justify integration cost |
-| Reveals blind spots | Flag as high-value finding for v0.4 graph exploration design |
+| Reveals blind spots | Flag as high-value finding for v0.5 graph exploration design |
 
-**Output:** Design input for v0.4 UI patterns and graph exploration workflows. No workspace modifications are made.
+**Output:** Design input for v0.5 UI patterns and graph exploration workflows. No workspace modifications are made.
 
 ---
 

@@ -119,7 +119,7 @@ Based on research, suggested phase structure:
 - Runtime and CLI should precede MCP and UI because they are the cheapest place to prove schemas, errors, idempotency, and eventing.
 - Workflow orchestration should follow atomic capability hardening so composition is safe.
 - LangGraph should remain late and bounded so model complexity does not contaminate deterministic foundations.
-- UI-path work should come last because v0.4 value depends on backend stability, not vice versa.
+- UI-path work should come last because **v0.5** value depends on v0.4 workflow stability and v0.3 backend stability, not vice versa.
 
 ### Research Flags
 
@@ -127,7 +127,7 @@ Phases likely needing deeper research during planning:
 - **Phase 1:** graph-edge canonicalization decision, because current dual-truth model has real downstream consequences.
 - **Phase 4:** event schema + mutation/audit design, because replayability and recovery semantics must be explicit.
 - **Phase 5:** retrieval/indexing envelope for `ask.domain`, bridge detection, and scale limits.
-- **Phase 6:** HTTP/derived-data contract design for the v0.4 UI path.
+- **Phase 6:** HTTP/derived-data contract design for the **v0.5** UI path.
 
 Phases with standard patterns (skip research-phase):
 - **Phase 2:** Python runtime + Typer CLI + Pydantic contract enforcement are well-documented patterns.
@@ -137,7 +137,7 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Strong alignment between repo constraints and current official tooling guidance; only v0.4 UI detail is less settled. |
+| Stack | HIGH | Strong alignment between repo constraints and current official tooling guidance; only **v0.5** UI detail is less settled. |
 | Features | HIGH | Near-term scope is clear and heavily grounded in PROJECT.md and current product docs. |
 | Architecture | HIGH | ADR-0003 and supporting docs produce a coherent, low-risk build order. |
 | Pitfalls | HIGH | Risks are repo-specific, concrete, and repeated across current docs and workflow behavior. |
@@ -150,7 +150,7 @@ Phases with standard patterns (skip research-phase):
 - **Event contract details:** define required event types, payload shape, and reconciliation rules before workflow implementation.
 - **Mutation/concurrency semantics:** plan atomic writes, serialization/locking, and recovery expectations for local-first multi-writer scenarios.
 - **Retrieval/index threshold:** define when file-backed retrieval stops being enough and when SQLite FTS becomes justified.
-- **v0.4 UI contract boundary:** validate which derived artifacts and progress semantics the browser layer should rely on.
+- **v0.5 UI contract boundary:** validate which derived artifacts and progress semantics the browser layer should rely on.
 
 ## Sources
 

@@ -1,8 +1,8 @@
 # Technology Stack
 
-**Project:** CONSTRUCT v0.3 foundation → v0.4 UI-primary
+**Project:** CONSTRUCT v0.3 foundation → v0.4 agent workflows → v0.5 UI-primary
 **Researched:** 2026-06-08
-**Overall recommendation confidence:** HIGH for v0.3 backend path, MEDIUM for v0.4 UI details
+**Overall recommendation confidence:** HIGH for v0.3 backend path, MEDIUM for v0.5 UI details
 
 ## Recommended Stack
 
@@ -20,7 +20,7 @@
 |------------|---------|---------|-----|------------|
 | Pydantic | 2.x | Canonical schemas for capability I/O, workspace files, and tool contracts | This should be the contract spine of v0.3. It already exists in dormant code, generates JSON Schema cleanly, and matches FastAPI + MCP well. Use strict validation for capability boundaries. | HIGH |
 | Typer | 0.21.x | CLI surface for `construct run ...` and admin commands | Best fit for tranche 1 because the repo already has a Typer CLI and the v0.3 ADR explicitly says CLI-first. Easy to map Pydantic-backed inputs to human-usable commands. | HIGH |
-| FastAPI | 0.12x | Future HTTP adapter for v0.3 tranche 2 / v0.4 | Standard Python API layer in 2025, pairs naturally with Pydantic v2/OpenAPI, and lets HTTP become just another adapter over the same capability registry. Do not lead with it in tranche 1; add it after CLI+MCP contracts stabilize. | HIGH |
+| FastAPI | 0.12x | Future HTTP adapter for v0.5 UI | Standard Python API layer in 2025, pairs naturally with Pydantic v2/OpenAPI, and lets HTTP become just another adapter over the same capability registry. Do not lead with it in tranche 1; add it after CLI+MCP contracts stabilize. | HIGH |
 | MCP Python SDK | 1.12.x | MCP stdio server for agent clients | The standard way to expose structured tools to Claude/Cursor-era clients. Use the Python SDK directly so MCP tools stay 1:1 with capability contracts. | HIGH |
 
 ### LLM orchestration
@@ -48,7 +48,7 @@
 | httpx | 0.27+/current | HTTP client for future research/index/provider helpers | Use for deterministic external calls; avoid requests in new code. |
 | orjson | current stable | Fast JSON serialization | Use inside API/MCP/result paths if profiling shows JSON overhead; optional, not day-1 mandatory. |
 | rich | current stable | Better CLI progress and readable local diagnostics | Use for developer/operator UX in CLI and possibly workflow progress output. |
-| Streamlit | 1.54.x | v0.3 localhost ops UI spike only | Use for the approved spike: capability runner, result viewer, gate review. Do not confuse this with the v0.4 product UI choice. |
+| Streamlit | 1.54.x | v0.3 localhost ops UI spike only | Use for the approved spike: capability runner, result viewer, gate review. Do not confuse this with the v0.5 product UI choice. |
 
 ## Implementation choices for this repo
 
@@ -103,7 +103,7 @@ Reuse and extend these patterns already present in `src/construct/`:
 
 Do **not** revive the whole archived Python-first app plan. Revive only the parts ADR-0003 explicitly keeps.
 
-## v0.4 UI stack recommendation
+## v0.5 UI stack recommendation
 
 | Category | Recommended | Why |
 |----------|-------------|-----|
@@ -111,9 +111,9 @@ Do **not** revive the whole archived Python-first app plan. Revive only the part
 | Bundler/dev server | Vite 7 | Best fit for localhost-first product UI; fast, simple, no SSR burden. |
 | Data fetching/cache | TanStack Query 5 | Strong fit for capability invocation, polling, invalidation, and result caching against the future HTTP API. |
 | Graph canvas | React Flow 12 | Standard, mature React graph canvas for interactive node/edge browsing and editing. |
-| Styling | Tailwind CSS 4 or lightweight CSS modules | Either is fine, but prefer Tailwind if v0.4 wants fast UI iteration; keep this secondary to the API work. |
+| Styling | Tailwind CSS 4 or lightweight CSS modules | Either is fine, but prefer Tailwind if v0.5 wants fast UI iteration; keep this secondary to the API work. |
 
-**Recommendation:** for v0.4, extend the existing localhost/browser path with a React+Vite SPA over the v0.3 HTTP layer. Do **not** use Next.js unless the product direction changes toward cloud SSR, auth-heavy multi-user delivery, or SEO pages.
+**Recommendation:** for v0.5, extend the existing localhost/browser path with a React+Vite SPA over the v0.4 HTTP layer. Do **not** use Next.js unless the product direction changes toward cloud SSR, auth-heavy multi-user delivery, or SEO pages.
 
 ## Alternatives considered
 
@@ -125,7 +125,7 @@ Do **not** revive the whole archived Python-first app plan. Revive only the part
 | Agent transport | MCP Python SDK | Custom JSON-RPC or ad-hoc subprocess protocol | Reinvents the ecosystem standard CONSTRUCT explicitly wants to join. |
 | LLM orchestration | LangGraph | Hand-rolled provider calls everywhere | Too much bespoke glue, weaker gate testing story, harder provider swapping. |
 | v0.3 spike UI | Streamlit | Build React UI immediately | Streamlit is the cheaper de-risking step already locked by ADR-0003. |
-| v0.4 UI shell | React+Vite SPA | Next.js | Adds server/runtime complexity before local-first UI needs it. |
+| v0.5 UI shell | React+Vite SPA | Next.js | Adds server/runtime complexity before local-first UI needs it. |
 | Graph persistence now | File SOT + optional later SQLite index | Neo4j / graph DB | Grossly premature for a single-user local-first knowledge workspace. |
 | Retrieval storage now | File-backed retrieval + later SQLite FTS | Vector DB first | Overkill before deterministic contracts and corpus scale justify it. |
 
@@ -158,7 +158,7 @@ uv add streamlit
 3. **Expose the same contracts through MCP stdio**
 4. **Add LangGraph only for `ask.domain` and later explicit review gates**
 5. **Build Streamlit ops spike over CLI/MCP**
-6. **Only then add FastAPI HTTP adapter for v0.4 UI**
+6. **Only then add FastAPI HTTP adapter for v0.5 UI**
 7. **Only after retrieval pain appears, add optional SQLite FTS/index layer**
 
 ## Sources

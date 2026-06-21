@@ -10,7 +10,7 @@
 
 Prove the layered runtime: **Python PIPE → capability registry → CLI + MCP (stdio) → LangGraph L2 gate → Streamlit ops UI** — all against `test-ws/` fixtures, workspace SOT unchanged.
 
-Tranche 1 is **not** v0.4 product UI. It is the minimum backend + agentic invoke + spikes to de-risk v0.4.
+Tranche 1 is **not** v0.5 product UI. It is the minimum backend + agentic invoke + spikes to de-risk v0.5.
 
 ---
 
@@ -32,7 +32,7 @@ Tranche 1 is **not** v0.4 product UI. It is the minimum backend + agentic invoke
 | Choice | Decision |
 |--------|----------|
 | **A — LangGraph** | **L2 “talk to my data”** first (not L3 promotion review) |
-| **B — Streamlit** | **Richer UI** — capability runner + gate review panel (previews v0.4 modal pattern) |
+| **B — Streamlit** | **Richer UI** — capability runner + gate review panel (previews v0.5 modal pattern) |
 | **C — MCP transport** | **stdio** first (`construct mcp`); SSE deferred to tranche 2 / cloud |
 
 ---
@@ -67,7 +67,7 @@ Tranche 1 is **not** v0.4 product UI. It is the minimum backend + agentic invoke
 
 ## Explicitly out of scope (tranche 2+)
 
-- HTTP API for browser UI (v0.4)
+- HTTP API for browser UI (v0.5)
 - MCP SSE / remote transport
 - `research-cycle`, `curation-cycle` full pipelines
 - CoPilotKit / v0.2 views write actions

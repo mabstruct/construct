@@ -1,12 +1,13 @@
-# ADR-0003: Layered Pipeline (v0.3) Then UI-Primary (v0.4)
+# ADR-0003: Layered Pipeline (v0.3) → Agent Workflows (v0.4) → UI-Primary (v0.5)
 
-**Status:** Accepted  
-**Date:** 2026-06-07  
-**Amended:** 2026-06-07 — invoke surfaces (CLI → MCP), UI spike path, LangGraph for LLM layer  
-**Deciders:** ;-)mab  
-**Context:** CONSTRUCT03 planning originally framed a single jump to UI-as-primary-interface. Implementation experience (v0.1 Claude-native skills, v0.2 views SPA, artifact catalog audit) showed that durable UI requires a testable backend first. This ADR splits delivery into two product versions and defines the layered runtime architecture.
+**Status:** Accepted
+**Date:** 2026-06-07
+**Amended:** 2026-06-07 — invoke surfaces (CLI → MCP), UI spike path, LangGraph for LLM layer
+**Amended:** 2026-06-21 — insert **v0.4 agent workflows** milestone; defer **UI-primary** to **v0.5** (see Amendment B)
+**Deciders:** ;-)mab
+**Context:** CONSTRUCT03 planning originally framed a single jump to UI-as-primary-interface. Implementation experience (v0.1 Claude-native skills, v0.2 views SPA, artifact catalog audit) showed that durable UI requires a testable backend first. This ADR splits delivery across product versions and defines the layered runtime architecture.
 
-**Supersedes (partially):** The monolithic “CONSTRUCT03 = UI shell in one step” framing in [`CONSTRUCT-CLAUDE-v03-planning/README.md`](../../CONSTRUCT-CLAUDE-v03-planning/README.md). That directory now tracks **v0.3 planning**; v0.4 UI work gets its own planning cycle once v0.3 pipelines ship.
+**Supersedes (partially):** The monolithic “CONSTRUCT03 = UI shell in one step” framing in [`CONSTRUCT-CLAUDE-v03-planning/README.md`](../../CONSTRUCT-CLAUDE-v03-planning/README.md). That directory now tracks **v0.3 planning**; **v0.4 agent workflow** and **v0.5 UI** work get their own planning cycles once v0.3 pipelines ship.
 
 **Related:** [`artifact-catalog.md`](../artifact-catalog.md) (PIPE / UI / LLM / HYB audit), [`adr-0001-claude-native-approach.md`](adr-0001-claude-native-approach.md), [`adr-0002-v02-packaging.md`](adr-0002-v02-packaging.md), archived [`archive/v01-python/spec/adrs/adr-0001-python-first-drop-openclaw.md`](../../archive/v01-python/spec/adrs/adr-0001-python-first-drop-openclaw.md)
 
@@ -20,8 +21,9 @@
 |---------|--------------|
 | **v0.1** | Claude-native configuration — skills, workflows, agents; chat-as-primary-interface |
 | **v0.2** | Local views SPA + `views-*` skills; derived JSON from workspace SOT |
-| **v0.3 (planned)** | Hardened capabilities, Python pipeline runtime, testable API/CLI |
-| **v0.4 (planned)** | UI-as-primary — structured controls call v0.3 pipelines |
+| **v0.3 (shipped)** | Hardened capabilities, Python pipeline runtime, testable API/CLI |
+| **v0.4 (planned)** | Agent workflows — LangGraph/LangChain pipelines; model-agnostic search; thin skills |
+| **v0.5 (planned)** | UI-as-primary — structured controls call v0.4 pipelines |
 
 The [`artifact-catalog.md`](../artifact-catalog.md) CONSTRUCT03 audit classifies every skill as `UI`, `PIPE`, `LLM`, or `HYB`. Attempting to build all `UI` affordances before `PIPE` implementations exist produces untestable UI and chat-shaped backends.
 
@@ -37,7 +39,7 @@ The [`artifact-catalog.md`](../artifact-catalog.md) CONSTRUCT03 audit classifies
 1. **Workspace files remain canonical** — same SOT as today (`cards/`, `connections.json`, etc.).
 2. **Deterministic work in Python** — testable, spec-aligned, CI-friendly.
 3. **LLM only when needed** — explicit gates, not ambient chat for every operation.
-4. **UI last** — v0.4 builds on proven pipelines; browser UI may extend v0.2 views, spike via Streamlit, or adopt CoPilotKit (see Amendment A below).
+4. **UI last** — v0.5 builds on proven v0.4 workflows; browser UI may extend v0.2 views, spike via Streamlit, or adopt CoPilotKit (see Amendment A below).
 
 ---
 
@@ -53,7 +55,7 @@ Layer 3 exposes **one capability contract, multiple adapters**. All adapters cal
 |---------|----------|------|
 | **CLI** | **v0.3 tranche 1** | Primary development and CI path (`construct run <capability>`). Contract tests run against CLI. |
 | **MCP** | **v0.3 tranche 1–2** | Agentic integration — Claude, Cursor, and other MCP clients invoke capabilities as tools without chat-shaped file ops. Same schemas as CLI. |
-| **HTTP** | v0.3 tranche 2 / v0.4 | Browser UI and remote clients; localhost first, cloud-deployable later. |
+| **HTTP** | v0.5 | Browser UI and remote clients; localhost first, cloud-deployable later. |
 
 **Rule:** MCP tools and CLI subcommands are **1:1 with catalog capabilities** — not freeform agent prompts. Skills in `CONSTRUCT-CLAUDE-impl/` become thin wrappers that call MCP or CLI.
 
@@ -68,15 +70,15 @@ Layer 3  CLI ──┐
 
 ### A.2 Browser UI — spike path (localhost → cloud)
 
-v0.4 remains UI-primary, but **evaluate UI technology before committing**. Three candidates:
+v0.5 remains UI-primary, but **evaluate UI technology before committing**. Three candidates:
 
 | Option | Fit | When |
 |--------|-----|------|
-| **v0.2 views SPA** (React/Vite) | Read-heavy dashboard already shipped; add write actions via HTTP | v0.4 default if spike confirms fit |
-| **Streamlit** | Python-native; fast spike for pipeline ops console, capability runner, gate review on localhost | **v0.3 spike** — validate Layer 3 without building v0.4 chrome |
-| **CoPilotKit** | Rich agent+UI patterns; React; heavier; no Java runtime | **v0.4 candidate** if agent-in-the-loop UI (L1/L2 modals, copilot sidebar) needs more than views SPA |
+| **v0.2 views SPA** (React/Vite) | Read-heavy dashboard already shipped; add write actions via HTTP | v0.5 default if spike confirms fit |
+| **Streamlit** | Python-native; fast spike for pipeline ops console, capability runner, gate review on localhost | **v0.3 spike** — validate Layer 3 without building v0.5 product chrome |
+| **CoPilotKit** | Rich agent+UI patterns; React; heavier; no Java runtime | **v0.5 candidate** if agent-in-the-loop UI (L1/L2 modals, copilot sidebar) needs more than views SPA |
 
-**Decision:** Run a **Streamlit spike in v0.3** as a localhost browser shell over CLI/MCP capabilities (pipeline status, run buttons, gate review). Use spike learnings to choose v0.4 direction: extend views SPA, adopt CoPilotKit, or hybrid (views for graph/read, CoPilotKit for agent panels).
+**Decision:** Run a **Streamlit spike in v0.3** as a localhost browser shell over CLI/MCP capabilities (pipeline status, run buttons, gate review). Use spike learnings to choose **v0.5** direction: extend views SPA, adopt CoPilotKit, or hybrid (views for graph/read, CoPilotKit for agent panels).
 
 Deployment path: **localhost first** (same as v0.2 views) → optional **cloud webserver** later. No cloud-first architecture in v0.3.
 
@@ -110,6 +112,23 @@ Adopt **LangGraph for L2 and L3 LLM subgraphs** (talk-to-my-data, in-skill decis
 
 ---
 
+## Amendment B (2026-06-21) — v0.4 agent workflows; v0.5 UI-primary
+
+After v0.3 shipped (2026-06-16), sequencing was refined:
+
+| Milestone | Scope | Rationale |
+|-----------|--------|-----------|
+| **v0.4** | Migrate multi-step skill workflows to Python **LangGraph/LangChain** (`research.run`, `curation.run`, model-agnostic web search via Tavily or similar) | Model-agnostic runtime; testable gates; closes curation placeholder debt; removes Claude `WebSearch` coupling |
+| **v0.5** | **UI-primary** browser shell (HTTP API, capability buttons, LLM modals) | UI needs stable workflow invoke targets from v0.4, not just v0.3 PIPE primitives |
+
+**Baseline spec:** [`spec-v04-agentworkflows.md`](../spec-v04-agentworkflows.md)
+
+**Unchanged:** Layer model, LLM tiers (L1/L2/L3), workspace SOT, capability registry pattern, Streamlit as v0.3 ops spike (not v0.5 product UI).
+
+**HTTP invoke surface:** Primary target moves from “v0.3 tranche 2 / v0.4” to **v0.5** (browser UI). MCP + CLI remain primary through v0.4.
+
+---
+
 ## Decision
 
 Adopt a **four-layer architecture** delivered in two product versions:
@@ -117,7 +136,7 @@ Adopt a **four-layer architecture** delivered in two product versions:
 ### Layer model (permanent)
 
 ```text
-Layer 4  UI shell (v0.4)           Forms, buttons, dashboards, review modals
+Layer 4  UI shell (v0.5)           Forms, buttons, dashboards, review modals
          │                         Calls Layer 3; never writes SOT directly
 Layer 3  Invoke surface           CLI (first) → MCP → HTTP
          │                         Same capability registry; strict schemas
@@ -142,19 +161,33 @@ LLM gates (cross-cutting)            Invoked only at declared boundaries (see be
 | **Workflow engine** | Cold Start, Daily Cycle, Co-Authorship as orchestrated pipelines with step progress → `log/events.jsonl` |
 | **Claude as test client** | Skills and MCP invoke Layer 3 — not inline deterministic file ops |
 | **LangGraph LLM gates** | L2/L3 subgraphs; provider config in YAML/env; spike in tranche 1 |
-| **UI spike (Streamlit)** | Localhost browser ops console over CLI/MCP — informs v0.4 choice (views vs CoPilotKit) |
+| **UI spike (Streamlit)** | Localhost browser ops console over CLI/MCP — informs **v0.5** choice (views vs CoPilotKit) |
 | **Strict capabilities** | Each catalog capability: input schema, output schema, error catalog, idempotency rules |
 
 **Claude's role in v0.3:** Primary **integration test harness** and **LLM gate executor** — not the deterministic runtime. Chat remains available for development and LLM-gated flows; it is not the production invoke path for PIPE operations.
 
-### v0.4 — UI-primary (presentation)
+### v0.4 — Agent workflows (LangGraph / LangChain)
 
-**Goal:** Users invoke capabilities through structured UI; chat demoted to LLM-gated flows only.
+**Goal:** Migrate multi-step skill workflows to Python pipelines with explicit L2/L3 gates; model-agnostic web search; thin SKILL.md wrappers.
+
+| Deliverable | Description |
+|-------------|-------------|
+| **Research pipeline** | `research.run` — search provider (Tavily default) → score gate → ingest → digest |
+| **Curation pipeline** | `curation.run` — real PIPE steps + promotion/connection L3 gates (replaces placeholder no-ops) |
+| **Workflow orchestration** | Daily cycle composes research + curation subgraphs; resume/checkpoint support |
+| **Search provider config** | `search/config.yaml` — swap Tavily/Brave/arXiv without graph rewrites |
+| **Skill migration** | Remove Claude `WebSearch` from research cycle; invoke CLI/MCP only |
+
+**Baseline spec:** [`spec-v04-agentworkflows.md`](../spec-v04-agentworkflows.md)
+
+### v0.5 — UI-primary (presentation)
+
+**Goal:** Users invoke v0.4 workflow capabilities through structured UI; chat demoted to LLM-gated flows only.
 
 | Deliverable | Description |
 |-------------|-------------|
 | **UI shell** | Browser on localhost → cloud later; direction chosen after v0.3 Streamlit spike (extend v0.2 views, CoPilotKit, or hybrid) |
-| **Capability buttons** | Each strict v0.3 capability → UI affordance (HTTP → same registry as CLI/MCP) |
+| **Capability buttons** | Each v0.4 workflow/capability → UI affordance (HTTP → same registry as CLI/MCP) |
 | **Progress + results** | Pipelines stream status; UI shows reports, not chat transcripts |
 | **LLM modals** | Co-authorship, gap discussion, promotion review, ambiguous connections — chat *inside* a bounded modal with explicit commit |
 
@@ -164,7 +197,7 @@ LLM gates (cross-cutting)            Invoked only at declared boundaries (see be
 
 **Principle:** LLM-only-when-needed. Default path for any operation is Layer 2 Python. LLM is opt-in per gate, declared in skill spec and catalog.
 
-| Tier | Name | When | v0.3 | v0.4 surface |
+| Tier | Name | When | v0.3 | v0.5 surface |
 |------|------|------|------|--------------|
 | **L1** | User-facing dialogue | Discussing gaps, open research questions, strategy, co-authorship voice | Claude test client / dev chat | Dedicated chat panels, “talk to my data”, co-authorship workspace |
 | **L2** | Grounded Q&A (“talk to my data”) | User asks questions over workspace context; retrieval + synthesis; read-mostly or suggest-then-confirm writes | API with RAG over cards/refs; LLM generates answer with citations | Search/ask panel with source cards linked |
@@ -190,7 +223,7 @@ Build UI shell immediately; skills stay Claude procedures behind buttons.
 
 ### Option B: Pipeline-first then UI (chosen)
 
-v0.3 = Layer 2 + 3; v0.4 = Layer 4.
+v0.3 = Layer 2 + 3; v0.4 = LangGraph workflows; v0.5 = Layer 4 UI.
 
 **Chosen because:** Matches artifact catalog PIPE/UI split; reuses `src/construct/` and v0.2 views; CLI-before-UI principle from archived spec; Claude remains valuable as test client and L1/L2/L3 gate without being the deterministic runtime.
 
@@ -209,13 +242,13 @@ FastAPI + SQLite + NetworkX + heartbeat per archived spec.
 - Capabilities become **contract-tested** against specs before UI investment.
 - **Artifact catalog** drives implementation order: PIPE skills first, then UI affordances.
 - **Claude skills** stay the user-facing *spec and adapter*; Python owns determinism — clear separation of concerns.
-- **v0.2 views** has a natural evolution path to v0.4 shell (already consumes JSON; adds write actions via API).
+- **v0.2 views** has a natural evolution path to **v0.5** shell (already consumes JSON; adds write actions via API).
 - **Archived Python v0.1** work (schemas, validation, CLI patterns) is reused without resurrecting the full app.
 - **GSD restart** for v0.3 implementation can track pipeline epics with pytest verification.
 
 - **MCP + CLI** give agentic clients first-class access without chat-shaped backends.
 - **LangGraph** centralizes provider switching for LLM gates — config change, not code change.
-- **Streamlit spike** de-risks v0.4 UI choice cheaply.
+- **Streamlit spike** de-risks **v0.5** UI choice cheaply.
 
 ### Negative
 
@@ -227,7 +260,7 @@ FastAPI + SQLite + NetworkX + heartbeat per archived spec.
 
 ### Neutral
 
-- Chat remains available for L1 throughout; “chat-as-primary” ends in v0.4 for PIPE/UI operations only.
+- Chat remains available for L1 throughout; “chat-as-primary” ends in **v0.5** for PIPE/UI operations only.
 - SQLite indexing, full cloud deploy — still deferred beyond localhost HTTP.
 
 ---
@@ -242,12 +275,13 @@ FastAPI + SQLite + NetworkX + heartbeat per archived spec.
 | LLM gates (L2/L3) | `src/construct/llm/` — LangGraph subgraphs, provider config |
 | CLI (Layer 3) | `src/construct/cli.py` (extend) |
 | MCP server (Layer 3) | `src/construct/mcp/` (new) — tools mirror CLI capabilities |
-| HTTP (Layer 3) | `src/construct/api/` (v0.3 tranche 2+) — localhost, cloud later |
+| HTTP (Layer 3) | `src/construct/api/` (v0.5+) — localhost, cloud later |
 | UI spike | `src/construct/ui/` or `spikes/streamlit/` — Streamlit ops console (v0.3) |
 | Tests | `tests/` + `test-ws/` fixtures |
-| Claude adapter skills | `CONSTRUCT-CLAUDE-impl/` — skills call CLI/API instead of inline file ops where migrated |
+| Claude adapter skills | `CONSTRUCT-CLAUDE-impl/` — skills call CLI/MCP instead of inline file ops where migrated |
 | v0.3 planning | `CONSTRUCT-CLAUDE-v03-planning/` |
-| v0.4 planning | `CONSTRUCT-CLAUDE-v04-planning/` (create when v0.3 pipelines stable) |
+| v0.4 planning | [`spec-v04-agentworkflows.md`](../spec-v04-agentworkflows.md) + GSD `.planning/` |
+| v0.5 planning | `CONSTRUCT-CLAUDE-v05-planning/` (create when v0.4 workflows stable) |
 
 ---
 
@@ -260,7 +294,7 @@ For each catalog row:
 3. **Expose** — CLI subcommand + MCP tool (+ HTTP when UI needs it) with shared input/output schema
 4. **Test** — contract test via CLI; MCP tool schema test; fixture workspace in [`test-ws/`](../../test-ws/)
 5. **Adapt skill** — SKILL.md: validate input → invoke MCP/CLI → format output → LangGraph gate if L2/L3
-6. **UI (v0.4)** — button/wizard calls same API Claude used in v0.3
+6. **UI (v0.5)** — button/wizard calls same API used in v0.4
 
 ---
 
@@ -270,7 +304,7 @@ For each catalog row:
 |-----|--------------|
 | **Archived Python ADR-0001** | v0.3 revives pipeline portions; LiteLLM routing → LangGraph provider config for LLM gates only |
 | **Claude-native ADR-0001** | Still valid for identity, voice, governance, L1 dialogue; Claude is no longer the runtime for PIPE steps |
-| **v0.2 packaging ADR-0002** | Views remain browser artefact; v0.4 extends them as UI shell |
+| **v0.2 packaging ADR-0002** | Views remain browser artefact; v0.5 extends them as UI shell |
 
 ---
 
@@ -287,8 +321,7 @@ Remaining:
 1. **Provider config file location** — repo default vs per-workspace `.construct/llm.yaml`?
 2. **Streamlit package path** — `src/construct/ui/` vs `spikes/v03-streamlit/`?
 3. **First migrated skill** — which SKILL.md calls MCP first (suggest `construct-workspace-validate`)?
-4. **Catalog columns** — split `C03 target` into `v0.3` / `v0.4`?
-5. **GSD initialization** — when v0.3 implementation starts, fresh `.planning/` at repo root
+4. **Catalog columns** — split `C03 target` into `v0.3` / `v0.4` / `v0.5`?
 
 ---
 
@@ -307,6 +340,14 @@ Remaining:
 
 ### v0.4 done when
 
+- `research.run` and `curation.run` execute via CLI/MCP with LangGraph/LangChain gates (mocked contract tests pass).
+- Research cycle no longer requires Claude `WebSearch` / `WebFetch` in skill `allowed-tools`.
+- Model-agnostic web search provider (Tavily default) configured via `search/config.yaml`.
+- Curation workflow placeholder no-ops replaced with real handlers.
+- Daily cycle composes research + curation subgraphs with resume support.
+
+### v0.5 done when
+
 - Primary user journeys (J1–J3) completable through UI without chat for PIPE/UI operations.
 - Chat/modals reserved for L1/L2/L3 as defined above.
-- v0.2 read-only views upgraded to read-write via Layer 3 API.
+- v0.2 read-only views upgraded to read-write via Layer 3 HTTP API.

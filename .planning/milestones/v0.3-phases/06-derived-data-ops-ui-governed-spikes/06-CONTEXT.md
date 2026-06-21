@@ -141,7 +141,7 @@ Expose stable derived-data contracts for future UI work, build a local Streamlit
 <deferred>
 ## Deferred Ideas
 
-- Full v0.4 browser UI — explicitly out of scope per PROJECT.md constraints. Streamlit is the spike; it informs but does not replace v0.4.
+- Full v0.5 browser UI — explicitly out of scope per PROJECT.md constraints. Streamlit is the spike; it informs but does not replace v0.5.
 - Embedding-based retrieval for ask.domain — still deferred (keyword rank only).
 - Full migration of all remaining skills to CLI/MCP — beyond the spike procedures scoped here.
 

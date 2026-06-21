@@ -1,9 +1,9 @@
 # CONSTRUCT — Artifact Catalog (Master)
 
-**Version:** 1.0.0  
-**Date:** 2026-06-06  
-**Status:** Active — audit baseline for v0.3 pipeline / v0.4 UI  
-**Architecture:** See [`adrs/adr-0003-v03-pipeline-v04-ui.md`](adrs/adr-0003-v03-pipeline-v04-ui.md) — v0.3 implements `PIPE`; v0.4 implements `UI` affordances on v0.3 API.
+**Version:** 1.0.0
+**Date:** 2026-06-06
+**Status:** Active — audit baseline for v0.3 pipeline / v0.4 agent workflows / v0.5 UI
+**Architecture:** See [`adrs/adr-0003-v03-pipeline-v04-ui.md`](adrs/adr-0003-v03-pipeline-v04-ui.md) — v0.3 implements `PIPE`; v0.4 implements LangGraph workflow capabilities; v0.5 implements `UI` affordances on the v0.4 API.
 **Scope:** All Claude-native implementation artifacts in `CONSTRUCT-CLAUDE-impl/`
 
 ---
