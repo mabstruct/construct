@@ -1,0 +1,7 @@
+{
+  "query": "__error_auth__",
+  "error": {
+    "type": "AuthError",
+    "message": "Invalid API key for mock provider"
+  }
+}

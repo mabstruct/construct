@@ -1,0 +1,18 @@
+{
+  "query": "api gateway patterns",
+  "response": {
+    "results": [
+      {
+        "title": "Tavily Sample Result",
+        "url": "https://example.org/tavily/sample",
+        "snippet": "Sample Tavily response shape for normalization tests.",
+        "score": 0.85,
+        "source_tier": 3,
+        "provider_specific": {
+          "raw_content": "Full markdown content would appear here.",
+          "published_date": "2025-06-01"
+        }
+      }
+    ]
+  }
+}

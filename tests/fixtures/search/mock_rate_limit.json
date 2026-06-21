@@ -1,0 +1,8 @@
+{
+  "query": "__error_rate_limit__",
+  "error": {
+    "type": "RateLimitError",
+    "retry_after_seconds": 30,
+    "message": "Rate limit exceeded for mock provider"
+  }
+}

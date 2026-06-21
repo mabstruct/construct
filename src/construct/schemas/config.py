@@ -6,7 +6,9 @@ from datetime import date, datetime
 from enum import Enum
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, field_validator, model_validator
 
 
 KEBAB_CASE_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -229,6 +231,72 @@ class SearchSeedsFile(BaseModel):
     version: int = Field(ge=1)
     updated: datetime | None = None
     clusters: list[SearchCluster] = Field(default_factory=list)
+
+
+class SearchProviderName(str, Enum):
+    mock = "mock"
+    tavily = "tavily"
+
+
+class SearchCapsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_queries_per_request: int = Field(default=1, ge=1)
+    max_results_per_query: int = Field(default=5, ge=1)
+    max_batch_queries: int = Field(default=8, ge=1)
+    max_raw_content_chars: int = Field(default=20000, ge=1)
+    degraded_on_provider_error: bool = True
+
+
+class MockProviderConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["mock"]
+    fixture_dir: str
+
+
+class TavilyProviderConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["tavily"]
+    api_key_env: str
+    search_depth: str = "basic"
+    topic: str = "general"
+    max_results: int = Field(default=5, ge=1)
+    include_raw_content: str = "markdown"
+    timeout_seconds: int = Field(default=30, ge=1)
+    include_answer: bool = False
+
+    @field_validator("api_key_env")
+    @classmethod
+    def validate_api_key_env(cls, value: str) -> str:
+        if not ENV_VAR_PATTERN.fullmatch(value):
+            raise ValueError("api_key_env must be an environment variable name")
+        return value
+
+
+SearchProviderBlock = Annotated[
+    MockProviderConfig | TavilyProviderConfig,
+    Discriminator("type"),
+]
+
+
+class SearchConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: int = Field(default=1, ge=1)
+    default_provider: SearchProviderName
+    providers: dict[str, SearchProviderBlock]
+    caps: SearchCapsConfig = Field(default_factory=SearchCapsConfig)
+
+    @model_validator(mode="after")
+    def validate_default_provider_exists(self) -> SearchConfig:
+        provider_key = self.default_provider.value
+        if provider_key not in self.providers:
+            raise ValueError(
+                f"default_provider '{provider_key}' must exist in providers dict"
+            )
+        return self
 
 
 class ExtractionStatus(str, Enum):

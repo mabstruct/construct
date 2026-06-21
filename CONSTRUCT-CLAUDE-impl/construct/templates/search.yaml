@@ -1,0 +1,28 @@
+# Search provider configuration for CONSTRUCT research workflows
+# Workspace init copies this file as-is into .construct/search.yaml
+# fixture_dir is relative to the repository root when running tests;
+# in a deployed workspace, point fixture_dir at your mock fixture directory.
+
+version: 1
+default_provider: mock
+
+providers:
+  mock:
+    type: mock
+    fixture_dir: tests/fixtures/search
+  tavily:
+    type: tavily
+    api_key_env: TAVILY_API_KEY
+    search_depth: basic
+    topic: general
+    max_results: 5
+    include_raw_content: markdown
+    timeout_seconds: 30
+    include_answer: false
+
+caps:
+  max_queries_per_request: 1
+  max_results_per_query: 5
+  max_batch_queries: 8
+  max_raw_content_chars: 20000
+  degraded_on_provider_error: true
