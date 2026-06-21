@@ -1,172 +1,201 @@
 # Project Research Summary
 
 **Project:** CONSTRUCT
-**Domain:** Local-first, agent-powered personal knowledge system
-**Researched:** 2026-06-08
+**Domain:** v0.4 Agent Workflows for a local-first, agent-powered knowledge system
+**Researched:** 2026-06-21
 **Confidence:** HIGH
 
 ## Executive Summary
 
-CONSTRUCT is not a generic notes app and should not be rebuilt as one. The research consistently points to a governed, local-first knowledge system whose core value is turning source material into durable knowledge cards, typed graph connections, and grounded outputs, while making the next sensible action obvious to the user. Experts would build this by preserving files as the canonical source of truth, hardening contracts first, and only then layering runtime adapters and UI on top.
+CONSTRUCT v0.4 should be built as a workflow-runtime hardening milestone, not as a new UI/product-surface milestone. The research is consistent: preserve the current file-native workspace as the source of truth, keep deterministic validation/ingest/graph operations in Python, and move opaque Claude-native research and curation behavior behind registered CLI/MCP capabilities that thin skills can call.
 
-The recommended approach is to use v0.3 to stabilize the shared contract spine: Pydantic schemas, capability registry, deterministic Python handlers, CLI-first execution, MCP parity for Claude-native workflows, bounded LangGraph gates only where judgment is needed, and optional HTTP/UI later. The roadmap should prioritize reliability, operability, and auditability over surface expansion.
+The recommended approach is a narrow six-phase sequence: search provider spine, structured research scoring, durable reviewed research runs, deterministic curation PIPE steps, reviewed curation L3 gates, and only then daily-cycle composition. Use Tavily as the first real search adapter, but make the mock provider and normalized `SearchResult` contract the real interface. Use LangChain structured output for bounded gates and LangGraph only for stateful workflows that need pause/resume; do not use it for deterministic file I/O, validation, dedup, or graph metrics.
 
-The biggest risks are contract drift, ambiguous graph truth, soft validation, incomplete event logging, and letting UI or prompts become alternate runtimes. Mitigate them by canonizing schemas, enforcing write gates and idempotent mutations, choosing one owner for graph edges, making `events.jsonl` authoritative, and ensuring all writes flow through registered capabilities rather than direct file edits or prompt-shaped behavior.
+The core risks are provider lock-in, non-durable human review, writes before approval, fake curation no-ops, CLI/MCP drift, live-only tests, and premature daily-cycle/UI work. Mitigate them by enforcing provider factories, strict Pydantic contracts, durable gate queues, offline mock-provider tests, registry-first capability exposure, and a hard scope boundary: no v0.5 browser UI, HTTP/cloud transport, broad registry cleanup, full views emission, or unrelated verification debt in the v0.4 core unless it directly blocks these workflows.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack research is unusually aligned with the repo's stated direction: Python 3.12 + uv + pytest + Pydantic should be the v0.3 core, with Typer as the golden CLI surface, MCP as the Claude-facing transport, FastAPI deferred until contracts are stable, and LangGraph limited to read-mostly or review-gated judgment flows. Markdown/YAML/JSON remain canonical; SQLite FTS is optional later, never day-one.
+Keep the existing Python/Pydantic/Typer/MCP/file-workspace spine. v0.4 adds only the workflow/search delta needed for model-agnostic research and curation: current LangGraph/LangChain 1.x bounds, Tavily's Python SDK behind a provider interface, durable local LangGraph checkpointing for human-review pauses, and explicit retry/backoff only where provider calls need it.
 
 **Core technologies:**
-- **Python 3.12**: runtime for deterministic pipelines and adapters — modern baseline without forcing a larger rewrite.
-- **uv**: package/dependency/tool runner — fastest path to a clean local Python workflow.
-- **Pydantic 2.x**: canonical contract layer — should define workspace, capability, adapter, and gate schemas once.
-- **Typer**: CLI surface — best first invoke path for testing and operability.
-- **MCP Python SDK**: Claude/Cursor tool transport — keeps Claude-native workflows while moving logic into stable tools.
-- **LangGraph**: bounded LLM orchestration — use only for `ask.domain`, synthesis/review gates, and ambiguous decisions.
-- **FastAPI**: future HTTP adapter — add after CLI and MCP schema parity exists.
+- **Python `>=3.11`**: workflow/runtime implementation — no Python migration belongs inside v0.4.
+- **Pydantic v2**: strict input/output schemas — all search, gate, review, and workflow models should use `extra="forbid"` and JSON-serializable fields.
+- **Typer + capability registry**: golden CLI surface — every new workflow capability should invoke the same registry handler used by MCP.
+- **MCP stdio**: agent invoke surface — parity with CLI is mandatory for `research.*`, `curation.*`, and `gate.*`.
+- **LangGraph `>=1.2,<2`**: stateful workflows with interrupts/checkpoints — use for `research.run`, curation gates where pause/resume matters, and later daily-cycle composition.
+- **`langgraph-checkpoint-sqlite >=3.1,<4`**: durable local checkpoints — required before shipping human-review LangGraph workflows; store under support/runtime state, not knowledge SOT.
+- **LangChain Core `>=1.4,<2` + `langchain-anthropic >=1.4,<2`**: structured L2/L3 gate boundary — use provider factory and Pydantic structured output, not freeform agent loops.
+- **`tavily-python >=0.7,<1`**: default real web search adapter — map once into normalized search models; CI uses mock/fixtures instead.
+- **`tenacity >=9.1,<10`**: optional direct retry dependency — add only if provider retry/backoff is implemented.
+- **`ruamel.yaml`, existing governance/model config**: YAML config loading — keep secrets in env vars, not workspace files.
+
+**Critical version requirements:** tighten stale loose LangGraph/LangChain lower bounds before building workflow APIs; add `langgraph-checkpoint-sqlite` by the first durable human-review graph; do not add full `langchain`, HTTP frameworks, vector DBs, Postgres/Redis/Celery, Tavily MCP, or crawler stacks for v0.4 core.
 
 ### Expected Features
 
-Near-term scope is about making the current proof of concept dependable and legible, not broadening the product surface. Table-stakes features center on reliable workspace initialization, governed card/ref/connection operations, validation, research/curation/synthesis loops, graph health, gap analysis, session resumption, and next-step guidance.
+v0.4's feature promise is: the same governed workflow runs from CLI, MCP, Streamlit review, or thin Claude skills; search/LLM outputs are structured and reviewable; canonical writes only happen through validated services after required approval.
 
 **Must have (table stakes):**
-- Reliable workspace initialization and guided domain setup.
-- Consistent card creation/edit/archive and typed connection management.
-- Workspace validation and data-contract enforcement.
-- Repeatable research cycle, curation cycle, and grounded synthesis flow.
-- Graph health reporting, gap analysis, session resumption, and help/next-step guidance.
-- Confidence/source-tier propagation in outputs.
+- **Search provider spine** — provider config, caps, normalized `SearchResult`/`SearchBatchOutput`, Tavily adapter, and mandatory mock provider.
+- **`research.search`** — CLI/MCP capability returning the same normalized schema without LLM scoring or SOT writes.
+- **`research.score`** — structured L3 gate producing relevance, source tier, key findings, ingest action, and reasoning under governance thresholds.
+- **`research.run`** — search → dedup → score → durable human review → governed ingest → digest → seed/event updates.
+- **Durable human review** — pending gates survive restart and can be approved/rejected through CLI/MCP, not only Streamlit.
+- **Real `curation.run` PIPE steps** — integrity, decay, orphan scan, and report must be actual deterministic handlers, not v0.3 placeholders.
+- **Curation promotion/connection gates** — L3 proposes lifecycle/edge changes; humans approve before writes.
+- **CLI/MCP parity** — every new v0.4 capability has registry, CLI, MCP, and contract-test coverage.
+- **Thin skill migrations** — research/curation skills delegate to capabilities and remove direct `WebSearch`/`WebFetch`/write orchestration when replacements are ready.
+- **Workflow state/progress/events** — `awaiting_review`, degraded, failed, completed, gate IDs, run IDs, counts, and event IDs are visible and auditable.
 
-**Should have (competitive):**
-- Epistemically governed cards as a first-class invariant.
-- Agent-orchestrated research → curation → synthesis loop.
-- Governed graph health workflows and state-aware next-step suggestions.
-- Cross-domain bridge detection once graph integrity is trustworthy.
-- Derived wiki/views over the same file-native workspace.
+**Should have (competitive / follow-on within v0.4):**
+- Model/provider-agnostic gates with mockable provider factories.
+- Review queues as first-class workflow state.
+- Resilient partial-result behavior for provider failures and caps.
+- Deterministic research digest, with optional L2 narrative only after structured digest fields exist.
+- `workflow.daily_cycle` composition once research and curation are independently stable.
+- Optional second provider/academic adapter after Tavily + mock prove the abstraction.
 
-**Defer (v2+ / later phases):**
-- Full browser-first product shell.
-- Rich graph visualization as a phase driver.
-- Vector search as foundational work.
-- Multi-user/cloud sync, broad integrations, plugin ecosystems, and aggressive automation.
+**Defer (v0.5+ / separate track):**
+- Browser-primary UI, HTTP API, MCP SSE, cloud/multi-user deployment.
+- Full co-authorship/authoring graph, unless W1-W6 finish cleanly.
+- SQLite/FTS/vector indexer and broad provider suite.
+- Full views data emission expansion; at most use an optional warning-only refresh hook.
+- RT-01/RT-02 registry unification, general verification debt, and unrelated v0.3 cleanup unless a specific item blocks v0.4 workflow delivery.
 
 ### Architecture Approach
 
-Architecture research strongly supports the ADR-0003 spine: workspace files first, Python runtime second, invoke adapters third, UI shell last. The system should expose one capability contract through CLI, MCP, and later HTTP; keep files as canonical state; use LangGraph only at named gates; require human review before model-authored source-of-truth changes; and keep the UI above the runtime rather than letting it write directly.
+v0.4 should integrate as a Layer 2 workflow-runtime extension inside the existing architecture. Skills classify intent and present results; CLI/MCP invoke registry capabilities; registry handlers call Python pipelines; providers/gates return strict proposals; only reviewed deterministic services write canonical workspace files. The workspace format does not change.
 
 **Major components:**
-1. **Workspace SOT** — canonical markdown/YAML/JSON knowledge state and audit trail.
-2. **Capability registry + runtime handlers** — shared schemas, validation, file I/O, graph ops, view generation.
-3. **Adapters (CLI → MCP → HTTP)** — thin invoke surfaces over the same contracts.
-4. **Workflow runner + event logger** — multi-step orchestration with replayable progress.
-5. **LangGraph gates** — bounded, typed judgment steps only.
-6. **Derived-data/UI layer** — consumes backend outputs, never writes canonical files directly.
+1. **Search provider spine** — `src/construct/search/` models, config, provider protocol/factory, Tavily adapter, mock adapter, fixture mapping tests.
+2. **LLM provider factory** — shared model construction for `research.score`, `card.evaluate`, connection gates, and later `ask.domain` cleanup; no new hardcoded Anthropic imports in v0.4 gates.
+3. **Research pipeline** — query building, caps, provider calls, dedup, score gate, gate queue, approved ingest, digest, seed/event updates.
+4. **Curation pipeline** — real integrity/decay/orphan/report PIPE steps first, then promotion/connection L3 gates over deterministic candidates.
+5. **Gate queue / review applier** — durable pending proposals, `gate.list`, `gate.review`, approval/rejection events, validated write application.
+6. **Workflow state envelope** — keep `WorkflowRunner` as the public CONSTRUCT status/progress shape; adapt LangGraph checkpoints/interrupts behind it where needed.
+7. **Capability registry + adapters** — `research.search`, `research.score`, `research.run`, `curation.run`, `card.evaluate`, `gate.list`, `gate.review`, and later daily-cycle exposed consistently through CLI/MCP.
+8. **Thin Claude skills** — no direct provider calls, no direct SOT writes; invoke CLI/MCP and summarize results.
+
+**Key patterns to follow:** registry-first entrypoints; provider interface + factory; gate-as-proposal, not gate-as-write; atomic validated SOT writes; offline contract tests with mock search/LLM providers; daily-cycle as parent composition only.
 
 ### Critical Pitfalls
 
-1. **Contract drift** — prevent with one canonical schema source and a contract-change checklist across templates, validators, skills, views, and runtime.
-2. **Dual graph truth** — choose one canonical edge store and make any second representation derived-only.
-3. **Advisory validation** — replace checklist validation with enforced preflight/post-write gates, staged mutations, and idempotent commands.
-4. **Non-authoritative event logging** — define a versioned event schema and require all mutations to pass through one evented command path.
-5. **Prompt-shaped tool boundaries / UI-first writes** — keep deterministic work in typed commands and require UI, Claude skills, and later API routes to invoke the same backend capabilities.
+1. **Provider abstraction leak** — avoid Tavily imports/fields in workflow code; map provider-native responses only inside the adapter and test provider swap with mock config.
+2. **Model-agnostic gates that still hardcode Anthropic** — add a shared LLM provider factory before W2; tests monkeypatch the factory and require no real API key.
+3. **Ungoverned LLM prose / writes before review** — gates must return strict Pydantic proposals, apply deterministic thresholds, persist pending review, and write SOT only after approve.
+4. **Workflow state split-brain** — decide how `WorkflowRunner` wraps LangGraph checkpoints by W2/W3; expose one public run state with `awaiting_review`, gate IDs, child run IDs, and errors.
+5. **Curation no-ops survive** — W4 must replace placeholder curation handlers with real validate/decay/orphan/report logic and tests that fail on `placeholder` output.
+6. **CLI/MCP parity regressions** — every phase must extend registry, CLI, MCP handler invocation tests, and JSON output comparisons together.
+7. **Live-only tests and weak negative coverage** — default pytest must pass offline; add fixtures for provider failure, invalid gate output, review rejection, duplicates, resume, and mid-batch failure.
+8. **Premature daily-cycle/UI scope** — W6 only composes stable child capabilities; no v0.5 UI/HTTP/cloud/full views work in core v0.4.
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 1: Contract Canon and Data Model Hardening
-**Rationale:** Every source agrees the main current risk is inconsistency, not missing features.
-**Delivers:** Canonical schemas for cards/refs/connections/events, artifact ownership rules, single graph-edge truth, contract docs, invariant tests.
-**Addresses:** Workspace validation, template consistency, reliable artifact generation.
-**Avoids:** Contract drift, dual graph truth, early UI/runtime rework.
+### Phase W1: Search Provider Spine + Contract Foundation
+**Rationale:** Normalized, mockable search is the prerequisite for scoring, research runs, skill migration, and provider independence. Starting with full `research.run` would embed unstable provider semantics.
+**Delivers:** `src/construct/search/`, `SearchResult`, `SearchBatchOutput`, search config resolution, env-only secret handling, query/result caps, mock provider, Tavily adapter, `research.search` registry/CLI/MCP, fixture mapping tests, no-network CI.
+**Addresses:** Search provider spine, mockable provider, `research.search`, cost/rate caps, CLI/MCP parity.
+**Avoids:** Provider abstraction leaks, config/secrets ambiguity, live-only tests, Tavily MCP bypass.
+**Research flag:** Standard pattern; no extra phase research expected beyond checking current Tavily SDK behavior during implementation.
 
-### Phase 2: Deterministic Runtime and Golden CLI
-**Rationale:** Once contracts are stable, the safest next step is a testable backend surface.
-**Delivers:** Capability registry, Python handlers, atomic/idempotent write wrappers, `workspace.validate`, `graph.status`, derived-data generation, CLI contract tests.
-**Uses:** Python 3.12, uv, Pydantic, Typer, pytest.
-**Implements:** Runtime core, event schema, audit boundaries.
+### Phase W2: LLM Provider Factory + `research.score`
+**Rationale:** Scoring is the boundary between raw search and governed knowledge. Proving it independently keeps `research.run` from becoming opaque and prevents LLM prose from becoming ingest logic.
+**Delivers:** Shared LLM provider factory, gate config entries, mock/fake LLM provider, `ResearchScoreInput/Output`, `ScoredFinding`, structured-output gate, governance threshold application, invalid-output tests.
+**Addresses:** `research.score`, model-agnostic gates, epistemic scoring, source tier/action proposal, human-review metadata.
+**Avoids:** Anthropic hardcoding, freeform LLM scoring, threshold duplication, writes before review.
+**Research flag:** Mostly standard from docs; phase planning should decide exact structured-output fallback/error behavior per provider.
 
-### Phase 3: Claude-Native Workflow Migration via MCP
-**Rationale:** Preserve current UX while reducing prompt fragility.
-**Delivers:** MCP stdio server with exact schema parity, thin skill adapters, session resumption/state-aware help, stable next-step guidance.
-**Addresses:** Workflow operability, continuity, guidance.
-**Avoids:** Too much agent discretion at the tool boundary.
+### Phase W3: Durable Human Review + `research.run`
+**Rationale:** This is the first full workflow proof: provider → L3 gate → durable review → governed write. It should reuse W1/W2 contracts rather than define new ones.
+**Delivers:** Gate queue storage, `gate.list`, `gate.review`, LangGraph/WorkflowRunner adapter, research run workflow, dedup/idempotency, approved ingest through existing services, deterministic digest, `search-seeds.json` updates, events, research skill migration removing `WebSearch`/`WebFetch`.
+**Addresses:** `research.run`, human review, governed ingest, research digest, workflow state/pause/resume, deduplication, degraded partial results, thin research skill.
+**Avoids:** Non-durable review, pre-approval writes, duplicate refs/cards, bad seed timestamps, batch partial-write ambiguity, Streamlit-only gates.
+**Research flag:** Needs focused phase research/spike on `WorkflowRunner` + LangGraph checkpoint ownership and CLI approval UX before implementation locks storage semantics.
 
-### Phase 4: Workflow Orchestration, Research/Curation Reliability, and Eventing
-**Rationale:** Multi-step workflows become safer after atomic operations work.
-**Delivers:** Workflow runner, structured progress events, hardened research/curation/synthesis flows, governance enforcement, reconciliation tooling.
-**Addresses:** Research cycle, curation cycle, auditability, confidence propagation.
-**Avoids:** Advisory validation, event-log theater, stale workflow choreography.
+### Phase W4: Curation PIPE Steps
+**Rationale:** Deterministic curation can and should be real before LLM promotion/connection gates. This closes the v0.3 placeholder/no-op debt without waiting on every L3 path.
+**Delivers:** `curation.run` with real integrity, decay, orphan scan, report, optional warning-only views refresh hook, compatibility route from old `workflow.run curation-cycle`, no placeholder messages.
+**Addresses:** Real curation PIPE, graph/workspace health reporting, workflow honesty, daily-cycle prerequisite.
+**Avoids:** Curation no-ops, LLM overreach into validation/metrics, accidental dependency on API keys, false success reports.
+**Research flag:** Standard deterministic Python/validation work; skip extra research unless current validation/graph services prove insufficient.
 
-### Phase 5: Bounded LangGraph Gates and Graph Leverage
-**Rationale:** Add LLM statefulness only where deterministic systems are insufficient.
-**Delivers:** `ask.domain`, grounded synthesis/review gates, better gap analysis, bridge detection, citation-rich outputs.
-**Uses:** LangGraph behind typed I/O boundaries.
-**Avoids:** LLM overreach into deterministic paths.
+### Phase W5: Curation L3 Gates + Review Application
+**Rationale:** Lifecycle and connection writes are high-impact epistemic changes. They should reuse W3's proven gate queue and W4's deterministic candidate evidence.
+**Delivers:** `card.evaluate`, promotion decisions, connection/bridge proposal gate, candidate-scoped evidence prompts, approved lifecycle/connection writes through services, rejection no-op tests, curation skill migration.
+**Addresses:** Curation promotion gate, connection maintenance gate, human approval for graph/lifecycle writes, thin curation skill.
+**Avoids:** Autonomous promotions/connections, whole-workspace LLM curation, hardcoded model providers, partial batch writes, skill UX breakage.
+**Research flag:** Needs phase-level design on candidate selection and relation/proposal semantics; does not need new provider-stack research.
 
-### Phase 6: UI-Path Preparation and Local Ops Shell
-**Rationale:** UI should consume proven contracts, not define them.
-**Delivers:** Derived-data contracts, optional Streamlit ops spike, HTTP planning, freshness/provenance semantics for later React/Vite UI.
-**Addresses:** Future browser path without pulling UI work too early.
-**Avoids:** Building the UI on chat-era workflows or hidden derived-state truth.
+### Phase W6: Daily-Cycle Composition
+**Rationale:** Daily cycle is valuable only as composition of reliable child capabilities. Building it early would hide unfinished research/curation behavior and multiply state bugs.
+**Delivers:** Parent workflow that calls `research.run`, waits/applies review as needed, calls `curation.run`, propagates child statuses/degraded states, reports `graph.status`, and optionally triggers one warning-only views refresh.
+**Addresses:** Daily-cycle composition, unified progress/status, guided next action.
+**Avoids:** Parent graph duplicating child logic, overwritten workflow state, double views refresh, success reports while children are awaiting review.
+**Research flag:** Plan after W3/W5 acceptance data; deeper research only if parent/child LangGraph checkpointing remains unresolved.
 
 ### Phase Ordering Rationale
 
-- Contracts must precede runtime because every feature depends on shared artifact semantics.
-- Runtime and CLI should precede MCP and UI because they are the cheapest place to prove schemas, errors, idempotency, and eventing.
-- Workflow orchestration should follow atomic capability hardening so composition is safe.
-- LangGraph should remain late and bounded so model complexity does not contaminate deterministic foundations.
-- UI-path work should come last because **v0.5** value depends on v0.4 workflow stability and v0.3 backend stability, not vice versa.
+- Search contracts precede scoring because L3 gates must operate over provider-normalized data, not Tavily/Claude-native shapes.
+- Scoring precedes research-run orchestration because gate schemas and thresholds must be independently testable before ingest is introduced.
+- Durable review is introduced with research-run and then reused by curation; this avoids building separate review systems for Streamlit, CLI, MCP, and skills.
+- Curation splits deterministic PIPE from L3 gates so validation/decay/orphan/report can land offline and stop v0.3 no-op behavior early.
+- Skill migrations are tied to capability readiness: migrate research after W3 and curation after W5, not as standalone docs edits.
+- Daily cycle comes last because it should compose stable child workflows and add no new search/scoring/curation logic.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1:** graph-edge canonicalization decision, because current dual-truth model has real downstream consequences.
-- **Phase 4:** event schema + mutation/audit design, because replayability and recovery semantics must be explicit.
-- **Phase 5:** retrieval/indexing envelope for `ask.domain`, bridge detection, and scale limits.
-- **Phase 6:** HTTP/derived-data contract design for the **v0.5** UI path.
+Phases likely needing deeper research or a focused spike during planning:
+- **W3:** LangGraph checkpoint + `WorkflowRunner` ownership, durable gate queue storage shape, and non-interactive CLI review UX.
+- **W5:** Curation candidate generation/proposal semantics for promotion and typed connections.
+- **W6:** Parent/child workflow state only if W3/W5 leave checkpoint ownership ambiguous.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2:** Python runtime + Typer CLI + Pydantic contract enforcement are well-documented patterns.
-- **Phase 3:** MCP schema-parity transport is a standard migration once capability contracts are fixed.
+Phases with standard patterns (skip research-phase unless implementation uncovers a blocker):
+- **W1:** Provider adapter + Pydantic model + fixture/mock testing is well documented.
+- **W2:** Structured output gate + provider factory is well documented; validate exact provider behavior in tests.
+- **W4:** Deterministic validation/decay/orphan/report handlers should reuse existing services and fixture tests.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Strong alignment between repo constraints and current official tooling guidance; only **v0.5** UI detail is less settled. |
-| Features | HIGH | Near-term scope is clear and heavily grounded in PROJECT.md and current product docs. |
-| Architecture | HIGH | ADR-0003 and supporting docs produce a coherent, low-risk build order. |
-| Pitfalls | HIGH | Risks are repo-specific, concrete, and repeated across current docs and workflow behavior. |
+| Stack | HIGH | Official/current docs and package checks support LangGraph 1.x, LangChain structured output, Tavily SDK fields, and SQLite checkpointing; scope avoids speculative infra. |
+| Features | HIGH | v0.4 behavior is strongly grounded in internal specs, user journeys, and v0.3 audit constraints; provider-specific UX details are less certain but not roadmap-blocking. |
+| Architecture | HIGH | All research converges on Layer 2 runtime extension, registry-first contracts, provider factories, gate-as-proposal, and workspace SOT preservation. |
+| Pitfalls | HIGH | Risks are repo-specific and mapped to concrete code/files/tests; severity estimates are MEDIUM where product impact depends on implementation choices. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Canonical edge ownership:** decide whether `connections.json` or card frontmatter owns graph truth before phase planning locks APIs.
-- **Event contract details:** define required event types, payload shape, and reconciliation rules before workflow implementation.
-- **Mutation/concurrency semantics:** plan atomic writes, serialization/locking, and recovery expectations for local-first multi-writer scenarios.
-- **Retrieval/index threshold:** define when file-backed retrieval stops being enough and when SQLite FTS becomes justified.
-- **v0.5 UI contract boundary:** validate which derived artifacts and progress semantics the browser layer should rely on.
+- **Workflow state ownership:** Decide by W2/W3 whether `WorkflowRunner` wraps LangGraph or LangGraph replaces internals for migrated workflows; expose one public state schema either way.
+- **Gate queue persistence format:** Choose support artifact/state shape, gate IDs, proposal action schema, and restart/resume semantics before W3 writes.
+- **CLI approval UX:** Define `gate list --json`, `gate review --decision ...`, and any approve-batch/edit flow so Streamlit is optional.
+- **Search seed update semantics:** Clarify whether `last_queried` means searched, approved, or ingested; do not advance failed/skipped clusters silently.
+- **Curation candidate semantics:** Define deterministic evidence and candidate limits before L3 promotion/connection gates.
+- **Batch mutation recovery:** Preflight all proposed writes, emit per-item + summary events, and make reruns idempotent rather than promising full rollback.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `.planning/PROJECT.md` — milestone goals, constraints, scope, continuity requirements.
-- `.planning/research/STACK.md` — recommended runtime, adapter, and UI-path stack.
-- `.planning/research/FEATURES.md` — table stakes, differentiators, and deferrals.
-- `.planning/research/ARCHITECTURE.md` — layered architecture, component boundaries, build order.
-- `.planning/research/PITFALLS.md` — repo-specific failure modes and sequencing warnings.
-- `CONSTRUCT-CLAUDE-spec/adrs/adr-0003-v03-pipeline-v04-ui.md` and related spec docs cited by the research files.
+- `.planning/research/STACK.md` — recommended v0.4 stack delta, versions, provider/search/runtime rules.
+- `.planning/research/FEATURES.md` — table stakes, differentiators, anti-features, dependencies, MVP definition.
+- `.planning/research/ARCHITECTURE.md` — Layer 2 extension architecture, components, contracts, data flow, build order.
+- `.planning/research/PITFALLS.md` — critical pitfalls, acceptance tests, phase warnings, recovery strategies.
+- `.planning/PROJECT.md` — v0.4 milestone goals, constraints, and out-of-scope boundaries cited by researchers.
+- `CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md` — authoritative workflow topology, capabilities, data structures, acceptance criteria.
+- `CONSTRUCT-CLAUDE-spec/adrs/adr-0003-v03-pipeline-v04-ui.md` — layer model, LLM tier boundaries, v0.4/v0.5 sequencing.
+- `.planning/milestones/v0.3-MILESTONE-AUDIT.md` — shipped state and accepted v0.3 debt relevant to workflows.
 
 ### Secondary (MEDIUM confidence)
-- Official docs cited in research: uv, FastAPI, Pydantic, Typer, MCP, LangGraph, Streamlit, React Flow, TanStack Query.
-- Anthropic tool-use and guardrail docs cited in pitfalls research.
-- Ink & Switch local-first essay cited for long-term local-first risk framing.
+- Repo files cited by architecture/pitfalls research: `src/construct/capabilities/catalog.py`, `src/construct/pipelines/workflow_runner.py`, `src/construct/llm/ask_domain.py`, `src/construct/ui/gate_review.py`, ingestion/knowledge/validation services, MCP contract tests, current research/curation skill files.
+- LangGraph docs via Context7 / official docs — StateGraph, interrupts, durable execution, checkpointers, SQLite checkpointer package.
+- LangChain docs via Context7 / official docs — chat model interfaces and Pydantic/JSON Schema structured output.
+- Tavily Python SDK docs — `search()` parameters and response fields (`title`, `url`, `content`, `score`, optional `raw_content`, `response_time`, `query`).
 
 ---
-*Research completed: 2026-06-08*
+*Research completed: 2026-06-21*
 *Ready for roadmap: yes*
