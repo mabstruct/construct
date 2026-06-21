@@ -36,6 +36,9 @@ from construct.llm.ask_domain import (
 # ── Bridge Detection imports (Phase 5) ──
 from construct.pipelines.bridge_detect import bridge_detect
 
+# ── Research Search imports (Phase 8) ──
+from construct.pipelines.research_search import ResearchSearchInput, research_search
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -347,6 +350,17 @@ def create_registry() -> CapabilityRegistry:
         mcp_tool_name="construct_bridge_detect",
     ))
 
+    registry.register(CapabilityRecord(
+        id="research.search",
+        name="Research Search",
+        description="Provider-agnostic web search returning normalized results (read-only)",
+        input_model=ResearchSearchInput,
+        output_model=OperationResult,
+        handler=_research_search_shim,
+        cli_name="research.search",
+        mcp_tool_name="construct_research_search",
+    ))
+
     return registry
 
 
@@ -357,6 +371,13 @@ def _validate_shim(*args, **kwargs):
     if args:
         return validate_workspace(args[0])
     return validate_workspace(kwargs["path"])
+
+
+def _research_search_shim(*args, **kwargs):
+    """RT-03 adapter for research.search."""
+    if args:
+        return research_search(ResearchSearchInput(workspace_path=str(args[0]), query=str(args[1])))
+    return research_search(ResearchSearchInput(**kwargs))
 
 
 def _create_card_shim(*args, **kwargs):

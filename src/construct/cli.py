@@ -394,6 +394,59 @@ def detect(
 
 
 # ---------------------------------------------------------------------------
+# Research command group (Phase 8)
+# ---------------------------------------------------------------------------
+
+research_app = typer.Typer(
+    no_args_is_help=True,
+    name="research",
+    help="Read-only research search via configured providers.",
+)
+app.add_typer(research_app)
+
+
+@research_app.command(name="search")
+def research_search_cmd(
+    ctx: typer.Context,
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    query: str | None = typer.Option(None, "--query", "-q", help="Single search query"),
+    queries: Optional[str] = typer.Option(
+        None,
+        "--queries",
+        help="Comma-separated batch queries",
+    ),
+    cluster_id: str | None = typer.Option(None, "--cluster-id", help="Search by seed cluster ID"),
+    max_results: int | None = typer.Option(None, "--max-results", help="Max results per query (1-50)"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Run provider-agnostic web search and return normalized results (read-only)."""
+    modes = [query is not None, queries is not None, cluster_id is not None]
+    if sum(modes) != 1:
+        typer.echo("ERROR: specify exactly one of --query, --queries, or --cluster-id")
+        raise typer.Exit(code=1)
+
+    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    if query is not None:
+        handler_kwargs["query"] = query
+    elif queries is not None:
+        handler_kwargs["queries"] = _parse_csv(queries)
+    else:
+        handler_kwargs["cluster_id"] = cluster_id
+
+    if max_results is not None:
+        handler_kwargs["max_results"] = max_results
+
+    try:
+        cap = get_registry().get("research.search")
+    except KeyError:
+        typer.echo("ERROR: Capability 'research.search' not found. Ensure Phase 8 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+    _display_result(result, json_output)
+
+
+# ---------------------------------------------------------------------------
 # Views command group (Phase 6)
 # ---------------------------------------------------------------------------
 
