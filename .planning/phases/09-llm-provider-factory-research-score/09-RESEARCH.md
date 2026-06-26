@@ -352,19 +352,18 @@ registry.register(CapabilityRecord(
 | A3 | `langchain-openai` install is safe (slopcheck not run). | Package Audit | Negligible — first-party LangChain monorepo package, verbatim in official docs. |
 | A4 | Mock structured-output via the existing conftest pattern (canned object from `.invoke()`) is sufficient for all four offline test classes. | Validation Architecture | If insufficient, may need a richer fake; pattern already proven for ask.domain. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All Phase-9 open questions were locked during planning. Answers are inlined below.
 
 1. **Input payload exact shape (D-10).**
-   - What we know: `research.search` emits `ResearchSearchOutput{batches:[SearchBatchOutput...], provider, degraded, warnings}`; each batch has `results:[SearchResult]`.
-   - What's unclear: Does `research.score` accept the full `batches` envelope, a flattened `list[SearchResult]`, or both (plus file-path/stdin loading)?
-   - Recommendation: Accept a flattened `list[SearchResult]` as the canonical param, with a CLI/handler helper that flattens `batches` from a `--results-file`/stdin JSON. Keep `workspace_path` required (D-12). Planner to lock the input model.
+   - RESOLVED: `research.score` accepts a flat `list[SearchResult]` as the canonical input param. A CLI/handler helper flattens a `batches`/`SearchBatchOutput` envelope (`batches[].results`) into that flat list when loading from `--results-file`/stdin. `workspace_path` is REQUIRED (D-12). Locked in **Plan 04** (input model + batches-flattening helper).
 
 2. **Where the concurrency cap lives (D-04, discretion).**
-   - What we know: `GateConfig` (config.py:22) is the natural home; `config.yaml` gates already carry per-gate fields.
-   - Recommendation: Add `concurrency_cap: int = <default>` to `GateConfig` and the `research.score` gate block. Default ~5 (LOW confidence on the exact number — tune to provider rate limits).
+   - RESOLVED: Add `concurrency_cap: int = 5` to `GateConfig` (`config.py`), set per-gate in the `research.score` `config.yaml` block. Default cap = 5. Locked in **Plan 02**.
 
 3. **Send-subgraph vs executor for fan-out (D-04, discretion).**
-   - Recommendation: A single fan-out node using a bounded `ThreadPoolExecutor` is the lower-risk choice for expressing D-08 retry + D-09 total-outage promotion clearly and testably. Use LangGraph `Send` only if the planner wants per-item nodes visible in graph traces.
+   - RESOLVED: Use a bounded `ThreadPoolExecutor` (`max_workers = concurrency_cap`) for the per-result fan-out — NOT a LangGraph `Send` subgraph — so D-08 retry + D-09 total-outage promotion stay explicit and offline-testable. Locked in **Plan 03**.
 
 ## Environment Availability
 
