@@ -87,7 +87,24 @@ Plans:
   3. User can see governance thresholds reflected in `skip`, `ref_only`, and `ref_and_card` recommendations before any workspace writes occur.
   4. Developer can verify the score gate offline with mock LLM providers, invalid-output fixtures, and degraded-state tests.
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves — sequential dependency chain: factory → gate core → fan-out/degraded → CLI/MCP surface)
+
+Plans:
+**Wave 1**
+
+- [ ] 09-01-PLAN.md — LLM provider factory + ask.domain retrofit + [BLOCKING] regression guard (D-01/D-02)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 09-02-PLAN.md — research.score schema, single-result scoring, governance clamp, taxonomy steering (D-05/06/07/11/12/14)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 09-03-PLAN.md — bounded fan-out, per-item retry+skip, total-outage promotion, run_gate runner (D-04/08/09)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 09-04-PLAN.md — capability registration + CLI table / MCP parity surface (D-10/13)
 
 ### Phase 10: Durable Human Review + research.run
 
@@ -171,7 +188,7 @@ Plans:
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
-| 9. LLM Provider Factory + research.score | v0.4 | 0/TBD | Not started | - |
+| 9. LLM Provider Factory + research.score | v0.4 | 0/4 | Not started | - |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
