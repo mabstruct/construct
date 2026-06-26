@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from pydantic import ValidationError
 
@@ -19,6 +19,7 @@ from construct.search.errors import (
     RateLimitError,
     SearchError,
 )
+from construct.search.fixture_paths import resolve_fixture_dir
 from construct.search.models import ProviderCapabilities, SearchBatchOutput, SearchResult
 from construct.search.provider import SearchProvider
 from construct.storage.workspace import WorkspaceLoader
@@ -37,19 +38,19 @@ _ERROR_TYPE_MAP: dict[str, type[SearchError]] = {
 class MockSearchProvider(SearchProvider):
     """Search provider backed by per-query JSON fixtures."""
 
-    def __init__(self, config: MockProviderConfig, *, provider_name: str = "mock") -> None:
+    def __init__(
+        self,
+        config: MockProviderConfig,
+        *,
+        provider_name: str = "mock",
+        workspace: Path | None = None,
+    ) -> None:
         self._config = config
         self._provider_name = provider_name
-        self._fixture_dir = Path(config.fixture_dir)
+        self._fixture_dir = resolve_fixture_dir(config.fixture_dir, workspace)
         self._fixtures = self._load_fixtures()
 
     def _load_fixtures(self) -> dict[str, dict]:
-        if not self._fixture_dir.is_dir():
-            raise ProviderUnavailableError(
-                provider_name=self._provider_name,
-                message=f"fixture_dir not found: {self._fixture_dir}",
-            )
-
         fixtures: dict[str, dict] = {}
         for path in sorted(self._fixture_dir.glob("*.json")):
             try:
@@ -136,13 +137,9 @@ class MockSearchProvider(SearchProvider):
         return self.search(query, max_results=max_results, cluster_id=cluster_id)
 
     def _resolve_fixture(self, query: str) -> dict:
-        try:
+        if query in self._fixtures:
             return self._fixtures[query]
-        except KeyError as exc:
-            raise ParseError(
-                provider_name=self._provider_name,
-                message=f"no mock fixture for query: {query!r}",
-            ) from exc
+        return _synthetic_fixture(query)
 
     def _maybe_sleep(self, payload: dict) -> None:
         latency_ms = payload.get("latency_ms")
@@ -224,6 +221,27 @@ class MockSearchProvider(SearchProvider):
                 ) from exc
             normalized.append(result)
         return normalized
+
+
+def _synthetic_fixture(query: str) -> dict:
+    """Return a deterministic offline result when no JSON fixture matches."""
+    return {
+        "query": query,
+        "response": {
+            "results": [
+                {
+                    "title": f"Mock result: {query}",
+                    "url": f"https://example.org/mock?q={quote_plus(query)}",
+                    "snippet": (
+                        f"Offline mock search result for {query!r}. "
+                        "Configure the tavily provider in .construct/search.yaml for live web search."
+                    ),
+                    "score": 0.7,
+                    "source_tier": 4,
+                }
+            ]
+        },
+    }
 
 
 def _source_domain(url: object) -> str | None:

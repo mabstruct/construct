@@ -1,0 +1,22 @@
+{
+  "query": "quantum gravity",
+  "latency_ms": 50,
+  "response": {
+    "results": [
+      {
+        "title": "Fixture Paper on Quantum Gravity",
+        "url": "https://example.org/paper/quantum-gravity",
+        "snippet": "Abstract excerpt on emergent spacetime and quantum gravity.",
+        "score": 0.91,
+        "source_tier": 2
+      },
+      {
+        "title": "Secondary Fixture Result",
+        "url": "https://example.org/paper/secondary",
+        "snippet": "Additional context on loop quantum gravity approaches.",
+        "score": 0.78,
+        "source_tier": 3
+      }
+    ]
+  }
+}

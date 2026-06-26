@@ -93,7 +93,11 @@ class SearchProviderFactory:
                     provider_name=provider_key,
                     message=f"provider block for '{provider_key}' is not type mock",
                 )
-            provider = MockSearchProvider(provider_config, provider_name=provider_key)
+            provider = MockSearchProvider(
+                provider_config,
+                provider_name=provider_key,
+                workspace=workspace,
+            )
         elif config.default_provider == SearchProviderName.tavily:
             if not isinstance(provider_config, TavilyProviderConfig):
                 raise ProviderUnavailableError(

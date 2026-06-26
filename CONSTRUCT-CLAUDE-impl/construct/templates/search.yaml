@@ -1,7 +1,7 @@
 # Search provider configuration for CONSTRUCT research workflows
 # Workspace init copies this file as-is into .construct/search.yaml
-# fixture_dir is relative to the repository root when running tests;
-# in a deployed workspace, point fixture_dir at your mock fixture directory.
+# fixture_dir: builtin — packaged offline fixtures (any query returns mock results)
+# fixture_dir: /path/to/fixtures — optional custom JSON fixtures directory
 
 version: 1
 default_provider: mock
@@ -9,7 +9,7 @@ default_provider: mock
 providers:
   mock:
     type: mock
-    fixture_dir: tests/fixtures/search
+    fixture_dir: builtin
   tavily:
     type: tavily
     api_key_env: TAVILY_API_KEY

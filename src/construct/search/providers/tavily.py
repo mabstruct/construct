@@ -23,9 +23,8 @@ from construct.storage.workspace import WorkspaceLoader
 
 def _import_tavily_sdk() -> tuple[Any, ...]:
     try:
-        from tavily import InvalidAPIKeyError, TavilyClient
-        from tavily import TimeoutError as TavilyTimeoutError
-        from tavily import UsageLimitExceededError
+        from tavily import InvalidAPIKeyError, TavilyClient, UsageLimitExceededError
+        from tavily.errors import TimeoutError as TavilyTimeoutError
     except ImportError as exc:
         raise ProviderUnavailableError(
             provider_name="tavily",

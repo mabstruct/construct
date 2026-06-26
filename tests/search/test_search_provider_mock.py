@@ -21,6 +21,19 @@ def _mock_config(fixture_dir: Path) -> SearchConfig:
     return SearchConfig.model_validate(payload)
 
 
+def test_synthetic_fallback_for_unknown_query() -> None:
+    yaml = YAML(typ="safe")
+    payload = yaml.load(SEARCH_TEMPLATE.read_text())
+    config = SearchConfig.model_validate(payload)
+
+    provider = SearchProviderFactory.create(config)
+    output = provider.search("knowledge curators", max_results=5)
+
+    assert output.query == "knowledge curators"
+    assert len(output.results) == 1
+    assert "knowledge curators" in output.results[0].title
+
+
 def test_happy_path_fixture(mock_fixtures_dir: Path) -> None:
     provider = SearchProviderFactory.create(_mock_config(mock_fixtures_dir))
     output = provider.search("quantum gravity", max_results=5)
@@ -123,6 +136,16 @@ def test_tavily_normalization() -> None:
     assert result.source_tier == 3
     assert result.score == 0.85
     assert result.provider_specific.get("published_date") == "2025-06-01"
+
+
+def test_import_tavily_sdk_when_search_extra_installed() -> None:
+    from construct.search.providers.tavily import _import_tavily_sdk
+
+    client_cls, invalid_key, usage_limit, timeout = _import_tavily_sdk()
+    assert client_cls.__name__ == "TavilyClient"
+    assert invalid_key.__name__ == "InvalidAPIKeyError"
+    assert usage_limit.__name__ == "UsageLimitExceededError"
+    assert timeout.__name__ == "TimeoutError"
 
 
 def test_tavily_factory_unavailable_without_sdk(

@@ -51,7 +51,16 @@ class ResearchSearchOutput(BaseModel):
 
 def _safe_error_message(exc: SearchError) -> str:
     if isinstance(exc, AuthError):
-        return "Authentication failed for search provider"
+        if exc.message.startswith("Missing API key environment variable:"):
+            env_name = exc.message.rsplit(":", maxsplit=1)[-1].strip()
+            return (
+                f"Environment variable {env_name} is not set. "
+                f"Export it in this shell: export {env_name}='your-key'"
+            )
+        return (
+            "Authentication failed for search provider — "
+            "check that the API key env var is set and valid"
+        )
     return exc.message
 
 

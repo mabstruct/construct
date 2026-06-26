@@ -28,6 +28,7 @@ def test_template_round_trip() -> None:
     assert "mock" in config.providers
     assert "tavily" in config.providers
     assert config.providers["mock"].type == "mock"
+    assert config.providers["mock"].fixture_dir == "builtin"
     assert config.providers["tavily"].type == "tavily"
     assert config.providers["tavily"].api_key_env == "TAVILY_API_KEY"
     assert config.caps.max_results_per_query == 5
