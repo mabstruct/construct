@@ -22,6 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 search = ["tavily-python>=0.7,<1"]
+llm-openai = ["langchain-openai>=1.2,<2"]
 
 [project.scripts]
 construct = "construct.cli:main"
