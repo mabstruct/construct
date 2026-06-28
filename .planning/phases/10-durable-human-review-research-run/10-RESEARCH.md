@@ -476,17 +476,17 @@ def _research_run_shim(*args, **kwargs):
 | A5 | `langgraph-checkpoint-sqlite` 2.x is API-compatible with `langgraph` 1.2.4 / `langgraph-checkpoint` 4.1.1. | Standard Stack | Medium — verify at install (slopcheck was unavailable). Same monorepo release line; expected compatible. Gate with the install checkpoint. |
 | A6 | Gate-decision events should use `EventAgent.human` (or `researcher`); existing `gate_review._log_gate_event` uses `EventAgent.construct`. | Reused Outputs D-11 | Low — cosmetic; reuse existing protocol's agent for consistency unless planner prefers `human`. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact digest record store path (A1).**
+1. **Exact digest record store path (A1).** RESOLVED: `digests/digests.json` (Plan 04 Task 2 specifies it; verifier asserts the path).
    - Known: markdown → `digests/<id>.md`; schema → `views.models.DigestRecord`/`DigestsFile`; `digests/` is an allowed derived dir.
    - Unclear: filename/location of the JSON record store (no SOT precedent).
    - Recommendation: `digests/digests.json`; planner confirms and the verifier asserts the path.
 
-2. **`run_id` / `gate_id` scheme and how `research.review`/`research.inspect` receive it.**
+2. **`run_id` / `gate_id` scheme and how `research.review`/`research.inspect` receive it.** RESOLVED: `run_id` = timestamp + short random, generated on `research.run`, surfaced in the result and used as the `thread_id`; `review`/`inspect` take `--run-id` (Plan 03 Task 2).
    - Recommendation: generate a `run_id` (timestamp + short random) on `research.run`; surface it in the result; `review`/`inspect` take `--run-id`/`run_id` as the `thread_id`. One `gate_id` per run (single gate this phase).
 
-3. **`.construct/` gitignore status.**
+3. **`.construct/` gitignore status.** RESOLVED: `.construct/` git-ignored via the `.gitignore` rule added in Plan 01 Task 2 (verified by grep).
    - Recommendation: planner verifies `.construct/workflow/*.sqlite` and `.construct/research/rejected.json` are git-ignored (the SQLite DB must not be committed).
 
 ## Environment Availability
