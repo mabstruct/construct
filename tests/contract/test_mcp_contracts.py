@@ -68,6 +68,7 @@ def test_mcp_tool_count() -> None:
         "construct_ask_domain",
         "construct_bridge_detect",
         "construct_research_search",
+        "construct_research_score",
     }
     assert tool_names == expected
 
@@ -121,6 +122,10 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         "construct_research_search": {
             "workspace_path": ws,
             "query": "contract test query",
+        },
+        "construct_research_score": {
+            "workspace_path": ws,
+            "results": [],
         },
     }
     return payloads[tool_name]
