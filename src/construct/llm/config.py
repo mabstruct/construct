@@ -25,6 +25,7 @@ class GateConfig(BaseModel):
     provider: str = "anthropic"
     temperature: float = 0.2
     review_required: bool = True
+    concurrency_cap: int = 5
 
 
 class LlmConfig(BaseModel):
@@ -37,6 +38,7 @@ class LlmConfig(BaseModel):
     })
     gates: dict[str, GateConfig] = Field(default_factory=lambda: {
         "ask.domain": GateConfig(),
+        "research.score": GateConfig(),
     })
 
 

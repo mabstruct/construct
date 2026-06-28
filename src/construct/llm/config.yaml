@@ -23,3 +23,8 @@ gates:
     provider: anthropic
     temperature: 0.2
     review_required: true
+  research.score:
+    provider: anthropic
+    temperature: 0.2
+    review_required: true
+    concurrency_cap: 5
