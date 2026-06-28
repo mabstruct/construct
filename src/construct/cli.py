@@ -406,6 +406,13 @@ research_app = typer.Typer(
 )
 app.add_typer(research_app)
 
+curation_app = typer.Typer(
+    no_args_is_help=True,
+    name="curation",
+    help="Run deterministic curation maintenance checks (read-only).",
+)
+app.add_typer(curation_app)
+
 
 @research_app.command(name="search")
 def research_search_cmd(
@@ -678,6 +685,78 @@ def research_inspect_cmd(
 
     result = cap.handler(**handler_kwargs)
     _emit_run_result(result, json_output)
+
+
+# ---------------------------------------------------------------------------
+# Curation command group (Phase 11)
+# ---------------------------------------------------------------------------
+
+
+def _render_curation_result(data: dict[str, Any]) -> None:
+    """Human-readable CurationRunResult summary: run status, run_id, and a
+    per-step line (step name, status, one-line summary) so the user can VISUALLY
+    distinguish completed vs degraded vs skipped steps (criterion #2)."""
+    typer.echo(f"status: {data.get('status', '')}")
+    typer.echo(f"run_id: {data.get('run_id', '')}")
+    steps = data.get("steps") or []
+    for step in steps:
+        name = step.get("step", "")
+        status = step.get("status", "")
+        summary = step.get("summary", "") or step.get("reason", "") or ""
+        line = f"  - {name}: {status}"
+        if summary:
+            line += f" — {summary}"
+        typer.echo(line)
+    events = data.get("events") or []
+    if events:
+        typer.echo(f"events: {', '.join(events)}")
+
+
+def _emit_curation_result(result: OperationResult, json_output: bool) -> None:
+    """Render a curation OperationResult: full-fidelity JSON passthrough, or the
+    curation per-step table on success / the generic error render on failure."""
+    if json_output:
+        _display_result(result, json_output=True)
+        return
+    if not result.success:
+        _display_result(result, json_output=False)
+        return
+    if result.data:
+        _render_curation_result(result.data)
+    typer.echo(f"✓ {result.message}")
+
+
+@curation_app.command(name="run")
+def curation_run_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Run the deterministic curation cycle (integrity, decay, orphan, connection-health, report)."""
+    try:
+        cap = get_registry().get("curation.run")
+    except KeyError:
+        typer.echo("ERROR: Capability 'curation.run' not found. Ensure Phase 11 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(workspace_path=str(workspace))
+    _emit_curation_result(result, json_output)
+
+
+@curation_app.command(name="inspect")
+def curation_inspect_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: str = typer.Option(..., "--run-id", help="The curation run to inspect"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Report a curation run's persisted state (read-only; never re-runs)."""
+    try:
+        cap = get_registry().get("curation.inspect")
+    except KeyError:
+        typer.echo("ERROR: Capability 'curation.inspect' not found. Ensure Phase 11 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(workspace_path=str(workspace), run_id=run_id)
+    _emit_curation_result(result, json_output)
 
 
 # ---------------------------------------------------------------------------
