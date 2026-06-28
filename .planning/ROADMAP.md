@@ -92,7 +92,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 09-01-PLAN.md — LLM provider factory + ask.domain retrofit + [BLOCKING] regression guard (D-01/D-02)
+- [x] 09-01-PLAN.md — LLM provider factory + ask.domain retrofit + [BLOCKING] regression guard (D-01/D-02)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -188,7 +188,7 @@ Plans:
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
-| 9. LLM Provider Factory + research.score | v0.4 | 0/4 | Not started | - |
+| 9. LLM Provider Factory + research.score | v0.4 | 1/4 | In Progress|  |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
