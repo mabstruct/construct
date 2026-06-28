@@ -46,6 +46,16 @@ from construct.llm.research_score import (
     run_gate as research_score_gate,
 )
 
+# ── Research Run imports (Phase 10) ──
+from construct.llm.research_run import (
+    InspectInput,
+    ResearchRunInput,
+    ReviewInput,
+    inspect_research_run,
+    review_research_run,
+    run_research_run,
+)
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -379,6 +389,38 @@ def create_registry() -> CapabilityRegistry:
         mcp_tool_name="construct_research_score",
     ))
 
+    # ── Durable research-run workflow (Phase 10) ──
+    registry.register(CapabilityRecord(
+        id="research.run",
+        name="Research Run",
+        description="Start a durable, human-gated research cycle (search → score → review); pauses at the review gate, no writes before approval",
+        input_model=ResearchRunInput,
+        output_model=OperationResult,
+        handler=_research_run_shim,
+        cli_name="research.run",
+        mcp_tool_name="construct_research_run",
+    ))
+    registry.register(CapabilityRecord(
+        id="research.review",
+        name="Research Review",
+        description="Resume a paused research run with per-finding decisions (or approve-all/reject-all); writes approved refs/cards and the cycle digest",
+        input_model=ReviewInput,
+        output_model=OperationResult,
+        handler=_research_review_shim,
+        cli_name="research.review",
+        mcp_tool_name="construct_research_review",
+    ))
+    registry.register(CapabilityRecord(
+        id="research.inspect",
+        name="Research Inspect",
+        description="Report a research run's pending review state (read-only; never resumes or writes)",
+        input_model=InspectInput,
+        output_model=OperationResult,
+        handler=_research_inspect_shim,
+        cli_name="research.inspect",
+        mcp_tool_name="construct_research_inspect",
+    ))
+
     return registry
 
 
@@ -433,6 +475,67 @@ def _research_score_shim(*args, **kwargs):
         success=True,
         message=message,
         data=output.model_dump(mode="json"),
+    )
+
+
+def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
+    """Run a research-run runner and wrap its ``RunResult`` in a sanitizing
+    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+
+    Mirrors ``_research_score_shim``'s error discipline (T-10-15): a total
+    provider outage → ``success=False`` carrying only ``degraded``/``total_outage``
+    flags (never raw provider text); any other exception → a key-safe sanitized
+    message via ``_safe_scoring_cause`` (never raw ``str(exc)``). On a normal
+    return the result is a success unless the ``RunResult.status`` is ``failed``
+    (e.g. the score gate degraded to a total outage before the gate).
+    """
+    try:
+        result = runner()
+    except ResearchScoreOutageError as exc:
+        return OperationResult(
+            success=False,
+            message=exc.safe_message,
+            data={"degraded": True, "total_outage": True},
+        )
+    except Exception as exc:
+        from construct.llm.research_score import _safe_scoring_cause
+
+        return OperationResult(
+            success=False,
+            message=f"{cap_id} failed: {_safe_scoring_cause(exc)}",
+            data={"degraded": True, "total_outage": False},
+        )
+    return OperationResult(
+        success=result.status != "failed",
+        message=result.message or result.status,
+        data=result.model_dump(mode="json"),
+    )
+
+
+def _research_run_shim(*args, **kwargs):
+    """RT-03 adapter for research.run (run-start; pauses at the human gate)."""
+    if args:
+        raise TypeError("research.run handler requires keyword arguments")
+    return _run_result_to_operation(
+        "research.run", lambda: run_research_run(ResearchRunInput(**kwargs))
+    )
+
+
+def _research_review_shim(*args, **kwargs):
+    """RT-03 adapter for research.review (resume with per-finding decisions)."""
+    if args:
+        raise TypeError("research.review handler requires keyword arguments")
+    return _run_result_to_operation(
+        "research.review", lambda: review_research_run(ReviewInput(**kwargs))
+    )
+
+
+def _research_inspect_shim(*args, **kwargs):
+    """RT-03 adapter for research.inspect (read-only get_state; never resumes)."""
+    if args:
+        raise TypeError("research.inspect handler requires keyword arguments")
+    return _run_result_to_operation(
+        "research.inspect", lambda: inspect_research_run(InspectInput(**kwargs))
     )
 
 
