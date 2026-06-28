@@ -1,6 +1,7 @@
 """LangGraph L2 gate for grounded Q&A with citations (tranche 1)."""
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import Any, TypedDict
@@ -11,6 +12,8 @@ from pydantic import BaseModel, Field
 
 from construct.llm import factory
 from construct.llm.config import ProviderConfig
+
+logger = logging.getLogger(__name__)
 
 
 # ── State schema (TypedDict — LangGraph prefers this over BaseModel) ──
@@ -292,9 +295,12 @@ def extract_citations(state: AskDomainState) -> dict:
         else:
             missing.append(cid)
 
-    # Log missing citations — they won't surface to user
+    # Log missing citations — they won't surface to user. Must NOT print to
+    # stdout: under the MCP stdio server stdout is the JSON-RPC transport, and
+    # an unframed print corrupts the protocol stream (WR-04). Log to stderr via
+    # the logging module instead.
     if missing:
-        print(f"WARNING: cited card IDs not in retrieved set: {missing}")
+        logger.warning("cited card IDs not in retrieved set: %s", missing)
 
     return {
         "citations": citations_list,
