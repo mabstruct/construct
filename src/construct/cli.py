@@ -464,14 +464,21 @@ def _flatten_search_results_payload(payload: Any) -> list[Any]:
         if isinstance(first, dict) and "results" in first and "provider_name" in first:
             flat: list[Any] = []
             for batch in payload:
+                if not isinstance(batch, dict):
+                    raise ValueError("batch entries must be objects with a 'results' array")
                 flat.extend(batch.get("results", []))
             return _validate(flat)
         return _validate(payload)
 
     if isinstance(payload, dict):
         if "batches" in payload:
+            batches = payload["batches"]
+            if not isinstance(batches, builtins.list):
+                raise ValueError("'batches' must be an array of batch objects")
             flat = []
-            for batch in payload["batches"]:
+            for batch in batches:
+                if not isinstance(batch, dict):
+                    raise ValueError("batch entries must be objects with a 'results' array")
                 flat.extend(batch.get("results", []))
             return _validate(flat)
         if "results" in payload:
