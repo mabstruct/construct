@@ -5,17 +5,22 @@ workflow nodes: URL normalization, deterministic ref-ID derivation, title
 fuzzy near-dup detection, and rejected-findings ledger I/O.
 
 These are intentionally stdlib-only and free of LangGraph so they remain
-deterministic and offline-testable. The legacy ``_deduplicate_ref_id()``
-suffixer in ``ingestion.py`` (appends ``-2``/``-3`` on collision) is the D-07
-anti-pattern this module replaces — it MUST NOT be used here, because its
-suffixes duplicate findings on every rerun.
+deterministic and offline-testable. The legacy collision suffixer in
+``ingestion.py`` (appends ``-2``/``-3`` on collision) is the D-07 anti-pattern
+this module replaces — it MUST NOT be used here, because its suffixes duplicate
+findings on every rerun. ID stability comes from hashing the normalized URL
+instead.
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import difflib
 import hashlib
+import json
+from pathlib import Path
 import re
+import sys
 from typing import Iterable
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -96,3 +101,76 @@ def title_is_near_dup(
         if ratio >= threshold:
             return True
     return False
+
+
+# --- rejected-findings ledger (D-06) ---------------------------------------
+#
+# Lives at ``<workspace>/.construct/research/rejected.json`` — a verified
+# non-SOT path (schemas/workspace.py allows ``.construct/**``), so it never
+# trips ``validate_workspace`` and a corrupt/forged ledger cannot masquerade as
+# a real ref under refs/. Reads are missing-file safe so the dedup node never
+# crashes on a fresh workspace (T-10-05).
+
+_EMPTY_LEDGER = {"version": 1, "rejected": []}
+
+
+def rejected_ledger_path(workspace: Path) -> Path:
+    """Return the rejected-ledger path: ``<workspace>/.construct/research/rejected.json``."""
+    return Path(workspace) / ".construct" / "research" / "rejected.json"
+
+
+def load_rejected_ledger(workspace: Path) -> dict:
+    """Load the rejected ledger, returning an empty ledger if absent or unreadable.
+
+    Never raises: a missing or malformed file yields ``{"version": 1,
+    "rejected": []}`` so the dedup node degrades gracefully (T-10-05).
+    """
+    path = rejected_ledger_path(workspace)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"version": 1, "rejected": []}
+    if not isinstance(data, dict) or not isinstance(data.get("rejected"), list):
+        return {"version": 1, "rejected": []}
+    data.setdefault("version", 1)
+    return data
+
+
+def append_rejected(
+    workspace: Path,
+    *,
+    normalized_url: str,
+    gate_id: str,
+    title: str,
+) -> None:
+    """Append a rejected finding to the ledger and persist it.
+
+    Each entry records the normalized URL, the originating ``gate_id``, the
+    title, and a UTC ISO timestamp. Parent directories are created as needed;
+    the ledger is written under ``.construct/research/`` and never inside the
+    SOT trees (refs/cards/digests/log).
+    """
+    ledger = load_rejected_ledger(workspace)
+    ledger["rejected"].append(
+        {
+            "normalized_url": normalized_url,
+            "gate_id": gate_id,
+            "title": title,
+            "rejected_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    path = rejected_ledger_path(workspace)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"WARNING: could not write rejected ledger to {path}: {exc}", file=sys.stderr)
+
+
+def rejected_normalized_urls(ledger: dict) -> set[str]:
+    """Return the set of normalized URLs in *ledger* for dedup filtering (D-06)."""
+    return {
+        entry["normalized_url"]
+        for entry in ledger.get("rejected", [])
+        if "normalized_url" in entry
+    }
