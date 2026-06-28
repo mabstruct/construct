@@ -267,24 +267,124 @@ def test_reject_all_and_approve_all(sample_search_results, scored_findings_batch
     assert len(research_dedup.rejected_normalized_urls(ledger)) == 3
 
 
-@pytest.mark.xfail(reason=_PENDING, strict=False)
-def test_cross_process_resume(test_workspace, sample_search_results, scored_findings_batch, sqlite_checkpointer, monkeypatch):
+def test_cross_process_resume(
+    test_workspace, sample_search_results, scored_findings_batch, sqlite_checkpointer, monkeypatch
+):
     """RSCH-04 / SC3: pause in one SqliteSaver/connection, close it, re-open a
     NEW SqliteSaver on the same DB file — ``get_state`` shows the pending batch
     and resume completes (mirrors ``test_workflow_runner`` r1/r2)."""
-    from construct.llm import research_run  # noqa: F401
+    from construct.llm import research_run
+    from construct.llm import research_score
+    from langgraph.types import Command
 
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    cfg = {"configurable": {"thread_id": "run-xproc"}}
+
+    # ── Process 1: start, pause at the gate, close the connection ──
     saver1, conn1, db_path = sqlite_checkpointer()
-    raise AssertionError("cross-process SqliteSaver resume not implemented yet")
+    graph1 = research_run.build_research_run_graph(saver1)
+    res1 = graph1.invoke(
+        research_run._initial_state(
+            research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-xproc")
+        ),
+        cfg,
+    )
+    assert "__interrupt__" in res1
+    conn1.close()
+
+    # ── Process 2: NEW SqliteSaver on the SAME db file ──
+    saver2, conn2, db_path2 = sqlite_checkpointer()
+    assert db_path2 == db_path
+    graph2 = research_run.build_research_run_graph(saver2)
+    snap = graph2.get_state(cfg)
+    assert snap.next == ("gate_review",)
+    assert snap.values.get("gate_queue"), "pending per-finding batch persisted across processes"
+
+    decisions = [e["decision"] for e in snap.values["gate_queue"]]
+    res2 = graph2.invoke(Command(resume=decisions), cfg)
+    assert graph2.get_state(cfg).next == ()
+    assert res2["status"] == "completed"
+    assert any((test_workspace / "refs").glob("*.json"))
+    assert Path(res2["digest_path"]).exists()
 
 
-@pytest.mark.xfail(reason=_PENDING, strict=False)
-def test_inspect_no_resume(test_workspace, sqlite_checkpointer, monkeypatch):
+def test_inspect_no_resume(
+    test_workspace, sample_search_results, scored_findings_batch, monkeypatch
+):
     """RSCH-04: ``research.inspect`` returns the pending batch via ``get_state``
-    WITHOUT resuming the graph."""
-    from construct.llm import research_run  # noqa: F401
+    WITHOUT resuming the graph (state.next unchanged afterward)."""
+    from construct.llm import research_run
+    from construct.llm import research_score
 
-    raise AssertionError("research.inspect (get_state, no resume) not implemented yet")
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    run = research_run.run_research_run(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-inspect")
+    )
+    assert run.status == "awaiting_review"
+
+    insp = research_run.inspect_research_run(
+        research_run.InspectInput(workspace_path=str(test_workspace), run_id="run-inspect")
+    )
+    assert insp.status == "awaiting_review"
+    assert insp.gate_queue, "inspect surfaces the pending per-finding batch"
+
+    # Inspect must NOT advance the graph or write refs.
+    refs_dir = test_workspace / "refs"
+    assert not refs_dir.exists() or not any(refs_dir.glob("*.json"))
+    insp2 = research_run.inspect_research_run(
+        research_run.InspectInput(workspace_path=str(test_workspace), run_id="run-inspect")
+    )
+    assert insp2.status == "awaiting_review"
+
+
+def test_run_result_fields(
+    test_workspace, sample_search_results, scored_findings_batch, monkeypatch
+):
+    """SC5: the run result exposes status, gate_ids, ref/card counts,
+    digest_path, seed_update status, and an events list."""
+    from construct.llm import research_run
+    from construct.llm import research_score
+
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    start = research_run.run_research_run(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-result")
+    )
+    assert start.status == "awaiting_review"
+    assert start.gate_id == "run-result"
+    assert start.gate_queue
+
+    done = research_run.review_research_run(
+        research_run.ReviewInput(
+            workspace_path=str(test_workspace), run_id="run-result", approve_all=True
+        )
+    )
+    # D-12 / SC5 surface.
+    assert done.status == "completed"
+    assert done.run_id == "run-result"
+    assert done.gate_id == "run-result"
+    assert done.refs_created, "ref count surfaced"
+    assert done.cards_created, "card count surfaced"
+    assert done.digest_path and Path(done.digest_path).exists()
+    assert done.seed_update == "updated"
+    assert "research_cycle_complete" in done.events
 
 
 def test_idempotent_rerun(
@@ -396,15 +496,6 @@ def test_partial_batch_resume_safe(
     # First ref not double-written; batch completed (arxiv ref + blog ref = 2).
     assert len(after_resume) == 2, after_resume
     assert after_crash.issubset(after_resume)
-
-
-@pytest.mark.xfail(reason=_PENDING, strict=False)
-def test_run_result_fields(test_workspace, sample_search_results, scored_findings_batch, monkeypatch):
-    """SC5: the run result exposes status, gate_ids, ref/card counts,
-    digest_path, seed_update status, and an events list."""
-    from construct.llm import research_run  # noqa: F401
-
-    raise AssertionError("RunResult D-12 field surface not implemented yet")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

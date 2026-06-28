@@ -918,3 +918,114 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
         )
     finally:
         conn.close()
+
+
+# ── Review/inspect runners (resume + read-only inspect; cross-process via the DB) ──
+
+
+def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
+    """Assemble the D-12 ``RunResult`` from the final/merged graph state (SC5)."""
+    retrieval = values.get("retrieval", {}) or {}
+    status = values.get("status") or ("completed" if completed else "awaiting_review")
+    return RunResult(
+        status=status,
+        run_id=run_id,
+        gate_id=values.get("gate_id", run_id),
+        gate_queue=values.get("gate_queue", []),
+        refs_created=values.get("refs_created", []),
+        cards_created=values.get("cards_created", []),
+        digest_path=values.get("digest_path"),
+        seed_update=values.get("seed_update"),
+        events=values.get("events", []),
+        degraded=bool(retrieval.get("degraded", False)),
+        message="Run complete." if completed else "Run still awaiting review.",
+    )
+
+
+def _build_resume_decisions(inp: ReviewInput, gate_queue: list[dict]) -> Any:
+    """Translate a ``ReviewInput`` into the per-finding resume payload.
+
+    Explicit ``decisions`` win; otherwise ``reject_all`` → every finding ``skip``,
+    ``approve_all`` → each finding's recommended ``ingest_action`` (the default),
+    and the bare default (no flag) → ``None`` so ``ingest_batch`` uses the per-entry
+    recommended decisions (i.e. the LLM's proposed ingest set).
+    """
+    if inp.decisions is not None:
+        return inp.decisions
+    if inp.reject_all:
+        return ["skip"] * len(gate_queue)
+    if inp.approve_all:
+        return [entry.get("decision", "skip") for entry in gate_queue]
+    return None
+
+
+def review_research_run(inp: ReviewInput) -> RunResult:
+    """Resume a paused run with per-finding decisions and run it to completion.
+
+    Re-opens the SAME persistent checkpointer on the workspace DB, recompiles the
+    graph, and submits ``Command(resume=decisions)`` against ``thread_id=run_id``
+    so the post-gate write nodes execute exactly once. Supports approve-all /
+    reject-all shortcuts (expanded to per-finding decisions). Returns the completed
+    ``RunResult`` (D-12). Closes the sqlite connection in ``finally``.
+    """
+    from langgraph.types import Command
+
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        gate_queue = snap.values.get("gate_queue", []) if snap.values else []
+        decisions = _build_resume_decisions(inp, gate_queue)
+
+        result = graph.invoke(Command(resume=decisions), cfg)
+        final = graph.get_state(cfg)
+        completed = not final.next
+        values = final.values if final.values else result
+        return _completion_result(inp.run_id, values, completed)
+    finally:
+        conn.close()
+
+
+def inspect_research_run(inp: InspectInput) -> RunResult:
+    """Report a run's pending state via ``get_state`` — NEVER resumes (read-only).
+
+    Re-opens the checkpointer on the workspace DB and reads the persisted snapshot
+    for ``thread_id=run_id``. Maps ``snapshot.next``: ``("gate_review",)`` →
+    ``awaiting_review`` (carrying the pending ``gate_queue``), empty → ``completed``
+    (or the terminal ``status``), anything else → ``running``. Performs no writes
+    and does not advance the graph. Closes the sqlite connection in ``finally``.
+    """
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        values = snap.values or {}
+
+        if snap.next == ("gate_review",):
+            status = "awaiting_review"
+            message = "Run is paused awaiting human review."
+        elif not snap.next:
+            status = values.get("status", "completed") if values else "unknown"
+            message = "Run is complete." if values else "No such run."
+        else:
+            status = "running"
+            message = f"Run is running (next: {snap.next})."
+
+        retrieval = values.get("retrieval", {}) or {}
+        return RunResult(
+            status=status,
+            run_id=inp.run_id,
+            gate_id=values.get("gate_id", inp.run_id),
+            gate_queue=values.get("gate_queue", []),
+            refs_created=values.get("refs_created", []),
+            cards_created=values.get("cards_created", []),
+            digest_path=values.get("digest_path"),
+            seed_update=values.get("seed_update"),
+            events=values.get("events", []),
+            degraded=bool(retrieval.get("degraded", False)),
+            message=message,
+        )
+    finally:
+        conn.close()
