@@ -844,3 +844,95 @@ def test_graph_outage_never_pauses(test_workspace, sqlite_checkpointer, monkeypa
 # removed in Plan 04 — the post-gate nodes are now fully implemented (they DO
 # write, but only downstream of the gate interrupt). The enduring invariant
 # (NO writes before approval) is covered by ``test_no_writes_before_approval``.
+
+
+# ── Security + robustness regressions (post-verification gap closure) ──────
+
+
+def test_run_id_rejects_path_traversal():
+    """CR-01: a non-kebab ``run_id`` (path traversal) is rejected at the trust
+    boundary on every input model, so it can never reach the digest file path."""
+    import pytest as _pytest
+    from pydantic import ValidationError
+
+    from construct.llm import research_run
+
+    evil = "../../../../tmp/evil"
+    with _pytest.raises(ValidationError):
+        research_run.ResearchRunInput(workspace_path="/ws", run_id=evil)
+    with _pytest.raises(ValidationError):
+        research_run.ReviewInput(workspace_path="/ws", run_id=evil)
+    with _pytest.raises(ValidationError):
+        research_run.InspectInput(workspace_path="/ws", run_id=evil)
+
+    # The run-start default (run_id=None) stays valid.
+    assert research_run.ResearchRunInput(workspace_path="/ws").run_id is None
+
+
+def test_generated_run_id_is_kebab_safe():
+    """CR-01: the auto-generated handle satisfies the same kebab invariant the
+    validator enforces, so re-validation inside ``run_research_run`` never trips."""
+    from construct.llm import research_run
+    from construct.schemas.config import KEBAB_CASE_PATTERN
+
+    rid = research_run._new_run_id()
+    assert KEBAB_CASE_PATTERN.fullmatch(rid) is not None, rid
+    # And it round-trips through the validated input model.
+    assert research_run.ResearchRunInput(workspace_path="/ws", run_id=rid).run_id == rid
+
+
+def test_inspect_nonexistent_run_reports_failed(tmp_path):
+    """WR-03: inspecting a run that does not exist returns ``status='failed'`` so
+    the catalog shim maps it to ``success=False`` (not a misleading success)."""
+    from construct.llm import research_run
+
+    insp = research_run.inspect_research_run(
+        research_run.InspectInput(workspace_path=str(tmp_path), run_id="run-nope")
+    )
+    assert insp.status == "failed"
+
+
+def test_review_does_not_resume_completed_run(
+    test_workspace, sample_search_results, scored_findings_batch, monkeypatch
+):
+    """WR-05: re-reviewing an already-completed run is a no-op — it must NOT
+    re-execute the post-gate write nodes (no duplicate events / re-stamped seeds)."""
+    from construct.llm import research_run
+    from construct.llm import research_score
+
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    research_run.run_research_run(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-twice")
+    )
+    first = research_run.review_research_run(
+        research_run.ReviewInput(
+            workspace_path=str(test_workspace), run_id="run-twice", approve_all=True
+        )
+    )
+    assert first.status == "completed"
+    first_events = list(first.events)
+
+    # Second review of the now-completed run must not re-run the write nodes.
+    second = research_run.review_research_run(
+        research_run.ReviewInput(
+            workspace_path=str(test_workspace), run_id="run-twice", approve_all=True
+        )
+    )
+    assert second.status == "completed"
+    assert second.events == first_events, "completed run must not re-emit events"
+
+
+def test_review_nonexistent_run_reports_failed(tmp_path):
+    """WR-05: reviewing a run_id with no paused state returns failed, not a resume."""
+    from construct.llm import research_run
+
+    res = research_run.review_research_run(
+        research_run.ReviewInput(workspace_path=str(tmp_path), run_id="run-ghost", approve_all=True)
+    )
+    assert res.status == "failed"

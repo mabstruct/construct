@@ -149,8 +149,14 @@ def append_rejected(
     title, and a UTC ISO timestamp. Parent directories are created as needed;
     the ledger is written under ``.construct/research/`` and never inside the
     SOT trees (refs/cards/digests/log).
+
+    Idempotent (WR-01/RSCH-05): if *normalized_url* is already recorded, this is
+    a no-op so a crash+resume that re-runs ``ingest_batch`` never grows the
+    ledger with duplicate entries for the same rejected finding.
     """
     ledger = load_rejected_ledger(workspace)
+    if normalized_url in rejected_normalized_urls(ledger):
+        return
     ledger["rejected"].append(
         {
             "normalized_url": normalized_url,

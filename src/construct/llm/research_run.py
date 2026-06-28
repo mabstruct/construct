@@ -39,12 +39,30 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from construct.schemas.config import KEBAB_CASE_PATTERN
 
 logger = logging.getLogger(__name__)
 
 # Title fuzzy near-dup threshold (D-05 — basic this phase).
 _TITLE_FUZZY_THRESHOLD = 0.90
+
+
+def _validate_run_id(value: str | None) -> str | None:
+    """Reject any ``run_id`` that is not kebab-case (CR-01 trust-boundary guard).
+
+    ``run_id`` is interpolated into the digest filename (``digest-{run_id}.md``)
+    and used as the LangGraph ``thread_id``. The MCP shims pass caller-supplied
+    ``**kwargs`` straight into the input models, so an unvalidated value such as
+    ``"../../../tmp/evil"`` would escape the workspace. Constraining it to
+    ``KEBAB_CASE_PATTERN`` ([a-z0-9] segments joined by single hyphens) makes
+    path traversal impossible at the boundary; ``None`` is allowed (run-start
+    auto-generates a safe id).
+    """
+    if value is not None and KEBAB_CASE_PATTERN.fullmatch(value) is None:
+        raise ValueError("run_id must be kebab-case ([a-z0-9] segments joined by single hyphens)")
+    return value
 
 
 # ── State schema (TypedDict — LangGraph prefers this; plain serializable data ONLY) ──
@@ -95,6 +113,8 @@ class ResearchRunInput(BaseModel):
     run_id: str | None = None
     provider_override: str | None = None
 
+    _check_run_id = field_validator("run_id")(_validate_run_id)
+
 
 class ReviewInput(BaseModel):
     """Input for ``research.review`` (resume with per-finding decisions, Plan 04)."""
@@ -106,6 +126,8 @@ class ReviewInput(BaseModel):
     approve_all: bool = False
     reject_all: bool = False
 
+    _check_run_id = field_validator("run_id")(_validate_run_id)
+
 
 class InspectInput(BaseModel):
     """Input for ``research.inspect`` (read pending batch via ``get_state``, Plan 04)."""
@@ -113,6 +135,8 @@ class InspectInput(BaseModel):
     model_config = {"extra": "forbid"}
     workspace_path: str
     run_id: str
+
+    _check_run_id = field_validator("run_id")(_validate_run_id)
 
 
 class GateQueueEntry(BaseModel):
@@ -154,8 +178,13 @@ class RunResult(BaseModel):
 
 
 def _new_run_id() -> str:
-    """Generate a sortable run/gate handle: UTC timestamp + short random suffix."""
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    """Generate a sortable, kebab-safe run/gate handle: UTC timestamp + random suffix.
+
+    The stamp uses ``-`` (not ISO ``T``) between date and time so the handle
+    satisfies ``KEBAB_CASE_PATTERN`` — the same invariant ``_validate_run_id``
+    enforces on caller-supplied ids (CR-01).
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     return f"run-{stamp}-{secrets.token_hex(3)}"
 
 
@@ -679,7 +708,12 @@ def compile_digest(state: ResearchRunState) -> dict:
 
     digests_dir = workspace / "digests"
     digests_dir.mkdir(parents=True, exist_ok=True)
-    md_path = digests_dir / f"{digest_id}.md"
+    # CR-01 defense-in-depth: run_id is already kebab-validated at the input
+    # boundary, but re-check the resolved path stays inside digests/ so a future
+    # caller that bypasses the model validators still cannot escape the workspace.
+    md_path = (digests_dir / f"{digest_id}.md").resolve()
+    if not str(md_path).startswith(str(digests_dir.resolve()) + "/"):
+        raise ValueError("digest path escapes the workspace digests directory")
     md_path.write_text(markdown, encoding="utf-8")
 
     store_path = digests_dir / "digests.json"
@@ -975,6 +1009,20 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         graph = build_research_run_graph(saver)
         cfg = {"configurable": {"thread_id": inp.run_id}}
         snap = graph.get_state(cfg)
+        # WR-05: only resume a run that is actually paused at the gate. Resuming a
+        # completed run would re-execute the post-gate write nodes, re-emitting
+        # D-11 audit events and re-stamping seed timestamps; a nonexistent run has
+        # nothing to resume at all.
+        if snap.next != ("gate_review",):
+            values = snap.values or {}
+            if values and not snap.next:
+                return _completion_result(inp.run_id, values, True)
+            return RunResult(
+                status="failed",
+                run_id=inp.run_id,
+                gate_id=values.get("gate_id", inp.run_id) if values else inp.run_id,
+                message="No paused run awaiting review for this run_id.",
+            )
         gate_queue = snap.values.get("gate_queue", []) if snap.values else []
         decisions = _build_resume_decisions(inp, gate_queue)
 
@@ -1007,7 +1055,10 @@ def inspect_research_run(inp: InspectInput) -> RunResult:
             status = "awaiting_review"
             message = "Run is paused awaiting human review."
         elif not snap.next:
-            status = values.get("status", "completed") if values else "unknown"
+            # WR-03: a nonexistent run has no persisted values — report it as
+            # failed (not "unknown") so the catalog shim maps it to success=False
+            # rather than a misleading successful OperationResult.
+            status = values.get("status", "completed") if values else "failed"
             message = "Run is complete." if values else "No such run."
         else:
             status = "running"

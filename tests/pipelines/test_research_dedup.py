@@ -147,6 +147,17 @@ def test_rejected_append_is_cumulative(tmp_path: Path) -> None:
     }
 
 
+def test_rejected_append_is_idempotent(tmp_path: Path) -> None:
+    """WR-01/RSCH-05: re-appending the same normalized URL is a no-op, so a
+    crash+resume that re-runs ingest never grows the ledger with duplicates."""
+    url = normalize_url("https://example.com/a")
+    append_rejected(tmp_path, normalized_url=url, gate_id="run-1", title="A")
+    append_rejected(tmp_path, normalized_url=url, gate_id="run-1", title="A again")
+    ledger = load_rejected_ledger(tmp_path)
+    assert len(ledger["rejected"]) == 1
+    assert rejected_normalized_urls(ledger) == {url}
+
+
 def test_rejected_normalized_urls_returns_set() -> None:
     ledger = {"version": 1, "rejected": [{"normalized_url": "https://e.com/a"}]}
     result = rejected_normalized_urls(ledger)
