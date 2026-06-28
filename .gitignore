@@ -10,3 +10,7 @@ tests/fixtures/v02/*/views/
 
 # Scratch / local secrets
 tmp/
+
+# Orchestration state (non-SOT): LangGraph SQLite checkpoint DB + rejected ledger.
+# Covers .construct/workflow/research-run.sqlite and .construct/research/rejected.json (D-02).
+.construct/

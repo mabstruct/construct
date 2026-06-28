@@ -76,7 +76,7 @@ Explicitly excluded from v0.4 Agent Workflows to prevent scope creep.
 |---------|--------|
 | Browser-primary product UI | v0.5 depends on stable v0.4 workflow capabilities first. |
 | HTTP API, MCP SSE, cloud deploy, auth, or multi-user runtime | v0.4 is local-first workflow hardening through existing CLI/MCP/Streamlit surfaces. |
-| SQLite, vector database, queue workers, or crawler stack | File workspace, provider fixtures, and governed ingest are sufficient for v0.4. |
+| Vector database, queue workers, or crawler stack | File workspace, provider fixtures, and governed ingest are sufficient for v0.4. **SQLite carve-out (D-02, RSCH-04):** SQLite is permitted as the LangGraph orchestration/checkpoint store under `.construct/` for `research.run` workflow state ONLY (durable human-review resume). The canonical SOT (cards/refs/connections/search-seeds/events/digests) stays file-based — no database owns any facts. |
 | Full co-authorship graph | Depends on stable research, curation, review, and daily-cycle foundations. |
 | Broad RT-01/RT-02 registry cleanup | Tracked separately unless a specific command path blocks v0.4 workflow delivery. |
 | Full views data emission | Optional warning-only refresh hook is acceptable; full emission is a separate track. |
