@@ -39,6 +39,13 @@ from construct.pipelines.bridge_detect import bridge_detect
 # ── Research Search imports (Phase 8) ──
 from construct.pipelines.research_search import ResearchSearchInput, research_search
 
+# ── Research Score imports (Phase 9) ──
+from construct.llm.research_score import (
+    ResearchScoreInput,
+    ResearchScoreOutageError,
+    run_gate as research_score_gate,
+)
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -361,6 +368,17 @@ def create_registry() -> CapabilityRegistry:
         mcp_tool_name="construct_research_search",
     ))
 
+    registry.register(CapabilityRecord(
+        id="research.score",
+        name="Research Score",
+        description="Score normalized search results into governance-aware finding proposals (read-only, no writes)",
+        input_model=ResearchScoreInput,
+        output_model=OperationResult,
+        handler=_research_score_shim,
+        cli_name="research.score",
+        mcp_tool_name="construct_research_score",
+    ))
+
     return registry
 
 
@@ -378,6 +396,30 @@ def _research_search_shim(*args, **kwargs):
     if args:
         return research_search(ResearchSearchInput(workspace_path=str(args[0]), query=str(args[1])))
     return research_search(ResearchSearchInput(**kwargs))
+
+
+def _research_score_shim(*args, **kwargs):
+    """RT-03 adapter for research.score."""
+    if args:
+        raise TypeError("research.score handler requires keyword arguments")
+    input_data = ResearchScoreInput(**kwargs)
+    try:
+        output = research_score_gate("research.score", input_data)
+    except ResearchScoreOutageError as exc:
+        return OperationResult(
+            success=False,
+            message=exc.safe_message,
+            data={"degraded": True, "total_outage": True},
+        )
+    degraded = bool(output.retrieval.get("degraded"))
+    message = f"Scored {len(output.findings)} findings"
+    if degraded:
+        message += " (degraded)"
+    return OperationResult(
+        success=True,
+        message=message,
+        data=output.model_dump(mode="json"),
+    )
 
 
 def _create_card_shim(*args, **kwargs):
