@@ -1,7 +1,9 @@
 """Shared fixtures for ask.domain and research.score tests."""
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -185,8 +187,17 @@ def write_card(workspace: Path, card_id: str, *,
                confidence: int = 3,
                source_tier: int = 3,
                lifecycle: str = "seed",
-               content_categories: list[str] | None = None) -> None:
-    """Write a card fixture to the workspace."""
+               content_categories: list[str] | None = None,
+               created: str = "2025-01-01",
+               last_verified: str | None = None) -> None:
+    """Write a card fixture to the workspace.
+
+    ``created`` and ``last_verified`` control the recency anchors decay-scan and
+    orphan-scan compare against governance thresholds (Phase 11). Both default to
+    the pre-existing behaviour: ``created`` stays ``2025-01-01`` and the
+    ``last_verified:`` frontmatter line is omitted unless a value is supplied, so
+    callers that do not pass them produce byte-identical card output.
+    """
     categories = content_categories or ["test-category"]
     display_title = title or card_id.title()
     frontmatter = (
@@ -194,7 +205,11 @@ def write_card(workspace: Path, card_id: str, *,
         f"id: {card_id}\n"
         f"title: {display_title}\n"
         f"epistemic_type: finding\n"
-        f"created: 2025-01-01\n"
+        f"created: {created}\n"
+    )
+    if last_verified is not None:
+        frontmatter += f"last_verified: {last_verified}\n"
+    frontmatter += (
         f"confidence: {confidence}\n"
         f"source_tier: {source_tier}\n"
         f"domains:\n"
@@ -228,6 +243,72 @@ def test_workspace(tmp_path: Path) -> Path:
     write_card(ws, "card-1", title="Test Card One", body="Content about testing methods and approaches.")
     write_card(ws, "card-2", title="Test Card Two", body="Different content covering test validation patterns.")
     write_card(ws, "card-3", title="Archived Card", body="Old content.", lifecycle="archived")
+    return ws
+
+
+# ── Phase 11: curation.run decay/orphan determinism fixture (Wave 0) ──
+
+
+# The full closed ``ConnectionType`` enum (schemas/workspace.py:29-39). The
+# canonical edge list lives at ``connections.json`` at the WORKSPACE ROOT — the
+# path ``WorkspaceLoader.load_connections`` reads — not under a ``connections/``
+# subdirectory.
+_CONNECTION_TYPES = [
+    "supports", "contradicts", "extends", "parallels", "requires",
+    "enables", "challenges", "inspires", "gap-for",
+]
+
+
+@pytest.fixture
+def curation_workspace(tmp_path: Path) -> Path:
+    """Deterministic workspace for decay/orphan threshold testing (Phase 11).
+
+    Builds four cards whose recency anchors are computed RELATIVE to
+    ``date.today()`` so the fixture never drifts inside the governance windows
+    (default decay window 28d, orphan tolerance 7d):
+
+    - ``fresh-card``           — created yesterday → NOT a decay candidate, NOT an orphan.
+    - ``stale-orphan-card``    — created 400d ago, degree 0 → BOTH a decay AND an orphan candidate.
+    - ``stale-connected-card`` — created 400d ago, degree 1 → a decay candidate but NOT an orphan.
+    - ``stale-archived-card``  — created 400d ago, ``lifecycle=archived`` → EXCLUDED from both scans.
+
+    A single ``ConnectionRecord`` links ``stale-connected-card`` (``from``) to
+    ``fresh-card`` (``to``); degree counting must therefore credit BOTH endpoints
+    (Pitfall 3) so ``fresh-card`` is non-orphan by virtue of being a target.
+    """
+    ws = tmp_path / "curation-workspace"
+    create_test_workspace(ws)
+
+    today = date.today()
+    fresh = (today - timedelta(days=1)).isoformat()
+    stale = (today - timedelta(days=400)).isoformat()
+
+    write_card(ws, "fresh-card", title="Fresh Card",
+               body="Recently created card; not a decay or orphan candidate.", created=fresh)
+    write_card(ws, "stale-orphan-card", title="Stale Orphan Card",
+               body="Old and unconnected; a decay and orphan candidate.", created=stale)
+    write_card(ws, "stale-connected-card", title="Stale Connected Card",
+               body="Old but connected; decay-eligible, not an orphan.", created=stale)
+    write_card(ws, "stale-archived-card", title="Stale Archived Card",
+               body="Old and archived; excluded from both scans.", created=stale,
+               lifecycle="archived")
+
+    connections = {
+        "version": 1,
+        "updated": today.isoformat(),
+        "connection_types": list(_CONNECTION_TYPES),
+        "connections": [
+            {
+                "from": "stale-connected-card",
+                "to": "fresh-card",
+                "type": "supports",
+                "created": today.isoformat(),
+                "created_by": "curator",
+                "note": "links the connected stale card to the fresh card",
+            }
+        ],
+    }
+    (ws / "connections.json").write_text(json.dumps(connections, indent=2) + "\n", encoding="utf-8")
     return ws
 
 
