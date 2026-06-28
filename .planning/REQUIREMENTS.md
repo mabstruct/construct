@@ -20,10 +20,10 @@ Requirements for the v0.4 Agent Workflows milestone. Each requirement maps to ex
 ### Research Workflow
 
 - [x] **RSCH-01**: User can run `research.score` through the CONSTRUCT CLI/MCP surface to convert normalized search results into structured, governance-aware finding proposals with relevance, source tier, ingest action, and reasoning.
-- [ ] **RSCH-02**: User can run `research.run` through the CONSTRUCT CLI/MCP surface to execute search, deduplication, scoring, review, approved ingest, digest creation, seed updates, and event logging as one workflow.
-- [ ] **RSCH-03**: User can review, approve, or reject research findings before any refs, cards, seed timestamps, or digest artifacts are written.
-- [ ] **RSCH-04**: User can resume or inspect a paused research workflow with pending review state preserved across process restarts.
-- [ ] **RSCH-05**: Rerunning a research workflow is idempotent for duplicate URLs, duplicate refs, rejected findings, and partially completed batches.
+- [x] **RSCH-02**: User can run `research.run` through the CONSTRUCT CLI/MCP surface to execute search, deduplication, scoring, review, approved ingest, digest creation, seed updates, and event logging as one workflow.
+- [x] **RSCH-03**: User can review, approve, or reject research findings before any refs, cards, seed timestamps, or digest artifacts are written.
+- [x] **RSCH-04**: User can resume or inspect a paused research workflow with pending review state preserved across process restarts.
+- [x] **RSCH-05**: Rerunning a research workflow is idempotent for duplicate URLs, duplicate refs, rejected findings, and partially completed batches.
 
 ### Curation Workflow
 
@@ -93,10 +93,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-03 | Phase 8 | Pending |
 | SRCH-04 | Phase 8 | Pending |
 | RSCH-01 | Phase 9 | Complete |
-| RSCH-02 | Phase 10 | Pending |
-| RSCH-03 | Phase 10 | Pending |
-| RSCH-04 | Phase 10 | Pending |
-| RSCH-05 | Phase 10 | Pending |
+| RSCH-02 | Phase 10 | Complete |
+| RSCH-03 | Phase 10 | Complete |
+| RSCH-04 | Phase 10 | Complete |
+| RSCH-05 | Phase 10 | Complete |
 | CUR-01 | Phase 11 | Pending |
 | CUR-02 | Phase 12 | Pending |
 | CUR-03 | Phase 12 | Pending |
