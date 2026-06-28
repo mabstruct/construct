@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: ready_to_plan
-stopped_at: Phase 10 complete (5/5) — ready to discuss Phase 11
-last_updated: 2026-06-28T18:19:46.070Z
-last_activity: 2026-06-28 -- Phase 10 execution started
+status: planning
+stopped_at: Phase 11 context gathered
+last_updated: "2026-06-28T19:09:40.760Z"
+last_activity: 2026-06-28
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
   completed_plans: 12
-  percent: 33
+  percent: 50
 ---
 
 # Project State
@@ -159,6 +159,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-28T12:32:04.465Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-durable-human-review-research-run/10-CONTEXT.md
+Last session: 2026-06-28T19:09:40.752Z
+Stopped at: Phase 11 context gathered
+Resume file: .planning/phases/11-curation-pipe-steps/11-CONTEXT.md
