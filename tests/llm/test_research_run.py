@@ -96,3 +96,237 @@ def test_run_result_fields(test_workspace, sample_search_results, scored_finding
     from construct.llm import research_run  # noqa: F401
 
     raise AssertionError("RunResult D-12 field surface not implemented yet")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 03 Task 1 — state schema, in-module I/O models, pre-gate nodes (GREEN)
+# ─────────────────────────────────────────────────────────────────────────────
+
+import json
+
+
+def _add_cluster(workspace, **cluster):
+    seeds_path = workspace / "search-seeds.json"
+    seeds = json.loads(seeds_path.read_text(encoding="utf-8"))
+    seeds["clusters"].append(cluster)
+    seeds_path.write_text(json.dumps(seeds, indent=2) + "\n", encoding="utf-8")
+
+
+def _search_result_dict(url, title, *, tier=3, score=0.5):
+    return {
+        "title": title,
+        "url": url,
+        "snippet": "snippet",
+        "source_tier": tier,
+        "score": score,
+        "provider_specific": {},
+        "source_domain": None,
+    }
+
+
+def test_models_defined_in_module():
+    """The I/O models live in research_run, NOT catalog.py (avoid circular import)."""
+    from construct.llm import research_run
+
+    for name in [
+        "ResearchRunInput",
+        "ReviewInput",
+        "InspectInput",
+        "RunResult",
+        "GateQueueEntry",
+        "ResearchRunState",
+    ]:
+        assert hasattr(research_run, name), f"missing model/type: {name}"
+    # ResearchRunState must be a TypedDict (plain serializable channels).
+    assert research_run.ResearchRunState.__class__.__name__ in {"_TypedDictMeta", "type"}
+
+
+def test_models_state_holds_no_nonserializable_defaults():
+    """A fresh state dict holds only plain serializable data (Pitfall 3)."""
+    from construct.llm import research_run
+
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path="/tmp/ws", run_id="run-x")
+    )
+    # Round-trips through JSON → proves no WorkspaceLoader / client / sqlite conn.
+    json.dumps(state)
+
+
+def test_build_queries_excludes_non_active(test_workspace):
+    """Paused/exhausted clusters and empty-term reserved clusters are excluded."""
+    from construct.llm import research_run
+
+    _add_cluster(
+        test_workspace,
+        id="paused-topic",
+        domain="test-domain",
+        terms=["paused term"],
+        weight=0.5,
+        status="paused",
+        last_queried=None,
+    )
+    _add_cluster(
+        test_workspace,
+        id="active-two",
+        domain="test-domain",
+        terms=["second active term"],
+        weight=0.5,
+        status="active",
+        last_queried=None,
+    )
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-x")
+    )
+    state.update(research_run.load_config(state))
+    out = research_run.build_queries(state)
+
+    assert "paused-topic" not in out["queried_clusters"]
+    # reserved empty-term ingest clusters never become queries
+    assert "manual-ingest" not in out["queried_clusters"]
+    assert "web-ingest" not in out["queried_clusters"]
+    # active clusters with terms are queried
+    assert "active-two" in out["queried_clusters"]
+    assert "test-domain-seed" in out["queried_clusters"]
+    assert len(out["queries"]) == len(out["queried_clusters"])
+
+
+def test_build_queries_respects_max_papers_per_cycle(test_workspace):
+    """The query list is capped at governance max_papers_per_cycle."""
+    from construct.llm import research_run
+
+    for i in range(4):
+        _add_cluster(
+            test_workspace,
+            id=f"topic-{i}",
+            domain="test-domain",
+            terms=[f"term {i}"],
+            weight=0.5,
+            status="active",
+            last_queried=None,
+        )
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-x")
+    )
+    state.update(research_run.load_config(state))
+    state["max_papers_per_cycle"] = 2
+    out = research_run.build_queries(state)
+    assert len(out["queries"]) == 2
+
+
+def test_deduplicate_filters_existing_refs_ledger_fuzzy_and_inbatch(test_workspace):
+    """deduplicate drops refs/ URLs, ledger URLs, in-batch dups, and title fuzzy."""
+    from construct.llm import research_run
+    from construct.pipelines import research_dedup
+
+    refs = test_workspace / "refs"
+    refs.mkdir(exist_ok=True)
+    existing_url = "https://arxiv.org/abs/2401.00001"
+    (refs / "existing-ref.json").write_text(
+        json.dumps(
+            {
+                "id": "existing-ref",
+                "title": "Loop Quantum Gravity and the Big Bounce",
+                "url": existing_url,
+                "relevance_score": 0.9,
+                "key_findings": [],
+                "content_categories": [],
+                "source_tier": 2,
+                "extraction_status": "complete",
+                "ingested_date": "2026-01-01",
+                "domain": "test-domain",
+                "search_cluster": "test-domain-seed",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    research_dedup.append_rejected(
+        test_workspace,
+        normalized_url=research_dedup.normalize_url("https://shop.test/widgets"),
+        gate_id="run-x",
+        title="Unrelated marketing page",
+    )
+
+    candidates = [
+        # normalized-URL + title-fuzzy dup of an existing ref (tracking param stripped)
+        _search_result_dict(
+            "https://arxiv.org/abs/2401.00001?utm_source=newsletter",
+            "Loop Quantum Gravity and the Big Bounce",
+            tier=2,
+            score=0.9,
+        ),
+        # in the rejected ledger
+        _search_result_dict("https://shop.test/widgets", "Unrelated marketing page", tier=5, score=0.1),
+        # brand-new finding (kept)
+        _search_result_dict("https://new.test/article", "A brand new finding", tier=3, score=0.6),
+        # in-batch duplicate of the previous (dropped)
+        _search_result_dict("https://new.test/article", "A brand new finding", tier=3, score=0.6),
+    ]
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-x")
+    )
+    state["search_results"] = candidates
+    out = research_run.deduplicate(state)
+    urls = [c["url"] for c in out["deduped"]]
+
+    assert urls.count("https://new.test/article") == 1
+    assert all("arxiv.org" not in u for u in urls)
+    assert all("shop.test" not in u for u in urls)
+
+
+def test_score_and_extract_catches_outage_before_gate(test_workspace, monkeypatch):
+    """ResearchScoreOutageError is caught → status failed, no raise, no gate_queue."""
+    from construct.llm import research_run
+    from construct.llm import research_score
+
+    def _boom(gate_id, input_data, *, config_path=None):
+        raise research_score.ResearchScoreOutageError(
+            "All scoring requests failed due to provider authentication error"
+        )
+
+    monkeypatch.setattr(research_score, "run_gate", _boom)
+
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-x")
+    )
+    state["gate_id"] = "run-x"
+    state["deduped"] = [_search_result_dict("https://arxiv.org/abs/2401.00001", "LQG")]
+
+    out = research_run.score_and_extract(state)
+    assert out["status"] == "failed"
+    assert out["retrieval"]["total_outage"] is True
+    assert out["gate_queue"] == []
+
+
+def test_score_and_extract_carries_degraded_and_builds_queue(
+    test_workspace, scored_findings_batch, monkeypatch
+):
+    """Degraded signal is carried and gate_queue default decision = ingest_action."""
+    from construct.llm import research_run
+    from construct.llm import research_score
+
+    degraded = scored_findings_batch.model_copy(
+        update={
+            "retrieval": {
+                **scored_findings_batch.retrieval,
+                "degraded": True,
+                "retried": 1,
+                "errors": 1,
+            }
+        }
+    )
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: degraded)
+
+    state = research_run._initial_state(
+        research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-x")
+    )
+    state["gate_id"] = "run-x"
+    state["deduped"] = [_search_result_dict("https://arxiv.org/abs/2401.00001", "LQG")]
+
+    out = research_run.score_and_extract(state)
+    assert out["status"] != "failed"
+    assert out["retrieval"]["degraded"] is True
+    assert len(out["gate_queue"]) == 3
+    # default decision mirrors the LLM's ingest_action (D-04)
+    assert out["gate_queue"][0]["decision"] == "ref_and_card"
+    assert out["gate_queue"][2]["decision"] == "skip"
