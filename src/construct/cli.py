@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import builtins
 import json
 import re
-from typing import List, Optional
+import sys
+from typing import Any, List, Optional
 
 import typer
 
@@ -444,6 +446,110 @@ def research_search_cmd(
 
     result = cap.handler(**handler_kwargs)
     _display_result(result, json_output)
+
+
+def _flatten_search_results_payload(payload: Any) -> list[Any]:
+    """Flatten a pre-fetched search payload into SearchResult dicts (D-10)."""
+    from construct.search.models import SearchResult
+
+    def _validate(items: list[Any]) -> list[Any]:
+        return [SearchResult.model_validate(item).model_dump(mode="json") for item in items]
+
+    # NB: `list` is shadowed at module scope by the `list` Typer commands below,
+    # so reference the builtin explicitly here.
+    if isinstance(payload, builtins.list):
+        if not payload:
+            return []
+        first = payload[0]
+        if isinstance(first, dict) and "results" in first and "provider_name" in first:
+            flat: list[Any] = []
+            for batch in payload:
+                flat.extend(batch.get("results", []))
+            return _validate(flat)
+        return _validate(payload)
+
+    if isinstance(payload, dict):
+        if "batches" in payload:
+            flat = []
+            for batch in payload["batches"]:
+                flat.extend(batch.get("results", []))
+            return _validate(flat)
+        if "results" in payload:
+            return _validate(payload["results"])
+
+    raise ValueError("Unrecognized search results payload shape")
+
+
+def _load_search_results_json(raw: str) -> list[Any]:
+    payload = json.loads(raw)
+    return _flatten_search_results_payload(payload)
+
+
+def _render_research_score_table(data: dict[str, Any]) -> None:
+    """Human-readable url/score/tier/action table plus degraded notice (D-13)."""
+    typer.echo("url\tscore\ttier\taction")
+    for finding in data.get("findings", []):
+        typer.echo(
+            f"{finding.get('url', '')}\t"
+            f"{finding.get('relevance_score', '')}\t"
+            f"{finding.get('source_tier', '')}\t"
+            f"{finding.get('ingest_action', '')}"
+        )
+    retrieval = data.get("retrieval", {})
+    typer.echo(
+        f"degraded: {retrieval.get('degraded', False)}, "
+        f"retried: {retrieval.get('retried', 0)}, "
+        f"errors: {retrieval.get('errors', 0)}"
+    )
+
+
+@research_app.command(name="score")
+def research_score_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    results_file: Path | None = typer.Option(
+        None, "--results-file", help="JSON file of SearchResults (or batches envelope)"
+    ),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Score pre-fetched search results into governance-aware finding proposals."""
+    if results_file is not None:
+        raw = results_file.read_text(encoding="utf-8")
+    elif not sys.stdin.isatty():
+        raw = sys.stdin.read()
+    else:
+        typer.echo("ERROR: provide --results-file or pipe JSON on stdin")
+        raise typer.Exit(code=1)
+
+    try:
+        flattened = _load_search_results_json(raw)
+    except (json.JSONDecodeError, ValueError) as exc:
+        typer.echo(f"ERROR: invalid results payload: {exc}")
+        raise typer.Exit(code=1) from exc
+
+    handler_kwargs = {
+        "workspace_path": str(workspace),
+        "results": flattened,
+    }
+
+    try:
+        cap = get_registry().get("research.score")
+    except KeyError:
+        typer.echo("ERROR: Capability 'research.score' not found. Ensure Phase 9 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+
+    if json_output:
+        _display_result(result, json_output=True)
+        return
+
+    if not result.success:
+        _display_result(result, json_output=False)
+        return
+
+    if result.data:
+        _render_research_score_table(result.data)
+    typer.echo(f"✓ {result.message}")
 
 
 # ---------------------------------------------------------------------------
