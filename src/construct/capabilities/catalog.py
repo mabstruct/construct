@@ -56,6 +56,14 @@ from construct.llm.research_run import (
     run_research_run,
 )
 
+# ── Curation Run imports (Phase 11) ──
+from construct.llm.curation_run import (
+    CurationInspectInput,
+    CurationRunInput,
+    inspect_curation_run,
+    run_curation_run,
+)
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -421,6 +429,28 @@ def create_registry() -> CapabilityRegistry:
         mcp_tool_name="construct_research_inspect",
     ))
 
+    # ── Deterministic curation-run workflow (Phase 11) ──
+    registry.register(CapabilityRecord(
+        id="curation.run",
+        name="Curation Run",
+        description="Run deterministic curation checks (integrity, decay, orphan, connection-health, report); findings-only, no canonical writes",
+        input_model=CurationRunInput,
+        output_model=OperationResult,
+        handler=_curation_run_shim,
+        cli_name="curation.run",
+        mcp_tool_name="construct_curation_run",
+    ))
+    registry.register(CapabilityRecord(
+        id="curation.inspect",
+        name="Curation Inspect",
+        description="Report a curation run's persisted state (read-only; never re-runs)",
+        input_model=CurationInspectInput,
+        output_model=OperationResult,
+        handler=_curation_inspect_shim,
+        cli_name="curation.inspect",
+        mcp_tool_name="construct_curation_inspect",
+    ))
+
     return registry
 
 
@@ -536,6 +566,48 @@ def _research_inspect_shim(*args, **kwargs):
         raise TypeError("research.inspect handler requires keyword arguments")
     return _run_result_to_operation(
         "research.inspect", lambda: inspect_research_run(InspectInput(**kwargs))
+    )
+
+
+def _curation_result_to_operation(cap_id: str, runner) -> OperationResult:
+    """Run a curation runner and wrap its ``CurationRunResult`` in a sanitizing
+    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+
+    Simpler than ``_run_result_to_operation``: curation is deterministic, so there
+    is NO ``ResearchScoreOutageError`` provider-outage path. Any exception →
+    ``success=False`` with a key-safe class-name message; a normal return is a
+    success unless the ``CurationRunResult.status`` is ``failed``.
+    """
+    try:
+        result = runner()
+    except Exception as exc:
+        return OperationResult(
+            success=False,
+            message=f"{cap_id} failed: {type(exc).__name__}",
+            data={"failed": True},
+        )
+    return OperationResult(
+        success=result.status != "failed",
+        message=result.message or result.status,
+        data=result.model_dump(mode="json"),
+    )
+
+
+def _curation_run_shim(*args, **kwargs):
+    """RT-03 adapter for curation.run (deterministic findings-only cycle)."""
+    if args:
+        raise TypeError("curation.run handler requires keyword arguments")
+    return _curation_result_to_operation(
+        "curation.run", lambda: run_curation_run(CurationRunInput(**kwargs))
+    )
+
+
+def _curation_inspect_shim(*args, **kwargs):
+    """RT-03 adapter for curation.inspect (read-only get_state; never re-runs)."""
+    if args:
+        raise TypeError("curation.inspect handler requires keyword arguments")
+    return _curation_result_to_operation(
+        "curation.inspect", lambda: inspect_curation_run(CurationInspectInput(**kwargs))
     )
 
 
