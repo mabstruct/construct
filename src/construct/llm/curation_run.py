@@ -44,6 +44,7 @@ from typing import Annotated, Any, Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, field_validator
 
+from construct.schemas.card import Lifecycle
 from construct.schemas.config import KEBAB_CASE_PATTERN
 
 logger = logging.getLogger(__name__)
@@ -215,11 +216,288 @@ def _open_checkpointer(workspace: Path):
     return SqliteSaver(conn), conn
 
 
-# ── Graph builder + runners (implemented in Tasks 2–3; importable now) ──
+# ── Node helpers (sanitization, date coercion, failed/deferred result builders) ──
 
 
-def build_curation_run_graph(checkpointer: Any):  # noqa: D401 — filled in Task 2
-    raise NotImplementedError("build_curation_run_graph lands in Task 2")
+def _sanitize_error(exc: Exception) -> str:
+    """Reduce an exception to a class name + first safe line (never echo raw text).
+
+    Mirrors the research-side discipline (T-11-02 / T-11-06): a node failure must
+    surface as an honest ``failed`` step without leaking a multi-line message that
+    might carry sensitive content.
+    """
+    text = str(exc).strip()
+    first = text.splitlines()[0] if text else ""
+    return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
+
+
+def _coerce_date(value: Any) -> date | None:
+    """Return a ``date`` for a date-or-isostring recency anchor; ``None`` if absent.
+
+    ``load_cards`` returns Python-mode dumps so ``created``/``last_verified`` are
+    already ``datetime.date`` — guard with ``isinstance`` so we never call
+    ``date.fromisoformat`` on a value that is already a date (Pitfall 2).
+    """
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _failed_step(step: str, exc: Exception) -> CurationStepResult:
+    """Build a ``status="failed"`` step result from a caught node exception (D-08)."""
+    safe = _sanitize_error(exc)
+    logger.warning("curation step %s failed: %s", step, safe)
+    return CurationStepResult(
+        step=step, status="failed", findings={"error": safe},
+        summary=f"{step} failed", reason=safe,
+    )
+
+
+def _deferred_step(step: str) -> dict:
+    """Emit a deferred skip-node result (D-10): skipped, optional, Phase-12 reason."""
+    result = CurationStepResult(
+        step=step, status="skipped", required=False,
+        reason="deferred to Phase 12",
+        summary=f"{step} deferred to Phase 12 (curation gates land in Phase 12)",
+    )
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+# ── Real step nodes (wrap existing fns; extract PRIMITIVES into findings) ──
+
+
+def integrity_check(state: CurationRunState) -> dict:
+    """Wrap ``validate_workspace`` and store primitive counts (Pitfall 4).
+
+    ``ValidationReport`` is a (non-JSON-serializable) dataclass — only its
+    primitives (error/warning counts, ``ok``, error paths) cross into findings.
+    """
+    try:
+        from construct.services.validation import validate_workspace
+
+        report = validate_workspace(Path(state["workspace_path"]))
+        result = CurationStepResult(
+            step="integrity_check", status="completed",
+            findings={
+                "errors": len(report.errors),
+                "warnings": len(report.warnings),
+                "ok": report.ok,
+                "error_paths": [f.path for f in report.errors],
+            },
+            summary=f"{len(report.errors)} error(s), {len(report.warnings)} warning(s)",
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("integrity_check", exc)
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+def decay_scan(state: CurationRunState) -> dict:
+    """Findings-only decay candidate scan (D-04/D-05/D-06).
+
+    Candidate = non-archived card whose recency anchor (``last_verified`` or
+    ``created``) is older than the governance ``decay_window_days``. Reports
+    ``auto_archive_on_decay`` but NEVER archives a card (D-06 — archiving is
+    deferred to Phase 12).
+    """
+    try:
+        from construct.storage.workspace import WorkspaceLoader
+
+        loader = WorkspaceLoader(Path(state["workspace_path"]))
+        window = state["decay_window_days"]
+        auto = state["auto_archive_on_decay"]
+        today = date.today()
+        candidate_ids: list[str] = []
+        for card in loader.load_cards():
+            lifecycle = card.get("lifecycle")
+            if getattr(lifecycle, "value", lifecycle) == Lifecycle.archived.value:
+                continue
+            anchor = _coerce_date(card.get("last_verified")) or _coerce_date(card.get("created"))
+            if anchor is None:
+                continue
+            if (today - anchor).days > window:
+                candidate_ids.append(card.get("id"))
+        summary = f"{len(candidate_ids)} decay candidate(s) over a {window}d window"
+        if auto:
+            summary += (
+                "; auto_archive_on_decay is set — archiving deferred to Phase 12 "
+                "(no card archived this phase)"
+            )
+        result = CurationStepResult(
+            step="decay_scan", status="completed",
+            findings={
+                "window_days": window,
+                "candidate_count": len(candidate_ids),
+                "candidate_ids": candidate_ids,
+                "auto_archive_on_decay": auto,
+            },
+            summary=summary,
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("decay_scan", exc)
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+def orphan_scan(state: CurationRunState) -> dict:
+    """Findings-only orphan candidate scan (D-04/D-05).
+
+    Candidate = non-archived card with connection degree 0 (counting each
+    ``ConnectionRecord`` endpoint — both ``from_`` AND ``to`` — Pitfall 3) whose
+    age exceeds the governance ``orphan_tolerance_days``.
+    """
+    try:
+        from construct.storage.workspace import WorkspaceLoadError, WorkspaceLoader
+
+        loader = WorkspaceLoader(Path(state["workspace_path"]))
+        tolerance = state["orphan_tolerance_days"]
+        today = date.today()
+
+        degree: dict[str, int] = {}
+        try:
+            connections = loader.load_connections()
+            for record in connections.connections:
+                degree[record.from_] = degree.get(record.from_, 0) + 1
+                degree[record.to] = degree.get(record.to, 0) + 1
+        except WorkspaceLoadError:
+            pass
+
+        candidate_ids: list[str] = []
+        for card in loader.load_cards():
+            lifecycle = card.get("lifecycle")
+            if getattr(lifecycle, "value", lifecycle) == Lifecycle.archived.value:
+                continue
+            cid = card.get("id")
+            if degree.get(cid, 0) != 0:
+                continue
+            anchor = _coerce_date(card.get("last_verified")) or _coerce_date(card.get("created"))
+            if anchor is None:
+                continue
+            if (today - anchor).days > tolerance:
+                candidate_ids.append(cid)
+        result = CurationStepResult(
+            step="orphan_scan", status="completed",
+            findings={
+                "tolerance_days": tolerance,
+                "candidate_count": len(candidate_ids),
+                "candidate_ids": candidate_ids,
+            },
+            summary=f"{len(candidate_ids)} orphan candidate(s) over a {tolerance}d tolerance",
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("orphan_scan", exc)
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+def connection_maintenance(state: CurationRunState) -> dict:
+    """Connection-health via ``bridge_detect`` (offline L1/L2; L3 auto-skips).
+
+    ``bridge_detect`` is NOT pure read-only — it writes DERIVED
+    ``log/bridge-candidates.json`` + ``views/build/data/bridges.json`` (Pitfall 1);
+    that is allowed under D-06 (derived, not canonical SOT). No canonical fact is
+    written.
+    """
+    try:
+        from construct.pipelines.bridge_detect import bridge_detect
+
+        op = bridge_detect(state["workspace_path"])
+        summary_block = (op.data or {}).get("summary", {})
+        totals = summary_block.get("totals", {})
+        l1_l2_only = summary_block.get("l1_l2_only")
+        result = CurationStepResult(
+            step="connection_maintenance",
+            status="completed" if op.success else "failed",
+            findings={"totals": totals, "l1_l2_only": l1_l2_only, "ok": op.success},
+            summary=(
+                "connection-health via bridge_detect; derived log/+views/ artifacts "
+                "written (no canonical SOT write)"
+            ),
+            reason=None if op.success else op.message,
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("connection_maintenance", exc)
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+def compile_report(state: CurationRunState) -> dict:
+    """Roll up the graph status report via ``graph_status`` (read-only counts)."""
+    try:
+        from construct.pipelines.graph_status import graph_status
+
+        op = graph_status(state["workspace_path"])
+        data = op.data or {}
+        result = CurationStepResult(
+            step="compile_report",
+            status="completed" if op.success else "failed",
+            findings={
+                "cards": data.get("cards", {}),
+                "connections": data.get("connections", {}),
+                "domains": data.get("domains", {}),
+            },
+            summary="graph status report compiled",
+            reason=None if op.success else op.message,
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("compile_report", exc)
+    return {"steps": [result.model_dump(mode="json")]}
+
+
+# ── Deferred skip-nodes (D-10 — explicit skipped nodes, not fake success) ──
+
+
+def promotion_review(state: CurationRunState) -> dict:
+    return _deferred_step("promotion_review")
+
+
+def process_inbox(state: CurationRunState) -> dict:
+    return _deferred_step("process_inbox")
+
+
+def views_refresh_hook(state: CurationRunState) -> dict:
+    return _deferred_step("views_refresh_hook")
+
+
+# ── Graph builder (purely LINEAR spec §4.3 topology — no conditional edges) ──
+
+
+def build_curation_run_graph(checkpointer: Any):
+    """Compile the deterministic curation StateGraph with the given checkpointer.
+
+    Linear topology (spec §4.3): START → load_config → integrity_check →
+    decay_scan → orphan_scan → promotion_review(SKIP) → connection_maintenance →
+    process_inbox(SKIP) → compile_report → views_refresh_hook(SKIP) → END.
+    ``load_config`` runs first to populate the governance thresholds the scans read.
+    """
+    builder = StateGraph(CurationRunState)
+
+    builder.add_node("load_config", load_config)
+    builder.add_node("integrity_check", integrity_check)
+    builder.add_node("decay_scan", decay_scan)
+    builder.add_node("orphan_scan", orphan_scan)
+    builder.add_node("promotion_review", promotion_review)
+    builder.add_node("connection_maintenance", connection_maintenance)
+    builder.add_node("process_inbox", process_inbox)
+    builder.add_node("compile_report", compile_report)
+    builder.add_node("views_refresh_hook", views_refresh_hook)
+
+    builder.add_edge(START, "load_config")
+    builder.add_edge("load_config", "integrity_check")
+    builder.add_edge("integrity_check", "decay_scan")
+    builder.add_edge("decay_scan", "orphan_scan")
+    builder.add_edge("orphan_scan", "promotion_review")
+    builder.add_edge("promotion_review", "connection_maintenance")
+    builder.add_edge("connection_maintenance", "process_inbox")
+    builder.add_edge("process_inbox", "compile_report")
+    builder.add_edge("compile_report", "views_refresh_hook")
+    builder.add_edge("views_refresh_hook", END)
+
+    return builder.compile(checkpointer=checkpointer)
+
+
+# ── Runners (implemented in Task 3; importable now) ──
 
 
 def run_curation_run(inp: CurationRunInput) -> CurationRunResult:  # filled in Task 3
