@@ -127,6 +127,9 @@ def test_catalog_loads() -> None:
         "bridge.detect",
         "research.search",
         "research.score",
+        "research.run",
+        "research.review",
+        "research.inspect",
     }
     actual_ids = {c.id for c in registry.list()}
     assert actual_ids == expected_ids
