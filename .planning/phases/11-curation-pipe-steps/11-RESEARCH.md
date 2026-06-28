@@ -413,14 +413,14 @@ registry.register(CapabilityRecord(
 | A5 | Module placed at `src/construct/llm/curation_run.py` (vs `pipelines/`). | Recommended Project Structure | Pure discretion (CONTEXT D); either compiles. No functional risk. |
 | A6 | connection-health passes through `bridge_detect`'s L1/L2 summary; the spec's "untyped edge typing" is Phase 12 scope (the `ConnectionType` enum is closed — there is no "untyped" type in the schema). | connection-health rows | If "untyped edge counts" were expected as a real finding, none exists to count; bridge candidates are the deterministic substitute. Confirm in plan. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does the run need a stable `run_id` echoed for a later `curation.inspect`, given there is no pause?**
+1. **Does the run need a stable `run_id` echoed for a later `curation.inspect`, given there is no pause?** — RESOLVED: register `curation.inspect` anyway for Phase-12 readiness and surface parity (implemented in plan 11-03-T1).
    - What we know: `research.run` exposes inspect for paused runs; curation runs to completion in one call.
    - What's unclear: whether inspect adds value when there is no mid-run pause to observe.
    - Recommendation: Still register `curation.inspect` for surface parity and Phase-12 readiness (it will matter once the interrupt lands). It reads the persisted terminal state — harmless and cheap.
 
-2. **Should `curation_cycle_complete` be the only event, or also per-step `workflow_step_complete`?**
+2. **Should `curation_cycle_complete` be the only event, or also per-step `workflow_step_complete`?** — RESOLVED: emit `curation_cycle_complete` with `EventAgent.curator` (required); per-step events optional (implemented in plan 11-02-T3).
    - What we know: spec §6.6 lists both `curation_cycle_complete` and `workflow_step_complete`.
    - What's unclear: whether per-step events are wanted in Phase 11 or deferred with the gate.
    - Recommendation: Emit `curation_cycle_complete` (required by §6.6 for run completion) using `EventAgent.curator`; per-step `workflow_step_complete` is optional and low-cost — include if the planner wants step-level audit granularity for criterion #2.
