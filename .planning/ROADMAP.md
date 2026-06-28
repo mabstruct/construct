@@ -221,6 +221,6 @@ Plans:
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
-| 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
+| 11. Curation PIPE Steps | v0.4 | 0/3 | Planned    |  |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |

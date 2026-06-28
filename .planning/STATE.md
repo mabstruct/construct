@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
-stopped_at: Phase 11 context gathered
-last_updated: "2026-06-28T19:38:33.728Z"
-last_activity: 2026-06-28 -- Phase 11 planning complete
+stopped_at: Completed 11-01-PLAN.md (Wave-0 red suite)
+last_updated: "2026-06-28T20:54:37.488Z"
+last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 3
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 11 — curation pipe steps
+**Current focus:** Phase 11 — curation-pipe-steps
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
+Phase: 11 (curation-pipe-steps) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-28 -- Phase 11 planning complete
+Last activity: 2026-06-28
 
-Progress: [█████████░] 86%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [█████████░] 86%
 
 | Phase 09 P02 | 20min | 2 tasks | 5 files |
 | Phase 09 P03 | 25min | 2 tasks | 2 files |
+| Phase 11 P01 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,8 @@ Recent decisions affecting current work:
 - [Phase 09-03]: score_all uses a sync ThreadPoolExecutor(max_workers=cap) for bounded fan-out — async gather does not honor the cap (D-04 / Pitfall 2)
 - [Phase 09-03]: degraded (partial item failure) vs total-outage (all provider/auth failures) discriminated by cause — partial degrades, total promotes to a gate error mapped to success=False by the Plan 04 shim (D-08 vs D-09)
 - [Phase 09-03]: provider errors sanitized to class name + safe message (mirrors research_search._safe_error_message) — never echo raw text that may carry a key (T-09-03)
+- [Phase ?]: [Phase 11-01]: curation fixtures write connections at canonical root connections.json matching WorkspaceLoader.load_connections
+- [Phase ?]: [Phase 11-01]: curation contract test imports CurationRunResult lazily so test_mcp_no_hardcoded_curation stays GREEN while the module is unbuilt
 
 ### Pending Todos
 
@@ -159,6 +162,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-28T19:09:40.752Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-curation-pipe-steps/11-CONTEXT.md
+Last session: 2026-06-28T20:54:32.271Z
+Stopped at: Completed 11-01-PLAN.md (Wave-0 red suite)
+Resume file: None
