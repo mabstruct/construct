@@ -22,6 +22,7 @@ governance/taxonomy loaders, ``build_scoring_llm``, and ``build_gate_output``.
 """
 from __future__ import annotations
 
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -330,24 +331,54 @@ class ResearchScoreOutageError(Exception):
         self.safe_message = message
 
 
-_PROVIDER_OUTAGE_MARKERS = (
+# Auth-phrase markers are specific enough that bare substring containment is
+# acceptable. Numeric HTTP codes are matched with word boundaries instead (see
+# below) so a "401"/"403" embedded in a token count or a scraped page echoed
+# into the message does not trip a false provider outage (WR-06).
+_PROVIDER_OUTAGE_PHRASES = (
     "authentication",
     "auth failed",
-    "401",
-    "403",
     "api key",
     "api_key",
     "unauthorized",
-    "gate_provider_error",
+)
+_PROVIDER_OUTAGE_CODES = ("401", "403")
+# Known provider auth/permission exception class names (matched across the MRO
+# so vendor subclasses are covered without importing optional SDKs).
+_AUTH_ERROR_TYPE_NAMES = frozenset(
+    {
+        "AuthenticationError",
+        "PermissionDeniedError",
+        "PermissionError",
+    }
+)
+_CODE_BOUNDARY_PATTERN = re.compile(
+    r"\b(" + "|".join(_PROVIDER_OUTAGE_CODES) + r")\b"
 )
 
 
 def _is_provider_outage_cause(exc: BaseException) -> bool:
-    """Classify whether an exception indicates provider/auth/config failure."""
-    msg = str(exc).lower()
-    if any(marker in msg for marker in _PROVIDER_OUTAGE_MARKERS):
+    """Classify whether an exception indicates provider/auth/config failure.
+
+    Prefer unambiguous signals: the explicit ``GATE_PROVIDER_ERROR`` prefix the
+    factory/gate raise, the exception *type* for known auth/permission errors,
+    word-boundary auth phrases, and word-boundary numeric HTTP codes. Bare
+    substring containment of codes like ``401``/``403`` is deliberately avoided
+    so a non-provider failure whose message merely mentions one of those tokens
+    is not misclassified as a provider auth outage (WR-06).
+    """
+    text = str(exc)
+    if "GATE_PROVIDER_ERROR" in text:
         return True
-    return isinstance(exc, RuntimeError) and "GATE_PROVIDER_ERROR" in str(exc)
+
+    for klass in type(exc).__mro__:
+        if klass.__name__ in _AUTH_ERROR_TYPE_NAMES:
+            return True
+
+    lowered = text.lower()
+    if any(phrase in lowered for phrase in _PROVIDER_OUTAGE_PHRASES):
+        return True
+    return bool(_CODE_BOUNDARY_PATTERN.search(lowered))
 
 
 def _safe_scoring_cause(exc: BaseException) -> str:
