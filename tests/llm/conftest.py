@@ -1,12 +1,20 @@
 """Shared fixtures for ask.domain and research.score tests."""
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+from construct.llm.research_score import (
+    GateMetadata,
+    ResearchScoreGateOutput,
+    ScoredFinding,
+)
 from construct.schemas.card import CardAuthor, Lifecycle
 from construct.search.models import SearchResult
 from construct.services.init import DomainInitInput, initialize_workspace
@@ -221,6 +229,100 @@ def test_workspace(tmp_path: Path) -> Path:
     write_card(ws, "card-2", title="Test Card Two", body="Different content covering test validation patterns.")
     write_card(ws, "card-3", title="Archived Card", body="Old content.", lifecycle="archived")
     return ws
+
+
+# ── Phase 10: durable research.run fixtures (Wave 0) ──
+
+
+@pytest.fixture
+def sqlite_checkpointer(tmp_path: Path):
+    """Factory that opens ``SqliteSaver`` instances on a SHARED tmp DB file.
+
+    Returns a zero-arg callable ``open_checkpointer() -> (saver, conn, db_path)``.
+    Call it twice on the same ``db_path`` to simulate cross-process resume: the
+    first instance pauses at the review interrupt, ``conn.close()`` ends that
+    "process", and a fresh ``SqliteSaver`` over the same file resumes from the
+    persisted checkpoint (mirrors the ``test_workflow_runner`` r1/r2 idiom).
+
+    ``check_same_thread=False`` is required so the saver can be used across the
+    threads LangGraph may run nodes on. All opened connections are closed at
+    teardown so the tmp file is releasable on every platform.
+    """
+    db_path = tmp_path / "research-run.sqlite"
+    opened: list[sqlite3.Connection] = []
+
+    def _open() -> tuple[SqliteSaver, sqlite3.Connection, Path]:
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        opened.append(conn)
+        return SqliteSaver(conn), conn, db_path
+
+    yield _open
+
+    for conn in opened:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def make_scored_findings_batch(
+    *,
+    gate_id: str = "research.score",
+) -> ResearchScoreGateOutput:
+    """Build a deterministic ``ResearchScoreGateOutput`` with MIXED ingest actions.
+
+    Produces one finding per ``ingest_action`` band (skip / ref_only /
+    ref_and_card) so offline review tests can exercise per-finding approve/reject
+    routing, the rejected ledger, and ingest counts without a live LLM. The URLs
+    line up with ``sample_search_results`` (arxiv / blog / shop).
+    """
+    findings = [
+        ScoredFinding(
+            url="https://arxiv.org/abs/2401.00001",
+            title="Loop Quantum Gravity and the Big Bounce",
+            relevance_score=0.91,
+            source_tier=2,
+            ingest_action="ref_and_card",
+            key_findings=["Quantum bounce replaces the singularity."],
+            content_categories=["test-category"],
+            reasoning="High-tier peer-reviewed source directly on topic.",
+        ),
+        ScoredFinding(
+            url="https://example-blog.test/quantum-gravity",
+            title="A blog take on quantum gravity",
+            relevance_score=0.55,
+            source_tier=4,
+            ingest_action="ref_only",
+            key_findings=["Informal overview, useful as a pointer."],
+            content_categories=["test-category"],
+            reasoning="Relevant but low-tier; keep a reference only.",
+        ),
+        ScoredFinding(
+            url="https://shop.test/widgets",
+            title="Unrelated marketing page",
+            relevance_score=0.12,
+            source_tier=5,
+            ingest_action="skip",
+            key_findings=[],
+            content_categories=[],
+            reasoning="Off-topic commercial page; skip.",
+        ),
+    ]
+    return ResearchScoreGateOutput(
+        findings=findings,
+        gate=GateMetadata(gate_id=gate_id),
+        retrieval={
+            "relevance_threshold": 0.5,
+            "card_creation_threshold": 0.7,
+            "max_papers_per_cycle": 5,
+        },
+    )
+
+
+@pytest.fixture
+def scored_findings_batch() -> ResearchScoreGateOutput:
+    """A mixed-action ``ResearchScoreGateOutput`` for offline review tests."""
+    return make_scored_findings_batch()
 
 
 @pytest.fixture
