@@ -24,8 +24,9 @@ Design constraints honored here:
   * Nodes log to stderr via ``logging`` only — never the builtin stdout writer
     (WR-04 / Pitfall 6: stdout is the MCP JSON-RPC transport).
   * The checkpointer uses ``SqliteSaver(sqlite3.connect(..., check_same_thread=False))``
-    kept alive for the handler — never ``with SqliteSaver.from_conn_string(...)``
-    (RESEARCH Pitfall 2: that closes the connection and breaks cross-process resume).
+    kept alive for the handler — never wrapped in a transient connection-string
+    context manager (RESEARCH Pitfall 2: that closes the connection and breaks
+    cross-process resume).
 """
 from __future__ import annotations
 
@@ -391,3 +392,185 @@ def score_and_extract(state: ResearchRunState) -> dict:
         "gate_queue": gate_queue,
         "retrieval": output.retrieval,
     }
+
+
+# ── The human-review gate (interrupt-ONLY — re-runs on resume; NO side effects) ──
+
+
+def gate_review(state: ResearchRunState) -> dict:
+    """Pause for per-finding human review.
+
+    *** ONLY the interrupt primitive lives here. NO writes, NO event emission, NO
+    non-idempotent prep. *** The interrupted node re-executes top-to-bottom on
+    resume (RESEARCH Pitfall 1, empirically confirmed), so any side effect here
+    would double-fire AND leak a write before approval (breaking RSCH-03). All
+    writes live in the downstream post-gate nodes that run only after resume.
+    """
+    decisions = interrupt(
+        {
+            "gate_id": state["gate_id"],
+            "gate_queue": state["gate_queue"],  # per-finding, default = ingest_action (D-04)
+        }
+    )
+    return {"decisions": decisions}
+
+
+# ── Post-gate write nodes (SKELETONS — IMPLEMENTED IN PLAN 04; NO writes here) ──
+
+
+def ingest_batch(state: ResearchRunState) -> dict:
+    """Write approved refs/cards + append rejects to the ledger. IMPLEMENTED IN PLAN 04.
+
+    Plan 03 skeleton: performs NO writes so the graph compiles and the pause is
+    testable. The real body (deterministic-ID skip-if-exists ref writes, seed
+    cards, per-finding reject ledger appends) lands in Plan 04.
+    """
+    logger.debug("ingest_batch skeleton (no writes in Plan 03)")
+    return {}
+
+
+def compile_digest(state: ResearchRunState) -> dict:
+    """Render the cycle digest markdown + DigestRecord. IMPLEMENTED IN PLAN 04.
+
+    Plan 03 skeleton: performs NO writes.
+    """
+    logger.debug("compile_digest skeleton (no writes in Plan 03)")
+    return {}
+
+
+def update_seeds_and_log(state: ResearchRunState) -> dict:
+    """Stamp queried clusters' last_queried + emit events. IMPLEMENTED IN PLAN 04.
+
+    Plan 03 skeleton: performs NO writes.
+    """
+    logger.debug("update_seeds_and_log skeleton (no writes in Plan 03)")
+    return {}
+
+
+# ── Graph builder (locked linear topology + outage short-circuit) ──
+
+
+def _route_after_score(state: ResearchRunState) -> str:
+    """Route to END on a caught total outage (never pause); otherwise to the gate."""
+    return END if state.get("status") == "failed" else "gate_review"
+
+
+def build_research_run_graph(checkpointer: Any):
+    """Compile the durable research.run StateGraph with the given checkpointer.
+
+    Linear topology: load_config → build_queries → execute_search → deduplicate →
+    score_and_extract → [outage? END] → gate_review[interrupt] → ingest_batch →
+    compile_digest → update_seeds_and_log → END. The single pause is the
+    interrupt in ``gate_review``; all write nodes are strictly downstream of it
+    (RSCH-03 holds by construction).
+    """
+    builder = StateGraph(ResearchRunState)
+
+    builder.add_node("load_config", load_config)
+    builder.add_node("build_queries", build_queries)
+    builder.add_node("execute_search", execute_search)
+    builder.add_node("deduplicate", deduplicate)
+    builder.add_node("score_and_extract", score_and_extract)
+    builder.add_node("gate_review", gate_review)
+    builder.add_node("ingest_batch", ingest_batch)
+    builder.add_node("compile_digest", compile_digest)
+    builder.add_node("update_seeds_and_log", update_seeds_and_log)
+
+    builder.add_edge(START, "load_config")
+    builder.add_edge("load_config", "build_queries")
+    builder.add_edge("build_queries", "execute_search")
+    builder.add_edge("execute_search", "deduplicate")
+    builder.add_edge("deduplicate", "score_and_extract")
+    # Outage short-circuit: a caught ResearchScoreOutageError never reaches the gate.
+    builder.add_conditional_edges(
+        "score_and_extract",
+        _route_after_score,
+        {END: END, "gate_review": "gate_review"},
+    )
+    builder.add_edge("gate_review", "ingest_batch")  # WRITE BOUNDARY (post-resume)
+    builder.add_edge("ingest_batch", "compile_digest")
+    builder.add_edge("compile_digest", "update_seeds_and_log")
+    builder.add_edge("update_seeds_and_log", END)
+
+    return builder.compile(checkpointer=checkpointer)
+
+
+# ── Persistent checkpointer (NO connection-string footgun — RESEARCH Pattern 2) ──
+
+
+def _open_checkpointer(workspace: Path):
+    """Open a persistent ``SqliteSaver`` under ``.construct/`` (caller closes conn).
+
+    Returns ``(saver, conn)``. The connection is kept alive for the whole handler
+    and closed in the caller's ``finally`` — never wrapped in a transient
+    connection-string context manager (Pitfall 2: that closes the connection on
+    block exit and breaks cross-process resume). ``check_same_thread=False`` is
+    required because ``score_all`` fans out across worker threads that may touch
+    the checkpointer (Pitfall 5).
+    """
+    from langgraph.checkpoint.sqlite import SqliteSaver
+
+    db = Path(workspace) / ".construct" / "workflow" / "research-run.sqlite"
+    db.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db), check_same_thread=False)
+    return SqliteSaver(conn), conn
+
+
+# ── Run-start runner (pauses at the gate; full completion/review land in Plan 04) ──
+
+
+def run_research_run(inp: ResearchRunInput) -> RunResult:
+    """Start a durable research run; pause at the human-review gate.
+
+    Opens the persistent checkpointer, builds the graph, and invokes it with
+    ``thread_id = run_id``. When the graph pauses (``__interrupt__`` present) this
+    returns a ``RunResult`` with status ``awaiting_review`` carrying the gate
+    handle and the pending per-finding ``gate_queue``. A caught total outage
+    returns status ``failed`` (the graph routed to END without pausing). The
+    review/inspect runners and full-completion path land in Plan 04.
+    """
+    from construct.llm.research_score import ResearchScoreOutageError
+
+    run_id = inp.run_id or _new_run_id()
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": run_id}}
+        resolved = ResearchRunInput(
+            workspace_path=inp.workspace_path,
+            run_id=run_id,
+            provider_override=inp.provider_override,
+        )
+        try:
+            result = graph.invoke(_initial_state(resolved), cfg)
+        except ResearchScoreOutageError as exc:
+            return RunResult(
+                status="failed",
+                run_id=run_id,
+                gate_id=run_id,
+                degraded=True,
+                message=exc.safe_message,
+            )
+
+        snap = graph.get_state(cfg)
+        if "__interrupt__" in result and snap.next == ("gate_review",):
+            return RunResult(
+                status="awaiting_review",
+                run_id=run_id,
+                gate_id=snap.values.get("gate_id", run_id),
+                gate_queue=snap.values.get("gate_queue", []),
+                degraded=bool(snap.values.get("retrieval", {}).get("degraded", False)),
+                message="Paused for human review; resume with research.review.",
+            )
+
+        # Outage short-circuit (status failed, no pause) or already-complete state.
+        status = result.get("status", "completed")
+        return RunResult(
+            status="failed" if status == "failed" else "completed",
+            run_id=run_id,
+            gate_id=run_id,
+            degraded=bool(result.get("retrieval", {}).get("degraded", False)),
+            message="Run did not pause for review." if status == "failed" else "Run complete.",
+        )
+    finally:
+        conn.close()
