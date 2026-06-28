@@ -34,10 +34,15 @@ def build_chat_model(cfg: ProviderConfig, *, temperature: float = 0.2) -> Any:
     if cfg.type == "langchain_anthropic":
         from langchain_anthropic import ChatAnthropic
 
+        # ChatAnthropic exposes `timeout` (alias of default_request_timeout) and
+        # `base_url` (alias of anthropic_api_url). Thread both so a configured
+        # self-hosted/proxy endpoint or request timeout is honoured (WR-02).
         return ChatAnthropic(
             model=cfg.model,
             temperature=temperature,
             max_tokens=cfg.max_tokens,
+            timeout=cfg.timeout_seconds,
+            base_url=cfg.base_url,
         )
 
     if cfg.type == "langchain_openai":
@@ -49,10 +54,13 @@ def build_chat_model(cfg: ProviderConfig, *, temperature: float = 0.2) -> Any:
                 "optional 'llm-openai' extra. Install: pip install 'construct[llm-openai]'"
             ) from exc
 
+        # ChatOpenAI accepts `timeout` and `base_url` directly.
         return ChatOpenAI(
             model=cfg.model,
             temperature=temperature,
             max_tokens=cfg.max_tokens,
+            timeout=cfg.timeout_seconds,
+            base_url=cfg.base_url,
         )
 
     raise RuntimeError(f"GATE_PROVIDER_ERROR: unknown provider type '{cfg.type}'")
