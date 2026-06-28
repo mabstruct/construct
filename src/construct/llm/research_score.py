@@ -148,9 +148,16 @@ def load_taxonomy_categories(workspace_path: str) -> list[str]:
     except Exception:
         pass
 
-    for card in loader.load_cards():
-        for cat in card.get("content_categories", []) or []:
-            categories.add(cat)
+    # Taxonomy is "soft steering" (D-11): a card-store load failure should
+    # degrade to no extra categories, not abort the whole gate run with an
+    # exception that escapes the shim. Guard symmetrically with the registry
+    # load above (WR-05).
+    try:
+        for card in loader.load_cards():
+            for cat in card.get("content_categories", []) or []:
+                categories.add(cat)
+    except Exception:
+        pass
 
     return sorted(categories)
 
