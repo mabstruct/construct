@@ -135,6 +135,12 @@ None - no external service configuration required.
 - The durable `research.run` workflow now completes end-to-end with resumable, idempotent, audited writes — ready for Plan 05 (capability registration / CLI / MCP wiring).
 - No blockers.
 
+## Self-Check: PASSED
+
+- SUMMARY.md present.
+- `src/construct/llm/research_run.py` present with `ingest_batch`, `review_research_run`, `inspect_research_run`.
+- All task commits present: `c73e6d9`, `9a3cd4b`, `4a13528`, `586b117`.
+
 ---
 *Phase: 10-durable-human-review-research-run*
 *Completed: 2026-06-28*
