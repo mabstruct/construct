@@ -133,7 +133,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 10-04-PLAN.md — Workflow write-side: idempotent ingest, template digest+record, seed/events, review/inspect runners, cross-process resume (RSCH-02/03/04/05)
+- [x] 10-04-PLAN.md — Workflow write-side: idempotent ingest, template digest+record, seed/events, review/inspect runners, cross-process resume (RSCH-02/03/04/05)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -207,7 +207,7 @@ Plans:
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
-| 10. Durable Human Review + research.run | v0.4 | 3/5 | In Progress|  |
+| 10. Durable Human Review + research.run | v0.4 | 4/5 | In Progress|  |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |
