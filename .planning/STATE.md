@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: executing
-stopped_at: Completed 11-01-PLAN.md (Wave-0 red suite)
-last_updated: "2026-06-28T21:06:43.446Z"
+status: verifying
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-06-28T21:12:20.193Z"
 last_activity: 2026-06-28
 progress:
   total_phases: 6
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 Phase: 11 (curation-pipe-steps) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-28
 
 Progress: [█████████░] 93%
@@ -58,6 +58,7 @@ Progress: [█████████░] 93%
 | Phase 09 P03 | 25min | 2 tasks | 2 files |
 | Phase 11 P01 | 20min | 3 tasks | 3 files |
 | Phase 11 P02 | 25min | 3 tasks | 1 files |
+| Phase 11 P03 | 20min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 11-01]: curation contract test imports CurationRunResult lazily so test_mcp_no_hardcoded_curation stays GREEN while the module is unbuilt
 - [Phase 11-02]: curation_run is a linear interrupt-free sibling of research_run — findings-only decay/orphan scans, deferred nodes as explicit skipped/required=False steps, D-09 degraded iff a required step failed/skipped
 - [Phase 11-02]: _initial_state(inp) single-arg form (matches Plan 01 red suite); run_id derived inside from inp.run_id or _new_run_id()
+- [Phase ?]: [Phase 11-03]: curation.run/inspect registered with cli_name+mcp_tool_name; MCP parity free via registry auto-discovery (no mcp/server.py edit); inventory tests grown to match
 
 ### Pending Todos
 
@@ -165,6 +167,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-28T21:03:43.840Z
-Stopped at: Completed 11-01-PLAN.md (Wave-0 red suite)
+Last session: 2026-06-28T21:12:20.185Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
