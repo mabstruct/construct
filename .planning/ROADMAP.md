@@ -155,11 +155,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 11-01-PLAN.md — Wave-0 failing suite: test_curation_run.py + test_curation_run_cli_mcp.py + conftest decay/orphan fixtures
+- [x] 11-01-PLAN.md — Wave-0 failing suite: test_curation_run.py + test_curation_run_cli_mcp.py + conftest decay/orphan fixtures
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 11-02-PLAN.md — curation_run.py: CurationStepResult/RunResult contract, linear §4.3 graph, 5 real steps + 3 deferred skips, SqliteSaver, run/inspect runners, D-09 aggregation
+- [x] 11-02-PLAN.md — curation_run.py: CurationStepResult/RunResult contract, linear §4.3 graph, 5 real steps + 3 deferred skips, SqliteSaver, run/inspect runners, D-09 aggregation
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -221,6 +221,6 @@ Plans:
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
-| 11. Curation PIPE Steps | v0.4 | 0/3 | Planned    |  |
+| 11. Curation PIPE Steps | v0.4 | 2/3 | In Progress|  |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |

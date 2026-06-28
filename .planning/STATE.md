@@ -4,13 +4,13 @@ milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
 stopped_at: Completed 11-01-PLAN.md (Wave-0 red suite)
-last_updated: "2026-06-28T20:54:37.488Z"
+last_updated: "2026-06-28T21:06:43.446Z"
 last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 14
   percent: 50
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 11 (curation-pipe-steps) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-28
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [████████░░] 80%
 | Phase 09 P02 | 20min | 2 tasks | 5 files |
 | Phase 09 P03 | 25min | 2 tasks | 2 files |
 | Phase 11 P01 | 20min | 3 tasks | 3 files |
+| Phase 11 P02 | 25min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,8 @@ Recent decisions affecting current work:
 - [Phase 09-03]: provider errors sanitized to class name + safe message (mirrors research_search._safe_error_message) — never echo raw text that may carry a key (T-09-03)
 - [Phase ?]: [Phase 11-01]: curation fixtures write connections at canonical root connections.json matching WorkspaceLoader.load_connections
 - [Phase ?]: [Phase 11-01]: curation contract test imports CurationRunResult lazily so test_mcp_no_hardcoded_curation stays GREEN while the module is unbuilt
+- [Phase 11-02]: curation_run is a linear interrupt-free sibling of research_run — findings-only decay/orphan scans, deferred nodes as explicit skipped/required=False steps, D-09 degraded iff a required step failed/skipped
+- [Phase 11-02]: _initial_state(inp) single-arg form (matches Plan 01 red suite); run_id derived inside from inp.run_id or _new_run_id()
 
 ### Pending Todos
 
@@ -162,6 +165,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-28T20:54:32.271Z
+Last session: 2026-06-28T21:03:43.840Z
 Stopped at: Completed 11-01-PLAN.md (Wave-0 red suite)
 Resume file: None

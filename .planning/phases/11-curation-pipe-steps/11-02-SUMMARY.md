@@ -40,7 +40,7 @@ patterns-established:
   - "Pattern: linear LangGraph sibling of an interrupt-driven workflow — copy the StateGraph/add_node/add_edge/compile shape, drop add_conditional_edges + interrupt + outage routing"
   - "Pattern: _aggregate_status(steps) shared by run and inspect so a re-read reproduces the same D-09 verdict from persisted steps"
 
-requirements-completed: [CUR-01]
+requirements-completed: []  # CUR-01 NOT marked — it requires the CLI/MCP surface delivered by Plan 03 (contract suite still RED)
 
 # Metrics
 duration: 25min
@@ -95,6 +95,13 @@ Public names Plan 03 wires into the capability registry / CLI / MCP:
 - **Files modified:** src/construct/llm/curation_run.py
 - **Commit:** `699883b`, `ead95fc`
 
+**2. [Rule 1 - Avoid false-complete] CUR-01 left unmarked despite the plan frontmatter `requirements: [CUR-01]`**
+- **Found during:** State update
+- **Issue:** CUR-01 is worded "User can run `curation.run` **through the CONSTRUCT CLI/MCP surface** and receive real ... results." Plan 02 delivers the module, but the CLI/MCP registration/wiring is Plan 03 — and `tests/contract/test_curation_run_cli_mcp.py` is still RED (6 failing). Marking CUR-01 complete now would be a false-complete signal; the 11-01 SUMMARY explicitly deferred CUR-01 to "Plans 02-03".
+- **Fix:** Reverted the `requirements.mark-complete CUR-01` edit to REQUIREMENTS.md (CUR-01 stays Pending). Plan 03 marks it once the CLI/MCP surface lands and the contract suite goes GREEN.
+- **Files modified:** .planning/REQUIREMENTS.md (reverted to unchanged)
+- **Commit:** n/a (no net change)
+
 No other deviations — the module follows the 11-PATTERNS shapes and the threat-model mitigations (T-11-01 run-id guard, T-11-02 per-node try/except, T-11-03 stderr-only logging, T-11-04 no canonical writes) exactly.
 
 ## Verification
@@ -113,3 +120,10 @@ No new trust boundaries beyond the plan's `<threat_model>`. The run_id boundary 
 ## Known Stubs
 
 None. The three deferred nodes (`promotion_review`/`process_inbox`/`views_refresh_hook`) are intentional, explicit `skipped`/`required=False` steps carrying a "deferred to Phase 12" reason (D-10) — they are not silent placeholders and are asserted on by `test_deferred_nodes_visible_skipped`. Phase 12 implements their bodies.
+
+## Self-Check: PASSED
+- FOUND: src/construct/llm/curation_run.py
+- FOUND: .planning/phases/11-curation-pipe-steps/11-02-SUMMARY.md
+- FOUND commit: 699883b (Task 1)
+- FOUND commit: 1f15078 (Task 2)
+- FOUND commit: ead95fc (Task 3)
