@@ -129,7 +129,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 10-03-PLAN.md — Workflow read-side: state + I/O models, pre-gate nodes, interrupt gate, checkpointed graph, pause (RSCH-02/03/04)
+- [x] 10-03-PLAN.md — Workflow read-side: state + I/O models, pre-gate nodes, interrupt gate, checkpointed graph, pause (RSCH-02/03/04)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -207,7 +207,7 @@ Plans:
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
-| 10. Durable Human Review + research.run | v0.4 | 2/5 | In Progress|  |
+| 10. Durable Human Review + research.run | v0.4 | 3/5 | In Progress|  |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |
