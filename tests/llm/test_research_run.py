@@ -18,18 +18,113 @@ Requirement → test map (RESEARCH §Validation Architecture):
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 _PENDING = "implemented in plans 02-05"
 
 
-@pytest.mark.xfail(reason=_PENDING, strict=False)
-def test_full_run_offline(test_workspace, sample_search_results, scored_findings_batch, monkeypatch):
+def test_full_run_offline(
+    test_workspace, sample_search_results, scored_findings_batch, sqlite_checkpointer, monkeypatch
+):
     """RSCH-02 / SC1: a full offline run composes search→dedup→score→review→
-    ingest→digest→seeds→events and returns a result carrying the D-12 fields."""
-    from construct.llm import research_run  # noqa: F401  (does not exist yet)
+    ingest→digest→seeds→events: digest md + DigestRecord + last_queried + events."""
+    import json
 
-    raise AssertionError("research.run full-run composition not implemented yet")
+    from construct.llm import research_run
+    from construct.llm import research_score
+    from construct.views.models import DigestsFile
+    from langgraph.types import Command
+
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    saver, conn, _db = sqlite_checkpointer()
+    graph = research_run.build_research_run_graph(saver)
+    cfg = {"configurable": {"thread_id": "run-full"}}
+    graph.invoke(
+        research_run._initial_state(
+            research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-full")
+        ),
+        cfg,
+    )
+    snap = graph.get_state(cfg)
+    defaults = [e["decision"] for e in snap.values["gate_queue"]]
+    result = graph.invoke(Command(resume=defaults), cfg)
+
+    assert result["status"] == "completed"
+
+    # Refs written (arxiv ref+card, blog ref-only → 2 refs).
+    assert any((test_workspace / "refs").glob("*.json"))
+
+    # Digest markdown at digests/<id>.md.
+    digest_path = Path(result["digest_path"])
+    assert digest_path.exists()
+    assert digest_path.parent == test_workspace / "digests"
+
+    # DigestRecord appended to digests/digests.json.
+    store_path = test_workspace / "digests" / "digests.json"
+    assert store_path.exists()
+    store = DigestsFile.model_validate_json(store_path.read_text(encoding="utf-8"))
+    assert len(store.digests) == 1
+    assert store.digests[0].id == "digest-run-full"
+
+    # last_queried stamped on the queried clusters.
+    seeds = json.loads((test_workspace / "search-seeds.json").read_text(encoding="utf-8"))
+    queried = set(result.get("queried_clusters", []))
+    stamped = [c for c in seeds["clusters"] if c["id"] in queried and c.get("last_queried")]
+    assert stamped, "at least one queried cluster must have last_queried set"
+    assert result["seed_update"] == "updated"
+
+    # D-11 events appended to the audit log.
+    events_log = (test_workspace / "log" / "events.jsonl").read_text(encoding="utf-8")
+    for action in (
+        "research_search_complete",
+        "research_score_gate_complete",
+        "gate_review_approved",
+        "research_cycle_complete",
+    ):
+        assert action in events_log, action
+
+
+def test_digest_degraded_notice(
+    test_workspace, sample_search_results, scored_findings_batch, sqlite_checkpointer, monkeypatch
+):
+    """A degraded score-gate run surfaces a degraded notice in the digest markdown."""
+    from construct.llm import research_run
+    from construct.llm import research_score
+    from langgraph.types import Command
+
+    degraded = scored_findings_batch.model_copy(
+        update={"retrieval": {**scored_findings_batch.retrieval, "degraded": True, "retried": 1, "errors": 1}}
+    )
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: degraded)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    saver, conn, _db = sqlite_checkpointer()
+    graph = research_run.build_research_run_graph(saver)
+    cfg = {"configurable": {"thread_id": "run-degraded"}}
+    graph.invoke(
+        research_run._initial_state(
+            research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-degraded")
+        ),
+        cfg,
+    )
+    snap = graph.get_state(cfg)
+    defaults = [e["decision"] for e in snap.values["gate_queue"]]
+    result = graph.invoke(Command(resume=defaults), cfg)
+
+    markdown = Path(result["digest_path"]).read_text(encoding="utf-8")
+    assert "Degraded notice" in markdown
 
 
 def test_no_writes_before_approval(test_workspace, sample_search_results, scored_findings_batch, monkeypatch):
