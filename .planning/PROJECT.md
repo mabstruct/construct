@@ -26,11 +26,11 @@ The system must reliably turn source material into connected, explorable knowled
 - ✓ Harden the Claude-native skills and workflows so they are reliable and consistently follow defined data formats — v0.3 (canonical contract + pre-write gates, Phases 1–2).
 - ✓ Make the current agentic user experience clearer through documented workflows and dependable next-step guidance — v0.3 (guided workflow operability + help.suggest, Phase 4; graph-health surfacing, Phase 7).
 - ✓ Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.5 — v0.3 (capability/CLI/MCP runtime spine + derived-data contracts, Phases 3, 5, 6).
+- ✓ **Research workflow:** `research.score` scores search results through a model-agnostic structured gate and `research.run` executes search→dedup→score→durable human review→approved ingest→digest→seed updates→events as one resumable workflow — v0.4 (Phase 9 scoring, Phase 10 durable `research.run`; RSCH-01..05).
 
 ### Active
 
 - [ ] **Search provider spine:** Add provider-agnostic search contracts, Tavily/default provider configuration, mock provider support, and CLI/MCP-accessible `research.search`.
-- [ ] **Research workflow:** Implement `research.score` and `research.run` so search results are scored by structured gates, reviewed before ingest, persisted through governed ingest, and logged with events.
 - [ ] **Curation workflow:** Implement `curation.run` with real integrity, decay, orphan, promotion, connection-maintenance, report, and optional views-refresh behavior instead of v0.3 placeholder no-ops.
 - [ ] **Thin skill migrations:** Update research and curation Claude-native skills to invoke CLI/MCP capabilities and remove direct `WebSearch` / `WebFetch` orchestration.
 - [ ] **Daily-cycle composition:** Extend the daily-cycle workflow after research and curation stabilize so the user can run a real model-agnostic daily maintenance path.
@@ -90,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — started v0.4 Agent Workflows milestone*
+*Last updated: 2026-06-28 — Phase 10 complete (durable `research.run`); research workflow (Phases 9–10) validated*
