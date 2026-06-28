@@ -150,7 +150,20 @@ Plans:
   2. User can distinguish completed deterministic checks, degraded checks, and skipped optional views refresh in the curation result.
   3. User no longer receives placeholder success messages for deterministic curation steps; each reported step includes concrete findings, counts, or an explicit degraded/skipped state.
 
-**Plans**: TBD
+**Plans**: 3 plans (3 waves — sequential: Wave-0 red tests → curation_run module → CLI/MCP wiring)
+
+Plans:
+**Wave 1**
+
+- [ ] 11-01-PLAN.md — Wave-0 failing suite: test_curation_run.py + test_curation_run_cli_mcp.py + conftest decay/orphan fixtures
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 11-02-PLAN.md — curation_run.py: CurationStepResult/RunResult contract, linear §4.3 graph, 5 real steps + 3 deferred skips, SqliteSaver, run/inspect runners, D-09 aggregation
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 11-03-PLAN.md — catalog registration + dual-mode shims + curation Typer sub-app + CLI/MCP parity + API-05 regression
 
 ### Phase 12: Curation L3 Gates + Review Application
 
