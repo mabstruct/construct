@@ -10,6 +10,7 @@ from construct.llm.ask_domain import (
     AskDomainState,
     build_ask_domain_graph,
 )
+from construct.llm.config import ProviderConfig
 from tests.llm.conftest import MockChatAnthropic, MockSynthesisOutput, create_test_workspace, write_card
 
 
@@ -34,6 +35,11 @@ def _make_initial_state(
         "context": "",
         "provider": "anthropic",
         "model": "claude-sonnet-4-20250514",
+        "provider_cfg": ProviderConfig(
+            type="langchain_anthropic",
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+        ),
         "synthesised_answer": None,
         "cited_card_ids": [],
         "llm_confidence": None,
@@ -53,11 +59,15 @@ def _make_initial_state(
 
 @pytest.fixture
 def patched_llm(monkeypatch: pytest.MonkeyPatch) -> MockChatAnthropic:
-    """Replace ChatAnthropic with mock for unit tests."""
+    """Replace factory.build_chat_model with mock for unit tests."""
     mock = MockChatAnthropic()
+
+    def _build_chat_model(cfg: ProviderConfig, *, temperature: float = 0.2) -> MockChatAnthropic:
+        return mock
+
     monkeypatch.setattr(
-        "construct.llm.ask_domain.ChatAnthropic",
-        lambda **kwargs: mock,
+        "construct.llm.factory.build_chat_model",
+        _build_chat_model,
     )
     return mock
 

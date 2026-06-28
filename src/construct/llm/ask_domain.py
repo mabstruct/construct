@@ -5,10 +5,12 @@ import time
 from pathlib import Path
 from typing import Any, TypedDict
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
+
+from construct.llm import factory
+from construct.llm.config import ProviderConfig
 
 
 # ── State schema (TypedDict — LangGraph prefers this over BaseModel) ──
@@ -26,6 +28,7 @@ class AskDomainState(TypedDict):
     context: str  # Formatted card summaries for LLM prompt
     provider: str  # Resolved provider name
     model: str  # Resolved model name
+    provider_cfg: ProviderConfig  # Full provider config for factory construction
 
     # LLM output
     synthesised_answer: str | None
@@ -225,11 +228,8 @@ def llm_synthesize(state: AskDomainState) -> dict:
             "review_status": "not_required",
         }
 
-    llm = ChatAnthropic(
-        model=state.get("model", "claude-sonnet-4-20250514"),
-        temperature=0.2,
-        max_tokens=4096,
-    )
+    provider_cfg = state["provider_cfg"]
+    llm = factory.build_chat_model(provider_cfg, temperature=0.2)
     structured_llm = llm.with_structured_output(SynthesisOutput, method="json_schema")
 
     messages = [
@@ -386,6 +386,7 @@ def run_gate(
         "context": "",
         "provider": provider_key,
         "model": model,
+        "provider_cfg": provider_cfg,
         "synthesised_answer": None,
         "cited_card_ids": [],
         "llm_confidence": None,

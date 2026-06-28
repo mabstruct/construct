@@ -17,9 +17,13 @@ class TestAskDomainMocked:
     ) -> None:
         """Full gate pipeline returns structured answer + citations."""
         mock = MockChatAnthropic()
+
+        def _build_chat_model(cfg, *, temperature: float = 0.2) -> MockChatAnthropic:
+            return mock
+
         monkeypatch.setattr(
-            "construct.llm.ask_domain.ChatAnthropic",
-            lambda **kwargs: mock,
+            "construct.llm.factory.build_chat_model",
+            _build_chat_model,
         )
 
         ws = create_test_workspace(tmp_path / "e2e")

@@ -27,8 +27,8 @@ class MockChatAnthropic:
 
     Usage in tests:
         monkeypatch.setattr(
-            "construct.llm.ask_domain.ChatAnthropic",
-            lambda **kwargs: MockChatAnthropic(),
+            "construct.llm.factory.build_chat_model",
+            lambda cfg, *, temperature=0.2: MockChatAnthropic(),
         )
     """
     def __init__(self, **kwargs: Any) -> None:
