@@ -449,11 +449,3 @@ def test_run_gate_does_not_mutate_workspace(
     )
     after = _snapshot(test_workspace)
     assert before == after
-
-
-# ── Plan 04 stubs (registry parity filled in contract tests) ──
-
-
-@pytest.mark.skip(reason="Plan 04: registry handler CLI + MCP parity (D-13) — see contract tests")
-def test_registry_handler_cli_mcp_parity() -> None:  # pragma: no cover
-    ...
