@@ -75,6 +75,10 @@ class ResearchRunState(TypedDict):
     # Output (final / post-gate — filled by Plan 04 write nodes)
     status: str  # running | awaiting_review | completed | failed
     ingested: list[str]
+    refs_created: list[str]
+    cards_created: list[str]
+    skipped_existing: list[str]
+    rejected: list[str]
     digest_path: str | None
     seed_update: str | None
     events: list[str]
@@ -176,6 +180,10 @@ def _initial_state(inp: ResearchRunInput) -> dict:
         "decisions": None,
         "status": "running",
         "ingested": [],
+        "refs_created": [],
+        "cards_created": [],
+        "skipped_existing": [],
+        "rejected": [],
         "digest_path": None,
         "seed_update": None,
         "events": [],
@@ -415,36 +423,372 @@ def gate_review(state: ResearchRunState) -> dict:
     return {"decisions": decisions}
 
 
-# ── Post-gate write nodes (SKELETONS — IMPLEMENTED IN PLAN 04; NO writes here) ──
+# ── Post-gate write nodes (REAL — run ONLY after Command(resume); RSCH-03 holds) ──
+
+# The concrete ingest actions that produce a ref (and optionally a card).
+_INGEST_ACTIONS = ("ref_only", "ref_and_card")
+
+
+def _normalize_decision(value: Any, default: str) -> str:
+    """Map a resume decision token to a concrete per-finding action.
+
+    Accepts the concrete actions (``skip``/``ref_only``/``ref_and_card``) plus the
+    convenience synonyms ``approve`` (→ the LLM's recommended ``default``) and
+    ``reject`` (→ ``skip``). ``None`` falls back to the per-finding default. This
+    keeps both the structured per-finding payload and the approve-all/reject-all
+    shortcuts expressible through one channel.
+    """
+    if value is None:
+        return default
+    if value == "approve":
+        return default if default in _INGEST_ACTIONS else "skip"
+    if value == "reject":
+        return "skip"
+    return str(value)
+
+
+def _resolve_decisions(state: ResearchRunState) -> list[str]:
+    """Resolve the effective per-finding action list aligned with ``gate_queue``.
+
+    The resume payload (``state['decisions']``) may be ``None`` (use each entry's
+    default ``ingest_action``), a positional ``list[str]`` of actions, or a
+    ``list[dict]`` keyed by finding ``url``. Anything missing falls back to the
+    per-finding default, so a short/partial payload never drops findings.
+    """
+    gate_queue = state.get("gate_queue", [])
+    raw = state.get("decisions")
+    resolved: list[str] = []
+    if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+        by_url = {d.get("url"): d.get("decision") for d in raw}
+        for entry in gate_queue:
+            url = entry.get("finding", {}).get("url")
+            resolved.append(_normalize_decision(by_url.get(url), entry.get("decision", "skip")))
+    elif isinstance(raw, list):
+        for i, entry in enumerate(gate_queue):
+            value = raw[i] if i < len(raw) else None
+            resolved.append(_normalize_decision(value, entry.get("decision", "skip")))
+    else:
+        for entry in gate_queue:
+            resolved.append(entry.get("decision", "skip"))
+    return resolved
 
 
 def ingest_batch(state: ResearchRunState) -> dict:
-    """Write approved refs/cards + append rejects to the ledger. IMPLEMENTED IN PLAN 04.
+    """Write approved refs/cards (deterministic IDs, skip-if-exists); ledger rejects.
 
-    Plan 03 skeleton: performs NO writes so the graph compiles and the pause is
-    testable. The real body (deterministic-ID skip-if-exists ref writes, seed
-    cards, per-finding reject ledger appends) lands in Plan 04.
+    Approved findings (``ref_only``/``ref_and_card``) become refs via the v0.3
+    ``_write_ref_file`` writer keyed by a deterministic ``ref_id_for`` slug+hash —
+    if the ref file already exists it is skipped, never overwritten, so a rerun or
+    a mid-batch crash+resume never double-writes (RSCH-05). ``ref_and_card`` also
+    creates a deterministically-IDed seed card (skip-if-exists). Rejected/skipped
+    findings are appended to the rejected ledger and never written to refs/cards
+    (RSCH-03). Per-finding errors are isolated (Phase 9 D-08): one finding raising
+    does not abort the batch. The legacy collision-suffix ingest helpers (D-07)
+    are NOT used — ID stability comes from hashing the normalized URL.
     """
-    logger.debug("ingest_batch skeleton (no writes in Plan 03)")
-    return {}
+    from datetime import date
+
+    from construct.pipelines.ingestion import (
+        _get_first_domain,
+        _seed_card_body,
+        _write_ref_file,
+    )
+    from construct.pipelines.research_dedup import (
+        append_rejected,
+        normalize_url,
+        ref_id_for,
+    )
+    from construct.schemas.card import CardAuthor
+    from construct.schemas.config import ExtractionStatus, ReferenceRecord
+    from construct.services.knowledge import create_card
+
+    workspace = Path(state["workspace_path"])
+    gate_id = state.get("gate_id") or state["run_id"]
+    gate_queue = state.get("gate_queue", [])
+    decisions = _resolve_decisions(state)
+    domain_id = _get_first_domain(workspace) or "general"
+
+    refs_created: list[str] = []
+    cards_created: list[str] = []
+    skipped_existing: list[str] = []
+    rejected: list[str] = []
+
+    for entry, decision in zip(gate_queue, decisions):
+        finding = entry.get("finding", {})
+        url = finding.get("url", "")
+        title = finding.get("title") or "Untitled"
+        norm = normalize_url(url) if url else ""
+        try:
+            if decision in _INGEST_ACTIONS:
+                ref_id = ref_id_for(norm, title)
+                ref_path = workspace / "refs" / f"{ref_id}.json"
+                if ref_path.exists():
+                    skipped_existing.append(ref_id)
+                else:
+                    ref = ReferenceRecord(
+                        id=ref_id,
+                        title=title,
+                        url=url or f"note://{ref_id}",
+                        relevance_score=float(finding.get("relevance_score", 0.0)),
+                        key_findings=list(finding.get("key_findings", [])),
+                        content_categories=list(finding.get("content_categories", [])),
+                        source_tier=int(finding.get("source_tier", 5)),
+                        extraction_status=ExtractionStatus.complete,
+                        ingested_date=date.today(),
+                        domain=domain_id,
+                        search_cluster="web-ingest",
+                    )
+                    _write_ref_file(workspace, ref_id, ref)
+                    refs_created.append(ref_id)
+                if decision == "ref_and_card":
+                    card_id = ref_id  # deterministic: card shares the ref's stable ID
+                    card_path = workspace / "cards" / f"{card_id}.md"
+                    if card_path.exists():
+                        skipped_existing.append(card_id)
+                    else:
+                        card_data = {
+                            "id": card_id,
+                            "title": title,
+                            "epistemic_type": "finding",
+                            "domains": [domain_id],
+                            "confidence": 1,
+                            "source_tier": int(finding.get("source_tier", 5)),
+                            "content_categories": list(finding.get("content_categories", [])),
+                            "sources": [{"type": "url", "ref": ref_id}],
+                        }
+                        body = _seed_card_body(title, "url", list(finding.get("key_findings", [])))
+                        card_result = create_card(
+                            str(workspace), card_data, author=CardAuthor.construct, body=body
+                        )
+                        if card_result.success:
+                            created_id = (
+                                card_result.data.get("id", card_id)
+                                if card_result.data
+                                else card_id
+                            )
+                            cards_created.append(created_id)
+                        else:
+                            logger.warning(
+                                "ingest_batch card create failed for %s: %s",
+                                title,
+                                card_result.message,
+                            )
+            else:  # skip / reject → ledger only, never a ref/card (RSCH-03)
+                if norm:
+                    append_rejected(
+                        workspace, normalized_url=norm, gate_id=gate_id, title=title
+                    )
+                rejected.append(title)
+        except Exception as exc:  # noqa: BLE001 — per-finding isolation (D-08)
+            logger.warning("ingest_batch finding %r failed: %s", title, exc)
+
+    logger.info(
+        "ingest_batch: %d refs, %d cards, %d skipped, %d rejected",
+        len(refs_created),
+        len(cards_created),
+        len(skipped_existing),
+        len(rejected),
+    )
+    return {
+        "ingested": refs_created + cards_created,
+        "refs_created": refs_created,
+        "cards_created": cards_created,
+        "skipped_existing": skipped_existing,
+        "rejected": rejected,
+    }
 
 
 def compile_digest(state: ResearchRunState) -> dict:
-    """Render the cycle digest markdown + DigestRecord. IMPLEMENTED IN PLAN 04.
+    """Render the cycle digest markdown + append a ``DigestRecord`` (template, no LLM).
 
-    Plan 03 skeleton: performs NO writes.
+    Builds a deterministic markdown digest from the approved findings and the run
+    counts (considered/approved/rejected/ingested) plus the created ref/card IDs
+    and — when the score gate degraded — a degraded notice (Phase 9 D-08/09).
+    Writes ``digests/<id>.md`` and appends a ``construct.views.models.DigestRecord``
+    to the ``digests/digests.json`` record store (RESEARCH A1/D-09), replacing any
+    record with the same id so a rerun stays idempotent. Surfaces the markdown
+    path via ``digest_path``. NO LLM call lives here (D-08).
     """
-    logger.debug("compile_digest skeleton (no writes in Plan 03)")
-    return {}
+    import json
+
+    from construct.pipelines.ingestion import _get_first_domain
+    from construct.views.models import DigestRecord, DigestsFile
+
+    workspace = Path(state["workspace_path"])
+    run_id = state.get("run_id") or state.get("gate_id") or "run"
+    gate_queue = state.get("gate_queue", [])
+    refs_created = state.get("refs_created", [])
+    cards_created = state.get("cards_created", [])
+    skipped_existing = state.get("skipped_existing", [])
+    decisions = _resolve_decisions(state)
+
+    considered = len(gate_queue)
+    approved = sum(1 for d in decisions if d in _INGEST_ACTIONS)
+    rejected = considered - approved
+    ingested = len(refs_created) + len(cards_created) + len(skipped_existing)
+
+    retrieval = state.get("retrieval", {}) or {}
+    degraded = bool(retrieval.get("degraded"))
+    degraded_notice = ""
+    if degraded:
+        degraded_notice = (
+            "\n> **Degraded notice:** the scoring gate ran in a degraded state "
+            f"(retried={retrieval.get('retried', 0)}, errors={retrieval.get('errors', 0)}); "
+            "some candidates may have been skipped.\n"
+        )
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    domain_id = _get_first_domain(workspace) or "general"
+    digest_id = f"digest-{run_id}"
+    title = f"Research cycle digest — {run_id}"
+
+    summary_line = (
+        f"considered={considered}, approved={approved}, rejected={rejected}, "
+        f"ingested={ingested}"
+    )
+
+    lines = [
+        f"# {title}",
+        "",
+        f"Generated: {now_iso}",
+        "",
+        "## Summary",
+        "",
+        f"- Considered: {considered}",
+        f"- Approved: {approved}",
+        f"- Rejected: {rejected}",
+        f"- Refs created: {len(refs_created)}",
+        f"- Cards created: {len(cards_created)}",
+        f"- Skipped (already ingested): {len(skipped_existing)}",
+    ]
+    if degraded_notice:
+        lines.append(degraded_notice)
+    if refs_created:
+        lines += ["", "## Created references", ""]
+        lines += [f"- `{ref_id}`" for ref_id in refs_created]
+    if cards_created:
+        lines += ["", "## Created cards", ""]
+        lines += [f"- `{card_id}`" for card_id in cards_created]
+    lines += ["", "## Approved findings", ""]
+    for entry, decision in zip(gate_queue, decisions):
+        if decision in _INGEST_ACTIONS:
+            finding = entry.get("finding", {})
+            lines.append(f"- {finding.get('title', 'Untitled')} ({decision})")
+    markdown = "\n".join(lines) + "\n"
+
+    digests_dir = workspace / "digests"
+    digests_dir.mkdir(parents=True, exist_ok=True)
+    md_path = digests_dir / f"{digest_id}.md"
+    md_path.write_text(markdown, encoding="utf-8")
+
+    store_path = digests_dir / "digests.json"
+    store = DigestsFile()
+    if store_path.exists():
+        try:
+            store = DigestsFile.model_validate_json(store_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            store = DigestsFile()
+    record = DigestRecord(
+        id=digest_id,
+        domain_id=domain_id,
+        title=title,
+        generated_at=now_iso,
+        card_ids=list(cards_created),
+        summary=summary_line,
+    )
+    # Idempotent append: drop any prior record with the same id, then add.
+    store.digests = [d for d in store.digests if d.id != digest_id]
+    store.digests.append(record)
+    store_path.write_text(
+        json.dumps(store.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+    )
+
+    logger.info("compile_digest wrote %s + DigestRecord", md_path)
+    return {"digest_path": str(md_path)}
 
 
 def update_seeds_and_log(state: ResearchRunState) -> dict:
-    """Stamp queried clusters' last_queried + emit events. IMPLEMENTED IN PLAN 04.
+    """Stamp ``last_queried`` on queried clusters + emit the D-11 audit events.
 
-    Plan 03 skeleton: performs NO writes.
+    Loads ``SearchSeedsFile``, sets ``last_queried = now`` on each cluster queried
+    this run, and writes ``search-seeds.json`` back. Emits via the existing
+    append-only ``append_event`` (non-blocking): ``research_search_complete``,
+    ``research_score_gate_complete``, per-finding ``gate_review_approved`` /
+    ``gate_review_rejected`` (reusing the gate_review event protocol's agent), and
+    ``research_cycle_complete`` on full completion. Sets ``status='completed'`` —
+    this is the terminal write node (D-11/D-12).
     """
-    logger.debug("update_seeds_and_log skeleton (no writes in Plan 03)")
-    return {}
+    import json
+
+    from construct.schemas.config import EventAgent
+    from construct.services.event_log import append_event
+    from construct.storage.workspace import WorkspaceLoader
+
+    workspace = Path(state["workspace_path"])
+    gate_id = state.get("gate_id") or state["run_id"]
+    queried = set(state.get("queried_clusters", []))
+    events = list(state.get("events", []))
+
+    seed_update = "skipped"
+    try:
+        seeds = WorkspaceLoader(workspace).load_search_seeds()
+        now = datetime.now(timezone.utc)
+        changed = False
+        for cluster in seeds.clusters:
+            if cluster.id in queried:
+                cluster.last_queried = now
+                changed = True
+        seeds.updated = now
+        (workspace / "search-seeds.json").write_text(
+            json.dumps(seeds.model_dump(mode="json"), indent=2) + "\n", encoding="utf-8"
+        )
+        seed_update = "updated" if changed else "no-clusters-queried"
+    except Exception as exc:  # noqa: BLE001 — seed update must not abort the cycle
+        logger.warning("update_seeds_and_log seed update failed: %s", exc)
+        seed_update = "failed"
+
+    # D-11 cycle events (append-only, non-blocking).
+    append_event(
+        workspace,
+        EventAgent.researcher,
+        "research_search_complete",
+        target=gate_id,
+        detail=f"{len(state.get('search_results', []))} results",
+    )
+    events.append("research_search_complete")
+    append_event(
+        workspace,
+        EventAgent.researcher,
+        "research_score_gate_complete",
+        target=gate_id,
+        detail=f"{len(state.get('findings', []))} findings",
+    )
+    events.append("research_score_gate_complete")
+
+    # Per-finding gate decisions (reuse the gate_review protocol agent — construct).
+    decisions = _resolve_decisions(state)
+    for entry, decision in zip(state.get("gate_queue", []), decisions):
+        title = entry.get("finding", {}).get("title", "")
+        if decision in _INGEST_ACTIONS:
+            append_event(
+                workspace, EventAgent.construct, "gate_review_approved",
+                target=gate_id, detail=title,
+            )
+            events.append("gate_review_approved")
+        else:
+            append_event(
+                workspace, EventAgent.construct, "gate_review_rejected",
+                target=gate_id, detail=title,
+            )
+            events.append("gate_review_rejected")
+
+    append_event(
+        workspace, EventAgent.researcher, "research_cycle_complete", target=gate_id
+    )
+    events.append("research_cycle_complete")
+
+    return {"status": "completed", "seed_update": seed_update, "events": events}
 
 
 # ── Graph builder (locked linear topology + outage short-circuit) ──
@@ -571,6 +915,117 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
             gate_id=run_id,
             degraded=bool(result.get("retrieval", {}).get("degraded", False)),
             message="Run did not pause for review." if status == "failed" else "Run complete.",
+        )
+    finally:
+        conn.close()
+
+
+# ── Review/inspect runners (resume + read-only inspect; cross-process via the DB) ──
+
+
+def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
+    """Assemble the D-12 ``RunResult`` from the final/merged graph state (SC5)."""
+    retrieval = values.get("retrieval", {}) or {}
+    status = values.get("status") or ("completed" if completed else "awaiting_review")
+    return RunResult(
+        status=status,
+        run_id=run_id,
+        gate_id=values.get("gate_id", run_id),
+        gate_queue=values.get("gate_queue", []),
+        refs_created=values.get("refs_created", []),
+        cards_created=values.get("cards_created", []),
+        digest_path=values.get("digest_path"),
+        seed_update=values.get("seed_update"),
+        events=values.get("events", []),
+        degraded=bool(retrieval.get("degraded", False)),
+        message="Run complete." if completed else "Run still awaiting review.",
+    )
+
+
+def _build_resume_decisions(inp: ReviewInput, gate_queue: list[dict]) -> Any:
+    """Translate a ``ReviewInput`` into the per-finding resume payload.
+
+    Explicit ``decisions`` win; otherwise ``reject_all`` → every finding ``skip``,
+    ``approve_all`` → each finding's recommended ``ingest_action`` (the default),
+    and the bare default (no flag) → ``None`` so ``ingest_batch`` uses the per-entry
+    recommended decisions (i.e. the LLM's proposed ingest set).
+    """
+    if inp.decisions is not None:
+        return inp.decisions
+    if inp.reject_all:
+        return ["skip"] * len(gate_queue)
+    if inp.approve_all:
+        return [entry.get("decision", "skip") for entry in gate_queue]
+    return None
+
+
+def review_research_run(inp: ReviewInput) -> RunResult:
+    """Resume a paused run with per-finding decisions and run it to completion.
+
+    Re-opens the SAME persistent checkpointer on the workspace DB, recompiles the
+    graph, and submits ``Command(resume=decisions)`` against ``thread_id=run_id``
+    so the post-gate write nodes execute exactly once. Supports approve-all /
+    reject-all shortcuts (expanded to per-finding decisions). Returns the completed
+    ``RunResult`` (D-12). Closes the sqlite connection in ``finally``.
+    """
+    from langgraph.types import Command
+
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        gate_queue = snap.values.get("gate_queue", []) if snap.values else []
+        decisions = _build_resume_decisions(inp, gate_queue)
+
+        result = graph.invoke(Command(resume=decisions), cfg)
+        final = graph.get_state(cfg)
+        completed = not final.next
+        values = final.values if final.values else result
+        return _completion_result(inp.run_id, values, completed)
+    finally:
+        conn.close()
+
+
+def inspect_research_run(inp: InspectInput) -> RunResult:
+    """Report a run's pending state via ``get_state`` — NEVER resumes (read-only).
+
+    Re-opens the checkpointer on the workspace DB and reads the persisted snapshot
+    for ``thread_id=run_id``. Maps ``snapshot.next``: ``("gate_review",)`` →
+    ``awaiting_review`` (carrying the pending ``gate_queue``), empty → ``completed``
+    (or the terminal ``status``), anything else → ``running``. Performs no writes
+    and does not advance the graph. Closes the sqlite connection in ``finally``.
+    """
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        values = snap.values or {}
+
+        if snap.next == ("gate_review",):
+            status = "awaiting_review"
+            message = "Run is paused awaiting human review."
+        elif not snap.next:
+            status = values.get("status", "completed") if values else "unknown"
+            message = "Run is complete." if values else "No such run."
+        else:
+            status = "running"
+            message = f"Run is running (next: {snap.next})."
+
+        retrieval = values.get("retrieval", {}) or {}
+        return RunResult(
+            status=status,
+            run_id=inp.run_id,
+            gate_id=values.get("gate_id", inp.run_id),
+            gate_queue=values.get("gate_queue", []),
+            refs_created=values.get("refs_created", []),
+            cards_created=values.get("cards_created", []),
+            digest_path=values.get("digest_path"),
+            seed_update=values.get("seed_update"),
+            events=values.get("events", []),
+            degraded=bool(retrieval.get("degraded", False)),
+            message=message,
         )
     finally:
         conn.close()
