@@ -411,6 +411,20 @@ def _research_score_shim(*args, **kwargs):
             message=exc.safe_message,
             data={"degraded": True, "total_outage": True},
         )
+    except Exception as exc:
+        # Pre-flight provider/config failures (missing config, unknown provider,
+        # missing API key during model construction, governance/taxonomy load
+        # errors) raise before score_all runs, so they never become a
+        # ResearchScoreOutageError. Route them through the same key-safe
+        # sanitizer used in-loop so the CLI never tracebacks and the MCP surface
+        # never leaks raw provider text (CR-01 / T-09-06).
+        from construct.llm.research_score import _safe_scoring_cause
+
+        return OperationResult(
+            success=False,
+            message=f"research.score failed: {_safe_scoring_cause(exc)}",
+            data={"degraded": True, "total_outage": False},
+        )
     degraded = bool(output.retrieval.get("degraded"))
     message = f"Scored {len(output.findings)} findings"
     if degraded:
