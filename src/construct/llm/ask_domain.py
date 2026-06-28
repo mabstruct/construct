@@ -332,8 +332,18 @@ _CACHE: dict[str, dict] = {}
 _CACHE_TTL_SECONDS = 24 * 60 * 60  # 24 hours
 
 
-def _cache_key(domain_id: str, question: str) -> str:
-    return f"{domain_id}::{question}"
+def _cache_key(
+    workspace_path: str,
+    domain_id: str,
+    question: str,
+    max_cards: int,
+    provider: str | None,
+) -> str:
+    # All answer-determining inputs must be part of the key. Omitting
+    # workspace_path/max_cards/provider_override let two workspaces that share a
+    # domain_id collide and receive each other's cached answer *and citations*
+    # (cross-workspace data-integrity defect, CR-02).
+    return f"{workspace_path}::{domain_id}::{max_cards}::{provider}::{question}"
 
 
 def _cache_fresh(entry: dict) -> bool:
@@ -362,7 +372,13 @@ def run_gate(
     from construct.llm.config import load_llm_config
 
     # Check cache first
-    ck = _cache_key(input_data.domain_id, input_data.question)
+    ck = _cache_key(
+        input_data.workspace_path,
+        input_data.domain_id,
+        input_data.question,
+        input_data.max_cards,
+        input_data.provider_override,
+    )
     cached = _CACHE.get(ck)
     if cached and _cache_fresh(cached):
         return cached["result"]
