@@ -497,12 +497,87 @@ def build_curation_run_graph(checkpointer: Any):
     return builder.compile(checkpointer=checkpointer)
 
 
-# ── Runners (implemented in Task 3; importable now) ──
+# ── Run/inspect runners + D-09 status aggregation + terminal event ──
 
 
-def run_curation_run(inp: CurationRunInput) -> CurationRunResult:  # filled in Task 3
-    raise NotImplementedError("run_curation_run lands in Task 3")
+def _aggregate_status(steps: list[CurationStepResult]) -> str:
+    """D-09 run-level roll-up (Pitfall 5).
+
+    ``degraded`` if any REQUIRED step is ``failed`` or ``skipped``; ``completed``
+    otherwise. The three deferred nodes are ``required=False`` so they never
+    degrade a clean run.
+    """
+    required_bad = [s for s in steps if s.required and s.status in ("failed", "skipped")]
+    return "degraded" if required_bad else "completed"
 
 
-def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:  # filled in Task 3
-    raise NotImplementedError("inspect_curation_run lands in Task 3")
+def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
+    """Run the deterministic curation cycle to completion and aggregate status.
+
+    Opens the persistent checkpointer, builds the linear graph, and invokes it once
+    (no resume/interrupt) with ``thread_id = run_id``. Reconstructs the per-step
+    results, computes the D-09 aggregate, appends one terminal
+    ``curation_cycle_complete`` event, and returns the ``CurationRunResult``. The
+    sqlite connection is always closed in ``finally``.
+    """
+    from construct.schemas.config import EventAgent
+    from construct.services.event_log import append_event
+
+    run_id = inp.run_id or _new_run_id()
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_curation_run_graph(saver)
+        cfg = {"configurable": {"thread_id": run_id}}
+        resolved = CurationRunInput(workspace_path=inp.workspace_path, run_id=run_id)
+        result = graph.invoke(_initial_state(resolved), cfg)
+
+        steps = [CurationStepResult(**s) for s in result["steps"]]
+        status = _aggregate_status(steps)
+
+        events = list(result.get("events", []))
+        append_event(
+            Path(inp.workspace_path), EventAgent.curator,
+            "curation_cycle_complete", target=run_id, detail=status,
+        )
+        events.append("curation_cycle_complete")
+
+        return CurationRunResult(
+            status=status, run_id=run_id, steps=steps, events=events,
+            message=f"Curation run {status}.",
+        )
+    finally:
+        conn.close()
+
+
+def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
+    """Report a curation run's persisted terminal state — NEVER re-runs (RT-03).
+
+    Re-opens the checkpointer and reads the persisted snapshot for
+    ``thread_id=run_id`` via ``graph.get_state``; reconstructs the
+    ``CurationRunResult`` from the persisted steps without executing any node. A
+    nonexistent run (no persisted values) maps to ``status="failed"`` so the
+    catalog shim surfaces ``success=False`` (WR-03 precedent). Performs no
+    workspace mutation; closes the sqlite connection in ``finally``.
+    """
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_curation_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        values = snap.values or {}
+
+        if not values:
+            return CurationRunResult(
+                status="failed", run_id=inp.run_id,
+                message="No such curation run.",
+            )
+
+        steps = [CurationStepResult(**s) for s in values.get("steps", [])]
+        status = _aggregate_status(steps)
+        return CurationRunResult(
+            status=status, run_id=inp.run_id, steps=steps,
+            events=values.get("events", []),
+            message="Curation run inspected (read-only).",
+        )
+    finally:
+        conn.close()
