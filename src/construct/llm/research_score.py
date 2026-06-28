@@ -22,14 +22,15 @@ governance/taxonomy loaders, ``build_scoring_llm``, and ``build_gate_output``.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from construct.llm import factory
-from construct.llm.config import GateConfig, ProviderConfig
+from construct.llm.config import GateConfig, ProviderConfig, load_llm_config
 from construct.search.models import SearchResult
 from construct.storage.workspace import WorkspaceLoader
 
@@ -308,4 +309,237 @@ def build_gate_output(
         findings=findings,
         gate=GateMetadata(gate_id=gate_id, provider=provider, model=model),
         retrieval=retrieval,
+    )
+
+
+# ── Error sanitization + outage discrimination (D-08/D-09, T-09-03) ──
+
+
+class ResearchScoreOutageError(Exception):
+    """Total provider/auth outage — every item failed on a provider-level cause."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.safe_message = message
+
+
+_PROVIDER_OUTAGE_MARKERS = (
+    "authentication",
+    "auth failed",
+    "401",
+    "403",
+    "api key",
+    "api_key",
+    "unauthorized",
+    "gate_provider_error",
+)
+
+
+def _is_provider_outage_cause(exc: BaseException) -> bool:
+    """Classify whether an exception indicates provider/auth/config failure."""
+    msg = str(exc).lower()
+    if any(marker in msg for marker in _PROVIDER_OUTAGE_MARKERS):
+        return True
+    return isinstance(exc, RuntimeError) and "GATE_PROVIDER_ERROR" in str(exc)
+
+
+def _safe_scoring_cause(exc: BaseException) -> str:
+    """Return a key-safe cause string — never echo raw provider exception text."""
+    name = exc.__class__.__name__
+    if _is_provider_outage_cause(exc):
+        return f"{name}: provider authentication or configuration error"
+    return f"{name}: scoring failed"
+
+
+def _skip_finding_for_failure(result: SearchResult, safe_cause: str) -> ScoredFinding:
+    """Build a skip finding when per-item scoring fails after retry (D-08)."""
+    return ScoredFinding(
+        url=result.url,
+        title=result.title,
+        relevance_score=0.0,
+        source_tier=result.source_tier,
+        ingest_action="skip",
+        key_findings=[],
+        content_categories=[],
+        reasoning=f"scoring_failed: {safe_cause}",
+    )
+
+
+def _score_one_with_retry(
+    result: SearchResult,
+    *,
+    llm: Any,
+    thresholds: GovernanceThresholds,
+    taxonomy_categories: list[str],
+) -> tuple[ScoredFinding, int, BaseException | None]:
+    """Score one result with a single retry; return (finding, retried_count, error)."""
+    retried = 0
+    last_exc: BaseException | None = None
+    for attempt in range(2):
+        try:
+            finding = score_one(
+                result,
+                llm=llm,
+                thresholds=thresholds,
+                taxonomy_categories=taxonomy_categories,
+            )
+            return finding, retried, None
+        except Exception as exc:
+            last_exc = exc
+            if attempt == 0:
+                retried = 1
+    assert last_exc is not None
+    return (
+        _skip_finding_for_failure(result, _safe_scoring_cause(last_exc)),
+        retried,
+        last_exc,
+    )
+
+
+@dataclass
+class ScoreAllCounters:
+    """Batch scoring counters echoed in retrieval (D-06 + D-08)."""
+
+    results_total: int = 0
+    scored_ok: int = 0
+    retried: int = 0
+    errors: int = 0
+    degraded: bool = False
+
+
+@dataclass
+class ScoreAllResult:
+    """Result of bounded fan-out scoring over a result list."""
+
+    findings: list[ScoredFinding] = field(default_factory=list)
+    counters: ScoreAllCounters = field(default_factory=ScoreAllCounters)
+    total_outage: bool = False
+    outage_message: str | None = None
+
+
+def score_all(
+    results: list[SearchResult],
+    *,
+    llm: Any,
+    thresholds: GovernanceThresholds,
+    taxonomy_categories: list[str],
+    cap: int,
+) -> ScoreAllResult:
+    """Score a batch with bounded concurrency, per-item retry, and outage detection."""
+    if not results:
+        return ScoreAllResult(
+            findings=[],
+            counters=ScoreAllCounters(results_total=0),
+        )
+
+    ordered: list[ScoredFinding | None] = [None] * len(results)
+    retried_total = 0
+    errors = 0
+    scored_ok = 0
+    provider_failures = 0
+
+    def _worker(index: int, result: SearchResult) -> tuple[int, ScoredFinding, int, BaseException | None]:
+        finding, item_retried, exc = _score_one_with_retry(
+            result,
+            llm=llm,
+            thresholds=thresholds,
+            taxonomy_categories=taxonomy_categories,
+        )
+        return index, finding, item_retried, exc
+
+    workers = max(1, min(cap, len(results)))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [
+            executor.submit(_worker, idx, result)
+            for idx, result in enumerate(results)
+        ]
+        for future in as_completed(futures):
+            index, finding, item_retried, exc = future.result()
+            ordered[index] = finding
+            retried_total += item_retried
+            if exc is not None:
+                errors += 1
+                if _is_provider_outage_cause(exc):
+                    provider_failures += 1
+            else:
+                scored_ok += 1
+
+    if scored_ok == 0 and provider_failures == len(results):
+        return ScoreAllResult(
+            findings=[],
+            counters=ScoreAllCounters(
+                results_total=len(results),
+                scored_ok=0,
+                retried=retried_total,
+                errors=errors,
+                degraded=True,
+            ),
+            total_outage=True,
+            outage_message=(
+                "All scoring requests failed due to provider authentication "
+                "or configuration error"
+            ),
+        )
+
+    findings = [f for f in ordered if f is not None]
+    return ScoreAllResult(
+        findings=findings,
+        counters=ScoreAllCounters(
+            results_total=len(results),
+            scored_ok=scored_ok,
+            retried=retried_total,
+            errors=errors,
+            degraded=errors > 0,
+        ),
+    )
+
+
+def run_gate(
+    gate_id: str,
+    input_data: ResearchScoreInput,
+    *,
+    config_path: Any = None,
+) -> ResearchScoreGateOutput:
+    """Run the research.score gate: resolve config, fan out, assemble output."""
+    config = load_llm_config(config_path)
+    gate_cfg = config.gates.get(gate_id, config.gates.get("research.score"))
+    if gate_cfg is None:
+        raise RuntimeError(f"GATE_PROVIDER_ERROR: unknown gate '{gate_id}'")
+
+    provider_key = input_data.provider_override or gate_cfg.provider
+    provider_cfg = config.providers.get(provider_key, config.providers["anthropic"])
+
+    thresholds = load_governance_thresholds(input_data.workspace_path)
+    taxonomy_categories = load_taxonomy_categories(input_data.workspace_path)
+    llm = build_scoring_llm(provider_cfg, gate_cfg)
+
+    batch = score_all(
+        input_data.results,
+        llm=llm,
+        thresholds=thresholds,
+        taxonomy_categories=taxonomy_categories,
+        cap=gate_cfg.concurrency_cap,
+    )
+
+    if batch.total_outage:
+        raise ResearchScoreOutageError(
+            batch.outage_message
+            or "Provider outage during research.score batch"
+        )
+
+    extra_retrieval = {
+        "results_total": batch.counters.results_total,
+        "scored_ok": batch.counters.scored_ok,
+        "retried": batch.counters.retried,
+        "errors": batch.counters.errors,
+        "degraded": batch.counters.degraded,
+    }
+
+    return build_gate_output(
+        batch.findings,
+        gate_id=gate_id,
+        provider=provider_key,
+        model=provider_cfg.model,
+        thresholds=thresholds,
+        extra_retrieval=extra_retrieval,
     )
