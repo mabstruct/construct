@@ -559,6 +559,127 @@ def research_score_cmd(
     typer.echo(f"✓ {result.message}")
 
 
+def _render_run_result(data: dict[str, Any]) -> None:
+    """Human-readable RunResult summary: status, handles, ingest counts, digest,
+    seed update, and the audit event trail (D-12)."""
+    typer.echo(f"status: {data.get('status', '')}")
+    typer.echo(f"run_id: {data.get('run_id', '')}")
+    typer.echo(f"gate_id: {data.get('gate_id', '')}")
+    gate_queue = data.get("gate_queue") or []
+    refs = data.get("refs_created") or []
+    cards = data.get("cards_created") or []
+    typer.echo(f"pending: {len(gate_queue)}, refs: {len(refs)}, cards: {len(cards)}")
+    if data.get("digest_path"):
+        typer.echo(f"digest_path: {data.get('digest_path')}")
+    if data.get("seed_update"):
+        typer.echo(f"seed_update: {data.get('seed_update')}")
+    events = data.get("events") or []
+    if events:
+        typer.echo(f"events: {', '.join(events)}")
+    if data.get("degraded"):
+        typer.echo("degraded: True")
+
+
+def _emit_run_result(result: OperationResult, json_output: bool) -> None:
+    """Render a research-run OperationResult: JSON passthrough or RunResult table."""
+    if json_output:
+        _display_result(result, json_output=True)
+        return
+    if not result.success:
+        _display_result(result, json_output=False)
+        return
+    if result.data:
+        _render_run_result(result.data)
+    typer.echo(f"✓ {result.message}")
+
+
+@research_app.command(name="run")
+def research_run_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Override the search/scoring provider"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Start a durable research run; pauses at the human-review gate (no writes before approval)."""
+    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    if provider is not None:
+        handler_kwargs["provider_override"] = provider
+
+    try:
+        cap = get_registry().get("research.run")
+    except KeyError:
+        typer.echo("ERROR: Capability 'research.run' not found. Ensure Phase 10 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+    _emit_run_result(result, json_output)
+
+
+@research_app.command(name="review")
+def research_review_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: str = typer.Option(..., "--run-id", help="The paused run/gate handle to resume"),
+    decisions_file: Optional[Path] = typer.Option(
+        None, "--decisions-file", help="JSON file of per-finding decisions (or pipe on stdin)"
+    ),
+    approve_all: bool = typer.Option(
+        False, "--approve-all", help="Approve every finding's recommended ingest action"
+    ),
+    reject_all: bool = typer.Option(False, "--reject-all", help="Reject (skip) every finding"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Resume a paused run with per-finding decisions (or --approve-all / --reject-all)."""
+    if sum([decisions_file is not None, approve_all, reject_all]) > 1:
+        typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
+        raise typer.Exit(code=1)
+
+    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace), "run_id": run_id}
+
+    raw: str | None = None
+    if decisions_file is not None:
+        raw = decisions_file.read_text(encoding="utf-8")
+    elif not approve_all and not reject_all and not sys.stdin.isatty():
+        raw = sys.stdin.read()
+
+    if raw:
+        try:
+            handler_kwargs["decisions"] = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            typer.echo(f"ERROR: invalid decisions payload: {exc}")
+            raise typer.Exit(code=1) from exc
+    if approve_all:
+        handler_kwargs["approve_all"] = True
+    if reject_all:
+        handler_kwargs["reject_all"] = True
+
+    try:
+        cap = get_registry().get("research.review")
+    except KeyError:
+        typer.echo("ERROR: Capability 'research.review' not found. Ensure Phase 10 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+    _emit_run_result(result, json_output)
+
+
+@research_app.command(name="inspect")
+def research_inspect_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: str = typer.Option(..., "--run-id", help="The run/gate handle to inspect"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Report a run's pending review state (read-only; never resumes or writes)."""
+    handler_kwargs = {"workspace_path": str(workspace), "run_id": run_id}
+
+    try:
+        cap = get_registry().get("research.inspect")
+    except KeyError:
+        typer.echo("ERROR: Capability 'research.inspect' not found. Ensure Phase 10 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+    _emit_run_result(result, json_output)
+
+
 # ---------------------------------------------------------------------------
 # Views command group (Phase 6)
 # ---------------------------------------------------------------------------
