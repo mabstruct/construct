@@ -274,6 +274,33 @@ requested key nor a sane default is present.
 
 ---
 
+## Resolution
+
+**Resolved:** 2026-06-28 via `/gsd:code-review 9 --fix` (Critical + Warning scope, single pass).
+All 8 Critical and Warning findings were fixed as atomic commits; the 3 Info
+findings were left out of scope (IN-02 was incidentally subsumed by the WR-06
+rewrite). Test suite went from 289 → **291 passed, 0 skipped** (+2 CR-01
+regression tests in `tests/llm/test_research_score_capability.py`).
+
+| Finding | Severity | Status | Commit | Resolution |
+|---------|----------|--------|--------|------------|
+| CR-01 | critical | ✅ fixed | `0abb5cd` | `_research_score_shim` wraps the whole gate call; pre-flight provider/config errors route through `_safe_scoring_cause` → `OperationResult(success=False, data={"degraded": True, "total_outage": False})`. No CLI traceback, no MCP raw-text leak. |
+| CR-02 | critical | ✅ fixed | `d95bd3b` | `ask.domain` cache key now includes `workspace_path`, `max_cards`, and `provider_override` at both read and write sites. |
+| WR-01 | warning | ✅ fixed | `adcb267` | `_flatten_search_results_payload` guards each batch element with `isinstance(..., dict)` and asserts `payload["batches"]` is a list, raising `ValueError` (mapped to the clean message). |
+| WR-02 | warning | ✅ fixed | `81e1f00` | `build_chat_model` threads `cfg.timeout_seconds`/`cfg.base_url` into `ChatAnthropic` (verified `timeout`/`base_url` against langchain_anthropic 1.4.5) and `ChatOpenAI`. |
+| WR-03 | warning | ✅ fixed | `fc5d526` | `ask.domain` synthesis failure records the exception class name only in `token_usage`, never `str(exc)`. |
+| WR-04 | warning | ✅ fixed | `89e1d7c` | `extract_citations` logs the missing-citation warning to stderr via `logging` instead of `print()` to stdout. |
+| WR-05 | warning | ✅ fixed | `f5ffc05` | `load_taxonomy_categories` wraps the `load_cards()` iteration in the same defensive guard as the registry load. |
+| WR-06 | warning | ✅ fixed | `ce8a72f` | `_is_provider_outage_cause` prefers the `GATE_PROVIDER_ERROR` prefix and auth/permission exception types, with word-boundary matching for numeric HTTP codes. |
+| IN-01 | info | ⏳ open | — | `list` Typer commands shadow the builtin; the `builtins.list` workaround remains. Tracked tech-debt. |
+| IN-02 | info | ✅ subsumed | `ce8a72f` | Redundant `GATE_PROVIDER_ERROR` re-check eliminated by the WR-06 classifier rewrite. |
+| IN-03 | info | ⏳ open | — | Unguarded Anthropic import + hardcoded `anthropic` fallback. Tracked tech-debt. |
+
+**Remaining open:** IN-01, IN-03 (Info only). Close with `/gsd:code-review 9 --fix --all`.
+
+---
+
 _Reviewed: 2026-06-28_
 _Reviewer: Claude (gsd-code-reviewer)_
+_Resolution: 2026-06-28 (gsd-code-fixer, 8/8 Critical+Warning fixed)_
 _Depth: standard_
