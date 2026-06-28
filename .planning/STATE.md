@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
-stopped_at: Phase 9 context gathered
+stopped_at: Phase 9 Plan 03 complete; Plan 04 (CLI/MCP surface) in progress
 last_updated: "2026-06-28T09:27:01.589Z"
 last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 17
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 09 (llm-provider-factory-research-score) — EXECUTING
-Plan: 2 of 4
-Status: Ready to execute
+Plan: 3 of 4 complete; Plan 04 in progress
+Status: 09-04 WIP uncommitted (capability registration + CLI/MCP surface)
 Last activity: 2026-06-28
 
-Progress: [███████░░░] 71%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [███████░░░] 71%
 - Trend: v0.4 ready to begin planning from Phase 8.
 
 | Phase 09 P02 | 20min | 2 tasks | 5 files |
+| Phase 09 P03 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,9 @@ Recent decisions affecting current work:
 - [Phase 09-02]: key_findings cleared on clamp-to-skip with clamp rationale appended to reasoning (D-14 / Pitfall 5)
 - [Phase 09-02]: score_one takes a pre-built llm (mock-injectable); factory.build_chat_model seam lives in build_scoring_llm for the Plan 03 runner
 - [Phase 09-02]: GovernanceThresholds dataclass decouples clamp/score_one from full GovernanceConfig and carries the D-06 echo fields
+- [Phase 09-03]: score_all uses a sync ThreadPoolExecutor(max_workers=cap) for bounded fan-out — async gather does not honor the cap (D-04 / Pitfall 2)
+- [Phase 09-03]: degraded (partial item failure) vs total-outage (all provider/auth failures) discriminated by cause — partial degrades, total promotes to a gate error mapped to success=False by the Plan 04 shim (D-08 vs D-09)
+- [Phase 09-03]: provider errors sanitized to class name + safe message (mirrors research_search._safe_error_message) — never echo raw text that may carry a key (T-09-03)
 
 ### Pending Todos
 
@@ -154,5 +158,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-06-28T09:26:54.160Z
-Stopped at: Phase 9 context gathered
+Stopped at: Phase 9 Plan 03 complete (committed 4ea1e0b); Plan 04 in progress with uncommitted WIP (catalog.py, cli.py, 2 new test files)
 Resume file: None
