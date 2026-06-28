@@ -123,6 +123,10 @@ None - no external service configuration required.
 - The full durable research workflow is now invokable from both the CLI and the stdio MCP server through the shared registry — Phase 10 capability surface is complete.
 - 331 passed / 4 skipped under `uv run --extra dev pytest`; only the 3 pre-existing environmental failures remain.
 
+## Self-Check: PASSED
+
+All created/modified files exist on disk; all task commits (fa6e0d3, 450fa45, c16d4ab) and the metadata commit (9c87a40) are present in git history.
+
 ---
 *Phase: 10-durable-human-review-research-run*
 *Completed: 2026-06-28*
