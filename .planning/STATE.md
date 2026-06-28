@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: executing
-stopped_at: Phase 9 Plan 03 complete; Plan 04 (CLI/MCP surface) in progress
-last_updated: "2026-06-28T09:27:01.589Z"
+status: 09-04 WIP uncommitted (capability registration + CLI/MCP surface)
+stopped_at: Phase 9 Plan 03 complete (committed 4ea1e0b); Plan 04 in progress with uncommitted WIP (catalog.py, cli.py, 2 new test files)
+last_updated: "2026-06-28T11:15:05.336Z"
 last_activity: 2026-06-28
 progress:
   total_phases: 6

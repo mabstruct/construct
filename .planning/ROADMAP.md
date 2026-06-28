@@ -34,7 +34,7 @@ Full phase detail (goals, success criteria, plans) archived in
 **Milestone Goal:** Move CONSTRUCT's highest-value multi-step workflows from opaque Claude-native procedures into testable, model-agnostic LangGraph/LangChain pipelines while preserving the existing workspace format and current skill UX.
 
 - [x] **Phase 8: Search Provider Spine + Contract Foundation** — provider-agnostic `research.search`, normalized search contracts, config/caps, degraded errors, and offline provider tests. (completed 2026-06-21)
-- [ ] **Phase 9: LLM Provider Factory + research.score** — model-agnostic structured scoring that turns normalized search results into governed finding proposals.
+- [x] **Phase 9: LLM Provider Factory + research.score** — model-agnostic structured scoring that turns normalized search results into governed finding proposals. (completed 2026-06-28)
 - [ ] **Phase 10: Durable Human Review + research.run** — reviewed, resumable research workflow with deduplication, approved ingest, digest, seed updates, and events.
 - [ ] **Phase 11: Curation PIPE Steps** — real deterministic curation checks and reports replace v0.3 placeholder success responses.
 - [ ] **Phase 12: Curation L3 Gates + Review Application** — promotion and connection proposals use reusable human review before canonical writes, with migrated skills.
@@ -104,7 +104,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 09-04-PLAN.md — capability registration + CLI table / MCP parity surface (D-10/13)
+- [x] 09-04-PLAN.md — capability registration + CLI table / MCP parity surface (D-10/13)
 
 ### Phase 10: Durable Human Review + research.run
 
@@ -188,7 +188,7 @@ Plans:
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
-| 9. LLM Provider Factory + research.score | v0.4 | 3/4 | In Progress|  |
+| 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
