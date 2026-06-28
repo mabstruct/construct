@@ -124,8 +124,8 @@ Plans:
 Plans:
 **Wave 1** *(parallel — no file overlap)*
 
-- [ ] 10-01-PLAN.md — Wave 0 foundation: install langgraph-checkpoint-sqlite, .construct/ gitignore + D-02 carve-out, failing Nyquist suite (RSCH-02..05)
-- [ ] 10-02-PLAN.md — Idempotency primitives: normalize_url, deterministic ref-ID, title-fuzzy, rejected ledger (RSCH-05)
+- [x] 10-01-PLAN.md — Wave 0 foundation: install langgraph-checkpoint-sqlite, .construct/ gitignore + D-02 carve-out, failing Nyquist suite (RSCH-02..05)
+- [x] 10-02-PLAN.md — Idempotency primitives: normalize_url, deterministic ref-ID, title-fuzzy, rejected ledger (RSCH-05)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -207,7 +207,7 @@ Plans:
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
-| 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
+| 10. Durable Human Review + research.run | v0.4 | 2/5 | In Progress|  |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |
