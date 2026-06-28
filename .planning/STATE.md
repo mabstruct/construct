@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: 09-04 WIP uncommitted (capability registration + CLI/MCP surface)
-stopped_at: Phase 9 Plan 03 complete (committed 4ea1e0b); Plan 04 in progress with uncommitted WIP (catalog.py, cli.py, 2 new test files)
-last_updated: "2026-06-28T11:15:05.336Z"
+status: ready_to_plan
+stopped_at: Phase 09 complete (4/4) — ready to discuss Phase 10
+last_updated: 2026-06-28T11:26:54.424Z
 last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 17
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 09 — llm-provider-factory-research-score
+**Current focus:** Phase 10 — durable human review + research.run
 
 ## Current Position
 
-Phase: 09 (llm-provider-factory-research-score) — EXECUTING
-Plan: 3 of 4 complete; Plan 04 in progress
-Status: 09-04 WIP uncommitted (capability registration + CLI/MCP surface)
+Phase: 10
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-06-28
 
 Progress: [█████████░] 86%
@@ -46,6 +46,7 @@ Progress: [█████████░] 86%
 |-------|-------|-------|----------|
 | 8 | TBD | - | - |
 | 08 | 3 | - | - |
+| 09 | 4 | - | - |
 
 **Recent Trend:**
 
