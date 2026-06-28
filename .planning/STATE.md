@@ -4,13 +4,13 @@ milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
 stopped_at: Phase 9 context gathered
-last_updated: "2026-06-27T15:56:34.052Z"
-last_activity: 2026-06-27 -- Phase 09 execution started
+last_updated: "2026-06-28T09:27:01.589Z"
+last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 5
   percent: 17
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 09 (llm-provider-factory-research-score) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 09
-Last activity: 2026-06-27 -- Phase 09 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-28
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ Progress: [░░░░░░░░░░] 0%
 
 - Last completed milestone: v0.3 shipped 2026-06-16 with 0 unsatisfied requirements.
 - Trend: v0.4 ready to begin planning from Phase 8.
+
+| Phase 09 P02 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -120,6 +122,9 @@ Recent decisions affecting current work:
 - [v0.4 Roadmap]: Use the research-recommended sequence W1–W6 as Phases 8–13.
 - [v0.4 Roadmap]: API/runtime parity is explicit in each relevant phase; final all-capability registry and CLI/MCP parity closes in Phase 13.
 - [v0.4 Roadmap]: Human review remains mandatory before research ingest, lifecycle, or connection writes.
+- [Phase 09-02]: key_findings cleared on clamp-to-skip with clamp rationale appended to reasoning (D-14 / Pitfall 5)
+- [Phase 09-02]: score_one takes a pre-built llm (mock-injectable); factory.build_chat_model seam lives in build_scoring_llm for the Plan 03 runner
+- [Phase 09-02]: GovernanceThresholds dataclass decouples clamp/score_one from full GovernanceConfig and carries the D-06 echo fields
 
 ### Pending Todos
 
@@ -148,6 +153,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-26T13:51:41.306Z
+Last session: 2026-06-28T09:26:54.160Z
 Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-llm-provider-factory-research-score/09-CONTEXT.md
+Resume file: None

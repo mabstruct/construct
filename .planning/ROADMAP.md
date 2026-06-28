@@ -96,7 +96,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 09-02-PLAN.md — research.score schema, single-result scoring, governance clamp, taxonomy steering (D-05/06/07/11/12/14)
+- [x] 09-02-PLAN.md — research.score schema, single-result scoring, governance clamp, taxonomy steering (D-05/06/07/11/12/14)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -188,7 +188,7 @@ Plans:
 | 6. Derived Data, Ops UI & Governed Spikes | v0.3 | 4/4 | Complete | 2026-06-11 |
 | 7. Close v0.3 blockers (RT-03, ING-02, ING-05) | v0.3 | 3/3 | Complete | 2026-06-16 |
 | 8. Search Provider Spine + Contract Foundation | v0.4 | 3/3 | Complete   | 2026-06-21 |
-| 9. LLM Provider Factory + research.score | v0.4 | 1/4 | In Progress|  |
+| 9. LLM Provider Factory + research.score | v0.4 | 2/4 | In Progress|  |
 | 10. Durable Human Review + research.run | v0.4 | 0/TBD | Not started | - |
 | 11. Curation PIPE Steps | v0.4 | 0/TBD | Not started | - |
 | 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
