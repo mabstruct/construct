@@ -253,12 +253,15 @@ def llm_synthesize(state: AskDomainState) -> dict:
             "llm_confidence": result.confidence,
         }
     except Exception as exc:
-        # Fail loud with structured error; no silent fallback
+        # Fail loud with structured error; no silent fallback. Record only the
+        # exception class name — never str(exc), which would carry raw provider
+        # internals (auth/key detail) into AskDomainOutput.token_usage and on to
+        # CLI/MCP clients (WR-03, mirrors research_score's sanitization).
         return {
             "synthesised_answer": None,
             "cited_card_ids": [],
             "llm_confidence": None,
-            "token_usage": {"error": str(exc)},
+            "token_usage": {"error": f"{exc.__class__.__name__}: synthesis failed"},
         }
 
 
