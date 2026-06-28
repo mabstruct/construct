@@ -119,7 +119,25 @@ Plans:
   4. User can rerun research safely without duplicating URLs, refs, rejected findings, or partially completed batch writes.
   5. User can see run status, gate IDs, approved ingest counts, digest path, seed update status, and emitted events in the workflow result.
 
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+
+Plans:
+**Wave 1** *(parallel — no file overlap)*
+
+- [ ] 10-01-PLAN.md — Wave 0 foundation: install langgraph-checkpoint-sqlite, .construct/ gitignore + D-02 carve-out, failing Nyquist suite (RSCH-02..05)
+- [ ] 10-02-PLAN.md — Idempotency primitives: normalize_url, deterministic ref-ID, title-fuzzy, rejected ledger (RSCH-05)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 10-03-PLAN.md — Workflow read-side: state + I/O models, pre-gate nodes, interrupt gate, checkpointed graph, pause (RSCH-02/03/04)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 10-04-PLAN.md — Workflow write-side: idempotent ingest, template digest+record, seed/events, review/inspect runners, cross-process resume (RSCH-02/03/04/05)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 10-05-PLAN.md — Capability registration + CLI + MCP parity + contract/regression tests (RSCH-02/03/04)
 
 ### Phase 11: Curation PIPE Steps
 
