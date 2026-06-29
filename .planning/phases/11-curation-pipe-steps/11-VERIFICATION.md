@@ -1,9 +1,11 @@
 ---
 phase: 11-curation-pipe-steps
 verified: 2026-06-28T22:00:00Z
-status: human_needed
+status: passed
+human_verified: 2026-06-29
 score: 3/3 must-haves verified
 overrides_applied: 0
+human_verification_note: "Both human-UAT items resolved 2026-06-29 (see 11-HUMAN-UAT.md): visual render confirmed against test-ws/ping-eon; WR-04 exit-code semantics accepted (exit 0 = ran without crashing; failure visible via status/JSON/event log)."
 human_verification:
   - test: "Run `construct curation run -w <workspace>` (without --json) against a real workspace and inspect the terminal output"
     expected: "Output shows status (completed/degraded), run_id, and a per-step line for each of the 5 real steps plus 3 deferred steps. Completed real steps have concrete summaries (e.g., '0 error(s), 1 warning(s)', '2 decay candidate(s) over a 28d window'). Deferred nodes show 'skipped — <step> deferred to Phase 12'. Status line clearly distinguishes completed vs degraded."
