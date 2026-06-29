@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: verifying
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-06-28T21:12:20.193Z"
+status: ready_to_plan
+stopped_at: Phase 11 complete (3/3) — ready to discuss Phase 12
+last_updated: 2026-06-29T05:48:27.174Z
 last_activity: 2026-06-28
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 11 — curation-pipe-steps
+**Current focus:** Phase 12 — curation l3 gates + review application
 
 ## Current Position
 
-Phase: 11 (curation-pipe-steps) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-06-28
+Phase: 12
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-29
 
 Progress: [█████████░] 93%
 
@@ -48,6 +48,7 @@ Progress: [█████████░] 93%
 | 08 | 3 | - | - |
 | 09 | 4 | - | - |
 | 10 | 5 | - | - |
+| 11 | 3 | - | - |
 
 **Recent Trend:**
 
