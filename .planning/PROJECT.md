@@ -27,6 +27,7 @@ The system must reliably turn source material into connected, explorable knowled
 - ✓ Make the current agentic user experience clearer through documented workflows and dependable next-step guidance — v0.3 (guided workflow operability + help.suggest, Phase 4; graph-health surfacing, Phase 7).
 - ✓ Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.5 — v0.3 (capability/CLI/MCP runtime spine + derived-data contracts, Phases 3, 5, 6).
 - ✓ **Research workflow:** `research.score` scores search results through a model-agnostic structured gate and `research.run` executes search→dedup→score→durable human review→approved ingest→digest→seed updates→events as one resumable workflow — v0.4 (Phase 9 scoring, Phase 10 durable `research.run`; RSCH-01..05).
+- ✓ **Curation PIPE steps:** `curation.run` / `curation.inspect` run real deterministic integrity, decay, orphan, connection-health, and report checks (replacing v0.3 placeholder no-ops) from the CLI and stdio MCP server, with completed/degraded/skipped status visible per step — v0.4 (Phase 11; CUR-01). Promotion/connection gates, human review application, and skill migration remain Phase 12.
 
 ### Active
 
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-28 — Phase 10 complete (durable `research.run`); research workflow (Phases 9–10) validated*
+*Last updated: 2026-06-29 — Phase 11 complete (deterministic `curation.run` PIPE steps, CUR-01); curation gates/review/skill-migration continue in Phase 12*
