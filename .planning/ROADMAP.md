@@ -178,7 +178,27 @@ Plans:
   4. Developer can verify curation behavior offline with tests that fail if placeholder handlers or unreviewed canonical writes remain.
   5. User can run migrated research and curation Claude-native skills that delegate to CLI/MCP capabilities instead of direct `WebSearch`, `WebFetch`, or workspace writes.
 
-**Plans**: TBD
+**Plans**: 6 plans (6 waves — linear graft chain: tests -> gates -> graph read-side -> graph write-side -> registry/CLI -> skills)
+
+Plans:
+**Wave 1**
+
+- [ ] 12-01-PLAN.md — Wave 0 failing-test scaffold: gate unit tests + HITL/reviewed-write integration tests + CLI/MCP parity + no-placeholder + skill-migration guards + conftest mock seams
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 12-02-PLAN.md — Two L3 LLM gates: card.evaluate (curation_promote.py) + connection-typing (curation_connect.py) + config.yaml gate entries
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 12-03-PLAN.md — curation_run.py read-side: gate_queue state + CurationProposal + producer nodes + interrupt-only process_inbox + empty-queue short-circuit + awaiting_review status
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 12-04-PLAN.md — curation_run.py write-side: apply_promotions/connections/archives + decision resolution + review_curation_run + extended inspect + events
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 12-05-PLAN.md — Registry + CLI: register card.evaluate + curation.review, extend curation.inspect, add `curation review` command, remove D-10 placeholder lambdas from catalog.py + cli.py
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 12-06-PLAN.md — Skill migration (API-04): research-cycle + curation-cycle + card-evaluate become thin orchestrators; human-verify the review loop
 
 ### Phase 13: Daily-Cycle Composition
 
@@ -222,5 +242,5 @@ Plans:
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete    | 2026-06-29 |
-| 12. Curation L3 Gates + Review Application | v0.4 | 0/TBD | Not started | - |
+| 12. Curation L3 Gates + Review Application | v0.4 | 0/6 | Planned | - |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |
