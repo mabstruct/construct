@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: ready_to_plan
-stopped_at: Phase 11 complete (3/3) — ready to discuss Phase 12
-last_updated: 2026-06-29T05:48:27.174Z
-last_activity: 2026-06-28
+status: planning
+stopped_at: Phase 12 context gathered
+last_updated: "2026-06-30T11:07:21.310Z"
+last_activity: 2026-06-29
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
   completed_plans: 15
-  percent: 50
+  percent: 67
 ---
 
 # Project State
@@ -168,6 +168,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-28T21:12:20.185Z
-Stopped at: Completed 11-03-PLAN.md
-Resume file: None
+Last session: 2026-06-30T11:07:21.302Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-curation-l3-gates-review-application/12-CONTEXT.md
