@@ -373,19 +373,21 @@ registry.register(CapabilityRecord(
 | A4 | Pre-Phase-12 `curation-run.sqlite` snapshots need **no migration**; stale/foreign `run_id`s just report `failed` on inspect | Runtime State Inventory | Low — curation runs are short and re-runnable; verify the inspect guard handles shape mismatch, not just nonexistent |
 | A5 | The promotion candidate pre-filter `lifecycle != mature` (D-02) is applied **deterministically in `promotion_review` before the LLM fan-out** (archived cards also excluded, mirroring decay_scan:317) | Phase Requirements (CUR-02) | Low — D-02 is explicit; archived exclusion is implied (archived is terminal). Confirm archived cards are excluded from the LLM gate (cost + nonsensical to promote an archived card) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does the `workflow` CLI command group survive v0.4?**
+> All three resolved during planning (adopted the recommendations below). Planning artifacts: Q1 → Plan 12-05 T2 (redirect/remove placeholder); Q2 → Plan 12-02 T3 (`card.evaluate` + `curation.connection_type` config.yaml entries); Q3 → Plan 12-04 T1 (escalate is review-only, no SOT write this phase).
+
+1. **RESOLVED — Does the `workflow` CLI command group survive v0.4?**
    - What we know: D-10 removes the curation-cycle placeholder steps; `workflow.run`/`workflow.status`/`workflow.resume` capabilities + CLI commands still exist (catalog.py:302-330, cli.py:200-266).
    - What's unclear: whether `construct workflow run` is removed entirely, kept for non-curation workflows (there are none real), or redirected to `curation.run`.
    - Recommendation: Redirect `construct workflow run curation-cycle` → `curation.run` (or remove the `workflow` group) and let the anti-placeholder test (CUR-05) assert no placeholder handler is reachable. Surface to the user during discuss/plan-check.
 
-2. **Exact gate ids + config entries for the two L3 gates.**
+2. **RESOLVED — Exact gate ids + config entries for the two L3 gates.**
    - What we know: `card.evaluate` is named in spec §10 capability table (line 481) as `construct card evaluate` / `construct_card_evaluate` / L3.
    - What's unclear: the connection-typing gate id (no spec name; discretion A1).
    - Recommendation: register `card.evaluate` config in `config.yaml`; for connection typing, reuse a `curation.connection_type` gate id (inline) and add a `config.yaml` entry to avoid the research.score fallback.
 
-3. **`escalate` item semantics on resume.**
+3. **RESOLVED — `escalate` item semantics on resume.**
    - What we know: D-07 says `escalate` items carry **no default write**; a human must explicitly act.
    - What's unclear: whether approving an `escalate` item triggers a write (and which), or whether escalate is review-only (record outcome, no SOT write this run).
    - Recommendation: Treat `escalate` as review-only this phase (record outcome + event, no canonical write), matching "no default write." Confirm with user.
