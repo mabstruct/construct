@@ -98,16 +98,21 @@ class CurationRunState(TypedDict):
     gate_queue: Annotated[list[dict], operator.add]
     decisions: Any  # resume payload from the single human-review gate
 
-    # Post-gate write outcomes — Plan 04's apply nodes fill these; empty here.
+    # Post-gate write outcomes — Plan 04's apply nodes fill these. ``promoted`` /
+    # ``connections_added`` / ``archived`` each have a single writer node, but
+    # ``rejected`` / ``escalated`` are contributed by more than one apply node, so
+    # they use ``operator.add`` to accumulate across nodes instead of overwriting.
     promoted: list[str]
     connections_added: list[str]
     archived: list[str]
-    rejected: list[str]
-    escalated: list[str]
+    rejected: Annotated[list[str], operator.add]
+    escalated: Annotated[list[str], operator.add]
 
-    # Output
+    # Output — ``events`` accumulates one audit-event name per emitting node
+    # (``operator.add``) so per-step + gate-review events survive across the
+    # interrupt/resume boundary without any node overwriting another's events.
     status: str  # running | awaiting_review | completed | degraded | failed
-    events: list[str]
+    events: Annotated[list[str], operator.add]
 
 
 # ── In-module I/O models (defined HERE, not catalog.py — avoid circular import) ──
@@ -298,6 +303,25 @@ def _sanitize_error(exc: Exception) -> str:
     text = str(exc).strip()
     first = text.splitlines()[0] if text else ""
     return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
+
+
+def _emit(workspace_path: str, action: str, target: str | None, detail: str | None = None) -> str:
+    """Append one audit event (append-only, non-blocking) and return its name.
+
+    Every deterministic step + apply/report node emits via this helper so the
+    ``log/events.jsonl`` audit trail records the full curation cycle per spec §6.6
+    (``workflow_step_complete`` per step, ``gate_review_approved`` /
+    ``gate_review_rejected`` per reviewed proposal, ``curation_cycle_complete`` at
+    the end). The returned name is appended into the ``events`` state channel. The
+    interrupt-only ``process_inbox`` node NEVER calls this (avoids a double-fire on
+    resume — Pitfall 1). ``append_event`` is non-blocking, so a log-write failure
+    never aborts a node.
+    """
+    from construct.schemas.config import EventAgent
+    from construct.services.event_log import append_event
+
+    append_event(Path(workspace_path), EventAgent.curator, action, target=target, detail=detail)
+    return action
 
 
 def _coerce_date(value: Any) -> date | None:
@@ -705,6 +729,225 @@ def process_inbox(state: CurationRunState) -> dict:
     return {"decisions": decisions}
 
 
+# ── Post-gate write nodes (WRITE BOUNDARY — run ONLY after Command(resume); CUR-03) ──
+
+
+def _normalize_decision(value: Any, default: str) -> str:
+    """Map a resume decision token to a concrete per-proposal verdict (D-07).
+
+    ``None`` falls back to the proposal's recommended ``default`` decision (the
+    gate's own verdict); the convenience synonym ``approve`` also expands to that
+    default so approve-all reproduces every gate recommendation, and ``reject``
+    collapses to a hard ``"reject"`` (no write). Any explicit token is passed
+    through verbatim so a structured per-item payload keeps full control.
+    """
+    if value is None:
+        return default
+    if value == "approve":
+        return default
+    if value == "reject":
+        return "reject"
+    return str(value)
+
+
+def _resolve_decisions(state: CurationRunState) -> list[str]:
+    """Resolve the effective per-proposal verdict list aligned with ``gate_queue``.
+
+    The resume payload (``state['decisions']``) is a positional ``list`` aligned
+    with the consolidated ``gate_queue`` (built by ``_build_resume_decisions``); a
+    short/absent payload falls back to each proposal's recommended ``decision`` so
+    no proposal is ever dropped. Only ``approved`` verdicts authorize a write — the
+    apply nodes below enforce the only-approved invariant per proposal kind.
+    """
+    gate_queue = state.get("gate_queue", [])
+    raw = state.get("decisions")
+    resolved: list[str] = []
+    if isinstance(raw, list):
+        for i, entry in enumerate(gate_queue):
+            value = raw[i] if i < len(raw) else None
+            resolved.append(_normalize_decision(value, entry.get("decision", "")))
+    else:
+        for entry in gate_queue:
+            resolved.append(entry.get("decision", ""))
+    return resolved
+
+
+def _card_lifecycle_map(workspace: str) -> dict[str, str]:
+    """Load ``{card_id: lifecycle_value}`` for idempotent skip-if-at-target writes.
+
+    Rebuilt INSIDE the apply node (never stored in state — Pitfall 3). Used so a
+    rerun/crash-resume that re-approves the same proposal skips a card already at
+    its target lifecycle / already archived rather than re-writing it.
+    """
+    from construct.storage.workspace import WorkspaceLoader
+
+    out: dict[str, str] = {}
+    try:
+        for card in WorkspaceLoader(Path(workspace)).load_cards():
+            lifecycle = card.get("lifecycle")
+            out[card.get("id")] = getattr(lifecycle, "value", lifecycle)
+    except Exception as exc:  # noqa: BLE001 — read robustness (T-11-02)
+        logger.warning("apply node: could not load card lifecycles: %s", _sanitize_error(exc))
+    return out
+
+
+def apply_promotions(state: CurationRunState) -> dict:
+    """Write APPROVED promotions via ``edit_card`` (idempotent; only-approved).
+
+    For each proposal of ``kind="promotion"`` whose resolved verdict is
+    ``"promote"``, advance the card lifecycle to ``target_lifecycle``
+    (``growing``/``mature`` only — Discrepancy 1) via
+    ``edit_card(..., author=CardAuthor.curator)``, skipping any card already at
+    that lifecycle (idempotent — a rerun never re-writes). ``escalate`` proposals
+    (and promotion verdicts resolving to ``escalate``) are REVIEW-ONLY: recorded as
+    escalated with NO SOT write this phase (Open-Q 3). Rejected proposals write
+    nothing. Each per-item write is isolated in try/except so one failure never
+    aborts the batch (D-08); one ``workflow_step_complete`` event marks the node.
+    """
+    from construct.schemas.card import CardAuthor
+    from construct.services.knowledge import edit_card
+
+    workspace = state["workspace_path"]
+    gate_queue = state.get("gate_queue", [])
+    decisions = _resolve_decisions(state)
+    lifecycles = _card_lifecycle_map(workspace)
+
+    promoted: list[str] = []
+    rejected: list[str] = []
+    escalated: list[str] = []
+    events: list[str] = []
+
+    for entry, decision in zip(gate_queue, decisions):
+        kind = entry.get("kind")
+        if kind not in ("promotion", "escalate"):
+            continue
+        card_id = entry.get("payload", {}).get("card_id")
+        # escalate is review-only this phase — record outcome, NO write (Open-Q 3).
+        if kind == "escalate" or decision == "escalate":
+            escalated.append(card_id)
+            events.append(_emit(workspace, "gate_review_rejected", card_id, "escalated (review-only)"))
+            continue
+        if decision != "promote":
+            rejected.append(card_id)
+            events.append(_emit(workspace, "gate_review_rejected", card_id, "promotion rejected"))
+            continue
+        target = entry.get("payload", {}).get("target_lifecycle")
+        if not target:
+            escalated.append(card_id)
+            events.append(_emit(workspace, "gate_review_rejected", card_id, "no target lifecycle"))
+            continue
+        try:
+            if lifecycles.get(card_id) == target:
+                promoted.append(card_id)  # already at target → idempotent no-op
+            else:
+                res = edit_card(workspace, card_id, {"lifecycle": target}, author=CardAuthor.curator)
+                if res.success:
+                    promoted.append(card_id)
+                else:
+                    logger.warning("apply_promotions: %s failed: %s", card_id, res.message)
+            events.append(_emit(workspace, "gate_review_approved", card_id, f"promote → {target}"))
+        except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
+            logger.warning("apply_promotions %s failed: %s", card_id, _sanitize_error(exc))
+    events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_promotions"))
+    return {"promoted": promoted, "rejected": rejected, "escalated": escalated, "events": events}
+
+
+def apply_connections(state: CurationRunState) -> dict:
+    """Write APPROVED connections via ``add_connection`` (idempotent dedup).
+
+    For each proposal of ``kind="connection"`` whose resolved verdict is not a
+    reject, persist a NEW typed edge via
+    ``add_connection(..., created_by=ConnectionAuthor.construct)``.
+    ``add_connection`` already dedups (a duplicate ``(from, to, type)`` returns
+    ``success=True, "Connection already exists"`` — knowledge.py:416-423), so a
+    rerun or crash-resume is a no-op that never duplicates an edge. Per-item
+    isolation keeps one bad pair from aborting the batch (D-08).
+    """
+    from construct.schemas.workspace import ConnectionAuthor, ConnectionType
+    from construct.services.knowledge import add_connection
+
+    workspace = state["workspace_path"]
+    gate_queue = state.get("gate_queue", [])
+    decisions = _resolve_decisions(state)
+
+    added: list[str] = []
+    rejected: list[str] = []
+    events: list[str] = []
+
+    for entry, decision in zip(gate_queue, decisions):
+        if entry.get("kind") != "connection":
+            continue
+        payload = entry.get("payload", {})
+        from_id = payload.get("from_card_id")
+        to_id = payload.get("to_card_id")
+        key = f"{from_id}->{to_id}"
+        if decision == "reject":
+            rejected.append(key)
+            events.append(_emit(workspace, "gate_review_rejected", key, "connection rejected"))
+            continue
+        try:
+            conn_type = ConnectionType(payload.get("connection_type"))
+            res = add_connection(
+                workspace, from_id, to_id, conn_type,
+                note=payload.get("reasoning"),
+                created_by=ConnectionAuthor.construct,
+            )
+            if res.success:
+                added.append(f"{key}:{conn_type.value}")
+            else:
+                logger.warning("apply_connections: %s failed: %s", key, res.message)
+            events.append(_emit(workspace, "gate_review_approved", key, f"connection {conn_type.value}"))
+        except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
+            logger.warning("apply_connections %s failed: %s", key, _sanitize_error(exc))
+    events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_connections"))
+    return {"connections_added": added, "rejected": rejected, "events": events}
+
+
+def apply_archives(state: CurationRunState) -> dict:
+    """Write APPROVED archives via ``archive_card`` (skip-if-already-archived).
+
+    For each proposal of ``kind="archive"`` whose resolved verdict is ``"archive"``,
+    set the card lifecycle to ``archived`` via
+    ``archive_card(..., author=CardAuthor.curator)``, skipping any card already
+    archived (idempotent). Rejected proposals write nothing. Per-item isolation
+    keeps one failing archive from aborting the batch (D-08).
+    """
+    from construct.schemas.card import CardAuthor, Lifecycle
+    from construct.services.knowledge import archive_card
+
+    workspace = state["workspace_path"]
+    gate_queue = state.get("gate_queue", [])
+    decisions = _resolve_decisions(state)
+    lifecycles = _card_lifecycle_map(workspace)
+
+    archived: list[str] = []
+    rejected: list[str] = []
+    events: list[str] = []
+
+    for entry, decision in zip(gate_queue, decisions):
+        if entry.get("kind") != "archive":
+            continue
+        card_id = entry.get("payload", {}).get("card_id")
+        if decision != "archive":
+            rejected.append(card_id)
+            events.append(_emit(workspace, "gate_review_rejected", card_id, "archive rejected"))
+            continue
+        try:
+            if lifecycles.get(card_id) == Lifecycle.archived.value:
+                archived.append(card_id)  # already archived → idempotent no-op
+            else:
+                res = archive_card(workspace, card_id, author=CardAuthor.curator)
+                if res.success:
+                    archived.append(card_id)
+                else:
+                    logger.warning("apply_archives: %s failed: %s", card_id, res.message)
+            events.append(_emit(workspace, "gate_review_approved", card_id, "archived"))
+        except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
+            logger.warning("apply_archives %s failed: %s", card_id, _sanitize_error(exc))
+    events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_archives"))
+    return {"archived": archived, "rejected": rejected, "events": events}
+
+
 def views_refresh_hook(state: CurationRunState) -> dict:
     return _deferred_step("views_refresh_hook")
 
@@ -729,10 +972,13 @@ def build_curation_run_graph(checkpointer: Any):
     Topology (spec §4.3 + Phase-12 HITL graft): START → load_config →
     integrity_check → decay_scan → orphan_scan → promotion_review(PRODUCER) →
     connection_maintenance(PRODUCER) → [gate_queue? process_inbox[interrupt] :
-    compile_report] → compile_report → views_refresh_hook(SKIP) → END. The three
-    producers enqueue all proposals into ONE ``gate_queue`` BEFORE the single
-    interrupt-only pause; no write node exists upstream of the interrupt (CUR-03
-    holds by construction — write nodes land in Plan 04).
+    compile_report] → apply_promotions → apply_connections → apply_archives →
+    compile_report → views_refresh_hook(SKIP) → END. The three producers enqueue
+    all proposals into ONE ``gate_queue`` BEFORE the single interrupt-only pause;
+    the three apply nodes (the canonical SOT writers) sit strictly DOWNSTREAM of
+    the interrupt, so no write node exists upstream of it — CUR-03 holds by
+    construction. The empty-queue short-circuit skips both the pause and the apply
+    nodes straight to compile_report (nothing to review, nothing to write).
     """
     builder = StateGraph(CurationRunState)
 
@@ -743,6 +989,9 @@ def build_curation_run_graph(checkpointer: Any):
     builder.add_node("promotion_review", promotion_review)
     builder.add_node("connection_maintenance", connection_maintenance)
     builder.add_node("process_inbox", process_inbox)
+    builder.add_node("apply_promotions", apply_promotions)
+    builder.add_node("apply_connections", apply_connections)
+    builder.add_node("apply_archives", apply_archives)
     builder.add_node("compile_report", compile_report)
     builder.add_node("views_refresh_hook", views_refresh_hook)
 
@@ -758,7 +1007,13 @@ def build_curation_run_graph(checkpointer: Any):
         _route_before_inbox,
         {"process_inbox": "process_inbox", "compile_report": "compile_report"},
     )
-    builder.add_edge("process_inbox", "compile_report")  # WRITE BOUNDARY (Plan 04)
+    # WRITE BOUNDARY (Plan 04): the three post-gate apply nodes run ONLY after
+    # Command(resume=…) clears the interrupt. Every canonical SOT write lives here,
+    # strictly downstream of process_inbox — CUR-03 holds by construction.
+    builder.add_edge("process_inbox", "apply_promotions")
+    builder.add_edge("apply_promotions", "apply_connections")
+    builder.add_edge("apply_connections", "apply_archives")
+    builder.add_edge("apply_archives", "compile_report")
     builder.add_edge("compile_report", "views_refresh_hook")
     builder.add_edge("views_refresh_hook", END)
 

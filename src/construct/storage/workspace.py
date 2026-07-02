@@ -147,8 +147,14 @@ class WorkspaceLoader:
     def load_cards(self) -> list[dict]:
         """Load and parse all cards from the workspace.
 
-        Returns a list of dicts with card metadata and body text.
-        Unparseable cards are skipped with a warning.
+        Returns a list of dicts with card metadata and body text. Recency anchors
+        (``created`` / ``last_verified``) stay as ``datetime.date`` objects
+        (python-mode dump — consumers such as the curation decay/orphan scans rely
+        on that), but ``lifecycle`` is normalized to its plain string value rather
+        than the ``Lifecycle`` enum member so callers get a stable serializable
+        token (``"growing"`` not ``"Lifecycle.growing"``). ``Lifecycle`` is a
+        ``(str, Enum)`` so any existing ``== Lifecycle.X`` / ``.value`` comparison
+        keeps working against the string form. Unparseable cards are skipped.
         """
         cards: list[dict] = []
         for card_path in self.iter_cards():
@@ -156,6 +162,9 @@ class WorkspaceLoader:
                 markdown = card_path.read_text(encoding="utf-8")
                 card, body = parse_card_markdown(markdown, source_path=card_path)
                 card_data = card.model_dump()
+                # Normalize lifecycle to its serializable string value (enum → str).
+                lifecycle = card_data.get("lifecycle")
+                card_data["lifecycle"] = getattr(lifecycle, "value", lifecycle)
                 card_data["body"] = body
                 cards.append(card_data)
             except (SchemaParseError, OSError):
