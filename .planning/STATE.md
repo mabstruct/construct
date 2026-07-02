@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: planning
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-30T11:07:21.310Z"
-last_activity: 2026-06-29
+status: planned
+stopped_at: Phase 12 planned + plan-checked (READY-WITH-CONCERNS; W1–W4 resolved)
+last_updated: "2026-07-01T09:00:00.000Z"
+last_activity: 2026-07-01
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 15
+  total_plans: 21
   completed_plans: 15
   percent: 67
 ---
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 12
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-29
+Plan: 6 plans ready (12-01 … 12-06)
+Status: Planned — plan-check READY-WITH-CONCERNS (0 blockers; W1–W4 resolved); ready to execute
+Last activity: 2026-07-01
 
 Progress: [█████████░] 93%
 
