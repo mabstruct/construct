@@ -42,12 +42,20 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, interrupt
 from pydantic import BaseModel, Field, field_validator
 
 from construct.schemas.card import Lifecycle
 from construct.schemas.config import KEBAB_CASE_PATTERN
 
 logger = logging.getLogger(__name__)
+
+# The single consolidated review gate identifier (Phase 12, CUR-03). A FIXED
+# module-level value for the ONE human-review pause — not a per-card state
+# channel. ``process_inbox`` references this constant directly in its interrupt
+# payload so the pause never reads an undefined ``state["gate_id"]`` (no
+# KeyError). All promotion / connection / archive proposals share this one gate.
+_CURATION_GATE_ID = "curation.review"
 
 
 def _validate_run_id(value: str | None) -> str | None:
@@ -82,8 +90,23 @@ class CurationRunState(TypedDict):
     # One CurationStepResult dump appended per node (reducer accumulates).
     steps: Annotated[list[dict], operator.add]
 
+    # ── Review gate (Phase 12, CUR-03) ──
+    # Heterogeneous consolidated review queue: CurationProposal dumps enqueued by
+    # the three producers (promotion / connection / archive). ``operator.add`` so
+    # each producer APPENDS into the single queue rather than overwriting it. The
+    # producers never re-run on resume, so no double-accumulation occurs.
+    gate_queue: Annotated[list[dict], operator.add]
+    decisions: Any  # resume payload from the single human-review gate
+
+    # Post-gate write outcomes — Plan 04's apply nodes fill these; empty here.
+    promoted: list[str]
+    connections_added: list[str]
+    archived: list[str]
+    rejected: list[str]
+    escalated: list[str]
+
     # Output
-    status: str  # running | completed | degraded | failed
+    status: str  # running | awaiting_review | completed | degraded | failed
     events: list[str]
 
 
@@ -110,6 +133,43 @@ class CurationInspectInput(BaseModel):
     _check_run_id = field_validator("run_id")(_validate_run_id)
 
 
+class CurationReviewInput(BaseModel):
+    """Input for ``curation.review`` (resume a paused run with per-item decisions).
+
+    ``run_id`` becomes the LangGraph ``thread_id`` for resume, so it is guarded by
+    the same kebab-case path-traversal validator as run/inspect. ``approve_all``
+    reproduces every proposal's recommended decision (D-07); ``reject_all`` writes
+    nothing. Plan 04 grows the write-side; Plan 03 resumes the graph to completion
+    with no canonical write (the apply nodes do not exist yet).
+    """
+
+    model_config = {"extra": "forbid"}
+    workspace_path: str
+    run_id: str
+    decisions: list | None = None
+    approve_all: bool = False
+    reject_all: bool = False
+
+    _check_run_id = field_validator("run_id")(_validate_run_id)
+
+
+class CurationProposal(BaseModel):
+    """One consolidated-review item (the tagged-union review envelope, D-07).
+
+    ``kind`` tags which write type the proposal would become AFTER human approval
+    (promotion / connection / archive / escalate). ``decision`` defaults to the
+    gate's recommendation (the per-item write the human is approving); a reviewer
+    may override it. ``payload`` carries the plain-serializable fields the Plan 04
+    apply node needs (card_id / target_lifecycle / from-to / connection_type …).
+    ``extra="forbid"`` keeps a malicious card body from smuggling extra keys.
+    """
+
+    model_config = {"extra": "forbid"}
+    kind: Literal["promotion", "connection", "archive", "escalate"]
+    decision: str = ""  # default = the gate recommendation (D-07)
+    payload: dict = Field(default_factory=dict)
+
+
 class CurationStepResult(BaseModel):
     """One curation step's outcome (D-07/D-08).
 
@@ -134,8 +194,10 @@ class CurationRunResult(BaseModel):
     """
 
     model_config = {"extra": "forbid"}
-    status: Literal["completed", "degraded", "failed"]
+    status: Literal["completed", "degraded", "failed", "awaiting_review"]
     run_id: str
+    gate_id: str | None = None
+    gate_queue: list[dict] = Field(default_factory=list)
     steps: list[CurationStepResult] = Field(default_factory=list)
     events: list[str] = Field(default_factory=list)
     message: str = ""
@@ -171,6 +233,13 @@ def _initial_state(inp: CurationRunInput) -> dict:
         "auto_archive_on_decay": False,
         "orphan_tolerance_days": 0,
         "steps": [],
+        "gate_queue": [],
+        "decisions": None,
+        "promoted": [],
+        "connections_added": [],
+        "archived": [],
+        "rejected": [],
+        "escalated": [],
         "status": "running",
         "events": [],
     }
