@@ -30,6 +30,8 @@ runner = CliRunner()
 _CAPS = {
     "curation.run": "construct_curation_run",
     "curation.inspect": "construct_curation_inspect",
+    "curation.review": "construct_curation_review",  # NEW (Plan 04)
+    "card.evaluate": "construct_card_evaluate",  # NEW (Plan 02)
 }
 
 
@@ -86,9 +88,30 @@ def test_mcp_no_hardcoded_curation() -> None:
 
 
 def test_cli_commands_present() -> None:
-    for sub in ("run", "inspect"):
+    for sub in ("run", "inspect", "review"):
         result = runner.invoke(app, ["curation", sub, "--help"])
         assert result.exit_code == 0, result.stdout
+    # card.evaluate is surfaced as its own `construct card evaluate` command.
+    evaluate = runner.invoke(app, ["card", "evaluate", "--help"])
+    assert evaluate.exit_code == 0, evaluate.stdout
+
+
+# ── CUR-05: no placeholder curation path reachable from CLI or registry ─────
+
+
+def test_no_placeholder_curation_path() -> None:
+    """D-10 / CUR-05: the ``_get_workflow_steps`` placeholder shim is deleted from
+    BOTH the catalog and the CLI (it lived in two files — Pitfall 6), so no
+    ``curation-cycle`` placeholder handler is reachable from the registry or the
+    CLI workflow group."""
+    import construct.capabilities.catalog as catalog_mod
+    import construct.cli as cli_mod
+
+    catalog_src = Path(catalog_mod.__file__).read_text(encoding="utf-8")
+    cli_src = Path(cli_mod.__file__).read_text(encoding="utf-8")
+
+    assert "_get_workflow_steps" not in catalog_src, "placeholder shim must be gone from catalog.py"
+    assert "_get_workflow_steps" not in cli_src, "placeholder shim must be gone from cli.py"
 
 
 # ── CLI/MCP result-schema parity + offline smoke ──────────────────────────
