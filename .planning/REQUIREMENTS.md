@@ -30,8 +30,8 @@ Requirements for the v0.4 Agent Workflows milestone. Each requirement maps to ex
 - [x] **CUR-01**: User can run `curation.run` through the CONSTRUCT CLI/MCP surface and receive real integrity, decay, orphan, connection, and report results instead of placeholder success responses.
 - [x] **CUR-02**: User can evaluate lifecycle promotion candidates through a structured `card.evaluate` gate that proposes promote, hold, or escalate decisions with evidence.
 - [x] **CUR-03**: User can review and approve or reject lifecycle and connection proposals before canonical card or connection writes occur.
-- [ ] **CUR-04**: User can inspect curation workflow status, degraded states, and emitted events for every deterministic step and review gate.
-- [ ] **CUR-05**: Developer can verify curation behavior with offline tests that fail if placeholder no-op handlers or unreviewed writes remain.
+- [x] **CUR-04**: User can inspect curation workflow status, degraded states, and emitted events for every deterministic step and review gate.
+- [x] **CUR-05**: Developer can verify curation behavior with offline tests that fail if placeholder no-op handlers or unreviewed writes remain.
 
 ### CONSTRUCT API And Runtime Parity
 
@@ -100,8 +100,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CUR-01 | Phase 11 | Complete |
 | CUR-02 | Phase 12 | Complete |
 | CUR-03 | Phase 12 | Complete |
-| CUR-04 | Phase 12 | Pending |
-| CUR-05 | Phase 12 | Pending |
+| CUR-04 | Phase 12 | Complete |
+| CUR-05 | Phase 12 | Complete |
 | API-01 | Phase 13 | Pending |
 | API-02 | Phase 13 | Pending |
 | API-03 | Phase 13 | Pending |
