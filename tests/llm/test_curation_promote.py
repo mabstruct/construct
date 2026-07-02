@@ -5,9 +5,11 @@ The gate runners ``construct.llm.curation_promote`` and
 ``construct.llm.curation_connect`` do NOT exist yet — they are created in Plans
 02-05 as symbol-for-symbol siblings of ``construct.llm.research_score``
 (``score_one`` → ``evaluate_one``, ``score_all`` → ``evaluate_all``, ``run_gate``,
-plus the outage error class + sanitizer). Importing them at module top makes this
-file fail on the EXPECTED missing import (``ModuleNotFoundError``) — that is the
-RED signal, not a syntax error. When the gate modules land, these tests turn
+plus the outage error class + sanitizer). They are imported lazily INSIDE each
+test body — never at module top — so this file COLLECTS cleanly (a top-level
+``ModuleNotFoundError`` would abort the whole ``pytest tests/`` session, since the
+repo runs without ``--continue-on-collection-errors``) while the suite stays RED
+on the missing import at run time. When the gate modules land, these tests turn
 GREEN one wave at a time.
 
 Requirement → test map (12-VALIDATION.md CUR-02 rows):
@@ -32,20 +34,6 @@ from __future__ import annotations
 
 import pytest
 
-from construct.llm.curation_promote import (
-    CardEvaluateInput,
-    CardEvaluateOutageError,
-    PromotionDecision,
-    evaluate_all,
-    evaluate_one,
-    run_gate,
-)
-from construct.llm.curation_connect import (
-    ConnectionTypeDecision,
-    type_all,
-    type_one,
-)
-from construct.schemas.workspace import ConnectionType
 from tests.llm.conftest import (
     ConfigurableStructuredMock,
     InvalidOutputMock,
@@ -64,14 +52,37 @@ def _raw_decision(
     target_lifecycle: str | None = "growing",
     method: str = "llm-judgment",
     reasoning: str = "LLM rationale for the proposed promotion.",
-) -> PromotionDecision:
-    """Build a 'raw' LLM-proposed PromotionDecision for the configurable mock."""
+):
+    """Build a 'raw' LLM-proposed PromotionDecision for the configurable mock.
+
+    Imports ``PromotionDecision`` lazily so a missing Plan-02 module surfaces at
+    RUN time (RED), never at collection time.
+    """
+    from construct.llm.curation_promote import PromotionDecision
+
     return PromotionDecision(
         card_id=card_id,
         decision=decision,
         target_lifecycle=target_lifecycle,
         reasoning=reasoning,
         method=method,
+    )
+
+
+def _raw_connection(
+    *,
+    from_card_id: str = "card-1",
+    to_card_id: str = "card-2",
+    connection_type: str = "supports",
+    reasoning: str = "Card 1 provides empirical support for card 2.",
+):
+    from construct.llm.curation_connect import ConnectionTypeDecision
+
+    return ConnectionTypeDecision(
+        from_card_id=from_card_id,
+        to_card_id=to_card_id,
+        connection_type=connection_type,
+        reasoning=reasoning,
     )
 
 
@@ -121,6 +132,8 @@ def _pair(
 
 
 def test_evaluate_one_promote() -> None:
+    from construct.llm.curation_promote import PromotionDecision, evaluate_one
+
     raw = _raw_decision(card_id="card-1", decision="promote", target_lifecycle="growing")
     llm = ConfigurableStructuredMock(raw)
     decision = evaluate_one(_card("card-1", lifecycle="seed"), llm=llm)
@@ -133,6 +146,8 @@ def test_evaluate_one_promote() -> None:
 
 
 def test_evaluate_one_hold() -> None:
+    from construct.llm.curation_promote import evaluate_one
+
     raw = _raw_decision(decision="hold", target_lifecycle=None)
     decision = evaluate_one(
         _card("card-1", lifecycle="growing"), llm=ConfigurableStructuredMock(raw)
@@ -142,6 +157,8 @@ def test_evaluate_one_hold() -> None:
 
 
 def test_evaluate_one_escalate() -> None:
+    from construct.llm.curation_promote import evaluate_one
+
     raw = _raw_decision(decision="escalate", target_lifecycle=None)
     decision = evaluate_one(
         _card("card-1", lifecycle="growing"), llm=ConfigurableStructuredMock(raw)
@@ -154,6 +171,8 @@ def test_evaluate_one_escalate() -> None:
 
 
 def test_candidate_prefilter_excludes_mature_and_archived() -> None:
+    from construct.llm.curation_promote import evaluate_all
+
     cards = [
         _card("c-seed", lifecycle="seed"),
         _card("c-growing", lifecycle="growing"),
@@ -176,6 +195,8 @@ def test_candidate_prefilter_excludes_mature_and_archived() -> None:
 def test_failure_escalates() -> None:
     """A card that still fails after one retry becomes a rule-based ESCALATE — it
     never silently drops and never fabricates an llm-judgment verdict."""
+    from construct.llm.curation_promote import evaluate_all
+
     batch = evaluate_all(
         [_card("card-1", lifecycle="seed")],
         llm=InvalidOutputMock(retry_succeeds=False),
@@ -190,6 +211,8 @@ def test_failure_escalates() -> None:
 def test_retry_then_succeed_keeps_llm_method() -> None:
     """A genuine borderline verdict recovered on retry keeps method='llm-judgment'
     (only forced-failure escalations are 'rule-based')."""
+    from construct.llm.curation_promote import evaluate_all
+
     raw = _raw_decision(decision="hold", target_lifecycle=None, method="llm-judgment")
     llm = InvalidOutputMock(retry_succeeds=True, retry_output=raw)
     batch = evaluate_all([_card("card-1", lifecycle="seed")], llm=llm, cap=1)
@@ -204,6 +227,8 @@ def test_retry_then_succeed_keeps_llm_method() -> None:
 
 
 def test_evaluate_all_returns_all_candidates_with_cap() -> None:
+    from construct.llm.curation_promote import evaluate_all
+
     cards = [_card("c1", lifecycle="seed"), _card("c2", lifecycle="growing")]
     llm = ConfigurableStructuredMock(_raw_decision(decision="hold", target_lifecycle=None))
     batch = evaluate_all(cards, llm=llm, cap=2)
@@ -212,6 +237,8 @@ def test_evaluate_all_returns_all_candidates_with_cap() -> None:
 
 
 def test_total_outage_when_all_provider_failures() -> None:
+    from construct.llm.curation_promote import evaluate_all
+
     cards = [_card("c1", lifecycle="seed"), _card("c2", lifecycle="growing")]
     batch = evaluate_all(cards, llm=TotalOutageMock(), cap=2)
     assert batch.total_outage is True
@@ -221,6 +248,8 @@ def test_total_outage_when_all_provider_failures() -> None:
 def test_run_gate_raises_on_total_outage(
     test_workspace, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from construct.llm.curation_promote import CardEvaluateInput, CardEvaluateOutageError, run_gate
+
     monkeypatch.setattr(
         "construct.llm.factory.build_chat_model",
         make_build_chat_model(TotalOutageMock()),
@@ -236,6 +265,8 @@ def test_run_gate_raises_on_total_outage(
 
 
 def test_sanitized_error_never_leaks_key_token() -> None:
+    from construct.llm.curation_promote import evaluate_all
+
     class _LeakyMock:
         def with_structured_output(self, model_class, **kwargs):
             return self
@@ -259,6 +290,8 @@ def test_sanitized_error_never_leaks_key_token() -> None:
 def test_run_gate_happy_path(
     test_workspace, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from construct.llm.curation_promote import CardEvaluateInput, run_gate
+
     raw = _raw_decision(decision="promote", target_lifecycle="growing")
     monkeypatch.setattr(
         "construct.llm.factory.build_chat_model",
@@ -279,14 +312,14 @@ def test_run_gate_happy_path(
 
 
 def test_connection_typing_assigns_enum() -> None:
-    raw = ConnectionTypeDecision(
-        from_card_id="card-1",
-        to_card_id="card-2",
-        connection_type="supports",
-        reasoning="Card 1 provides empirical support for card 2.",
+    from construct.llm.curation_connect import ConnectionTypeDecision, type_one
+    from construct.schemas.workspace import ConnectionType
+
+    raw = _raw_connection(from_card_id="card-1", to_card_id="card-2", connection_type="supports")
+    decision = type_one(
+        _pair(from_card_id="card-1", to_card_id="card-2"),
+        llm=ConfigurableStructuredMock(raw),
     )
-    decision = type_one(_pair(from_card_id="card-1", to_card_id="card-2"),
-                        llm=ConfigurableStructuredMock(raw))
     assert isinstance(decision, ConnectionTypeDecision)
     assert decision.connection_type == ConnectionType.supports
     assert decision.from_card_id == "card-1"
@@ -295,15 +328,14 @@ def test_connection_typing_assigns_enum() -> None:
 
 
 def test_type_all_returns_typed_decisions() -> None:
+    from construct.llm.curation_connect import type_all
+    from construct.schemas.workspace import ConnectionType
+
     pairs = [
         _pair(from_card_id="card-1", to_card_id="card-2"),
         _pair(from_card_id="card-2", to_card_id="card-3"),
     ]
-    raw = ConnectionTypeDecision(
-        from_card_id="x", to_card_id="y",
-        connection_type="extends",
-        reasoning="B extends the argument in A.",
-    )
+    raw = _raw_connection(connection_type="extends", reasoning="B extends the argument in A.")
     batch = type_all(pairs, llm=ConfigurableStructuredMock(raw), cap=2)
     assert len(batch.decisions) == 2
     for decision in batch.decisions:
