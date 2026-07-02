@@ -20,3 +20,17 @@ Deferred failing tests (resolved by Plans 03-04):
 - test_cross_process_resume
 - test_inspect_pending_review
 - test_curation_events_emitted
+
+## From Plan 12-03 (read-side HITL graft) — out-of-scope items
+
+Plan 12-03 turned the read-side tests GREEN (no_writes_before_approval,
+single_consolidated, empty_queue, no_unreviewed_writes) and left the write-side
+tests RED for Plan 12-04. Out-of-scope discoveries:
+
+- **Contract tests RED (Plan 05/06 targets):** `tests/contract/test_curation_run_cli_mcp.py`
+  has 6 failing tests (`test_registered`, `test_shims_reject_positional_args`,
+  `test_in_mcp_tool_list`, `test_mcp_server_exposes_curation`, `test_cli_commands_present`,
+  `test_no_placeholder_curation_path`). They assert `curation.review` / `card.evaluate`
+  registration in `catalog.py` + `cli.py` and placeholder removal — none of which Plan 03
+  touches (Plan 03 only modifies `curation_run.py`). Verified pre-existing at the Plan-03
+  baseline (identical 6 failures with Task-2 changes stashed). Plans 05/06 own these.

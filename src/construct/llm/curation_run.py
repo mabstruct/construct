@@ -366,13 +366,16 @@ def integrity_check(state: CurationRunState) -> dict:
 
 
 def decay_scan(state: CurationRunState) -> dict:
-    """Findings-only decay candidate scan (D-04/D-05/D-06).
+    """Decay candidate scan + archive PRODUCER (D-04/D-05/D-06, Phase 12 CUR-03).
 
     Candidate = non-archived card whose recency anchor (``last_verified`` or
-    ``created``) is older than the governance ``decay_window_days``. Reports
-    ``auto_archive_on_decay`` but NEVER archives a card (D-06 — archiving is
-    deferred to Phase 12).
+    ``created``) is older than the governance ``decay_window_days``. The findings
+    surface is unchanged; when ``auto_archive_on_decay`` is set this node also
+    enqueues one ``CurationProposal(kind="archive")`` per decay candidate into the
+    consolidated ``gate_queue``. It PROPOSES only — no card is archived here (the
+    archive write is a Plan 04 post-gate apply node behind the human review gate).
     """
+    archive_dumps: list[dict] = []
     try:
         from construct.storage.workspace import WorkspaceLoader
 
@@ -406,9 +409,21 @@ def decay_scan(state: CurationRunState) -> dict:
             },
             summary=summary,
         )
+        # Archive PRODUCER: candidate_ids already exclude archived cards, so each
+        # is a valid archive proposal. Enqueue only under the governance flag.
+        if auto and candidate_ids:
+            archive_dumps = [
+                CurationProposal(
+                    kind="archive", decision="archive", payload={"card_id": cid}
+                ).model_dump(mode="json")
+                for cid in candidate_ids
+            ]
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("decay_scan", exc)
-    return {"steps": [result.model_dump(mode="json")]}
+    out: dict = {"steps": [result.model_dump(mode="json")]}
+    if archive_dumps:
+        out["gate_queue"] = archive_dumps
+    return out
 
 
 def orphan_scan(state: CurationRunState) -> dict:
@@ -461,14 +476,44 @@ def orphan_scan(state: CurationRunState) -> dict:
     return {"steps": [result.model_dump(mode="json")]}
 
 
-def connection_maintenance(state: CurationRunState) -> dict:
-    """Connection-health via ``bridge_detect`` (offline L1/L2; L3 auto-skips).
+def _bridges_to_candidates(bridges: list[dict]) -> list[dict]:
+    """Reshape ``bridge_detect`` bridge entries into connection-typing candidates.
 
-    ``bridge_detect`` is NOT pure read-only — it writes DERIVED
-    ``log/bridge-candidates.json`` + ``views/build/data/bridges.json`` (Pitfall 1);
-    that is allowed under D-06 (derived, not canonical SOT). No canonical fact is
-    written.
+    ``bridge_detect`` emits nested ``{"from": {card_id, domain, title}, "to": …}``
+    entries; ``curation_connect.type_all`` expects the flat candidate-pair shape
+    (``from_card_id`` / ``to_card_id`` / titles / ``l2_shared_categories``).
     """
+    candidates: list[dict] = []
+    for b in bridges:
+        frm = b.get("from", {})
+        to = b.get("to", {})
+        candidates.append(
+            {
+                "from_card_id": frm.get("card_id"),
+                "to_card_id": to.get("card_id"),
+                "from_domain": frm.get("domain"),
+                "to_domain": to.get("domain"),
+                "from_title": frm.get("title"),
+                "to_title": to.get("title"),
+                "l2_shared_categories": b.get("l2_shared_categories") or [],
+            }
+        )
+    return candidates
+
+
+def connection_maintenance(state: CurationRunState) -> dict:
+    """Connection-health via ``bridge_detect`` + connection-typing PRODUCER (CUR-03).
+
+    Keeps the existing ``bridge_detect`` call (which writes DERIVED
+    ``log/bridge-candidates.json`` + ``views/build/data/bridges.json`` — allowed
+    under D-06, not canonical SOT) and additionally feeds its candidate pairs to
+    the ``curation.connection_type`` L3 gate, enqueuing each typed result as a
+    ``CurationProposal(kind="connection")``. It PROPOSES only — the connection
+    write is a Plan 04 post-gate apply node. On a provider outage the typing step
+    degrades to zero proposals while the bridge findings are still reported.
+    """
+    proposals: list[CurationProposal] = []
+    typed = 0
     try:
         from construct.pipelines.bridge_detect import bridge_detect
 
@@ -476,19 +521,67 @@ def connection_maintenance(state: CurationRunState) -> dict:
         summary_block = (op.data or {}).get("summary", {})
         totals = summary_block.get("totals", {})
         l1_l2_only = summary_block.get("l1_l2_only")
+
+        if op.success:
+            candidates = _bridges_to_candidates((op.data or {}).get("bridges", []))
+            if candidates:
+                from construct.llm import curation_connect
+                from construct.llm.config import load_llm_config
+
+                config = load_llm_config(None)
+                gate_cfg = config.gates.get("curation.connection_type") or config.gates.get(
+                    "research.score"
+                )
+                provider_cfg = config.providers.get(
+                    gate_cfg.provider, config.providers["anthropic"]
+                )
+                llm = curation_connect.build_typing_llm(provider_cfg, gate_cfg)
+                batch = curation_connect.type_all(
+                    candidates, llm=llm, cap=gate_cfg.concurrency_cap
+                )
+                if batch.total_outage:
+                    logger.warning(
+                        "connection_maintenance: provider outage — no connection "
+                        "proposals enqueued"
+                    )
+                else:
+                    for d in batch.decisions:
+                        proposals.append(
+                            CurationProposal(
+                                kind="connection",
+                                decision="approve",
+                                payload={
+                                    "from_card_id": d.from_card_id,
+                                    "to_card_id": d.to_card_id,
+                                    "connection_type": d.connection_type.value,
+                                    "reasoning": d.reasoning,
+                                },
+                            )
+                        )
+                        typed += 1
+
         result = CurationStepResult(
             step="connection_maintenance",
             status="completed" if op.success else "failed",
-            findings={"totals": totals, "l1_l2_only": l1_l2_only, "ok": op.success},
+            findings={
+                "totals": totals,
+                "l1_l2_only": l1_l2_only,
+                "ok": op.success,
+                "connection_proposals": typed,
+            },
             summary=(
-                "connection-health via bridge_detect; derived log/+views/ artifacts "
-                "written (no canonical SOT write)"
+                "connection-health via bridge_detect; typed-connection proposals "
+                "queued for review (derived log/+views/ only, no canonical SOT write)"
             ),
             reason=None if op.success else op.message,
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("connection_maintenance", exc)
-    return {"steps": [result.model_dump(mode="json")]}
+        return {"steps": [result.model_dump(mode="json")]}
+    out: dict = {"steps": [result.model_dump(mode="json")]}
+    if proposals:
+        out["gate_queue"] = [p.model_dump(mode="json") for p in proposals]
+    return out
 
 
 def compile_report(state: CurationRunState) -> dict:
@@ -514,31 +607,132 @@ def compile_report(state: CurationRunState) -> dict:
     return {"steps": [result.model_dump(mode="json")]}
 
 
-# ── Deferred skip-nodes (D-10 — explicit skipped nodes, not fake success) ──
+# ── Promotion PRODUCER (no pause, no write — enqueues into gate_queue only) ──
 
 
 def promotion_review(state: CurationRunState) -> dict:
-    return _deferred_step("promotion_review")
+    """Promotion PRODUCER: judge non-mature/non-archived cards → enqueue proposals.
+
+    Pre-filters to promotion candidates (``lifecycle != mature`` AND
+    ``!= archived``, D-02) BEFORE the LLM fan-out, runs the ``card.evaluate`` L3
+    gate, and enqueues one ``CurationProposal`` per ``promote``/``escalate``
+    verdict. A plain ``hold`` is events-only (logged, not enqueued — D-07). It
+    PROPOSES only: no pause and no canonical write happen here. A provider outage
+    degrades to zero proposals (the single pause lives in ``process_inbox``).
+    """
+    proposals: list[CurationProposal] = []
+    enqueued = 0
+    try:
+        from construct.llm import curation_promote
+        from construct.llm.config import load_llm_config
+        from construct.storage.workspace import WorkspaceLoader
+
+        cards = WorkspaceLoader(Path(state["workspace_path"])).load_cards()
+        candidates = [c for c in cards if curation_promote.is_promotion_candidate(c)]
+
+        if candidates:
+            config = load_llm_config(None)
+            gate_cfg = config.gates.get("card.evaluate") or config.gates.get(
+                "research.score"
+            )
+            provider_cfg = config.providers.get(
+                gate_cfg.provider, config.providers["anthropic"]
+            )
+            llm = curation_promote.build_scoring_llm(provider_cfg, gate_cfg)
+            batch = curation_promote.evaluate_all(
+                candidates, llm=llm, cap=gate_cfg.concurrency_cap
+            )
+            if batch.total_outage:
+                logger.warning(
+                    "promotion_review: provider outage — no promotion proposals enqueued"
+                )
+            else:
+                for d in batch.decisions:
+                    if d.decision == "hold":
+                        logger.info(
+                            "promotion_review: hold %s (events-only, not enqueued)",
+                            d.card_id,
+                        )
+                        continue
+                    kind = "promotion" if d.decision == "promote" else "escalate"
+                    proposals.append(
+                        CurationProposal(
+                            kind=kind,
+                            decision=d.decision,
+                            payload={
+                                "card_id": d.card_id,
+                                "target_lifecycle": d.target_lifecycle,
+                                "reasoning": d.reasoning,
+                                "method": d.method,
+                            },
+                        )
+                    )
+                    enqueued += 1
+
+        result = CurationStepResult(
+            step="promotion_review",
+            status="completed",
+            findings={"candidates": len(candidates), "proposals": enqueued},
+            summary=f"{enqueued} promotion/escalate proposal(s) from {len(candidates)} candidate(s)",
+        )
+    except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
+        result = _failed_step("promotion_review", exc)
+        return {"steps": [result.model_dump(mode="json")]}
+    out: dict = {"steps": [result.model_dump(mode="json")]}
+    if proposals:
+        out["gate_queue"] = [p.model_dump(mode="json") for p in proposals]
+    return out
+
+
+# ── Consolidated human-review gate (interrupt-ONLY — the CUR-03 spine) ──
 
 
 def process_inbox(state: CurationRunState) -> dict:
-    return _deferred_step("process_inbox")
+    """Single consolidated review pause — interrupt-ONLY (CUR-03 spine).
+
+    *** ONLY the interrupt primitive lives here. NO writes, NO event emission, NO
+    non-idempotent prep. *** The interrupted node re-executes top-to-bottom on
+    resume, so any side effect here would double-fire AND leak a write before
+    approval. All promotion / connection / archive writes live strictly
+    downstream in Plan 04's post-gate apply nodes, which run only after
+    ``Command(resume=…)``. The gate id is the fixed module constant
+    ``_CURATION_GATE_ID`` (never a per-card ``state["gate_id"]`` read → no
+    KeyError); every proposal kind shares this one gate and one resume.
+    """
+    decisions = interrupt(
+        {"gate_id": _CURATION_GATE_ID, "gate_queue": state["gate_queue"]}
+    )
+    return {"decisions": decisions}
 
 
 def views_refresh_hook(state: CurationRunState) -> dict:
     return _deferred_step("views_refresh_hook")
 
 
-# ── Graph builder (purely LINEAR spec §4.3 topology — no conditional edges) ──
+# ── Graph builder (deterministic prefix + one conditional short-circuit) ──
+
+
+def _route_before_inbox(state: CurationRunState) -> str:
+    """Route to the review gate only when the consolidated queue is non-empty.
+
+    An empty ``gate_queue`` (no promotion / connection / archive proposals) skips
+    ``process_inbox`` entirely and runs straight to ``compile_report`` — a run
+    with nothing to review never pauses (Pitfall 2). A non-empty queue routes to
+    the single interrupt-only gate.
+    """
+    return "process_inbox" if state.get("gate_queue") else "compile_report"
 
 
 def build_curation_run_graph(checkpointer: Any):
-    """Compile the deterministic curation StateGraph with the given checkpointer.
+    """Compile the durable curation StateGraph with the given checkpointer.
 
-    Linear topology (spec §4.3): START → load_config → integrity_check →
-    decay_scan → orphan_scan → promotion_review(SKIP) → connection_maintenance →
-    process_inbox(SKIP) → compile_report → views_refresh_hook(SKIP) → END.
-    ``load_config`` runs first to populate the governance thresholds the scans read.
+    Topology (spec §4.3 + Phase-12 HITL graft): START → load_config →
+    integrity_check → decay_scan → orphan_scan → promotion_review(PRODUCER) →
+    connection_maintenance(PRODUCER) → [gate_queue? process_inbox[interrupt] :
+    compile_report] → compile_report → views_refresh_hook(SKIP) → END. The three
+    producers enqueue all proposals into ONE ``gate_queue`` BEFORE the single
+    interrupt-only pause; no write node exists upstream of the interrupt (CUR-03
+    holds by construction — write nodes land in Plan 04).
     """
     builder = StateGraph(CurationRunState)
 
@@ -558,8 +752,13 @@ def build_curation_run_graph(checkpointer: Any):
     builder.add_edge("decay_scan", "orphan_scan")
     builder.add_edge("orphan_scan", "promotion_review")
     builder.add_edge("promotion_review", "connection_maintenance")
-    builder.add_edge("connection_maintenance", "process_inbox")
-    builder.add_edge("process_inbox", "compile_report")
+    # Empty-queue short-circuit: never pause when there is nothing to review.
+    builder.add_conditional_edges(
+        "connection_maintenance",
+        _route_before_inbox,
+        {"process_inbox": "process_inbox", "compile_report": "compile_report"},
+    )
+    builder.add_edge("process_inbox", "compile_report")  # WRITE BOUNDARY (Plan 04)
     builder.add_edge("compile_report", "views_refresh_hook")
     builder.add_edge("views_refresh_hook", END)
 
@@ -570,23 +769,31 @@ def build_curation_run_graph(checkpointer: Any):
 
 
 def _aggregate_status(steps: list[CurationStepResult]) -> str:
-    """D-09 run-level roll-up (Pitfall 5).
+    """D-09 run-level roll-up over COMPLETED runs (Pitfall 5).
 
     ``degraded`` if any REQUIRED step is ``failed`` or ``skipped``; ``completed``
-    otherwise. The three deferred nodes are ``required=False`` so they never
-    degrade a clean run.
+    otherwise. Called only on runs that ran to END — a paused/reviewed run is
+    surfaced as ``awaiting_review`` by the pause detection in ``run_curation_run``
+    and never reaches this aggregate, so a pending review gate is NOT degraded.
+    The producers (promotion_review / connection_maintenance) emit ``completed``
+    required steps; ``views_refresh_hook`` stays ``required=False`` so the one
+    remaining deferred node never degrades a clean run.
     """
     required_bad = [s for s in steps if s.required and s.status in ("failed", "skipped")]
     return "degraded" if required_bad else "completed"
 
 
 def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
-    """Run the deterministic curation cycle to completion and aggregate status.
+    """Run the curation cycle, detecting the single consolidated review pause.
 
-    Opens the persistent checkpointer, builds the linear graph, and invokes it once
-    (no resume/interrupt) with ``thread_id = run_id``. Reconstructs the per-step
-    results, computes the D-09 aggregate, appends one terminal
-    ``curation_cycle_complete`` event, and returns the ``CurationRunResult``. The
+    Opens the persistent checkpointer, builds the graph, and invokes it once with
+    ``thread_id = run_id``. If the run pauses at the interrupt-only
+    ``process_inbox`` gate (a non-empty ``gate_queue``), returns
+    ``status="awaiting_review"`` surfacing the pending consolidated queue and the
+    ``run_id`` review handle — NO terminal event and NO write (resume via
+    ``curation.review``). Otherwise (empty queue → short-circuit) reconstructs the
+    per-step results, computes the D-09 aggregate, appends the terminal
+    ``curation_cycle_complete`` event, and returns the completed result. The
     sqlite connection is always closed in ``finally``.
     """
     from construct.schemas.config import EventAgent
@@ -600,6 +807,19 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
         resolved = CurationRunInput(workspace_path=inp.workspace_path, run_id=run_id)
         result = graph.invoke(_initial_state(resolved), cfg)
 
+        snap = graph.get_state(cfg)
+        if "__interrupt__" in result and snap.next == ("process_inbox",):
+            values = snap.values or {}
+            return CurationRunResult(
+                status="awaiting_review",
+                run_id=run_id,
+                gate_id=run_id,
+                gate_queue=values.get("gate_queue", []),
+                steps=[CurationStepResult(**s) for s in values.get("steps", [])],
+                events=list(values.get("events", [])),
+                message="Curation run paused for human review; resume with curation.review.",
+            )
+
         steps = [CurationStepResult(**s) for s in result["steps"]]
         status = _aggregate_status(steps)
 
@@ -611,8 +831,74 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
         events.append("curation_cycle_complete")
 
         return CurationRunResult(
-            status=status, run_id=run_id, steps=steps, events=events,
+            status=status, run_id=run_id, gate_id=run_id, gate_queue=[],
+            steps=steps, events=events,
             message=f"Curation run {status}.",
+        )
+    finally:
+        conn.close()
+
+
+def _build_resume_decisions(inp: CurationReviewInput, gate_queue: list[dict]) -> list:
+    """Resolve the resume payload for one consolidated review (D-07).
+
+    ``reject_all`` maps every proposal to ``"reject"`` (no write); ``approve_all``
+    reproduces each proposal's recommended ``decision`` (the gate's own verdict);
+    an explicit ``decisions`` list is passed through verbatim. Plan 03 resumes the
+    graph with this payload but performs no canonical write (the apply nodes that
+    consume these decisions are Plan 04).
+    """
+    if inp.reject_all:
+        return ["reject" for _ in gate_queue]
+    if inp.decisions is not None:
+        return list(inp.decisions)
+    # approve_all (or default): reproduce the recommended per-item decision.
+    return [entry.get("decision", "approve") for entry in gate_queue]
+
+
+def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
+    """Resume a paused curation run with per-item decisions (read-side; Plan 03).
+
+    Re-opens the checkpointer over the same DB and inspects the persisted snapshot
+    for ``thread_id=run_id``. If the run is not paused at ``process_inbox`` it is
+    already complete (or never paused) and is surfaced without re-running any write
+    (the paused-state guard — CUR-03 idempotency spine). Otherwise it submits
+    ``Command(resume=decisions)`` to clear the single interrupt and runs the graph
+    to END, then aggregates the D-09 status. Plan 03 has no post-gate apply nodes,
+    so resume completes without a canonical write; Plan 04 grafts the write-side.
+    The sqlite connection is always closed in ``finally``.
+    """
+    saver, conn = _open_checkpointer(Path(inp.workspace_path))
+    try:
+        graph = build_curation_run_graph(saver)
+        cfg = {"configurable": {"thread_id": inp.run_id}}
+        snap = graph.get_state(cfg)
+        values = snap.values or {}
+
+        if snap.next != ("process_inbox",):
+            # Not paused: already-completed run → report as-is; unknown → failed.
+            if values and not snap.next:
+                steps = [CurationStepResult(**s) for s in values.get("steps", [])]
+                return CurationRunResult(
+                    status=_aggregate_status(steps),
+                    run_id=inp.run_id, steps=steps,
+                    events=list(values.get("events", [])),
+                    message="Curation run already complete (no re-review).",
+                )
+            return CurationRunResult(
+                status="failed", run_id=inp.run_id,
+                message="No paused curation run to review.",
+            )
+
+        decisions = _build_resume_decisions(inp, values.get("gate_queue", []))
+        result = graph.invoke(Command(resume=decisions), cfg)
+
+        steps = [CurationStepResult(**s) for s in result["steps"]]
+        status = _aggregate_status(steps)
+        return CurationRunResult(
+            status=status, run_id=inp.run_id, gate_id=inp.run_id, gate_queue=[],
+            steps=steps, events=list(result.get("events", [])),
+            message=f"Curation review {status}.",
         )
     finally:
         conn.close()

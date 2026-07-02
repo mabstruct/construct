@@ -35,7 +35,11 @@ _REAL_STEPS = (
     "connection_maintenance",
     "compile_report",
 )
-_DEFERRED_STEPS = ("promotion_review", "process_inbox", "views_refresh_hook")
+# Phase 12 turns ``promotion_review`` into a proposal PRODUCER and ``process_inbox``
+# into the interrupt-only consolidated review gate (routed around on an empty
+# queue), so neither is a deferred skip any longer. ``views_refresh_hook`` is the
+# only node still deferred (its Phase-12 wiring lands in a later plan).
+_DEFERRED_STEPS = ("views_refresh_hook",)
 
 # Canonical source-of-truth artifacts D-06 protects. Derived ``log/`` and
 # ``views/`` are intentionally EXCLUDED (Pitfall 1: bridge_detect writes there).
