@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
-stopped_at: Completed 12-02-PLAN.md (L3 gates: card.evaluate + connection-typing)
-last_updated: "2026-07-02T09:20:48.358Z"
+stopped_at: Completed 12-03-PLAN.md (read-side HITL graft)
+last_updated: "2026-07-02T16:45:00.000Z"
 last_activity: 2026-07-02
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 18
-  percent: 67
+  completed_plans: 19
+  percent: 71
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 12
-Plan: 12-01 + 12-02 executed; 12-03 … 12-06 pending
-Status: Executing — Wave-2 L3 gates landed (card.evaluate + connection-typing GREEN, 13/13; research_score 24/24 unregressed)
+Plan: 12-01 … 12-03 executed; 12-04 … 12-06 pending
+Status: Executing — Wave-3 read-side HITL graft landed (gate_queue producers + interrupt-only process_inbox + empty-queue short-circuit; read-side tests GREEN, write-side stays RED for 12-04)
 Last activity: 2026-07-02
 
-Progress: [████████░░] 81%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- v0.4 plans completed: 1
+- v0.4 plans completed: 2
 - v0.4 total plans: TBD
 - v0.3 shipped history: 7 phases / 25 plans
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 81%
 | Phase 11 P02 | 25min | 3 tasks | 1 files |
 | Phase 11 P03 | 20min | 3 tasks | 4 files |
 | Phase 12 P02 | 15min | 3 tasks | 3 files |
+| Phase 12 P03 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,8 @@ Recent decisions affecting current work:
 - [Phase 11-02]: _initial_state(inp) single-arg form (matches Plan 01 red suite); run_id derived inside from inp.run_id or _new_run_id()
 - [Phase ?]: [Phase 11-03]: curation.run/inspect registered with cli_name+mcp_tool_name; MCP parity free via registry auto-discovery (no mcp/server.py edit); inventory tests grown to match
 - [Phase 12-02]: PromotionDecision + CardEvaluateInput defined in curation_promote.py (extra=forbid) to avoid catalog.py circular import; target_lifecycle limited to growing|mature|None; connection-typing input is a bridge_detect candidate pair with a required ConnectionType enum
+- [Phase 12-03]: interrupt-only process_inbox keyed by the module constant _CURATION_GATE_ID ("curation.review", never state["gate_id"]); three producers append into ONE operator.add gate_queue before the single pause; empty-queue conditional short-circuit means offline no-mock runs (provider total-outage → zero proposals) complete without pausing, keeping every legacy Phase-11 test green
+- [Phase 12-03]: added a minimal resume-only review_curation_run in Plan 03 (its -k target test_single_consolidated_gate calls it) with NO write nodes; Plan 04 grafts the post-gate apply nodes onto the same runner
 
 ### Pending Todos
 
@@ -170,6 +173,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-02T07:01:52.194Z
+Last session: 2026-07-02T16:43:40.447Z
 Stopped at: Phase 12 context gathered
 Resume file: None

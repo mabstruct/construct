@@ -189,7 +189,7 @@ Plans:
 - [x] 12-02-PLAN.md — Two L3 LLM gates: card.evaluate (curation_promote.py) + connection-typing (curation_connect.py) + config.yaml gate entries
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 12-03-PLAN.md — curation_run.py read-side: gate_queue state + CurationProposal + producer nodes + interrupt-only process_inbox + empty-queue short-circuit + awaiting_review status
+- [x] 12-03-PLAN.md — curation_run.py read-side: gate_queue state + CurationProposal + producer nodes + interrupt-only process_inbox + empty-queue short-circuit + awaiting_review status
 **Wave 4** *(blocked on Wave 3)*
 
 - [ ] 12-04-PLAN.md — curation_run.py write-side: apply_promotions/connections/archives + decision resolution + review_curation_run + extended inspect + events
@@ -242,5 +242,5 @@ Plans:
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete    | 2026-06-29 |
-| 12. Curation L3 Gates + Review Application | v0.4 | 2/6 | In Progress|  |
+| 12. Curation L3 Gates + Review Application | v0.4 | 3/6 | In Progress|  |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |
