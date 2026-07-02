@@ -183,7 +183,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Wave 0 failing-test scaffold: gate unit tests + HITL/reviewed-write integration tests + CLI/MCP parity + no-placeholder + skill-migration guards + conftest mock seams
+- [x] 12-01-PLAN.md — Wave 0 failing-test scaffold: gate unit tests + HITL/reviewed-write integration tests + CLI/MCP parity + no-placeholder + skill-migration guards + conftest mock seams
 **Wave 2** *(blocked on Wave 1)*
 
 - [ ] 12-02-PLAN.md — Two L3 LLM gates: card.evaluate (curation_promote.py) + connection-typing (curation_connect.py) + config.yaml gate entries
@@ -242,5 +242,5 @@ Plans:
 | 9. LLM Provider Factory + research.score | v0.4 | 4/4 | Complete   | 2026-06-28 |
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete    | 2026-06-29 |
-| 12. Curation L3 Gates + Review Application | v0.4 | 0/6 | Planned | - |
+| 12. Curation L3 Gates + Review Application | v0.4 | 1/6 | In Progress|  |
 | 13. Daily-Cycle Composition | v0.4 | 0/TBD | Not started | - |

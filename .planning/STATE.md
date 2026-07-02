@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: planned
-stopped_at: Phase 12 planned + plan-checked (READY-WITH-CONCERNS; W1–W4 resolved)
-last_updated: "2026-07-01T09:00:00.000Z"
+status: executing
+stopped_at: Phase 12 context gathered
+last_updated: "2026-07-02T07:02:21.843Z"
 last_activity: 2026-07-01
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 15
+  completed_plans: 17
   percent: 67
 ---
 
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 12
-Plan: 6 plans ready (12-01 … 12-06)
-Status: Planned — plan-check READY-WITH-CONCERNS (0 blockers; W1–W4 resolved); ready to execute
-Last activity: 2026-07-01
+Plan: 12-01 executed (Wave-0 RED scaffold); 12-02 … 12-06 pending
+Status: Executing — Wave-0 failing-test net landed (30 RED tests across 4 files; 359 existing green)
+Last activity: 2026-07-02
 
-Progress: [█████████░] 93%
+Progress: [████████░░] 76%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- v0.4 plans completed: 0
+- v0.4 plans completed: 1
 - v0.4 total plans: TBD
 - v0.3 shipped history: 7 phases / 25 plans
 
@@ -168,6 +168,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-30T11:07:21.302Z
+Last session: 2026-07-02T07:01:52.194Z
 Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-curation-l3-gates-review-application/12-CONTEXT.md
+Resume file: None
