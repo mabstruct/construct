@@ -17,7 +17,6 @@ from construct.services.init import DomainInitInput, WorkspaceInitError, initial
 from construct.services.knowledge import OperationResult
 from construct.capabilities.catalog import get_registry
 from construct.mcp.server import run_server
-from construct.pipelines.workflow_runner import WorkflowRunner
 
 
 app = typer.Typer(no_args_is_help=True)
@@ -205,35 +204,11 @@ workflow_app = typer.Typer(
 app.add_typer(workflow_app)
 
 
-def _get_workflow_steps_from_registry(runner: WorkflowRunner) -> list:
-    """Get workflow step definitions. For Phase 4, return curation-cycle steps."""
-    from construct.capabilities.catalog import _get_workflow_steps
-    # Try loading from state file
-    s = runner.status()
-    if s.success and s.data and s.data.get("state"):
-        name = s.data["state"].get("workflow_name", "curation-cycle")
-        return _get_workflow_steps(name)
-    return _get_workflow_steps("curation-cycle")
-
-
-@workflow_app.command()
-def run(
-    ctx: typer.Context,
-    workflow_name: str = typer.Argument("curation-cycle", help="Workflow name to run"),
-    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
-    start_step: int = typer.Option(0, "--step", "-s", help="Start from this step index"),
-    json_output: bool = typer.Option(False, "--json", "-j"),
-) -> None:
-    """Run a multi-step workflow with state persistence and resume support."""
-    try:
-        cap = get_registry().get("workflow.run")
-    except KeyError:
-        typer.echo("ERROR: Capability not found.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, workflow_name=workflow_name, start_step=start_step)
-    _display_result(result, json_output)
-
-
+# D-10 / CUR-05: the `workflow run` / `workflow resume` commands existed only to
+# drive the fake-success curation-cycle step placeholder (which lived in both
+# catalog.py and here — Pitfall 6). Both are removed; `construct curation run` is
+# now the sole canonical curation entrypoint. Only `workflow status` remains — it
+# reports real persisted workflow-runner state.
 @workflow_app.command()
 def status(
     ctx: typer.Context,
@@ -247,22 +222,6 @@ def status(
         typer.echo("ERROR: Capability not found.")
         raise typer.Exit(code=1)
     result = cap.handler(workspace)
-    _display_result(result, json_output)
-
-
-@workflow_app.command()
-def resume(
-    ctx: typer.Context,
-    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
-    json_output: bool = typer.Option(False, "--json", "-j"),
-) -> None:
-    """Resume a paused or failed workflow from the last saved state."""
-    try:
-        runner = WorkflowRunner(workspace)
-        steps = _get_workflow_steps_from_registry(runner)
-        result = runner.resume(steps)
-    except Exception as exc:
-        result = OperationResult(success=False, message=str(exc))
     _display_result(result, json_output)
 
 

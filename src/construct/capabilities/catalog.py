@@ -308,20 +308,11 @@ def create_registry() -> CapabilityRegistry:
         handler=lambda **kwargs: OperationResult(success=False, message="Not yet implemented — see Plan 02"),
         mcp_tool_name="construct_views_generate_data",
     ))
-    registry.register(CapabilityRecord(
-        id="workflow.run",
-        name="Run Workflow",
-        description="Execute a multi-step workflow with state persistence",
-        input_model=WorkflowRunInput,
-        output_model=OperationResult,
-        handler=lambda workspace, workflow_name="workflow", start_step=0: (
-            lambda w, name, step: WorkflowRunner(w).run(
-                _get_workflow_steps(name), workflow_name=name, start_step=step
-            )
-        )(workspace, workflow_name, start_step),
-        cli_name="workflow.run",
-        mcp_tool_name="construct_workflow_run",
-    ))
+    # D-10 / CUR-05: the legacy ``workflow.run`` capability existed only to drive
+    # the fake-success curation-cycle step placeholder. It is removed here —
+    # ``curation.run`` is now the sole canonical curation entrypoint.
+    # ``workflow.status`` stays: it reads real persisted WorkflowRunner state and
+    # carries no placeholder.
     registry.register(CapabilityRecord(
         id="workflow.status",
         name="Workflow Status",
@@ -799,25 +790,6 @@ def _build_card_updates(kwargs: dict) -> dict:
     if summary is not None:
         updates["_summary"] = summary
     return updates
-
-
-def _get_workflow_steps(name: str) -> list:
-    """Get step definitions for a named workflow procedure."""
-    from construct.pipelines.workflow_runner import WorkflowStep
-    from construct.services.knowledge import OperationResult
-
-    if name == "curation-cycle":
-        return [
-            WorkflowStep(name="integrity-check", description="Validate card integrity", handler=lambda **kw: OperationResult(success=True, message="Integrity check placeholder — see skill migration"), handler_kwargs={}),
-            WorkflowStep(name="decay-scan", description="Check for stale cards", handler=lambda **kw: OperationResult(success=True, message="Decay scan placeholder")),
-            WorkflowStep(name="orphan-scan", description="Detect orphan cards", handler=lambda **kw: OperationResult(success=True, message="Orphan scan placeholder")),
-            WorkflowStep(name="promotion-scan", description="Evaluate cards for lifecycle promotion", handler=lambda **kw: OperationResult(success=True, message="Promotion scan placeholder")),
-            WorkflowStep(name="connection-maint", description="Type untyped edges and detect bridges", handler=lambda **kw: OperationResult(success=True, message="Connection maintenance placeholder")),
-            WorkflowStep(name="process-inbox", description="Process pending user actions", handler=lambda **kw: OperationResult(success=True, message="Inbox processing placeholder")),
-            WorkflowStep(name="report", description="Compile stats and health report", handler=lambda **kw: OperationResult(success=True, message="Report placeholder")),
-        ]
-    # Default: single-step placeholder
-    return [WorkflowStep(name="single-step", description="Single step", handler=lambda **kw: OperationResult(success=True, message=f"Workflow '{name}' executed (placeholder)"), handler_kwargs={})]
 
 
 # ---------------------------------------------------------------------------

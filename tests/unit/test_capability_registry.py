@@ -119,7 +119,6 @@ def test_catalog_loads() -> None:
         "knowledge.connection.list",
         "graph.status",
         "views.generate_data",
-        "workflow.run",
         "workflow.status",
         "ingest.source",
         "help.suggest",
