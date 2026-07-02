@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-07-02T07:02:21.843Z"
-last_activity: 2026-07-01
+stopped_at: Completed 12-02-PLAN.md (L3 gates: card.evaluate + connection-typing)
+last_updated: "2026-07-02T09:20:48.358Z"
+last_activity: 2026-07-02
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 17
+  completed_plans: 18
   percent: 67
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 ## Current Position
 
 Phase: 12
-Plan: 12-01 executed (Wave-0 RED scaffold); 12-02 … 12-06 pending
-Status: Executing — Wave-0 failing-test net landed (30 RED tests across 4 files; 359 existing green)
+Plan: 12-01 + 12-02 executed; 12-03 … 12-06 pending
+Status: Executing — Wave-2 L3 gates landed (card.evaluate + connection-typing GREEN, 13/13; research_score 24/24 unregressed)
 Last activity: 2026-07-02
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 76%
 | Phase 11 P01 | 20min | 3 tasks | 3 files |
 | Phase 11 P02 | 25min | 3 tasks | 1 files |
 | Phase 11 P03 | 20min | 3 tasks | 4 files |
+| Phase 12 P02 | 15min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,7 @@ Recent decisions affecting current work:
 - [Phase 11-02]: curation_run is a linear interrupt-free sibling of research_run — findings-only decay/orphan scans, deferred nodes as explicit skipped/required=False steps, D-09 degraded iff a required step failed/skipped
 - [Phase 11-02]: _initial_state(inp) single-arg form (matches Plan 01 red suite); run_id derived inside from inp.run_id or _new_run_id()
 - [Phase ?]: [Phase 11-03]: curation.run/inspect registered with cli_name+mcp_tool_name; MCP parity free via registry auto-discovery (no mcp/server.py edit); inventory tests grown to match
+- [Phase 12-02]: PromotionDecision + CardEvaluateInput defined in curation_promote.py (extra=forbid) to avoid catalog.py circular import; target_lifecycle limited to growing|mature|None; connection-typing input is a bridge_detect candidate pair with a required ConnectionType enum
 
 ### Pending Todos
 
