@@ -1,18 +1,21 @@
 ---
-description: "Run a full graph maintenance pass — validate cards, check health, promote/decay lifecycle, detect orphans. Use when user says 'curate', 'clean up the graph', 'check graph health', 'run maintenance'."
+description: "Run a full graph maintenance pass — delegate to the Python curation capability, drive the consolidated approve/reject review loop, narrate the health report. Use when user says 'curate', 'clean up the graph', 'check graph health', 'run maintenance'."
 allowed-tools: Read, Bash(construct), MCP(connect)
 ---
+
+> **Migrated for Phase 12 (API-04, D-08):** Integrity, decay, orphan, promotion, and connection-typing logic no longer live in this skill's prose — they are the Python `curation.run` capability (Phase 11/12). This skill is a **thin orchestrator**: it invokes `construct curation run`, presents the single consolidated gate queue, collects approve/reject decisions, resumes via `construct curation review`, and narrates the report. The skill drives the conversation; Python enforces the contracts and owns every write. No inline curation logic survives here.
+
 # Skill: Curation Cycle
 
 **Trigger:** User says "curate", "clean up the graph", "check graph health", "run maintenance", or similar.
 **Agent:** Curator
-**Produces:** Updated cards (lifecycle changes via CLI), connection updates, health report, event log entries
+**Produces:** Lifecycle promotions, typed connections, archives, health report, event log entries — all written by the Python capability behind the human gate.
 
 ---
 
 ## Prerequisites
 
-The CLI must be available on `$PATH`. For MCP-based operations, start the server:
+The CLI must be available on `$PATH`. For MCP-based operation, start the server:
 
 ```bash
 construct mcp &
@@ -20,205 +23,76 @@ construct mcp &
 
 ## Procedure
 
-Run all 7 steps. Each step is independent — continue even if one step finds issues.
+### Step 1: Invoke the Curation Capability
 
----
+**INPUT:** Workspace on disk
+**OUTPUT:** A durable curation run that runs the deterministic maintenance pass and pauses at the consolidated review gate (no writes before approval)
+**METHOD:** CLI `construct curation run` (owns integrity, decay, orphan, promotion, connection-typing, and the write boundary)
 
-### Step 1: Integrity Check
-
-**INPUT:** Workspace `cards/` directory, `connections.json`
-**OUTPUT:** Validation report with errors and warnings
-
-Validate workspace integrity via CLI:
+Run the capability against the workspace:
 
 ```bash
-construct validate --workspace . --json
+construct curation run --workspace . --json
 ```
 
-**Alternative (MCP):** Invoke the `construct_validate` tool:
+**Alternative (MCP):** invoke the `construct_curation_run` tool with `{"workspace_path": "."}`.
 
-```json
-{
-  "tool": "construct_validate",
-  "arguments": {
-    "path": "."
-  }
-}
-```
+The run executes the deterministic prefix (integrity → decay → orphan → promotion evaluation → connection maintenance) and then **pauses** at a single consolidated review gate, returning `status: awaiting_review`, a `run_id`, and a consolidated `gate_queue`. It writes nothing to the source of truth until you resume it (Step 3). If the queue is empty, the run completes immediately with a report — skip to Step 4.
 
-The validation command checks:
+### Step 2: Present the Consolidated Gate Queue
 
-**Required fields:**
-- `id`, `title`, `epistemic_type`, `created`, `confidence`, `source_tier`, `domains`
+**INPUT:** `gate_queue` + `run_id` from Step 1
+**OUTPUT:** The user's per-item approve/reject decisions
 
-**Value validation:**
-- `confidence` is integer 1–5
-- `source_tier` is integer 1–5
-- `epistemic_type` is valid enum
-- `lifecycle` is valid enum: seed | growing | mature | archived
-- `domains` entries exist in `domains.yaml`
+The `gate_queue` is a single consolidated list mixing several proposal kinds. Present them grouped so the user sees each write type distinctly:
 
-**Connection integrity:**
-- For each edge in `connections.json`, verify both `from` and `to` card IDs exist
-- Flag dangling references
+- **promotion** — a card proposed for `seed → growing` or `growing → mature`
+- **connection** — a proposed typed edge between two cards
+- **archive** — a stale card proposed for archiving (decay path)
+- **escalate** — a card the gate could not decide; review-only this phase (no default write)
 
-**Report findings:**
+**Surface the `method` field on each promotion/escalate item** so the user can tell failure-driven escalations apart from genuine borderline ones:
+- `method: rule-based` → the gate escalated because the LLM evaluation failed/retried out — a mechanical escalation, not a judgment call.
+- `method: llm-judgment` → a genuine borderline decision the model reasoned about.
 
-> "Integrity: {N} cards checked, {N} valid, {N} errors: {error summary}"
+For each item show the reasoning the capability returned. Do not re-derive or override the judgment — it is the Python gate's, and it is the single source of truth. Let the user:
+- approve a subset and reject the rest, or
+- approve everything (approve-all), or
+- reject everything (reject-all).
 
----
+### Step 3: Resume via Review
 
-### Step 2: Decay Scan
+**INPUT:** `run_id` from Step 1 + the user's decisions
+**OUTPUT:** Approved lifecycle/connection/archive writes applied; rejected items dropped
+**METHOD:** CLI `construct curation review` (the write boundary — only approved items are persisted)
 
-**INPUT:** `governance.yaml` decay settings, card lifecycle data
-**OUTPUT:** List of stale cards, optionally archived
-
-Read `governance.yaml` → `decay.decay_window_days` (default: 28).
-
-Load card data for lifecycle and last_verified:
+Resume the paused run with the collected decisions:
 
 ```bash
-construct knowledge card list --workspace . --json
+# Approve every proposal's recommended write:
+construct curation review --workspace . --run-id <run_id> --approve-all --json
+
+# Or reject (write nothing for) every proposal:
+construct curation review --workspace . --run-id <run_id> --reject-all --json
+
+# Or a per-item decision set (pipe JSON on stdin or pass --decisions-file):
+echo '<decisions-json>' | construct curation review --workspace . --run-id <run_id> --json
 ```
 
-**Note:** If `card list` is not yet implemented, read individual card files via `Read cards/<id>.md` to check `last_verified` and `created` dates.
+Use exactly one of `--approve-all`, `--reject-all`, or a decisions payload. Only approved items are written; the capability applies promotions (`edit_card` lifecycle), connections (`add_connection`, idempotent), and archives (`archive_card`) with per-item isolation and event logging.
 
-For each non-archived card:
-- Check `last_verified` date (or `created` if never verified)
-- If older than decay window → flag as stale
+### Step 4: Narrate the Report
 
-```
-Stale: {card-id} — last verified {date}, {N} days ago
-```
+**INPUT:** The review/run result
+**OUTPUT:** A human-readable graph health report + confirmation
 
-If `auto_archive_on_decay: true` → archive the card via CLI:
-
-```bash
-construct knowledge card archive <card-id> --author curator --workspace .
-```
-
-Otherwise → just report.
-
----
-
-### Step 3: Orphan Scan
-
-**INPUT:** Card lifecycle data (from Step 2), connection data
-**OUTPUT:** List of orphan cards with zero connections
-
-Read `governance.yaml` → `quality.orphan_tolerance_days` (default: 7).
-
-Get connection data via CLI:
-
-```bash
-construct knowledge connection list --workspace . --json
-```
-
-For each non-archived card:
-- Count connections where card appears as `from` or `to`
-- If zero connections AND card is older than tolerance → flag as orphan
-
-```
-Orphan: {card-id} — {N} days old, zero connections
-```
-
-For borderline orphan cases, apply LLM judgment: Is the card self-contained and valuable even without connections? If yes, keep it; if it's a dead end, recommend archiving.
-
----
-
-### Step 4: Promotion Scan
-
-**INPUT:** Card lifecycle data (from Step 2), governance rules (from Step 2)
-**OUTPUT:** Promoted cards or escalation list
-
-Invoke the `construct-card-evaluate` skill (see `CONSTRUCT-CLAUDE-impl/claude/skills/construct-card-evaluate/SKILL.md`):
-
-- Apply rule-based promotion for clear candidates (use `construct knowledge card edit --lifecycle`)
-- Evaluate ambiguous cards using the evaluation rubric
-- Escalate when human judgment needed
-
-> "This step delegates to `construct-card-evaluate` — that skill handles the detailed promotion logic, governance thresholds, and ambiguous-case evaluation."
-
----
-
-### Step 5: Connection Maintenance
-
-**INPUT:** Current connection list, card summaries
-**OUTPUT:** Updated connections.json via CLI
-
-**Type untyped edges:**
-- Get current connections:
-
-  ```bash
-  construct knowledge connection list --workspace . --json
-  ```
-
-- Scan for edges where `type` is null or empty
-- For each, read both cards' summaries via `Read cards/<id>.md` (requires card content for LLM judgment)
-- Propose a relation type (see `.construct/references/connection-types.md`)
-- Add typed connection via CLI:
-
-  ```bash
-  construct knowledge connection add <from-id> <to-id> --type <relation> --by curator --workspace .
-  ```
-
-- Remove the untyped edge (if replacing an existing connection):
-
-  ```bash
-  construct knowledge connection remove <from-id> <to-id> --type <old-type> --workspace .
-  ```
-
-**Cross-domain bridge detection:**
-
-Level 1 (graph structure):
-- Use connection list from above to find cards that connect to cards in different domains
-- These are natural bridge nodes
-
-Level 2 (category overlap):
-- Find cards sharing content categories across different domains
-- These may indicate structural parallels
-
-Report bridges found:
-
-> "Bridges detected: {card-id} connects {domain-A} ↔ {domain-B} ({relation})"
-
----
-
-### Step 6: Process Inbox (if applicable)
-
-**INPUT:** User's pending actions (flagged cards, suggested connections)
-**OUTPUT:** Confirmed actions processed
-
-If there are any pending user actions:
-- List them for the user
-- Process confirmed actions using the same CLI commands (edit, archive, connection add/remove)
-
-Optionally check active workflow state:
-
-```bash
-construct workflow status --workspace .
-```
-
----
-
-### Step 7: Stats & Report
-
-**INPUT:** Results from Steps 1–6
-**OUTPUT:** Human-readable graph health report
-
-Compile and present:
-
-```bash
-construct status --workspace . --json
-```
-
-Or invoke MCP `construct_graph_status` for the structured health data.
+Relay the capability's report back to the user. Cite the counts it returned; do not recompute them:
 
 ```
 ## Graph Health Report — {date}
 
 ### Overview
-- Total cards: {N} (seed: {N}, growing: {N}, mature: {N}, archived: {N})
+- Total cards: {N} (seed / growing / mature / archived)
 - Total connections: {N}
 - Domains: {N} active
 
@@ -226,61 +100,43 @@ Or invoke MCP `construct_graph_status` for the structured health data.
 - Integrity errors: {N}
 - Stale cards (decay): {N}
 - Orphan cards: {N}
-- Average confidence: {N.N}
-- Average connections per card: {N.N}
 
-### Actions Taken
+### Actions Taken (approved this cycle)
 - Cards promoted: {N}
 - Connections typed: {N}
-- Bridges detected: {N}
+- Cards archived: {N}
 
 ### Attention Needed
-- {list of escalated items}
-- {list of cards needing human review}
+- {escalated items surfaced for human review}
 ```
 
-Log: `curation_cycle_complete` event appended to `log/events.jsonl`.
+The capability logs `curation_cycle_complete` to `log/events.jsonl` — no manual log entry needed.
 
----
+### Step 5: Views Refresh Hook
 
-### Step 8: Views Refresh Hook
+If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent triggers a single regeneration after all child skills complete.
 
-**OUTPUT:** Optional views regeneration
+Otherwise, if `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
 
-If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
+```bash
+construct views generate --workspace .
+```
 
-**Skip check:** If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent will trigger a single regeneration after all child skills complete. This avoids redundant regeneration (e.g., daily-cycle runs research-cycle → curation-cycle → both would fire hooks; only the last one matters since regen is full and idempotent).
+Or invoke MCP `construct_views_generate_data`.
 
-If not skipped:
-1. Run the views generate data capability:
+- On success: if `.construct/config.yaml` sets `views.confirm_refresh: true`, append `✓ views updated`. Otherwise stay silent (the SPA polls `version.json`).
+- On failure: append `⚠ views regeneration failed: {single-line message}. Workspace is intact; run 'construct views generate' manually to refresh the views.`
+- Always preserve this skill's success status — the hook is a side effect, not a success condition.
 
-   ```bash
-   construct views generate --workspace .
-   ```
-
-   Or invoke MCP `construct_views_generate_data`.
-
-2. If it succeeds → if `.construct/config.yaml` sets `views.confirm_refresh: true`, append to the report: `✓ views updated (build_id: {id})`. Otherwise, no extra user-facing message (the SPA picks it up via `version.json` polling within 30s).
-
-3. If it fails → append a warning to the report:
-
-   > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `views generate` manually to refresh the views.
-
-4. Always preserve this skill's success status — the hook is a side effect, not a success condition
-
-If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
+If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently.
 
 ---
 
 ## Validation
 
-- [ ] Step 1: `construct validate --json` or `construct_validate` MCP tool called correctly
-- [ ] Step 2: Card data loaded via CLI or Read; archiving uses `construct knowledge card archive`
-- [ ] Step 3: Connection data loaded via `construct knowledge connection list`
-- [ ] Step 4: `construct-card-evaluate` skill invoked for promotion decisions
-- [ ] Step 5: `construct knowledge connection add/remove` used for connection ops
-- [ ] Step 6: Inbox items processed and confirmed
-- [ ] Step 7: Health data loaded via `construct status` or `construct_graph_status`
-- [ ] Step 8: Views refresh is optional and non-blocking
-- [ ] Events logged for every action taken
-- [ ] `connections.json` remains valid JSON after all updates
+- [ ] `construct curation run` invoked (no inline integrity/decay/orphan/promotion/connection logic)
+- [ ] Consolidated `gate_queue` presented, grouped by kind, with the `method` field visible on promotion/escalate items
+- [ ] User decisions collected (subset / approve-all / reject-all)
+- [ ] `construct curation review` resumed the run — only approved items written
+- [ ] Health report relayed with the capability's own counts
+- [ ] No direct workspace writes performed by this skill
