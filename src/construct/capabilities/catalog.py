@@ -59,9 +59,18 @@ from construct.llm.research_run import (
 # ── Curation Run imports (Phase 11) ──
 from construct.llm.curation_run import (
     CurationInspectInput,
+    CurationReviewInput,
     CurationRunInput,
     inspect_curation_run,
+    review_curation_run,
     run_curation_run,
+)
+
+# ── Curation L3 gate imports (Phase 12) ──
+from construct.llm.curation_promote import (
+    CardEvaluateInput,
+    CardEvaluateOutageError,
+    run_gate as card_evaluate_gate,
 )
 
 
@@ -443,12 +452,34 @@ def create_registry() -> CapabilityRegistry:
     registry.register(CapabilityRecord(
         id="curation.inspect",
         name="Curation Inspect",
-        description="Report a curation run's persisted state (read-only; never re-runs)",
+        description="Report a curation run's persisted state, including any pending-review (awaiting_review) gate queue (read-only; never re-runs)",
         input_model=CurationInspectInput,
         output_model=OperationResult,
         handler=_curation_inspect_shim,
         cli_name="curation.inspect",
         mcp_tool_name="construct_curation_inspect",
+    ))
+    registry.register(CapabilityRecord(
+        id="curation.review",
+        name="Curation Review",
+        description="Resume a paused curation run with per-item decisions (or approve-all/reject-all); applies approved lifecycle/connection/archive writes",
+        input_model=CurationReviewInput,
+        output_model=OperationResult,
+        handler=_curation_review_shim,
+        cli_name="curation.review",
+        mcp_tool_name="construct_curation_review",
+    ))
+
+    # ── Card promotion L3 gate (Phase 12) ──
+    registry.register(CapabilityRecord(
+        id="card.evaluate",
+        name="Card Evaluate",
+        description="Evaluate non-mature cards through the L3 promotion gate into governance-reviewable promote/hold/escalate proposals (read-only, no writes)",
+        input_model=CardEvaluateInput,
+        output_model=OperationResult,
+        handler=_card_evaluate_shim,
+        cli_name="card.evaluate",
+        mcp_tool_name="construct_card_evaluate",
     ))
 
     return registry
@@ -608,6 +639,54 @@ def _curation_inspect_shim(*args, **kwargs):
         raise TypeError("curation.inspect handler requires keyword arguments")
     return _curation_result_to_operation(
         "curation.inspect", lambda: inspect_curation_run(CurationInspectInput(**kwargs))
+    )
+
+
+def _curation_review_shim(*args, **kwargs):
+    """RT-03 adapter for curation.review (resume a paused run with per-item
+    decisions; applies approved lifecycle/connection/archive writes)."""
+    if args:
+        raise TypeError("curation.review handler requires keyword arguments")
+    return _curation_result_to_operation(
+        "curation.review", lambda: review_curation_run(CurationReviewInput(**kwargs))
+    )
+
+
+def _card_evaluate_shim(*args, **kwargs):
+    """RT-03 adapter for card.evaluate (L3 promotion gate; read-only, no writes).
+
+    Mirrors ``_research_score_shim``'s error discipline (T-12-04 / WR-06): a total
+    provider outage → ``success=False`` carrying only ``degraded``/``total_outage``
+    flags (never raw provider text); any other exception → a key-safe sanitized
+    message via the gate module's ``_safe_scoring_cause`` (never raw ``str(exc)``).
+    """
+    if args:
+        raise TypeError("card.evaluate handler requires keyword arguments")
+    input_data = CardEvaluateInput(**kwargs)
+    try:
+        output = card_evaluate_gate("card.evaluate", input_data)
+    except CardEvaluateOutageError as exc:
+        return OperationResult(
+            success=False,
+            message=exc.safe_message,
+            data={"degraded": True, "total_outage": True},
+        )
+    except Exception as exc:
+        from construct.llm.curation_promote import _safe_scoring_cause
+
+        return OperationResult(
+            success=False,
+            message=f"card.evaluate failed: {_safe_scoring_cause(exc)}",
+            data={"degraded": True, "total_outage": False},
+        )
+    degraded = bool(output.retrieval.get("degraded"))
+    message = f"Evaluated {len(output.decisions)} cards"
+    if degraded:
+        message += " (degraded)"
+    return OperationResult(
+        success=True,
+        message=message,
+        data=output.model_dump(mode="json"),
     )
 
 

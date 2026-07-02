@@ -759,6 +759,55 @@ def curation_inspect_cmd(
     _emit_curation_result(result, json_output)
 
 
+@curation_app.command(name="review")
+def curation_review_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: str = typer.Option(..., "--run-id", help="The paused curation run to resume"),
+    decisions_file: Optional[Path] = typer.Option(
+        None, "--decisions-file", help="JSON file of per-item decisions (or pipe on stdin)"
+    ),
+    approve_all: bool = typer.Option(
+        False, "--approve-all", help="Approve every proposal's recommended write"
+    ),
+    reject_all: bool = typer.Option(
+        False, "--reject-all", help="Reject (write nothing for) every proposal"
+    ),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Resume a paused curation run with per-item decisions (or --approve-all / --reject-all)."""
+    if sum([decisions_file is not None, approve_all, reject_all]) > 1:
+        typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
+        raise typer.Exit(code=1)
+
+    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace), "run_id": run_id}
+
+    raw: str | None = None
+    if decisions_file is not None:
+        raw = decisions_file.read_text(encoding="utf-8")
+    elif not approve_all and not reject_all and not sys.stdin.isatty():
+        raw = sys.stdin.read()
+
+    if raw:
+        try:
+            handler_kwargs["decisions"] = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            typer.echo(f"ERROR: invalid decisions payload: {exc}")
+            raise typer.Exit(code=1) from exc
+    if approve_all:
+        handler_kwargs["approve_all"] = True
+    if reject_all:
+        handler_kwargs["reject_all"] = True
+
+    try:
+        cap = get_registry().get("curation.review")
+    except KeyError:
+        typer.echo("ERROR: Capability 'curation.review' not found. Ensure Phase 12 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
+    _emit_curation_result(result, json_output)
+
+
 # ---------------------------------------------------------------------------
 # Views command group (Phase 6)
 # ---------------------------------------------------------------------------
@@ -1192,6 +1241,38 @@ def archive(
         typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
         raise typer.Exit(code=1)
     result = cap.handler(workspace, card_id, author=CardAuthor(author))
+    _display_result(result, json_output)
+
+
+# Top-level `card` group hosting the L3 promotion gate (`construct card evaluate`).
+# Distinct from the `knowledge card` CRUD group: evaluate proposes lifecycle
+# promotions (read-only), it is not a card CRUD op.
+card_gate_app = typer.Typer(
+    no_args_is_help=True,
+    name="card",
+    help="Card-level L3 gates (promotion evaluation).",
+)
+app.add_typer(card_gate_app)
+
+
+@card_gate_app.command(name="evaluate")
+def card_evaluate_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    provider: Optional[str] = typer.Option(None, "--provider", help="Override the evaluation provider"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Evaluate non-mature cards through the L3 promotion gate (read-only; no writes)."""
+    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    if provider is not None:
+        handler_kwargs["provider_override"] = provider
+
+    try:
+        cap = get_registry().get("card.evaluate")
+    except KeyError:
+        typer.echo("ERROR: Capability 'card.evaluate' not found. Ensure Phase 12 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(**handler_kwargs)
     _display_result(result, json_output)
 
 
