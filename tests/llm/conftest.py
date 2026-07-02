@@ -406,6 +406,88 @@ def scored_findings_batch() -> ResearchScoreGateOutput:
     return make_scored_findings_batch()
 
 
+# ── Phase 12: L3 gate mock seams (Wave 0) ──
+#
+# Two fixture builders that hand the reusable ``ConfigurableStructuredMock`` a
+# ``PromotionDecision``-shaped and a ``ConnectionTypeDecision``-shaped canned
+# return. The gate output models live in ``construct.llm.curation_promote`` /
+# ``construct.llm.curation_connect`` — created in Plans 02-05 — so they are
+# imported lazily INSIDE the factory bodies. This keeps ``conftest`` collectable
+# (existing research/curation tests import cleanly) while the curation gate
+# modules are absent; only a test that actually *requests* one of these decisions
+# goes RED on the missing import. The monkeypatch seam stays
+# ``construct.llm.factory.build_chat_model`` (see ``make_build_chat_model``); no
+# new mock class is introduced — these are fixture builders over the existing
+# ``ConfigurableStructuredMock``.
+
+
+@pytest.fixture
+def promotion_decision_mock():
+    """Factory → ``ConfigurableStructuredMock`` seeded with a ``PromotionDecision``.
+
+    ``PromotionDecision`` (spec §6.4, ``extra="forbid"``) is created in Plan 02, so
+    it is imported lazily. Callers override the canned verdict::
+
+        llm = promotion_decision_mock(decision="escalate", target_lifecycle=None)
+        decision = evaluate_one(card, llm=llm)
+    """
+
+    def _make(
+        *,
+        card_id: str = "card-1",
+        decision: str = "promote",
+        target_lifecycle: str | None = "growing",
+        reasoning: str = "Card is mature enough to advance a lifecycle band.",
+        method: str = "llm-judgment",
+    ) -> ConfigurableStructuredMock:
+        from construct.llm.curation_promote import PromotionDecision
+
+        return ConfigurableStructuredMock(
+            PromotionDecision(
+                card_id=card_id,
+                decision=decision,
+                target_lifecycle=target_lifecycle,
+                reasoning=reasoning,
+                method=method,
+            )
+        )
+
+    return _make
+
+
+@pytest.fixture
+def connection_type_decision_mock():
+    """Factory → ``ConfigurableStructuredMock`` seeded with a ``ConnectionTypeDecision``.
+
+    ``ConnectionTypeDecision`` (Discrepancy 2 — a REQUIRED ``ConnectionType`` enum,
+    no ``None``) is created in Plan 02/05, so it is imported lazily. Drives the
+    connection-typing L3 gate over a ``bridge_detect`` candidate pair::
+
+        llm = connection_type_decision_mock(connection_type="extends")
+        decision = type_one(pair, llm=llm)
+    """
+
+    def _make(
+        *,
+        from_card_id: str = "card-1",
+        to_card_id: str = "card-2",
+        connection_type: str = "supports",
+        reasoning: str = "Card A empirically supports the claim in card B.",
+    ) -> ConfigurableStructuredMock:
+        from construct.llm.curation_connect import ConnectionTypeDecision
+
+        return ConfigurableStructuredMock(
+            ConnectionTypeDecision(
+                from_card_id=from_card_id,
+                to_card_id=to_card_id,
+                connection_type=connection_type,
+                reasoning=reasoning,
+            )
+        )
+
+    return _make
+
+
 @pytest.fixture
 def sample_search_results() -> list[SearchResult]:
     """Phase-8 normalized SearchResult fixtures (NOT the spec §6.1 draft schema).
