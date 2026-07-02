@@ -28,3 +28,13 @@ gates:
     temperature: 0.2
     review_required: true
     concurrency_cap: 5
+  card.evaluate:
+    provider: anthropic
+    temperature: 0.2
+    review_required: true
+    concurrency_cap: 5
+  curation.connection_type:
+    provider: anthropic
+    temperature: 0.2
+    review_required: true
+    concurrency_cap: 5
