@@ -1,18 +1,20 @@
 ---
-description: "Evaluate cards for lifecycle promotion or decay. Use when user says 'evaluate cards', 'check promotions', or during curation cycle."
+description: "Evaluate cards for lifecycle promotion or decay by delegating to the Python L3 promotion gate. Use when user says 'evaluate cards', 'check promotions', or during curation cycle."
 allowed-tools: Read, Bash(construct), MCP(connect)
 ---
 # Skill: Evaluate Card for Promotion
 
-**Trigger:** User says "evaluate cards", "check promotions", or during curation cycle Step 4.
+**Trigger:** User says "evaluate cards", "check promotions", or during a curation cycle's promotion step.
 **Agent:** Curator
-**Produces:** Card lifecycle updates logged via CLI, event log entries
+**Produces:** A set of `PromotionDecision`s (promote / hold / escalate) proposed by the Python gate — presented for review, not written directly by this skill.
 
 ---
 
+> **Migrated for Phase 12 (API-04, D-09):** The promotion-threshold ruleset and the ambiguous-card LLM rubric that used to live in this skill's prose are now the Python `card.evaluate` L3 gate (`src/construct/llm/curation_promote.py`). That gate is the **single source of promotion judgment** — this skill no longer carries a duplicate, unguarded judgment path that could drift from the tested gate. This skill is a **thin wrapper**: it invokes `construct card evaluate` and presents the gate's `PromotionDecision` output. The skill drives the conversation; Python owns the judgment.
+
 ## Prerequisites
 
-The CLI must be available on `$PATH`. For MCP-based operations, start the server:
+The CLI must be available on `$PATH`. For MCP-based operation, start the server:
 
 ```bash
 construct mcp &
@@ -20,159 +22,51 @@ construct mcp &
 
 ## Procedure
 
-### Step 1: Load Governance Rules
+### Step 1: Invoke the Promotion Gate
 
-Read `governance.yaml` promotion thresholds (this is a small config file — direct read is appropriate):
+**INPUT:** Workspace on disk
+**OUTPUT:** One `PromotionDecision` per non-mature card (read-only — no writes)
+**METHOD:** CLI `construct card evaluate` (the single source of promotion judgment)
 
-**INPUT:** `governance.yaml` (workspace root)
-**OUTPUT:** Governance thresholds dictionary
-
-- `seed_to_growing_confidence` (default: 2)
-- `seed_to_growing_min_connections` (default: 1)
-- `growing_to_mature_confidence` (default: 3)
-- `growing_to_mature_source_tier` (default: 2)
-- `growing_to_mature_min_connections` (default: 2)
-- `require_human_approval` (default: false)
-
-### Step 2: Load Card Data
-
-**INPUT:** Workspace `cards/` directory, `connections.json`
-**OUTPUT:** Card frontmatter list with connection counts
-
-Read card data via CLI (loads card frontmatter without file-by-file scanning):
+Run the gate against the workspace:
 
 ```bash
-# List cards with structured output
-construct knowledge card list --workspace . --json
+construct card evaluate --workspace . --json
 ```
 
-**Note:** If `card list` is not yet implemented, read individual card files with `Read cards/<id>.md` and aggregate manually. Get connection counts from:
+Add `--provider <name>` only if the user asked to override the default provider.
 
-```bash
-construct knowledge connection list --workspace . --json
-```
+**Alternative (MCP):** invoke the `construct_card_evaluate` tool with `{"workspace_path": "."}`.
 
-This returns structured JSON with all cards' frontmatter (id, title, epistemic_type, confidence, source_tier, lifecycle, domains, last_verified, created) and connection data.
+The gate deterministically pre-filters candidates (non-mature, non-archived cards), applies the governance thresholds and the LLM judgment for borderline cards, and returns a `PromotionDecision` per candidate. It is **read-only**: it proposes, it does not write. There is no inline threshold logic or rubric in this skill — do not re-derive the decision.
 
-### Step 3: Apply Promotion Rules
+### Step 2: Present the Decisions
 
-**INPUT:** Governance thresholds (from Step 1) + card/connection data (from Step 2)
-**OUTPUT:** Lists of qualified, ambiguous, and ineligible cards
+**INPUT:** The `PromotionDecision` list from Step 1
+**OUTPUT:** A clear, reviewable summary for the user
 
-#### Seed → Growing
+Each decision carries `card_id`, `decision` (`promote` | `hold` | `escalate`), an optional `target_lifecycle` (`growing` | `mature`), a `reasoning` string, and a `method` field. Present them grouped by decision, and **surface the `method` field** so the user can tell escalation types apart:
 
-Card qualifies if ALL of:
-- `lifecycle: seed`
-- `confidence >= seed_to_growing_confidence`
-- connection count >= `seed_to_growing_min_connections`
-
-#### Growing → Mature
-
-Card qualifies if ALL of:
-- `lifecycle: growing`
-- `confidence >= growing_to_mature_confidence`
-- `source_tier <= growing_to_mature_source_tier`
-- connection count >= `growing_to_mature_min_connections`
-
-### Step 4: Handle Clear Promotions
-
-**INPUT:** Qualified cards list + governance rules
-**OUTPUT:** Updated card lifecycles
-
-For cards that meet ALL criteria:
-- If `require_human_approval: false` → promote directly via CLI (use `construct knowledge card edit --lifecycle`):
-
-  ```bash
-  construct knowledge card edit <card-id> --lifecycle growing --author curator --workspace .
-  ```
-
-- If `require_human_approval: true` → flag for review, list to user
-
-### Step 5: Evaluate Ambiguous Cards (LLM Judgment)
-
-**INPUT:** Borderline cards + governance thresholds
-**OUTPUT:** Promotion decision (promote | hold | escalate)
-
-For cards that meet SOME but not all criteria, apply LLM judgment:
-
-1. Read the card's full content via CLI:
-
-   ```bash
-   construct knowledge card get <card-id> --workspace . --json
-   ```
-
-   Or read directly: `Read cards/<card-id>.md`
-
-2. Assess:
-   - Is the content quality sufficient despite missing a threshold?
-   - Is the source reliable enough?
-   - Are existing connections meaningful?
-
-3. Decide: `promote` | `hold` | `escalate`
-
-**Promote:** Quality justifies overriding a missing threshold. Update via CLI:
-
-```bash
-construct knowledge card edit <card-id> --lifecycle <growing|mature> --author curator --workspace .
-```
-
-**Hold:** Not ready. Note why in response.
-**Escalate:** Needs human judgment. Present the card's case to the user.
-
-### Step 6: Log Events
-
-**INPUT:** Promotion decisions and card IDs
-**OUTPUT:** Event log entries
-
-For each action, append to `log/events.jsonl`:
-
-```json
-{"event": "promote_card", "timestamp": "{ISO-8601}", "card_id": "{id}", "from": "seed", "to": "growing", "method": "rule-based|judgment"}
-```
-
-Log entries can also be written via CLI:
-
-```bash
-construct event log --event promote_card --card <id> --from seed --to growing
-```
-
-### Step 7: Report
-
-**OUTPUT:** Human-readable promotion summary
-
-Summarize:
+- `method: rule-based` → a **failure-driven** escalation: the gate's LLM evaluation failed and retried out, so the card was mechanically escalated. This is not a judgment call — it means "the evaluator could not run cleanly," and typically warrants a re-run rather than human deliberation.
+- `method: llm-judgment` → a **genuine borderline** decision the model reasoned about. The `reasoning` explains the call; this is the case that actually wants human attention.
 
 > "Promotion scan complete:
-> - {N} cards promoted (seed → growing: {N}, growing → mature: {N})
-> - {N} cards held (not ready)
-> - {N} cards need your review: {list}"
+> - {N} promote ({seed→growing}: {N}, {growing→mature}: {N})
+> - {N} hold — not ready
+> - {N} escalate — {X} borderline (llm-judgment), {Y} evaluation failures (rule-based; consider re-running)"
 
----
+### Step 3: Apply (when part of a curation run)
 
-## Evaluation Rubric for Ambiguous Cards
+This skill only **evaluates**. It does not write lifecycle changes on its own.
 
-When a card doesn't clearly meet all thresholds, consider:
-
-| Factor | Weight | Question |
-|--------|--------|----------|
-| Content quality | High | Is the summary clear, specific, and substantive? |
-| Source reliability | High | Even if tier 3+, is the source credible for this claim? |
-| Connection quality | Medium | Are existing connections meaningful, not just incidental? |
-| Recency | Low | Is this recent enough to be relevant? |
-| Domain coverage | Low | Does this fill a gap in the domain? |
-
-If 3+ factors are positive → lean promote.
-If 2+ factors are negative → lean hold.
-If mixed with high-weight negatives → escalate.
+- When invoked inside a curation cycle, the promotion proposals flow into the consolidated `curation.run` gate queue, and the approved writes are applied by `construct curation review` behind the human gate. Do not promote cards directly from here.
+- When invoked standalone at the user's request, present the decisions and let the user drive the curation cycle to apply any approved promotions. Escalations are review-only — surface them for the user's judgment.
 
 ---
 
 ## Validation
 
-- [ ] Governance rules loaded from `governance.yaml`
-- [ ] Card data loaded via CLI (or fallback `Read`)
-- [ ] Connection data loaded via `construct knowledge connection list`
-- [ ] All promoted cards meet minimum criteria
-- [ ] `construct knowledge card edit` used for lifecycle updates
-- [ ] Ambiguous cards evaluated against rubric
-- [ ] Events logged for every action taken
+- [ ] `construct card evaluate` invoked (no inline promotion thresholds or rubric in this skill)
+- [ ] `PromotionDecision`s presented grouped by decision, with `reasoning` shown
+- [ ] `method` field surfaced so rule-based (failure-driven) escalations read distinctly from llm-judgment (borderline) ones
+- [ ] No direct lifecycle writes performed by this skill — writes flow through the reviewed curation path
