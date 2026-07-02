@@ -386,7 +386,8 @@ def integrity_check(state: CurationRunState) -> dict:
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("integrity_check", exc)
-    return {"steps": [result.model_dump(mode="json")]}
+    event = _emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "integrity_check")
+    return {"steps": [result.model_dump(mode="json")], "events": [event]}
 
 
 def decay_scan(state: CurationRunState) -> dict:
@@ -444,7 +445,10 @@ def decay_scan(state: CurationRunState) -> dict:
             ]
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("decay_scan", exc)
-    out: dict = {"steps": [result.model_dump(mode="json")]}
+    out: dict = {
+        "steps": [result.model_dump(mode="json")],
+        "events": [_emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "decay_scan")],
+    }
     if archive_dumps:
         out["gate_queue"] = archive_dumps
     return out
@@ -497,7 +501,8 @@ def orphan_scan(state: CurationRunState) -> dict:
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("orphan_scan", exc)
-    return {"steps": [result.model_dump(mode="json")]}
+    event = _emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "orphan_scan")
+    return {"steps": [result.model_dump(mode="json")], "events": [event]}
 
 
 def _bridges_to_candidates(bridges: list[dict]) -> list[dict]:
@@ -601,19 +606,34 @@ def connection_maintenance(state: CurationRunState) -> dict:
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("connection_maintenance", exc)
-        return {"steps": [result.model_dump(mode="json")]}
-    out: dict = {"steps": [result.model_dump(mode="json")]}
+        event = _emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "connection_maintenance")
+        return {"steps": [result.model_dump(mode="json")], "events": [event]}
+    out: dict = {
+        "steps": [result.model_dump(mode="json")],
+        "events": [_emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "connection_maintenance")],
+    }
     if proposals:
         out["gate_queue"] = [p.model_dump(mode="json") for p in proposals]
     return out
 
 
 def compile_report(state: CurationRunState) -> dict:
-    """Roll up the graph status report via ``graph_status`` (read-only counts)."""
+    """Roll up the graph status report + set the terminal status/cycle event.
+
+    Reads graph counts via ``graph_status`` (read-only), then computes the D-09
+    aggregate over every step seen so far (including this one) and stamps it onto
+    the ``status`` channel — this is the node both terminal paths (empty-queue
+    short-circuit AND post-gate apply chain) always run exactly once, so it is the
+    single place the ``curation_cycle_complete`` audit event fires (never
+    double-emitted across the interrupt). ``views_refresh_hook`` runs after this
+    but is ``required=False`` so it never changes the aggregate.
+    """
+    workspace = state["workspace_path"]
+    run_id = state["run_id"]
     try:
         from construct.pipelines.graph_status import graph_status
 
-        op = graph_status(state["workspace_path"])
+        op = graph_status(workspace)
         data = op.data or {}
         result = CurationStepResult(
             step="compile_report",
@@ -628,7 +648,13 @@ def compile_report(state: CurationRunState) -> dict:
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("compile_report", exc)
-    return {"steps": [result.model_dump(mode="json")]}
+    all_steps = [CurationStepResult(**s) for s in state.get("steps", [])] + [result]
+    status = _aggregate_status(all_steps)
+    events = [
+        _emit(workspace, "workflow_step_complete", run_id, "compile_report"),
+        _emit(workspace, "curation_cycle_complete", run_id, status),
+    ]
+    return {"steps": [result.model_dump(mode="json")], "status": status, "events": events}
 
 
 # ── Promotion PRODUCER (no pause, no write — enqueues into gate_queue only) ──
@@ -701,8 +727,12 @@ def promotion_review(state: CurationRunState) -> dict:
         )
     except Exception as exc:  # noqa: BLE001 — node robustness (T-11-02)
         result = _failed_step("promotion_review", exc)
-        return {"steps": [result.model_dump(mode="json")]}
-    out: dict = {"steps": [result.model_dump(mode="json")]}
+        event = _emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "promotion_review")
+        return {"steps": [result.model_dump(mode="json")], "events": [event]}
+    out: dict = {
+        "steps": [result.model_dump(mode="json")],
+        "events": [_emit(state["workspace_path"], "workflow_step_complete", state["run_id"], "promotion_review")],
+    }
     if proposals:
         out["gate_queue"] = [p.model_dump(mode="json") for p in proposals]
     return out
@@ -1046,14 +1076,12 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
     ``process_inbox`` gate (a non-empty ``gate_queue``), returns
     ``status="awaiting_review"`` surfacing the pending consolidated queue and the
     ``run_id`` review handle — NO terminal event and NO write (resume via
-    ``curation.review``). Otherwise (empty queue → short-circuit) reconstructs the
-    per-step results, computes the D-09 aggregate, appends the terminal
-    ``curation_cycle_complete`` event, and returns the completed result. The
-    sqlite connection is always closed in ``finally``.
+    ``curation.review``). Otherwise (empty queue → short-circuit) the graph runs
+    to END; ``compile_report`` has already stamped the D-09 ``status`` and emitted
+    the terminal ``curation_cycle_complete`` audit event, so this runner just
+    surfaces the persisted steps/status/events. The sqlite connection is always
+    closed in ``finally``.
     """
-    from construct.schemas.config import EventAgent
-    from construct.services.event_log import append_event
-
     run_id = inp.run_id or _new_run_id()
     saver, conn = _open_checkpointer(Path(inp.workspace_path))
     try:
@@ -1076,18 +1104,10 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
             )
 
         steps = [CurationStepResult(**s) for s in result["steps"]]
-        status = _aggregate_status(steps)
-
-        events = list(result.get("events", []))
-        append_event(
-            Path(inp.workspace_path), EventAgent.curator,
-            "curation_cycle_complete", target=run_id, detail=status,
-        )
-        events.append("curation_cycle_complete")
-
+        status = result.get("status") or _aggregate_status(steps)
         return CurationRunResult(
             status=status, run_id=run_id, gate_id=run_id, gate_queue=[],
-            steps=steps, events=events,
+            steps=steps, events=list(result.get("events", [])),
             message=f"Curation run {status}.",
         )
     finally:
@@ -1149,7 +1169,7 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
         result = graph.invoke(Command(resume=decisions), cfg)
 
         steps = [CurationStepResult(**s) for s in result["steps"]]
-        status = _aggregate_status(steps)
+        status = result.get("status") or _aggregate_status(steps)
         return CurationRunResult(
             status=status, run_id=inp.run_id, gate_id=inp.run_id, gate_queue=[],
             steps=steps, events=list(result.get("events", [])),
@@ -1165,9 +1185,12 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
     Re-opens the checkpointer and reads the persisted snapshot for
     ``thread_id=run_id`` via ``graph.get_state``; reconstructs the
     ``CurationRunResult`` from the persisted steps without executing any node. A
-    nonexistent run (no persisted values) maps to ``status="failed"`` so the
-    catalog shim surfaces ``success=False`` (WR-03 precedent). Performs no
-    workspace mutation; closes the sqlite connection in ``finally``.
+    run paused at ``process_inbox`` is surfaced as ``awaiting_review`` with the
+    pending consolidated ``gate_queue`` (checked BEFORE the empty-values guard so a
+    pending review never reads as failed). A nonexistent run (no persisted values)
+    maps to ``status="failed"`` so the catalog shim surfaces ``success=False``
+    (WR-03 precedent). NEVER resumes — read-only; closes the sqlite connection in
+    ``finally``.
     """
     saver, conn = _open_checkpointer(Path(inp.workspace_path))
     try:
@@ -1176,6 +1199,17 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
         snap = graph.get_state(cfg)
         values = snap.values or {}
 
+        # Paused-at-gate branch FIRST — a run awaiting review has values + a
+        # pending next node; surface it without resuming (CUR-04).
+        if snap.next == ("process_inbox",):
+            steps = [CurationStepResult(**s) for s in values.get("steps", [])]
+            return CurationRunResult(
+                status="awaiting_review", run_id=inp.run_id, gate_id=inp.run_id,
+                gate_queue=values.get("gate_queue", []),
+                steps=steps, events=list(values.get("events", [])),
+                message="Curation run paused awaiting human review.",
+            )
+
         if not values:
             return CurationRunResult(
                 status="failed", run_id=inp.run_id,
@@ -1183,10 +1217,10 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
             )
 
         steps = [CurationStepResult(**s) for s in values.get("steps", [])]
-        status = _aggregate_status(steps)
+        status = values.get("status") or _aggregate_status(steps)
         return CurationRunResult(
             status=status, run_id=inp.run_id, steps=steps,
-            events=values.get("events", []),
+            events=list(values.get("events", [])),
             message="Curation run inspected (read-only).",
         )
     finally:
