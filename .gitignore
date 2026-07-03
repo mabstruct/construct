@@ -14,3 +14,8 @@ tmp/
 # Orchestration state (non-SOT): LangGraph SQLite checkpoint DB + rejected ledger.
 # Covers .construct/workflow/research-run.sqlite and .construct/research/rejected.json (D-02).
 .construct/
+
+# Secrets — never commit provider API keys / tokens.
+.env
+.env.*
+!.env.example
