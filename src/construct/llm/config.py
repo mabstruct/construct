@@ -13,10 +13,14 @@ class ProviderConfig(BaseModel):
     """LLM provider configuration."""
     model_config = {"extra": "forbid"}
     type: str = "langchain_anthropic"
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-5"
     max_tokens: int = 4096
     timeout_seconds: int = 60
     base_url: str | None = None
+    # Some newer models (e.g. Claude Sonnet 5) reject an explicit ``temperature``
+    # ("temperature is deprecated for this model"). Set false to omit it so the
+    # model's own default is used instead of erroring at invoke time.
+    supports_temperature: bool = True
 
 
 class GateConfig(BaseModel):

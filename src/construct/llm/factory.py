@@ -37,13 +37,17 @@ def build_chat_model(cfg: ProviderConfig, *, temperature: float = 0.2) -> Any:
         # ChatAnthropic exposes `timeout` (alias of default_request_timeout) and
         # `base_url` (alias of anthropic_api_url). Thread both so a configured
         # self-hosted/proxy endpoint or request timeout is honoured (WR-02).
-        return ChatAnthropic(
+        kwargs: dict[str, Any] = dict(
             model=cfg.model,
-            temperature=temperature,
             max_tokens=cfg.max_tokens,
             timeout=cfg.timeout_seconds,
             base_url=cfg.base_url,
         )
+        # Newer models (e.g. Claude Sonnet 5) reject an explicit temperature;
+        # omit it when the provider config opts out so we use the model default.
+        if cfg.supports_temperature:
+            kwargs["temperature"] = temperature
+        return ChatAnthropic(**kwargs)
 
     if cfg.type == "langchain_openai":
         try:
@@ -55,12 +59,14 @@ def build_chat_model(cfg: ProviderConfig, *, temperature: float = 0.2) -> Any:
             ) from exc
 
         # ChatOpenAI accepts `timeout` and `base_url` directly.
-        return ChatOpenAI(
+        oa_kwargs: dict[str, Any] = dict(
             model=cfg.model,
-            temperature=temperature,
             max_tokens=cfg.max_tokens,
             timeout=cfg.timeout_seconds,
             base_url=cfg.base_url,
         )
+        if cfg.supports_temperature:
+            oa_kwargs["temperature"] = temperature
+        return ChatOpenAI(**oa_kwargs)
 
     raise RuntimeError(f"GATE_PROVIDER_ERROR: unknown provider type '{cfg.type}'")

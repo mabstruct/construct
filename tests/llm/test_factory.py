@@ -41,6 +41,35 @@ class TestAnthropicBranch:
 
         assert model.temperature == 0.7
 
+    def test_temperature_omitted_when_unsupported(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """supports_temperature=False omits the kwarg so newer models don't 400.
+
+        Claude Sonnet 5 rejects an explicit ``temperature`` ("temperature is
+        deprecated for this model"); the factory must not send it, letting the
+        model default apply instead of erroring at invoke time.
+        """
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-real")
+        cfg = ProviderConfig(
+            type="langchain_anthropic",
+            model="claude-sonnet-5",
+            supports_temperature=False,
+        )
+
+        captured: dict = {}
+
+        class _FakeChat:
+            def __init__(self, **kw):
+                captured.update(kw)
+
+        monkeypatch.setattr("langchain_anthropic.ChatAnthropic", _FakeChat)
+
+        build_chat_model(cfg, temperature=0.2)
+
+        assert "temperature" not in captured
+        assert captured["model"] == "claude-sonnet-5"
+
 
 class TestOpenAIMissingExtra:
     """type='langchain_openai' without the optional extra installed degrades cleanly."""

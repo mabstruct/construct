@@ -247,7 +247,8 @@ class TestProviderConfig:
         cfg = load_llm_config(DEFAULT_CONFIG_PATH)
         assert cfg.default_gate == "ask.domain"
         assert "anthropic" in cfg.providers
-        assert cfg.providers["anthropic"].model == "claude-sonnet-4-20250514"
+        assert cfg.providers["anthropic"].model == "claude-sonnet-5"
+        assert cfg.providers["anthropic"].supports_temperature is False
         assert cfg.gates["ask.domain"].provider == "anthropic"
         assert cfg.gates["ask.domain"].temperature == 0.2
 
