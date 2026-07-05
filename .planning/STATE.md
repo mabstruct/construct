@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-07-02T21:50:00.096Z"
-last_activity: 2026-07-02
+status: phase_complete
+stopped_at: Phase 12 complete + verified (UAT passed 2026-07-05); ready to plan Phase 13
+last_updated: "2026-07-05T00:00:00.000Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 21
   completed_plans: 21
-  percent: 83
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 12 — curation l3 gates + review application
+**Current focus:** Phase 13 — daily-cycle composition (final v0.4 phase)
 
 ## Current Position
 
-Phase: 12
-Plan: 12-01 … 12-03 executed; 12-04 … 12-06 pending
-Status: Executing — Wave-3 read-side HITL graft landed (gate_queue producers + interrupt-only process_inbox + empty-queue short-circuit; read-side tests GREEN, write-side stays RED for 12-04)
-Last activity: 2026-07-02
+Phase: 12 complete → next Phase 13
+Plan: all 6 plans executed + verified; UAT PASSED 2026-07-05 (API-04 satisfied)
+Status: Phase 12 shipped — GOAL MET; full suite 390 green. Ready to plan Phase 13 (daily-cycle composition; DAY-01/02/03 + API-01/02/03/05). Fixed retired-model config bug (f14f958) during UAT.
+Last activity: 2026-07-05
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 

@@ -1,13 +1,14 @@
 ---
 phase: 12-curation-l3-gates-review-application
 verified: 2026-07-02T22:15:00Z
-status: human_needed
-score: 5/5 must-haves verified (automated); 1 human UAT outstanding
+status: verified
+score: 5/5 must-haves verified (automated); human UAT PASSED 2026-07-05
 overrides_applied: 0
 human_verification:
   - test: "Run the migrated construct-curation-cycle skill conversationally against test-ws/my-construct"
     expected: "Skill invokes `construct curation run` (not inline logic), pauses presenting the consolidated gate_queue (promotion/connection/archive/escalate with method field visible); approve a subset + reject the rest -> calls `construct curation review`; only approved items written (confirm via `construct curation inspect`); zero direct WebSearch/WebFetch/Write during the session"
-    why_human: "End-to-end conversational skill behavior (Plan 12-06 Task 3, checkpoint:human-verify) cannot be exercised programmatically; the executor intentionally deferred it. API-04's deterministic deliverable is code-complete and automated-verified, but the interactive review loop still needs a human run."
+    why_human: "End-to-end conversational skill behavior (Plan 12-06 Task 3, checkpoint:human-verify) cannot be exercised programmatically; the executor intentionally deferred it."
+    result: "PASSED 2026-07-05 — drove the migrated curation-cycle procedure end-to-end: `curation run` paused at awaiting_review with real llm-judgment proposals (method visible); approved via `curation review`; only-approved writes landed (2 cards → mature); re-review no-op (idempotent); events emitted (workflow_step_complete + gate_review_approved + curation_cycle_complete); zero WebSearch/WebFetch/Write. Surfaced+fixed a retired-model config bug (commit f14f958) and resynced stale workspace skill installs."
 ---
 
 # Phase 12: Curation L3 Gates + Review Application — Verification Report

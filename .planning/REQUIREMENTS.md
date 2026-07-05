@@ -38,7 +38,7 @@ Requirements for the v0.4 Agent Workflows milestone. Each requirement maps to ex
 - [ ] **API-01**: Developer can see every new v0.4 capability registered in the existing CONSTRUCT capability registry/API with Pydantic input/output schemas, handler metadata, CLI command metadata, and MCP tool metadata.
 - [ ] **API-02**: User and agent can invoke every new v0.4 workflow capability through the same registry-backed handler from the `construct` CLI and stdio MCP server.
 - [ ] **API-03**: Developer can verify CLI/MCP schema and result parity for all new research, curation, gate, and daily-cycle capabilities.
-- [ ] **API-04**: User can run migrated research and curation Claude-native skills that delegate to CLI/MCP instead of direct `WebSearch`, `WebFetch`, or workspace writes.
+- [x] **API-04**: User can run migrated research and curation Claude-native skills that delegate to CLI/MCP instead of direct `WebSearch`, `WebFetch`, or workspace writes.
 - [ ] **API-05**: Existing v0.3 CLI, MCP, Streamlit, validation, ingestion, graph, and ask-domain behavior continues to pass while v0.4 workflow capabilities are added.
 
 ### Daily-Cycle Composition
@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-01 | Phase 13 | Pending |
 | API-02 | Phase 13 | Pending |
 | API-03 | Phase 13 | Pending |
-| API-04 | Phase 12 | Pending |
+| API-04 | Phase 12 | Complete |
 | API-05 | Phase 13 | Pending |
 | DAY-01 | Phase 13 | Pending |
 | DAY-02 | Phase 13 | Pending |
