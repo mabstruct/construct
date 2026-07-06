@@ -73,6 +73,14 @@ from construct.llm.curation_promote import (
     run_gate as card_evaluate_gate,
 )
 
+# ── Daily Run imports (Phase 13) ──
+from construct.llm.daily_run import (
+    DailyInspectInput,
+    DailyRunInput,
+    inspect_daily_run,
+    run_daily_run,
+)
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -473,6 +481,31 @@ def create_registry() -> CapabilityRegistry:
         mcp_tool_name="construct_card_evaluate",
     ))
 
+    # ── Thin daily-cycle composition (Phase 13) ──
+    # D-08: daily.run/daily.inspect mirror the curation.run/inspect siblings; the
+    # deleted workflow.run group is NOT revived. MCP parity is free via registry
+    # auto-discovery (mcp/server.py is never edited).
+    registry.register(CapabilityRecord(
+        id="daily.run",
+        name="Daily Run",
+        description="Run the non-blocking daily maintenance cycle: compose research.run → curation.run → graph.status, auto-apply each gate's recommended decisions, exclude escalate (surfaced as a pending count), and never report a false completed",
+        input_model=DailyRunInput,
+        output_model=OperationResult,
+        handler=_daily_run_shim,
+        cli_name="daily.run",
+        mcp_tool_name="construct_daily_run",
+    ))
+    registry.register(CapabilityRecord(
+        id="daily.inspect",
+        name="Daily Inspect",
+        description="Read a persisted daily-run receipt (read-only; never re-runs the cycle)",
+        input_model=DailyInspectInput,
+        output_model=OperationResult,
+        handler=_daily_inspect_shim,
+        cli_name="daily.inspect",
+        mcp_tool_name="construct_daily_inspect",
+    ))
+
     return registry
 
 
@@ -678,6 +711,48 @@ def _card_evaluate_shim(*args, **kwargs):
         success=True,
         message=message,
         data=output.model_dump(mode="json"),
+    )
+
+
+def _daily_result_to_operation(cap_id: str, runner) -> OperationResult:
+    """Run a daily runner and wrap its ``DailyRunResult`` in a sanitizing
+    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+
+    Mirrors ``_curation_result_to_operation``: any exception →
+    ``success=False`` with a key-safe class-name message; a normal return is a
+    success unless the ``DailyRunResult.status`` is ``failed`` — a degraded cycle
+    still maps to ``success=True`` (the degraded-exits-0 exit-code contract).
+    """
+    try:
+        result = runner()
+    except Exception as exc:
+        return OperationResult(
+            success=False,
+            message=f"{cap_id} failed: {type(exc).__name__}",
+            data={"failed": True},
+        )
+    return OperationResult(
+        success=result.status != "failed",
+        message=result.message or result.status,
+        data=result.model_dump(mode="json"),
+    )
+
+
+def _daily_run_shim(*args, **kwargs):
+    """Keyword-only adapter for daily.run (thin research→curation→graph cycle)."""
+    if args:
+        raise TypeError("daily.run handler requires keyword arguments")
+    return _daily_result_to_operation(
+        "daily.run", lambda: run_daily_run(DailyRunInput(**kwargs))
+    )
+
+
+def _daily_inspect_shim(*args, **kwargs):
+    """Keyword-only adapter for daily.inspect (read a receipt; never re-runs)."""
+    if args:
+        raise TypeError("daily.inspect handler requires keyword arguments")
+    return _daily_result_to_operation(
+        "daily.inspect", lambda: inspect_daily_run(DailyInspectInput(**kwargs))
     )
 
 
