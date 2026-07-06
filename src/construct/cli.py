@@ -372,6 +372,13 @@ curation_app = typer.Typer(
 )
 app.add_typer(curation_app)
 
+daily_app = typer.Typer(
+    no_args_is_help=True,
+    name="daily",
+    help="Run the non-blocking daily maintenance cycle (research → curation → graph health).",
+)
+app.add_typer(daily_app)
+
 
 @research_app.command(name="search")
 def research_search_cmd(
@@ -765,6 +772,85 @@ def curation_review_cmd(
 
     result = cap.handler(**handler_kwargs)
     _emit_curation_result(result, json_output)
+
+
+# ---------------------------------------------------------------------------
+# Daily command group (Phase 13)
+# ---------------------------------------------------------------------------
+
+
+def _render_daily_result(data: dict[str, Any]) -> None:
+    """Human-readable DailyRunResult summary: parent status/run_id, one line per
+    composed child (capability + status), the pending-escalation count, and a
+    graph-health line (cards/connections/domains) so the user can VISUALLY
+    distinguish a clean daily cycle from a degraded one."""
+    typer.echo(f"status: {data.get('status', '')}")
+    typer.echo(f"run_id: {data.get('run_id', '')}")
+    children = data.get("children") or []
+    for child in children:
+        capability = child.get("capability", "")
+        status = child.get("status", "")
+        line = f"  - {capability}: {status}"
+        message = child.get("message", "") or ""
+        if message:
+            line += f" — {message}"
+        typer.echo(line)
+    typer.echo(f"pending_escalations: {data.get('pending_escalations', 0)}")
+    health = data.get("graph_health") or {}
+    if health:
+        typer.echo(
+            "graph_health: "
+            f"cards={health.get('cards', '?')}, "
+            f"connections={health.get('connections', '?')}, "
+            f"domains={health.get('domains', '?')}"
+        )
+
+
+def _emit_daily_result(result: OperationResult, json_output: bool) -> None:
+    """Render a daily OperationResult: full-fidelity JSON passthrough, or the
+    daily child/health summary on success / the generic error render on failure."""
+    if json_output:
+        _display_result(result, json_output=True)
+        return
+    if not result.success:
+        _display_result(result, json_output=False)
+        return
+    if result.data:
+        _render_daily_result(result.data)
+    typer.echo(f"✓ {result.message}")
+
+
+@daily_app.command(name="run")
+def daily_run_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Run the non-blocking daily cycle (research.run → curation.run → graph.status)."""
+    try:
+        cap = get_registry().get("daily.run")
+    except KeyError:
+        typer.echo("ERROR: Capability 'daily.run' not found. Ensure Phase 13 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(workspace_path=str(workspace))
+    _emit_daily_result(result, json_output)
+
+
+@daily_app.command(name="inspect")
+def daily_inspect_cmd(
+    workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: str = typer.Option(..., "--run-id", help="The daily run to inspect"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Read a persisted daily-run receipt (read-only; never re-runs)."""
+    try:
+        cap = get_registry().get("daily.inspect")
+    except KeyError:
+        typer.echo("ERROR: Capability 'daily.inspect' not found. Ensure Phase 13 is complete.")
+        raise typer.Exit(code=1)
+
+    result = cap.handler(workspace_path=str(workspace), run_id=run_id)
+    _emit_daily_result(result, json_output)
 
 
 # ---------------------------------------------------------------------------

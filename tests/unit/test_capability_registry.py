@@ -133,6 +133,8 @@ def test_catalog_loads() -> None:
         "curation.inspect",
         "curation.review",
         "card.evaluate",
+        "daily.run",
+        "daily.inspect",
     }
     actual_ids = {c.id for c in registry.list()}
     assert actual_ids == expected_ids
