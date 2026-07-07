@@ -247,4 +247,4 @@ Plans:
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete    | 2026-06-29 |
 | 12. Curation L3 Gates + Review Application | v0.4 | 3/6 | In Progress|  |
-| 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete   | 2026-07-07 |
+| 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete    | 2026-07-07 |
