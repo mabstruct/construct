@@ -216,7 +216,7 @@ Plans:
 **Plans**: 3 plans
 
 - [x] 13-01-PLAN.md — Thin `daily.run` composition module + RED-first unit/integration tests (DAY-01/02/03)
-- [ ] 13-02-PLAN.md — Register daily.run/daily.inspect + `daily` CLI sub-app + CLI/MCP parity contract test (API-01/02/03)
+- [x] 13-02-PLAN.md — Register daily.run/daily.inspect + `daily` CLI sub-app + CLI/MCP parity contract test (API-01/02/03)
 - [ ] 13-03-PLAN.md — Daily-cycle skill hook (D-10 views refresh) + full-suite regression gate (API-05)
 
 ## Coverage
@@ -247,4 +247,4 @@ Plans:
 | 10. Durable Human Review + research.run | v0.4 | 5/5 | Complete    | 2026-06-28 |
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete    | 2026-06-29 |
 | 12. Curation L3 Gates + Review Application | v0.4 | 3/6 | In Progress|  |
-| 13. Daily-Cycle Composition | v0.4 | 1/3 | In Progress|  |
+| 13. Daily-Cycle Composition | v0.4 | 2/3 | In Progress|  |
