@@ -32,13 +32,13 @@ research-cycle → curation-cycle → graph-status → [user interaction]
                                    card-create    gap-analysis    search-adjust
 ```
 
-This workflow can be executed via the workflow runner:
+This workflow is executed by the composed daily capability:
 
 ```bash
-construct workflow run daily-cycle
+construct daily run --workspace . --json
 ```
 
-The runner tracks progress, persists state, and supports resume.
+`construct daily run` runs the research → curation → graph-status cycle in a single non-blocking pass (D-01): it auto-applies each child gate's recommended decision, never auto-writes escalated/ambiguous items, and returns per-child status plus a pending-escalation count and the closing graph-health summary. It does not pause for review — optional review of pending items happens afterward via the children's own `construct research review` / `construct curation review` on a fresh cycle.
 
 ---
 
@@ -65,7 +65,7 @@ Present a brief summary:
 Run if last cycle was >24h ago (or user requests).
 Report what was found.
 
-**Views auto-refresh:** If `views/build/` exists, `views-generate-data` runs automatically after the cycle completes. The browser shows an UPDATE flag within 30s.
+**Views refresh:** Deferred — no per-child views work. A single views regeneration runs once after the whole cycle completes (Step 5, D-10). The `construct daily run` capability itself does no views work.
 
 ### 3. Curation Cycle
 **Skill:** `curation-cycle`
@@ -80,7 +80,7 @@ Run maintenance:
 
 Report findings and actions taken.
 
-**Views auto-refresh:** Same as research — views data regenerated automatically if views are scaffolded.
+**Views refresh:** Deferred — same as research. The single post-run regeneration is owned by this skill and runs once in Step 5 (D-10), not per child.
 
 ### 4. User Interaction Phase
 
@@ -96,12 +96,23 @@ Based on curation findings, the user may:
 | "Draft something on {topic}" | `synthesis` |
 | Free conversation | CONSTRUCT handles directly |
 
-### 5. Views Refresh (if applicable)
+### 5. Views Refresh (skill-owned hook, D-10)
+
+The `construct daily run` capability does **no** views work — regenerating the views data is this skill's responsibility, run exactly ONCE after the capability's run completes (the "parent owns the single views refresh" pattern shared with the curation-cycle skill).
 
 If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
-- Run `views-generate-data` once, after all child skills (research-cycle, curation-cycle) have completed.
-- Child skills skip their own Step 8 hooks when invoked as part of this workflow (skill-chain depth check).
-- Report outcome per the standard hook pattern: silent on success, warning on failure.
+
+```bash
+construct views generate --workspace .
+```
+
+Or invoke MCP `construct_views_generate_data`.
+
+- On success: if `.construct/config.yaml` sets `views.confirm_refresh: true`, append `✓ views updated`. Otherwise stay silent (the SPA polls `version.json`).
+- On failure: append `⚠ views regeneration failed: {single-line message}. Workspace is intact; run 'construct views generate' manually to refresh the views.`
+- Always preserve this workflow's success status — the hook is a side effect, not a success condition.
+
+If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently.
 
 ### 6. End of Session
 
@@ -142,5 +153,6 @@ If the user returns after multiple days:
 
 - **Web search fails:** Step 2 continues with available results; research cycle reports degraded state
 - **Curation finds invalid cards:** Step 3 flags them but continues; user review needed
+- **A child cycle fails:** `construct daily run` isolates and degrades (D-06) — the other child and the closing `graph.status` still run; the parent result reports a `degraded` status with per-child detail, never a bare `completed`
 - **Views refresh fails:** Warning appended to report; workspace is unaffected
-- **Workflow interrupted:** Can be resumed via `construct workflow resume`
+- **Cycle interrupted:** The daily cycle is non-blocking and single-pass (D-01) — there is no parent resume. Re-run `construct daily run` on the next cycle; any pending or escalated items remain available for optional review via the children's own `construct research review` / `construct curation review`.
