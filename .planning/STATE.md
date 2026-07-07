@@ -3,25 +3,25 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
 status: Awaiting next milestone
-stopped_at: Phase 13 context gathered
+stopped_at: Milestone v0.4 complete and archived
 last_updated: "2026-07-07T09:51:53.608Z"
 last_activity: 2026-07-07 — Milestone v0.4 completed and archived
 progress:
-  total_phases: 7
+  total_phases: 6
   completed_phases: 6
   total_plans: 24
   completed_plans: 24
-  percent: 86
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-21)
+See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Milestone complete
+**Current focus:** v0.4 shipped — awaiting next milestone (v0.5 UI-primary), define via /gsd:new-milestone
 
 ## Current Position
 
