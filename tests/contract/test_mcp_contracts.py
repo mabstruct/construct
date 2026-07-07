@@ -75,6 +75,8 @@ def test_mcp_tool_count() -> None:
         "construct_curation_inspect",
         "construct_curation_review",
         "construct_card_evaluate",
+        "construct_daily_run",
+        "construct_daily_inspect",
     }
     assert tool_names == expected
 
@@ -139,6 +141,8 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         "construct_curation_inspect": {"workspace_path": ws, "run_id": "no-such-run"},
         "construct_curation_review": {"workspace_path": ws, "run_id": "no-such-run"},
         "construct_card_evaluate": {"workspace_path": ws},
+        "construct_daily_run": {"workspace_path": ws},
+        "construct_daily_inspect": {"workspace_path": ws, "run_id": "no-such-run"},
     }
     return payloads[tool_name]
 
