@@ -28,13 +28,13 @@ The system must reliably turn source material into connected, explorable knowled
 - ✓ Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.5 — v0.3 (capability/CLI/MCP runtime spine + derived-data contracts, Phases 3, 5, 6).
 - ✓ **Research workflow:** `research.score` scores search results through a model-agnostic structured gate and `research.run` executes search→dedup→score→durable human review→approved ingest→digest→seed updates→events as one resumable workflow — v0.4 (Phase 9 scoring, Phase 10 durable `research.run`; RSCH-01..05).
 - ✓ **Curation PIPE steps:** `curation.run` / `curation.inspect` run real deterministic integrity, decay, orphan, connection-health, and report checks (replacing v0.3 placeholder no-ops) from the CLI and stdio MCP server, with completed/degraded/skipped status visible per step — v0.4 (Phase 11; CUR-01). Promotion/connection gates, human review application, and skill migration remain Phase 12.
+- ✓ **Daily-cycle composition:** `daily.run` / `daily.inspect` compose the stable `research.run → curation.run → graph.status` children as a thin, non-blocking Python cycle (isolate-and-degrade, escalate excluded, no false `completed`), registered with full CLI/MCP parity and wired into the daily-cycle skill which owns the single post-run views refresh — v0.4 (Phase 13; DAY-01/02/03, API-01/02/03/05). Closes v0.4.
 
 ### Active
 
 - [ ] **Search provider spine:** Add provider-agnostic search contracts, Tavily/default provider configuration, mock provider support, and CLI/MCP-accessible `research.search`.
 - [ ] **Curation workflow:** Implement `curation.run` with real integrity, decay, orphan, promotion, connection-maintenance, report, and optional views-refresh behavior instead of v0.3 placeholder no-ops.
 - [ ] **Thin skill migrations:** Update research and curation Claude-native skills to invoke CLI/MCP capabilities and remove direct `WebSearch` / `WebFetch` orchestration.
-- [ ] **Daily-cycle composition:** Extend the daily-cycle workflow after research and curation stabilize so the user can run a real model-agnostic daily maintenance path.
 
 ### Out of Scope
 
