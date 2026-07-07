@@ -8,16 +8,18 @@ CONSTRUCT is a local-first knowledge management system that helps a user collabo
 
 The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.
 
-## Current Milestone: v0.4 Agent Workflows
+## Current Milestone: v0.4 Agent Workflows — ✅ SHIPPED 2026-07-07
 
 **Goal:** Move CONSTRUCT's highest-value multi-step workflows from opaque Claude-native procedures into testable, model-agnostic LangGraph/LangChain pipelines while preserving the existing workspace format and current skill UX.
 
-**Target features:**
-- Search provider spine with Tavily/default mockable provider and normalized search result contracts.
-- `research.search`, `research.score`, and `research.run` with L3 scoring, human review, governed ingest, events, and CLI/MCP parity.
-- `curation.run` with real integrity/decay/orphan/report steps plus promotion/connection gates, replacing v0.3 placeholder no-ops.
-- Thin skill migrations for research and curation so they delegate to CLI/MCP and remove direct `WebSearch` / `WebFetch`.
-- Daily-cycle composition after research and curation stabilize.
+**Delivered (Phases 8–13, 22/22 requirements):**
+- Search provider spine with Tavily/default mockable provider and normalized search result contracts (Phase 8; SRCH-01..04).
+- `research.search`, `research.score`, and `research.run` with L3 scoring, durable human review, governed ingest, events, and CLI/MCP parity (Phases 8–10; RSCH-01..05).
+- `curation.run` with real integrity/decay/orphan/connection/report steps plus propose-only promotion/connection L3 gates and reviewed apply, replacing v0.3 placeholder no-ops (Phases 11–12; CUR-01..05).
+- Thin skill migrations for research and curation delegating to CLI/MCP, removing direct `WebSearch` / `WebFetch` (Phase 12; API-04).
+- Daily-cycle composition — thin non-blocking `daily.run` composing research → curation → graph.status with full CLI/MCP parity (Phase 13; DAY-01..03, API-01/02/03/05).
+
+**Next:** v0.5 (UI-primary experience) — define via `/gsd:new-milestone`.
 
 ## Requirements
 
@@ -28,13 +30,13 @@ The system must reliably turn source material into connected, explorable knowled
 - ✓ Define and deliver the v0.3 foundation that preserves the knowledge model while creating a stable path toward a UI-primary product in v0.5 — v0.3 (capability/CLI/MCP runtime spine + derived-data contracts, Phases 3, 5, 6).
 - ✓ **Research workflow:** `research.score` scores search results through a model-agnostic structured gate and `research.run` executes search→dedup→score→durable human review→approved ingest→digest→seed updates→events as one resumable workflow — v0.4 (Phase 9 scoring, Phase 10 durable `research.run`; RSCH-01..05).
 - ✓ **Curation PIPE steps:** `curation.run` / `curation.inspect` run real deterministic integrity, decay, orphan, connection-health, and report checks (replacing v0.3 placeholder no-ops) from the CLI and stdio MCP server, with completed/degraded/skipped status visible per step — v0.4 (Phase 11; CUR-01). Promotion/connection gates, human review application, and skill migration remain Phase 12.
+- ✓ **Search provider spine:** provider-agnostic search contracts, Tavily/default + mock providers, config-driven caps, and CLI/MCP-accessible `research.search` with structured degraded errors and zero SOT writes — v0.4 (Phase 8; SRCH-01..04).
+- ✓ **Thin skill migrations:** research and curation Claude-native skills delegate to CLI/MCP capabilities with direct `WebSearch` / `WebFetch` / workspace writes removed, guarded by a forbidden-tool test — v0.4 (Phase 12; API-04).
 - ✓ **Daily-cycle composition:** `daily.run` / `daily.inspect` compose the stable `research.run → curation.run → graph.status` children as a thin, non-blocking Python cycle (isolate-and-degrade, escalate excluded, no false `completed`), registered with full CLI/MCP parity and wired into the daily-cycle skill which owns the single post-run views refresh — v0.4 (Phase 13; DAY-01/02/03, API-01/02/03/05). Closes v0.4.
 
 ### Active
 
-- [ ] **Search provider spine:** Add provider-agnostic search contracts, Tavily/default provider configuration, mock provider support, and CLI/MCP-accessible `research.search`.
-- [ ] **Curation workflow:** Implement `curation.run` with real integrity, decay, orphan, promotion, connection-maintenance, report, and optional views-refresh behavior instead of v0.3 placeholder no-ops.
-- [ ] **Thin skill migrations:** Update research and curation Claude-native skills to invoke CLI/MCP capabilities and remove direct `WebSearch` / `WebFetch` orchestration.
+_v0.4 shipped — no active requirements. Define v0.5 (UI-primary experience) via `/gsd:new-milestone`. Candidate carry-over: UI-01/02, RT-01/RT-02 registry unification, full `views.generate_data` emission, historical verification/security debt._
 
 ### Out of Scope
 
@@ -53,7 +55,7 @@ The desired user experience in the near term is still guided by Claude-native sk
 
 There are already relevant analyses in the latest specification documents covering capabilities and artifacts. Those documents should inform requirements and roadmap structure rather than re-deriving the product from scratch.
 
-**Current state (starting v0.4, 2026-06-21):** v0.3 shipped across 7 phases / 25 plans. The runtime is a Python package (`src/construct/`) with a capability registry, a Click CLI, and a stdio MCP server as the agentic surface; Claude-native skills are thin wrappers over those capabilities. Knowledge lives in a governed workspace (cards/refs/connections + search-seeds/domains/governance YAML) behind pre-write validation gates. Grounded Q&A, synthesis, and bridge detection run on the graph; a Streamlit ops dashboard and view data contracts prepare **v0.5**. The v0.3 milestone audit closes at 0 unsatisfied requirements. **v0.4 now scopes the workflow-specific next step:** model-agnostic research and curation workflows per [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md), with non-workflow carry-over debt deferred unless it blocks this delivery.
+**Current state (v0.4 shipped, 2026-07-07):** v0.4 Agent Workflows shipped across 6 phases (8–13) / 24 plans, delivering all 22 requirements with the full pytest suite green (404 tests). The runtime is a Python package (`src/construct/`, ~15k LOC) with a capability registry, a Typer CLI, and a stdio MCP server; Claude-native skills are thin wrappers that now delegate to CLI/MCP. On top of the v0.3 governed-workspace spine, v0.4 added: a provider-agnostic search spine (Tavily + mock, config-driven caps); a model-agnostic LLM provider factory and L3 gates (`research.score`, `card.evaluate`, connection-typing); durable checkpointed LangGraph workflows for `research.run` and `curation.run` with real `interrupt()` human review that writes nothing before approval; and a thin `daily.run` composition folding research → curation → graph.status into one non-blocking cycle. MCP parity for every new capability is free via registry auto-discovery (`mcp/server.py` never hand-edited). **Next:** v0.5 (UI-primary experience) sits on these proven pipelines; carry-over debt (RT-01/RT-02 registry unification, full `views.generate_data` emission, historical verification/security docs) remains deferred. Reference: [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md).
 
 ## Constraints
 
@@ -71,7 +73,9 @@ There are already relevant analyses in the latest specification documents coveri
 | Preserve the knowledge model and workspace format across versions | Cross-version continuity is central to the product architecture and migration story | ✓ Good — workspace format preserved; Phase 1 published a migration playbook |
 | Python is the deterministic enforcement layer; skills orchestrate flow; the capability registry is the single contract behind CLI + MCP | Keeps behavior testable and gives agents and (future) UI one surface | ⚠️ Revisit — registry is canonical for core ops, but views/spike/tag groups still bypass it (RT-01/RT-02, v0.4 backlog) |
 | Fix governed-ingest validation by conforming the data to the gate, not weakening the gate | Keeps validation strict so canonical truth stays trustworthy | ✓ Good — v0.3 (Phase 7, ING-02) |
-| Scope v0.4 to agent workflows first, not all accepted v0.3 carry-over debt | Research and curation workflows are the highest leverage path to model-agnostic operation and v0.5 readiness; unrelated debt can obscure that goal | — Pending — milestone just started |
+| Scope v0.4 to agent workflows first, not all accepted v0.3 carry-over debt | Research and curation workflows are the highest leverage path to model-agnostic operation and v0.5 readiness; unrelated debt can obscure that goal | ✓ Good — v0.4 shipped all 22 workflow requirements; carry-over debt stayed deferred without blocking delivery |
+| Compose the daily cycle as thin synchronous Python over frozen children, not a parent LangGraph graph/checkpointer | Each child already owns its own checkpointer + typed result; a parent graph would duplicate state and gate logic. Isolate-and-degrade is a per-child try/except | ✓ Good — v0.4 (Phase 13, D-09); `daily.run` is 268 lines with no parent graph, full CLI/MCP parity free via registry auto-discovery |
+| Auto-apply only each gate's *recommended* decision via the child `approve_all` resume, excluding escalate | Keeps the non-blocking daily cycle safe: escalate items never get an unattended canonical write, and every applied write is event-logged by the children exactly as interactive review | ✓ Good — v0.4 (Phase 13, D-02/D-03); pending escalations surfaced as a count, never a false `completed` |
 
 ## Evolution
 
@@ -91,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-29 — Phase 11 complete (deterministic `curation.run` PIPE steps, CUR-01); curation gates/review/skill-migration continue in Phase 12*
+*Last updated: 2026-07-07 after v0.4 Agent Workflows milestone (Phases 8–13, 22/22 requirements shipped)*

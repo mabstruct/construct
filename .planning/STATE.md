@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Agent Workflows
-status: milestone_complete
-stopped_at: Milestone complete (Phase 13 was final phase)
-last_updated: 2026-07-07T09:41:35.423Z
-last_activity: 2026-07-06 -- Phase 13 execution started
+status: Awaiting next milestone
+stopped_at: Phase 13 context gathered
+last_updated: "2026-07-07T09:51:53.608Z"
+last_activity: 2026-07-07 — Milestone v0.4 completed and archived
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
   completed_plans: 24
-  percent: 71
+  percent: 86
 ---
 
 # Project State
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-07
-
-Progress: [█████████░] 92%
+Phase: Milestone v0.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-07 — Milestone v0.4 completed and archived
 
 ## Performance Metrics
 
@@ -177,3 +175,7 @@ Recent decisions affecting current work:
 Last session: 2026-07-06T06:12:24.420Z
 Stopped at: Phase 13 context gathered
 Resume file: .planning/phases/13-daily-cycle-composition/13-CONTEXT.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
