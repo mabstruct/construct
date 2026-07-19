@@ -209,6 +209,43 @@ def _run_graph_child(workspace_path: str) -> tuple[DailyChildStatus, dict]:
         ), {}
 
 
+def _run_views_refresh(workspace_path: str):
+    """Rebuild the SPA's views cache at the tail of the cycle (D-12).
+
+    **Deliberately asymmetric with the other ``_run_*`` helpers: this one does NOT
+    return a ``DailyChildStatus``.** ``DailyChildStatus`` is precisely the type
+    ``_aggregate_daily_status`` consumes, so returning one would invite a future edit
+    to append it to ``children`` — and an advisory cache rebuild would then be able to
+    degrade a completed maintenance cycle. Returning the refresh helper's own type
+    makes that mistake require a deliberate conversion rather than a one-line append.
+
+    **D-12's accepted cost is paid here.** A single daily cycle triggers THREE sweeps:
+    research.run's, curation.run's, and this one. That is a direct consequence of
+    daily.run tracking no parent/child relationship (Phase 13 D-09 — there is no parent
+    graph and no signal a child could read to know it is nested), and D-12 chose the
+    rule that needs no parent-awareness: every workflow refreshes. The incremental
+    fingerprinting in ``views/lib/fingerprint.py`` makes the later sweeps cheap — an
+    unchanged install root short-circuits before any per-workspace file is rewritten
+    (asserted by ``test_second_sweep_over_unchanged_root_writes_less``) — but the
+    children DO mutate the workspace, so in a live cycle the later sweeps are usually
+    real rebuilds rather than no-ops, and ``version.json`` churns more than once per
+    cycle while the SPA polls it. Bounded by the ``views.auto_regenerate`` kill switch.
+    """
+    from construct.views.refresh import refresh_views
+
+    # D-05: the generator is install-root scoped and discovers workspaces as its
+    # children; passing the workspace itself would find zero and publish an empty
+    # build that looks like a successful refresh.
+    install_root = Path(workspace_path).parent
+
+    outcome = refresh_views(install_root)
+    if outcome.status == "failed":
+        logger.warning("daily.run: views refresh failed: %s", outcome.reason)
+    else:
+        logger.info("daily.run: views refresh %s", outcome.status)
+    return outcome
+
+
 # ── Runners ──
 
 
@@ -239,6 +276,14 @@ def run_daily_run(inp: DailyRunInput) -> DailyRunResult:
         graph_health=graph_health,
         message=f"Daily cycle {status}.",
     )
+
+    # D-12: refresh AFTER the children and AFTER `status` is computed, so the outcome
+    # cannot reach `_aggregate_daily_status`, `children`, `pending_escalations` or
+    # `graph_health` — the exclusion is structural, not a matter of discipline. Before
+    # the receipt write so the persisted record covers a complete cycle. The returned
+    # outcome is intentionally dropped: it is logged inside the helper and is not a
+    # success condition of anything here.
+    _run_views_refresh(workspace)
 
     # Persist the receipt AFTER run_id passed the kebab validator (path safety).
     path = _receipt_path(workspace, run_id)
