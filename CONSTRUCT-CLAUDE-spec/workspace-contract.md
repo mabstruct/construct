@@ -30,11 +30,16 @@ workspace/
 │   └── events.jsonl
 ├── digests/
 │   └── {domain}/
-└── publish/
+├── publish/
+├── WORKSPACE.md
+└── .construct/
+    ├── search.yaml
+    └── workflow/
 ```
 
 This is the only accepted default layout for Phase 1.
 
+- `inbox/` is a `REQUIRED_PATHS` entry in `src/construct/schemas/workspace.py` but is **not** shown in the tree above. This omission is known, pre-existing drift, tracked separately from the durable-state and configuration-truth corrections recorded here.
 - The dormant Python-first layout is **not** a second canonical default.
 - Runtime code and validators must reconcile to this contract instead of pulling the contract back toward older `domains/{id}/domain.yaml`, `db/`, `workflows/`, or other archived assumptions.
 - Migration from older assumptions is allowed, but long-lived dual-layout support is not the Phase 1 default posture.
@@ -63,6 +68,7 @@ These artifacts are generated from source-of-truth files or workflow execution. 
 |------|-------|------|
 | `digests/{domain}/digest-{date}.md` | derived | Research-cycle summaries and review output |
 | `publish/{slug}.md` | derived | Curated outward-facing synthesis output |
+| `WORKSPACE.md` | derived | Generated workspace orientation document describing the scaffolded layout, written at init |
 
 `digests/` and `publish/` must never be treated as canonical graph inputs.
 
@@ -76,6 +82,17 @@ These artifacts support execution, configuration, or deployment, but they do not
 | `AGENTS.md` | support | Workspace operating rules for the Claude-native runtime |
 | `.construct/templates/*` | support | Authoritative initial shapes for canonical and derived artifacts |
 | `.construct/model-routing.yaml` | support | Runtime/provider routing guidance; not part of workspace knowledge state |
+| `.construct/search.yaml` | support | Search-provider configuration; the shipped template defaults to the `mock` provider |
+
+### Durable orchestration state
+
+These artifacts hold in-flight workflow decisions and run position that are not reconstructible from the canonical source-of-truth files — they are neither canonical knowledge nor derived from it.
+
+| Path | Class | Role |
+|------|-------|------|
+| `.construct/workflow/*.sqlite` | durable orchestration state | LangGraph checkpoint state holding resumable run position and pending human-review decisions for `research.run` and `curation.run` |
+
+`.construct/workflow/` is **not** in `REQUIRED_PATHS`, is not scaffolded at init, and is created lazily at first checkpointer construction; it may legitimately be absent from a valid workspace. See `adrs/adr-0004-durable-workflow-checkpoints.md` for the full decision.
 
 ## Authority and drift rules
 
