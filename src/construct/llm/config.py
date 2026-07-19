@@ -59,13 +59,17 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def load_llm_config(config_path: Path | None = None) -> LlmConfig:
-    """Load LLM provider config from YAML.
+def resolve_llm_config_path(config_path: Path | None = None) -> Path:
+    """Return the LLM config path the runtime will read, without touching disk.
 
     Resolution order:
     1. ``config_path`` argument (explicit override)
     2. ``CONSTRUCT_LLM_CONFIG`` environment variable
     3. ``src/construct/llm/config.yaml`` (default)
+
+    Extracted from ``load_llm_config`` per D-10/Q1 so the ops UI can display the
+    effective path by calling this instead of restating the order and drifting.
+    Resolves only — existence checking stays in ``load_llm_config``.
     """
     path = config_path
     if path is None:
@@ -74,6 +78,18 @@ def load_llm_config(config_path: Path | None = None) -> LlmConfig:
             path = Path(env_path)
     if path is None:
         path = DEFAULT_CONFIG_PATH
+    return path
+
+
+def load_llm_config(config_path: Path | None = None) -> LlmConfig:
+    """Load LLM provider config from YAML.
+
+    Resolution order:
+    1. ``config_path`` argument (explicit override)
+    2. ``CONSTRUCT_LLM_CONFIG`` environment variable
+    3. ``src/construct/llm/config.yaml`` (default)
+    """
+    path = resolve_llm_config_path(config_path)
 
     if not path.exists():
         raise FileNotFoundError(
