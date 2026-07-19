@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 14
-status: roadmapped
-stopped_at: Phase 14 context gathered
-last_updated: "2026-07-19T16:29:39.265Z"
+status: planned
+stopped_at: Phase 14 planned
+last_updated: "2026-07-19T19:54:07.102Z"
 last_activity: 2026-07-19
-last_activity_desc: v0.4.1 roadmap created (Phases 14–17)
+last_activity_desc: Phase 14 planned — 4 plans in 2 waves
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -23,15 +23,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** v0.4.1 Surface Integration & Documentation Truth — Phases 14–17 roadmapped, 9/9 requirements mapped. Next: `/gsd-plan-phase 14`.
+**Current focus:** v0.4.1 Surface Integration & Documentation Truth — Phases 14–17 roadmapped, 9/9 requirements mapped. Next: `/gsd-execute-phase 14`.
 
 ## Current Position
 
-Phase: 14 — Durable-State & Config Truth (not started)
-Plan: —
-Status: Roadmap complete, awaiting phase planning
+Phase: 14 — Durable-State & Config Truth (planned)
+Plan: — (0/4 complete)
+Status: Ready to execute
 Progress: [░░░░░░░░░░] 0% (0/4 phases)
-Last activity: 2026-07-19 — v0.4.1 roadmap created (Phases 14–17)
+Last activity: 2026-07-19 — Phase 14 planned: 4 plans in 2 waves (DOC-03, FIX-02)
 
 ## Performance Metrics
 
@@ -157,7 +157,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 14 with `/gsd-plan-phase 14`.
+- Execute Phase 14 with `/gsd-execute-phase 14` — 4 plans, 2 waves.
 - Phase 15 planning must settle two named decisions before implementation: `install_root` vs `workspace` contract (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory import coupling (`generate.py:43-51`).
 - Phase 16 planning must decide `knowledge card list` / `knowledge ref list`: implement, or rewrite `construct-synthesis` and `construct-gap-analysis` onto existing commands.
 - Phase 16: retiring `USER-TEST-PLAYBOOK-v03.md` (DOC-04) removes the `workflow run` / `workflow resume` allowlist entries — coordinate so the guard ends empty, not merely unscanned.
@@ -184,12 +184,12 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T16:29:39.256Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-durable-state-config-truth/14-CONTEXT.md
+Last session: 2026-07-19T19:54:07.102Z
+Stopped at: Phase 14 planned — 4 plans, 2 waves
+Resume file: .planning/phases/14-durable-state-config-truth/14-01-PLAN.md
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 14` to plan Durable-State & Config Truth (DOC-03, FIX-02).
+- Run `/gsd-execute-phase 14` to execute Durable-State & Config Truth (DOC-03, FIX-02) — Wave 1: 14-01, 14-04; Wave 2: 14-02, 14-03.
 - Reference `.planning/milestones/v0.4-MILESTONE-AUDIT.md` throughout — it carries file:line evidence for every requirement.
 - Do not start v0.5 planning until Phase 14 lands: DOC-03 gates v0.5 design.

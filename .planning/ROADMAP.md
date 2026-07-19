@@ -72,55 +72,72 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 ## Phase Details
 
 ### Phase 14: Durable-State & Config Truth
+
 **Goal**: A v0.5 planner and a developer configuring LLM behavior each find exactly one true, recorded answer about where durable state and configuration live.
 **Depends on**: Nothing (first phase of v0.4.1)
 **Requirements**: DOC-03, FIX-02
 **Success Criteria** (what must be TRUE):
+
   1. `nfrs.md` §2 and `architecture-overview.md:243` no longer assert that no database owns part of the truth and no derived state is required; both name `.construct/workflow/*.sqlite` as intentional durable state holding pending human-review decisions that are not reconstructible from layer 1.
   2. `workspace-contract.md` lists `.construct/workflow/*.sqlite`, `.construct/search.yaml`, and `WORKSPACE.md` among workspace artifacts, and `nfrs.md` §4 names Tavily instead of asserting "Third-party APIs: None".
   3. The Streamlit ops UI's LLM config path default resolves to the file the runtime actually reads — `ui/streamlit_app.py`'s default agrees with `llm/config.py`'s resolution order (including the `CONSTRUCT_LLM_CONFIG` override).
   4. `model-routing.yaml` has exactly one recorded fate: either it is gone from `services/init.py` new-workspace scaffolding, or it is scaffolded and marked deprecated in every doc that currently calls it authoritative (`workspace-contract.md` Support table, `config-topology.md:56,135`).
   5. Full pytest suite green (≥439 tests) with no new `_KNOWN_BROKEN` entries.
+
 **Plans**: 4 plans
+**Wave 1**
+
 - [ ] 14-01-PLAN.md — Create adr-0004 (durable workflow checkpoints) and add the named carve-out + complete ADR index to `architecture-overview.md` [wave 1]
-- [ ] 14-02-PLAN.md — Scope `nfrs.md` §2's rebuild guarantee, rewrite "No Hidden State", name the LLM config authority at §3, correct §4 for Tavily [wave 2]
-- [ ] 14-03-PLAN.md — Add the three missing artifacts + durable-orchestration-state class to `workspace-contract.md`; deprecate `model-routing.yaml` there and in `config-topology.md` [wave 2]
 - [ ] 14-04-PLAN.md — Extract `resolve_llm_config_path()` with tests; make the Streamlit sidebar display the effective resolved path read-only [wave 1]
 
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 14-02-PLAN.md — Scope `nfrs.md` §2's rebuild guarantee, rewrite "No Hidden State", name the LLM config authority at §3, correct §4 for Tavily [wave 2]
+- [ ] 14-03-PLAN.md — Add the three missing artifacts + durable-orchestration-state class to `workspace-contract.md`; deprecate `model-routing.yaml` there and in `config-topology.md` [wave 2]
+
 ### Phase 15: views.generate_data Resolution
+
 **Goal**: A user or agent invoking `views.generate_data` over CLI or MCP gets real generated view data or an honest, documented absence — never a permanent-failure stub.
 **Depends on**: Nothing (independent of Phase 14; sequenced second because its outcome dictates Phase 16 and 17 content)
 **Requirements**: FIX-01
 **Success Criteria** (what must be TRUE):
+
   1. No permanent-failure handler for `views.generate_data` remains in `capabilities/catalog.py` — the `OperationResult(success=False, "Not yet implemented — see Plan 02")` lambda at `catalog.py:317` is gone, either by wiring the real `views/generate.py:175` implementation or by removing the capability from the registry and the MCP surface.
   2. `("views", "generate")` is deleted from `_KNOWN_BROKEN` and the paired still-broken assertion no longer covers it.
   3. The `install_root` vs `workspace` contract mismatch (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory import coupling (`generate.py:43-51`) each have an explicit recorded decision, not an implicit resolution.
   4. Running a daily cycle's post-run views refresh either produces view data or reports an honest, actionable skip — its remediation message never tells the user to run a command that does not exist.
   5. Full pytest suite green with no new `_KNOWN_BROKEN` entries; if the views command group had to be touched, the bounded RT-01/RT-02 exception is scoped to that group only.
+
 **Plans**: TBD
 
 ### Phase 16: Invocation & User-Doc Truth
+
 **Goal**: Every command string a user or agent executes from CONSTRUCT's documentation resolves against the live registry and runs.
 **Depends on**: Phase 15 (FIX-01's decision determines what the curation-cycle, research-cycle, and daily-cycle references should say)
 **Requirements**: FIX-03, DEC-01, DOC-04
 **Success Criteria** (what must be TRUE):
+
   1. `_KNOWN_BROKEN` in `tests/contract/test_doc_command_references.py` is **empty** and the full suite is green — every `construct ...` string in skills, workflow docs, and the release playbook resolves against the live Typer app.
   2. `knowledge card list` / `knowledge ref list` have one recorded decision — implemented as real commands, or both dependent skills (`construct-synthesis`, `construct-gap-analysis`) rewritten onto commands that exist.
   3. `construct-synthesis/SKILL.md` either no longer declares `WebSearch` / `WebFetch`, or `PROJECT.md` records it as a deliberate, reasoned exception to the thin-wrapper claim — `spec-v04:436` is closed either way.
   4. A user can invoke `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate` directly from `USER_GUIDE.md`, and `construct/references/commands.md` lists real commands.
   5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description match the live 25-command surface.
+
 **Plans**: TBD
 
 ### Phase 17: Architecture Doc Set & daily.run Discoverability
+
 **Goal**: A v0.5 planner reading the architecture doc set sees the system that actually exists, and the flagship v0.4 capability is reachable from the chat interface.
 **Depends on**: Phase 14 (durable-state and config decisions), Phase 15 (capability counts and views outcome)
 **Requirements**: DOC-01, DOC-02, UX-01
 **Success Criteria** (what must be TRUE):
+
   1. `architecture-overview.md` presents ADR-0003's four-layer model including the Python runtime layer, with no surviving claim that skills are the only legitimate writers to layer 1 (:39, :73, :236) and no citation of the non-existent `spec-v02-data-model.md`.
   2. `artifact-catalog.md` contains rows for every registered capability, CLI command, and MCP tool with counts that match live introspection of the registry and Typer app, plus the search spine, the LLM gates, and the missing `construct-spike-run` skill row.
   3. `config-topology.md` is either corrected against the real on-disk layout or deleted, with every document that defers to it updated accordingly.
   4. A user can trigger `daily.run` from Claude-native chat through a skill, and that skill's command strings pass the FIX-04 guard with zero additions to `_KNOWN_BROKEN`.
   5. The no-parent-graph design decision for `daily.run` is recorded in a durable document (PROJECT.md Key Decisions and/or the architecture doc set), not only in the `daily_run.py:10-11` docstring.
+
 **Plans**: TBD
 
 ## Coverage (v0.4.1 — active)
