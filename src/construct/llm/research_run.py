@@ -828,6 +828,33 @@ def update_seeds_and_log(state: ResearchRunState) -> dict:
 # ── Graph builder (locked linear topology + outage short-circuit) ──
 
 
+def views_refresh(state: ResearchRunState) -> dict:
+    """Rebuild the SPA's views cache after the terminal write node (D-12).
+
+    A side effect, never a success condition: this node returns an EMPTY dict so it
+    cannot set, degrade or clear ``status`` — ``update_seeds_and_log`` upstream owns the
+    terminal status and this node structurally cannot touch it. A refresh that is
+    skipped, disabled or broken leaves the run reporting exactly what it would have
+    reported without the refresh.
+
+    Note the outage short-circuit in ``_route_after_score``: a caught score outage routes
+    straight to END, so an outage run legitimately never reaches this node. That is
+    correct — there is nothing new to publish from a run that never scored anything.
+    """
+    from construct.views.refresh import refresh_views
+
+    # D-05: install-root scoped, so the workspace's PARENT. Passing the workspace would
+    # discover zero workspaces and publish an empty build that looks like a success.
+    install_root = Path(state["workspace_path"]).parent
+
+    outcome = refresh_views(install_root)
+    if outcome.status == "failed":
+        logger.warning("views_refresh: refresh failed: %s", outcome.reason)
+    else:
+        logger.info("views_refresh: %s (%s)", outcome.status, outcome.reason or "no detail")
+    return {}
+
+
 def _route_after_score(state: ResearchRunState) -> str:
     """Route to END on a caught total outage (never pause); otherwise to the gate."""
     return END if state.get("status") == "failed" else "gate_review"
@@ -838,9 +865,10 @@ def build_research_run_graph(checkpointer: Any):
 
     Linear topology: load_config → build_queries → execute_search → deduplicate →
     score_and_extract → [outage? END] → gate_review[interrupt] → ingest_batch →
-    compile_digest → update_seeds_and_log → END. The single pause is the
-    interrupt in ``gate_review``; all write nodes are strictly downstream of it
-    (RSCH-03 holds by construction).
+    compile_digest → update_seeds_and_log → views_refresh → END. The single pause is
+    the interrupt in ``gate_review``; all write nodes are strictly downstream of it
+    (RSCH-03 holds by construction). ``views_refresh`` is a pure side effect appended
+    after the terminal write node and returns no state (D-12).
     """
     builder = StateGraph(ResearchRunState)
 
@@ -853,6 +881,7 @@ def build_research_run_graph(checkpointer: Any):
     builder.add_node("ingest_batch", ingest_batch)
     builder.add_node("compile_digest", compile_digest)
     builder.add_node("update_seeds_and_log", update_seeds_and_log)
+    builder.add_node("views_refresh", views_refresh)
 
     builder.add_edge(START, "load_config")
     builder.add_edge("load_config", "build_queries")
@@ -868,7 +897,8 @@ def build_research_run_graph(checkpointer: Any):
     builder.add_edge("gate_review", "ingest_batch")  # WRITE BOUNDARY (post-resume)
     builder.add_edge("ingest_batch", "compile_digest")
     builder.add_edge("compile_digest", "update_seeds_and_log")
-    builder.add_edge("update_seeds_and_log", END)
+    builder.add_edge("update_seeds_and_log", "views_refresh")
+    builder.add_edge("views_refresh", END)
 
     return builder.compile(checkpointer=checkpointer)
 

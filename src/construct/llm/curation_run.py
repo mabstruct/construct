@@ -10,9 +10,12 @@ post-gate write nodes replaced by read-only / findings-only steps:
     ``orphan_scan`` → new findings-only candidate selection over ``load_cards`` /
     ``load_connections``; ``connection_maintenance`` → ``bridge_detect``;
     ``compile_report`` → ``graph_status``).
-  * Three deferred steps (``promotion_review``, ``process_inbox``,
-    ``views_refresh_hook``) report ``status="skipped", required=False`` with a
-    "deferred to Phase 12" reason — explicit skipped nodes, not fake success (D-10).
+  * ``views_refresh_hook`` runs the real post-cycle views refresh (Phase 15 D-12)
+    and reports what it ACTUALLY did — ``skipped`` when gated, ``completed`` with a
+    failure reason when the refresh broke. It is ``required=False`` on every branch
+    because the refresh is a side effect, never a success condition; it must never
+    move the run's status. ``promotion_review`` and ``process_inbox`` became real
+    proposal-producer / review-gate nodes in Phase 12 and are no longer deferred.
   * A purely LINEAR graph over spec §4.3 topology (no conditional edges, no
     interrupt pause) compiled over a durable persistent ``SqliteSaver``.
   * Run-level status aggregation (D-09): ``degraded`` if any REQUIRED step is
@@ -349,16 +352,6 @@ def _failed_step(step: str, exc: Exception) -> CurationStepResult:
         step=step, status="failed", findings={"error": safe},
         summary=f"{step} failed", reason=safe,
     )
-
-
-def _deferred_step(step: str) -> dict:
-    """Emit a deferred skip-node result (D-10): skipped, optional, Phase-12 reason."""
-    result = CurationStepResult(
-        step=step, status="skipped", required=False,
-        reason="deferred to Phase 12",
-        summary=f"{step} deferred to Phase 12 (curation gates land in Phase 12)",
-    )
-    return {"steps": [result.model_dump(mode="json")]}
 
 
 # ── Real step nodes (wrap existing fns; extract PRIMITIVES into findings) ──
@@ -979,7 +972,56 @@ def apply_archives(state: CurationRunState) -> dict:
 
 
 def views_refresh_hook(state: CurationRunState) -> dict:
-    return _deferred_step("views_refresh_hook")
+    """Rebuild the SPA's views cache as a side effect of the cycle completing (D-12).
+
+    The step result reflects what the refresh ACTUALLY did — a gated refresh reports
+    ``skipped``, a broken one reports ``completed`` carrying the failure in its reason.
+    Nothing here is hardcoded: this node previously returned a fixed ``skipped`` with a
+    stale "deferred to Phase 12" reason, an audit trail that lied about the run
+    (T-15-14), and ``workflow.run`` was removed in Phase 12 for the same fake-success
+    class of defect (see the D-10/CUR-05 comment in ``catalog.py``).
+
+    ``required=False`` on every branch: per D-12 the refresh is a side effect, never a
+    success condition, so ``_aggregate_daily_status``'s required-step roll-up must never
+    see it. A failed refresh is therefore reported as ``completed`` with the failure in
+    ``reason`` rather than ``failed`` — the node ran to completion; the cache did not
+    rebuild. Reporting ``failed`` would be honest about the refresh but would leave a
+    ``failed`` step in the run record that a future aggregation change could pick up.
+    """
+    from construct.views.refresh import refresh_views
+
+    # D-05: the generator is INSTALL-ROOT scoped and discovers workspaces as its
+    # children. Passing the workspace itself would discover zero workspaces and write
+    # an empty build — a refresh that looks like it worked and produced nothing.
+    workspace = state["workspace_path"]
+    install_root = Path(workspace).parent
+
+    outcome = refresh_views(install_root)
+    if outcome.status == "skipped":
+        result = CurationStepResult(
+            step="views_refresh_hook", status="skipped", required=False,
+            reason=outcome.reason,
+            summary=f"views refresh skipped: {outcome.reason}",
+        )
+    elif outcome.status == "succeeded":
+        result = CurationStepResult(
+            step="views_refresh_hook", status="completed", required=False,
+            findings={"build_id": outcome.build_id, "files_written": outcome.files_written},
+            summary=f"views refreshed ({outcome.files_written} files written)",
+        )
+    else:
+        logger.warning("views_refresh_hook: refresh failed: %s", outcome.reason)
+        result = CurationStepResult(
+            step="views_refresh_hook", status="completed", required=False,
+            reason=outcome.reason,
+            summary=(
+                f"views regeneration failed: {outcome.reason}. Workspace is intact; "
+                f"run 'construct views generate' manually to refresh the views."
+            ),
+        )
+
+    events = [_emit(workspace, "workflow_step_complete", state["run_id"], "views_refresh_hook")]
+    return {"steps": [result.model_dump(mode="json")], "events": events}
 
 
 # ── Graph builder (deterministic prefix + one conditional short-circuit) ──

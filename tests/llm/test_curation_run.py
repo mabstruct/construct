@@ -168,9 +168,16 @@ def test_run_status_degraded_on_step_failure(curation_workspace, monkeypatch):
 
 
 def test_deferred_nodes_visible_skipped(curation_workspace):
-    """SC2: ``promotion_review``, ``process_inbox``, ``views_refresh_hook`` are
-    present as ``skipped`` nodes with ``required=False`` and a "deferred to Phase
-    12" reason — distinct from completed steps and from absent steps."""
+    """SC2: an optional node that does not act is visible as an explicit ``skipped``
+    step with ``required=False`` and a reason describing WHY — never absent, and never
+    a fabricated status.
+
+    Phase 15 (D-12) wired ``views_refresh_hook`` to the real refresh, so its reason is
+    now the live gate outcome rather than the old "deferred to Phase 12" placeholder.
+    The fixture's install root has no ``views/build/``, so the existence gate skips —
+    and the reason must say so. Asserting the reason is *derived* is what keeps this a
+    fake-success guard: a hardcoded reason of any vintage fails the second assertion.
+    """
     from construct.llm import curation_run
 
     run = curation_run.run_curation_run(
@@ -182,7 +189,9 @@ def test_deferred_nodes_visible_skipped(curation_workspace):
         step = steps[name]
         assert step["status"] == "skipped"
         assert step["required"] is False
-        assert "deferred to Phase 12" in (step.get("reason") or "")
+        reason = step.get("reason") or ""
+        assert "views/build" in reason, f"{name} must report the real gate reason, got: {reason!r}"
+        assert "deferred to Phase 12" not in reason
 
 
 # ── 4. anti-placeholder guard ───────────────────────────────────────────────

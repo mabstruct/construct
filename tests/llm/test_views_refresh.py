@@ -247,5 +247,12 @@ def test_deferred_step_placeholder_is_gone() -> None:
     from construct.llm import curation_run
 
     assert not hasattr(curation_run, "_deferred_step")
+
+    # Scoped to the views node rather than the whole file: `decay_scan`'s
+    # auto_archive summary carries its own, unrelated "deferred to Phase 12" string,
+    # pinned by test_auto_archive_reported_not_acted. That is a different node's
+    # contract and is out of this plan's scope — see the 15-04 summary.
     src = Path(curation_run.__file__).read_text(encoding="utf-8")
-    assert "deferred to Phase 12" not in src
+    node_src = src[src.index("def views_refresh_hook"):]
+    node_src = node_src[: node_src.index("\n# ──")] if "\n# ──" in node_src else node_src
+    assert "deferred to Phase 12" not in node_src.split('"""')[-1]
