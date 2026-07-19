@@ -52,10 +52,11 @@ The system must reliably turn source material into connected, explorable knowled
 - ✓ **Search provider spine:** provider-agnostic search contracts, Tavily/default + mock providers, config-driven caps, and CLI/MCP-accessible `research.search` with structured degraded errors and zero SOT writes — v0.4 (Phase 8; SRCH-01..04).
 - ✓ **Thin skill migrations:** research and curation Claude-native skills delegate to CLI/MCP capabilities with direct `WebSearch` / `WebFetch` / workspace writes removed, guarded by a forbidden-tool test — v0.4 (Phase 12; API-04).
 - ✓ **Daily-cycle composition:** `daily.run` / `daily.inspect` compose the stable `research.run → curation.run → graph.status` children as a thin, non-blocking Python cycle (isolate-and-degrade, escalate excluded, no false `completed`), registered with full CLI/MCP parity and wired into the daily-cycle skill which owns the single post-run views refresh — v0.4 (Phase 13; DAY-01/02/03, API-01/02/03/05). Closes v0.4.
+- ✓ **Durable-state & config truth:** `.construct/workflow/*.sqlite` is recorded in `adr-0004` as sanctioned durable state holding pending human-review decisions not reconstructible from layer 1, with `nfrs.md` §2/§4, `architecture-overview.md`, and `workspace-contract.md` scoped to match; `resolve_llm_config_path()` gives the Streamlit ops UI and the runtime one shared code path, and `model-routing.yaml` is scaffolded-but-deprecated everywhere it was called authoritative — v0.4.1 (Phase 14; DOC-03, FIX-02). Unblocks v0.5 design.
 
 ### Active
 
-**v0.4.1 Surface Integration & Documentation Truth** (see Current Milestone above). Nine open requirements: FIX-01/02/03 (live defects), DOC-01/02/03/04 (documentation truth), UX-01 (`daily.run` entry point), DEC-01 (synthesis skill tool grants). FIX-04 (doc-command guard) delivered 2026-07-19.
+**v0.4.1 Surface Integration & Documentation Truth** (see Current Milestone above). Seven open requirements: FIX-01/03 (live defects), DOC-01/02/04 (documentation truth), UX-01 (`daily.run` entry point), DEC-01 (synthesis skill tool grants). FIX-04 (doc-command guard) delivered 2026-07-19; DOC-03 and FIX-02 closed by Phase 14 (2026-07-19).
 
 _Deferred past v0.4.1: v0.5 UI-primary experience (UI-01/02), RT-01/RT-02 registry unification, thin-wrapper migration for `construct-bridge-detect` / `domain-init` / `search-adjust` (logged for v0.6), historical verification/security debt._
 
@@ -119,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-19 — v0.4.1 Surface Integration & Documentation Truth milestone started (scope from `milestones/v0.4-MILESTONE-AUDIT.md`)*
+*Last updated: 2026-07-19 — Phase 14 (Durable-State & Config Truth) complete; DOC-03 and FIX-02 validated, v0.5 design unblocked*
