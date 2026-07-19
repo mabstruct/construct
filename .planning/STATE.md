@@ -4,17 +4,17 @@ milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 14
 current_phase_name: durable-state-config-truth
-status: executing
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-07-19T20:11:01.573Z"
+status: verifying
+stopped_at: Completed 14-03-PLAN.md (phase 14 plans 4/4, ready for verification)
+last_updated: "2026-07-19T20:16:12.097Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 14 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 14 (durable-state-config-truth) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
-Progress: [████████░░] 75% (0/4 phases)
+Status: Phase complete — ready for verification
+Progress: [██████████] 100% (0/4 phases)
 Last activity: 2026-07-19 — Phase 14 execution started
 
 ## Performance Metrics
@@ -72,6 +72,7 @@ Last activity: 2026-07-19 — Phase 14 execution started
 | Phase 14 P01 | 12m | 2 tasks | 2 files |
 | Phase 14 P04 | 14m | 3 tasks | 3 files |
 | Phase 14 P02 | 9min | 2 tasks | 1 files |
+| Phase 14 P03 | ~14m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,9 @@ Recent decisions affecting current work:
 - [Phase 14]: nfrs.md §2's rebuild guarantee is scoped by naming knowledge state explicitly, not by softening wording — a guarantee that lists what it covers stays auditable
 - [Phase 14]: nfrs.md §3 names src/construct/llm/config.yaml as the LLM config authority; model-routing.yaml marked deprecated and inert, retained only for REQUIRED_PATHS workspace-contract stability
 - [Phase 14]: nfrs.md §4's Tavily row leads with default_provider: mock so a reader stopping after one sentence has a true picture — corrects the record without over-correcting into a false egress claim
+- [Phase ?]: `.construct/workflow/*.sqlite` filed under a new fourth artifact class in workspace-contract.md, not Support — the Support preamble's denial of workspace truth is the falsehood DOC-03 removes
+- [Phase ?]: model-routing.yaml rows annotated as deprecated rather than deleted in workspace-contract.md and config-topology.md — D-01 keeps it a REQUIRED_PATHS entry
+- [Phase ?]: config-topology.md's Python-approach comparison cell left intact as historically accurate; Phase 17 (D-03) may discard these edits wholesale
 
 ### Pending Todos
 
@@ -200,8 +204,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T20:10:54.535Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-07-19T20:16:12.088Z
+Stopped at: Completed 14-03-PLAN.md (phase 14 plans 4/4, ready for verification)
 Resume file: None
 
 ## Operator Next Steps
