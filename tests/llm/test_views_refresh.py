@@ -118,3 +118,134 @@ def test_refresh_failed_when_report_has_validation_errors(
 
     assert outcome.status == "failed"
     assert "1" in outcome.reason
+
+
+# ── Task 2: curation.run and research.run — the paired-status side-effect proof ──
+
+
+def test_curation_run_status_unchanged_when_refresh_raises(
+    curation_workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-12: a refresh that blows up must not move the curation run's status.
+
+    The two runs differ ONLY in whether the generator raises. Comparing them is what
+    proves the rule — asserting a single run "completed" would still pass if the
+    failure branch were quietly degrading the run.
+    """
+    from construct.llm import curation_run
+
+    install_root = curation_workspace.parent
+    _scaffold_build_dir(install_root)
+
+    healthy = _Spy()
+    monkeypatch.setattr("construct.views.generate.generate", healthy)
+    good = curation_run.run_curation_run(
+        curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-vr-ok")
+    )
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy(raises=RuntimeError("boom")))
+    bad = curation_run.run_curation_run(
+        curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-vr-bad")
+    )
+
+    assert good.status == bad.status
+    # The refresh really ran, and against the INSTALL ROOT — not the workspace (D-05).
+    assert healthy.calls == [install_root]
+
+
+def test_curation_refresh_step_reports_what_happened(
+    curation_workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The replaced node must report its real outcome, never a hardcoded status."""
+    from construct.llm import curation_run
+
+    install_root = curation_workspace.parent
+    _scaffold_build_dir(install_root)
+    monkeypatch.setattr("construct.views.generate.generate", _Spy())
+
+    run = curation_run.run_curation_run(
+        curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-vr-step")
+    )
+
+    step = next(
+        (s if isinstance(s, dict) else s.model_dump())
+        for s in run.steps
+        if (s if isinstance(s, dict) else s.model_dump())["step"] == "views_refresh_hook"
+    )
+    assert step["status"] == "completed"
+    assert step["required"] is False
+    assert "deferred to Phase 12" not in (step.get("reason") or "")
+    assert "deferred to Phase 12" not in (step.get("summary") or "")
+
+
+def test_research_run_status_unchanged_when_refresh_raises(
+    tmp_path: Path,
+    sample_search_results,
+    scored_findings_batch,
+    sqlite_checkpointer,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-12, research edition: paired healthy/raising runs must agree on status."""
+    from langgraph.types import Command
+
+    from construct.llm import research_run, research_score
+    from tests.llm.conftest import create_test_workspace
+
+    monkeypatch.setattr(research_score, "run_gate", lambda *a, **k: scored_findings_batch)
+    monkeypatch.setattr(
+        research_run,
+        "_run_search",
+        lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
+    )
+
+    def _drive(ws: Path, thread: str) -> str:
+        saver, _conn, _db = sqlite_checkpointer()
+        graph = research_run.build_research_run_graph(saver)
+        cfg = {"configurable": {"thread_id": thread}}
+        graph.invoke(
+            research_run._initial_state(
+                research_run.ResearchRunInput(workspace_path=str(ws), run_id=thread)
+            ),
+            cfg,
+        )
+        defaults = [e["decision"] for e in graph.get_state(cfg).values["gate_queue"]]
+        return graph.invoke(Command(resume=defaults), cfg)["status"]
+
+    root_ok = tmp_path / "ok"
+    root_bad = tmp_path / "bad"
+    ws_ok = create_test_workspace(root_ok / "ws")
+    ws_bad = create_test_workspace(root_bad / "ws")
+    _scaffold_build_dir(root_ok)
+    _scaffold_build_dir(root_bad)
+
+    healthy = _Spy()
+    monkeypatch.setattr("construct.views.generate.generate", healthy)
+    good_status = _drive(ws_ok, "run-vr-ok")
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy(raises=RuntimeError("boom")))
+    bad_status = _drive(ws_bad, "run-vr-bad")
+
+    assert good_status == bad_status == "completed"
+    assert healthy.calls == [root_ok]
+
+
+def test_research_graph_ends_through_the_refresh_node() -> None:
+    """The documented terminal edge must be the built one."""
+    import inspect
+
+    from construct.llm import research_run
+
+    src = inspect.getsource(research_run.build_research_run_graph)
+    assert 'add_node("views_refresh"' in src
+    assert 'add_edge("update_seeds_and_log", "views_refresh")' in src
+    assert 'add_edge("views_refresh", END)' in src
+    assert 'add_edge("update_seeds_and_log", END)' not in src
+
+
+def test_deferred_step_placeholder_is_gone() -> None:
+    """T-15-14: the fabricated skipped-status helper must not survive."""
+    from construct.llm import curation_run
+
+    assert not hasattr(curation_run, "_deferred_step")
+    src = Path(curation_run.__file__).read_text(encoding="utf-8")
+    assert "deferred to Phase 12" not in src
