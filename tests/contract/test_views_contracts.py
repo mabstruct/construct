@@ -275,6 +275,72 @@ class TestRoundTrip:
 
 
 # ---------------------------------------------------------------------------
+# 4b. The widened domain shape (D-02)
+# ---------------------------------------------------------------------------
+
+
+class TestWidenedDomainRecord:
+    """DomainRecord must accept the shape ``lib/parse_domains.parse`` really emits.
+
+    Asserted positively rather than merely tolerated: this file declares itself
+    the views contract guard, so the widened field set belongs here explicitly.
+    """
+
+    def test_parser_shaped_domain_validates(self) -> None:
+        """A realistic parse_domains.py dict validates with no extra_forbidden."""
+        parser_output = {
+            "id": "cosmology",
+            "name": "Cosmology",
+            "description": "Structure and evolution of the universe",
+            "status": "active",
+            "created": "2026-04-22",
+            "content_categories": ["observations", "theory"],
+            "source_priorities": ["arxiv", "peer-reviewed papers"],
+            "cross_domain_links": [{"domain": "philosophy-of-mind", "topics": ["realism"]}],
+            "metrics": {
+                "papers": 47,
+                "cards": 120,
+                "cards_by_lifecycle": {"seed": 18, "growing": 60, "mature": 38, "archived": 4},
+                "cards_by_confidence": {"1": 5, "2": 22, "3": 51, "4": 30, "5": 12},
+                "connections": 184,
+                "orphan_cards": 3,
+                "avg_confidence": 3.12,
+                "last_research_cycle": "2026-04-25",
+                "last_curation_cycle": "2026-04-26",
+            },
+        }
+
+        record = DomainRecord.model_validate(parser_output)
+
+        assert record.metrics["cards"] == 120
+        assert record.metrics["cards_by_lifecycle"]["mature"] == 38
+        assert record.cross_domain_links == [
+            {"domain": "philosophy-of-mind", "topics": ["realism"]}
+        ]
+        assert record.source_priorities == ["arxiv", "peer-reviewed papers"]
+
+    def test_bare_string_cross_domain_links_accepted(self) -> None:
+        """The v02 fixtures emit bare domain-id strings; the parser accepts any list."""
+        record = DomainRecord.model_validate(
+            {
+                "id": "cosmology",
+                "name": "Cosmology",
+                "description": "",
+                "cross_domain_links": ["philosophy-of-mind"],
+            }
+        )
+
+        assert record.cross_domain_links == ["philosophy-of-mind"]
+
+    def test_widened_domain_still_rejects_unknown_fields(self) -> None:
+        """Widening the field set must not have weakened strictness (D-02)."""
+        with pytest.raises(ValidationError):
+            DomainRecord.model_validate(
+                {"id": "x", "name": "x", "description": "", "card_count": 3}
+            )
+
+
+# ---------------------------------------------------------------------------
 # 5. Invalid data is rejected
 # ---------------------------------------------------------------------------
 
