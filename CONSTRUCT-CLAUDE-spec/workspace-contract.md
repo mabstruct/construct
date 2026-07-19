@@ -81,7 +81,7 @@ These artifacts support execution, configuration, or deployment, but they do not
 | `.construct/` | support | Deployed agent infrastructure: skills, workflows, references, templates |
 | `AGENTS.md` | support | Workspace operating rules for the Claude-native runtime |
 | `.construct/templates/*` | support | Authoritative initial shapes for canonical and derived artifacts |
-| `.construct/model-routing.yaml` | support | Runtime/provider routing guidance; not part of workspace knowledge state |
+| `.construct/model-routing.yaml` | support | **Deprecated and inert** — nothing reads it; retained only for workspace-contract stability. LLM configuration authority is `src/construct/llm/config.yaml`, resolved by `src/construct/llm/config.py` |
 | `.construct/search.yaml` | support | Search-provider configuration; the shipped template defaults to the `mock` provider |
 
 ### Durable orchestration state
