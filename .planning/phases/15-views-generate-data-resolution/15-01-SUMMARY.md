@@ -184,6 +184,10 @@ None — `pyyaml` 6.0.3 was already resolved in the live venv transitively via `
 - **Plan 02 (model reconciliation)** should start from the `bridges.json` `top_domain_pairs` mismatch documented above — it is a live, reproducible instance of the disagreement Plan 02 targets.
 - **Plan 05 (D-09)** still owns the skill directory's `generate.py`, `run.sh`, `requirements.txt`, `debounced_hook.py`, `debounced-hook.sh`, and `SKILL.md`, all of which were deliberately left untouched. Note that the skill's `generate.py` still expects a sibling `lib/` that no longer exists — Plan 05 must resolve that dangling reference.
 
+## Self-Check: PASSED
+
+All claimed artifacts exist on disk; all four commit hashes resolve in `git log`; full suite green at 446 passed.
+
 ---
 *Phase: 15-views-generate-data-resolution*
 *Completed: 2026-07-19*
