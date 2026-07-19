@@ -62,12 +62,18 @@ class BridgeRecord(BaseModel):
     cards: list[str] = Field(default_factory=list)
 
 
+# D-02: the field set below is derived from what the parsers actually emit —
+# ``parse_bridges._build_summary`` returns exactly ``totals`` and
+# ``top_domain_pairs``. The four L3 gate fields are retained because
+# ``pipelines/bridge_detect.py`` emits them and ``llm/curation_run.py`` reads
+# ``l1_l2_only``; they are defaulted and harmless.
 class BridgeSummary(BaseModel):
-    """Aggregate sums and L3 gate statistics for bridges.json."""
+    """Aggregate sums, top domain pairs, and L3 gate statistics for bridges.json."""
 
     model_config = ConfigDict(extra="forbid")
 
     totals: dict = Field(default_factory=dict)
+    top_domain_pairs: list[dict] = Field(default_factory=list)
     l1_l2_only: bool = False
     l3_calls: int = 0
     l3_candidates_eligible: int = 0
@@ -88,19 +94,32 @@ class BridgesFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# D-02: the field set below is derived from what ``lib/parse_domains.parse``
+# emits and is corroborated field-for-field by spec-v02-data-model.md §5.1. The
+# previous scalar counters (card_count, connection_count, digest_count,
+# article_count) and ``keywords`` were phantoms — no parser emitted them and no
+# consumer read them; the real counts live inside ``metrics``.
+# ``cross_domain_links`` and ``metrics`` stay open (bare list / dict) rather
+# than becoming nested models: the parser guards them with nothing stronger than
+# an ``isinstance(list)`` check, so a nested model would be stricter than the
+# parser guarantees and would reject legacy domains.yaml content it accepts.
+# Three element shapes exist in the wild — schemas/config.py's
+# ``{"domain", "topics"}``, spec §5.1's ``{"to", "note"}``, and the bare domain-id
+# strings the v02 fixtures use — so the element type is deliberately unconstrained.
 class DomainRecord(BaseModel):
-    """One domain entry with derived graph metrics."""
+    """One domain entry with declared metadata and derived graph metrics."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
     name: str
     description: str
-    card_count: int = 0
-    connection_count: int = 0
-    digest_count: int = 0
-    article_count: int = 0
-    keywords: list[str] = Field(default_factory=list)
+    status: str = "active"
+    created: str = ""
+    content_categories: list[str] = Field(default_factory=list)
+    source_priorities: list[str] = Field(default_factory=list)
+    cross_domain_links: list = Field(default_factory=list)
+    metrics: dict = Field(default_factory=dict)
 
 
 class DomainsFile(BaseModel):
@@ -117,16 +136,30 @@ class DomainsFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# D-02: the field set below is derived from what ``lib/parse_articles._parse``
+# emits and is corroborated field-for-field by spec-v02-data-model.md §5.5. The
+# previous ``url`` / ``published_date`` pair was a phantom — no parser emits
+# either, and ``url`` being *required* meant every populated install root failed
+# validation on articles.json. ``source_cards`` stays an open list[dict] because
+# the parser emits two element shapes: an expanded card record, and the
+# ``{"id", "status": "missing"}`` stub §5.5 mandates for unresolvable ids.
 class ArticleRecord(BaseModel):
-    """One cross-workspace published article."""
+    """One cross-workspace published article with expanded source-card provenance."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
     title: str
-    url: str
+    type: str = ""
+    status: str = "draft"
+    date: str = ""
     workspaces: list[str] = Field(default_factory=list)
-    published_date: str | None = None
+    domains: list[str] = Field(default_factory=list)
+    confidence_floor: int = 0
+    source_cards: list[dict] = Field(default_factory=list)
+    body_markdown: str = ""
+    excerpt: str = ""
+    raw_path: str = ""
 
 
 class ArticlesFile(BaseModel):
@@ -173,7 +206,11 @@ class CardRecord(BaseModel):
     lifecycle: str
     domains: list[str] = Field(default_factory=list)
     summary: str
-    connections: list[dict] = Field(default_factory=list)
+    # D-02: ``lib/parse_connections.denormalize_into_cards`` assigns
+    # ``sorted(nset)`` where ``nset`` is a set of neighbour card ids, so this is
+    # always a list of id strings. Spec §5.2 corroborates: the full edge list
+    # with types lives in connections.json, not here.
+    connections: list[str] = Field(default_factory=list)
     content_categories: list[str] = Field(default_factory=list)
 
 
@@ -242,6 +279,11 @@ class DigestsFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# D-02: ``lib/parse_events.parse`` passes ``log/events.jsonl`` lines through
+# verbatim, and ``details`` is free-form there — spec §5.6 explicitly declines to
+# enumerate event shapes. Real logs carry a human-readable string
+# (``"Created card-hubble-tension"``); structured emitters carry a dict. The
+# union describes both rather than rejecting the string form.
 class EventRecord(BaseModel):
     """One audit-trail event entry."""
 
@@ -251,7 +293,7 @@ class EventRecord(BaseModel):
     type: str
     actor: str
     card_id: str | None = None
-    details: dict | None = None
+    details: str | dict | None = None
 
 
 class EventsFile(BaseModel):

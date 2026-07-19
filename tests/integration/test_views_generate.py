@@ -17,7 +17,7 @@ import pydantic
 
 from construct.views import models as views_models
 from construct.views.generate import generate
-from construct.views.models import unwrap_payload
+from construct.views.models import CardRecord, unwrap_payload
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -97,14 +97,18 @@ def test_generated_card_connections_are_id_strings(tmp_path: Path) -> None:
 
     assert all_cards, "populated fixture produced zero cards"
 
-    # Load-bearing precondition: without a non-empty connections list somewhere,
-    # the type assertion below passes vacuously — the Pitfall 1 failure mode.
-    assert any(card["connections"] for card in all_cards), (
+    # generate() validates an *adapted projection* of each card but writes the
+    # raw parser dict, so the denormalised neighbour list lands on disk under the
+    # parser's key ``connects_to``. It is the same value the CardsFile adapter
+    # feeds to CardRecord.connections (generate.py:110, :461).
+    # Load-bearing precondition: without a non-empty list somewhere, the type
+    # assertion below passes vacuously — the Pitfall 1 failure mode.
+    assert any(card["connects_to"] for card in all_cards), (
         "no generated card has connections; CardRecord.connections is untested"
     )
 
     for card in all_cards:
-        connections = card["connections"]
+        connections = card["connects_to"]
         assert all(isinstance(entry, str) for entry in connections), (
             f"card {card['id']} has non-string connections: {connections}"
         )
@@ -112,6 +116,18 @@ def test_generated_card_connections_are_id_strings(tmp_path: Path) -> None:
         assert connections == sorted(connections), (
             f"card {card['id']} connections are not sorted: {connections}"
         )
+        # The value the writer emits must satisfy the model the validator applies.
+        record = CardRecord(
+            id=card["id"],
+            title=card["title"],
+            epistemic_type=card["epistemic_type"],
+            confidence=card["confidence"],
+            source_tier=card["source_tier"],
+            lifecycle=card["lifecycle"],
+            summary=card.get("summary_excerpt", ""),
+            connections=connections,
+        )
+        assert record.connections == connections
 
 
 def test_models_still_forbid_unknown_fields() -> None:
