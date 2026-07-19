@@ -27,34 +27,10 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from construct.views.models import (
-    ArticlesFile,
-    BridgesFile,
-    CardsFile,
-    ConnectionsFile,
-    DigestsFile,
-    DomainsFile,
-    EventsFile,
-    StatsFile,
-    ViewsEnvelope,
-)
-
-# ---------------------------------------------------------------------------
-# Path setup — import the existing construct-views-generate-data skill lib
-# ---------------------------------------------------------------------------
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_SKILL_LIB = (
-    _PROJECT_ROOT
-    / "CONSTRUCT-CLAUDE-impl"
-    / "claude"
-    / "skills"
-    / "construct-views-generate-data"
-)
-if str(_SKILL_LIB) not in sys.path:
-    sys.path.insert(0, str(_SKILL_LIB))
-
-# pylint: disable=wrong-import-position,unused-import
-from lib import (  # type: ignore[import-untyped]  # noqa: E402
+# D-08: the views source parsers ship inside the package. The distribution
+# packages only ``src/construct``, so the previous deployed-skill-directory
+# lookup raised ImportError on an installed CONSTRUCT.
+from construct.views.lib import (
     build_id as build_id_mod,
     compute_stats,
     discover,
@@ -68,6 +44,17 @@ from lib import (  # type: ignore[import-untyped]  # noqa: E402
     parse_digests,
     parse_domains,
     parse_events,
+)
+from construct.views.models import (
+    ArticlesFile,
+    BridgesFile,
+    CardsFile,
+    ConnectionsFile,
+    DigestsFile,
+    DomainsFile,
+    EventsFile,
+    StatsFile,
+    ViewsEnvelope,
 )
 
 
@@ -386,7 +373,13 @@ def generate(install_root: Path) -> GenerateReport:
         ws = w.get("workspace", "?")
         f = w.get("file", "?")
         r = w.get("reason", "?")
-        warnings_list.append(f"{ws}/{f}: {r}")
+        # Some parsers already qualify ``file`` with the workspace name. Only
+        # prepend the workspace id when it is not already the leading segment,
+        # otherwise the warning names the workspace twice (Pitfall 4).
+        if f == ws or f.startswith(f"{ws}/"):
+            warnings_list.append(f"{f}: {r}")
+        else:
+            warnings_list.append(f"{ws}/{f}: {r}")
 
     return GenerateReport(
         success=len(validation_errors) == 0,
