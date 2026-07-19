@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
-status: planning
-last_updated: "2026-07-19T15:31:17.495Z"
+status: roadmapped
+last_updated: "2026-07-19T18:00:00.000Z"
 last_activity: 2026-07-19
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** v0.4 shipped — awaiting next milestone (v0.5 UI-primary), define via /gsd:new-milestone
+**Current focus:** v0.4.1 Surface Integration & Documentation Truth — Phases 14–17 roadmapped, 9/9 requirements mapped. Next: `/gsd-plan-phase 14`.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 14 — Durable-State & Config Truth (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-19 — Milestone v0.4.1 started
+Status: Roadmap complete, awaiting phase planning
+Progress: [░░░░░░░░░░] 0% (0/4 phases)
+Last activity: 2026-07-19 — v0.4.1 roadmap created (Phases 14–17)
 
 ## Performance Metrics
 
@@ -69,6 +70,7 @@ Last activity: 2026-07-19 — Milestone v0.4.1 started
 - Phase 7 added: Close v0.3 blockers (RT-03 MCP parity, ING-02 ingest cluster, ING-05 graph.status) — from milestone audit 2026-06-15.
 - v0.4 started as Agent Workflows milestone: search provider spine, research.run, curation.run, thin skill migrations, and daily-cycle composition. v0.5 UI and unrelated v0.3 carry-over debt remain deferred unless directly required.
 - v0.4 continues numbering at Phase 8 and contains 6 phases: search spine, score gate, reviewed research run, curation PIPE, curation gates, daily-cycle composition.
+- v0.4.1 continues numbering at Phase 14 and contains 4 phases: durable-state & config truth (14), views.generate_data resolution (15), invocation & user-doc truth (16), architecture doc set & daily.run discoverability (17). Patch milestone — no phase adds runtime capability.
 - Scope boundary: keep v0.5 UI, HTTP/cloud, broad RT-01/RT-02 cleanup, full views emission, and historical verification/security debt out unless directly blocking v0.4 workflows.
 
 ### Decisions
@@ -129,6 +131,12 @@ Recent decisions affecting current work:
 - [v0.4 Roadmap]: Use the research-recommended sequence W1–W6 as Phases 8–13.
 - [v0.4 Roadmap]: API/runtime parity is explicit in each relevant phase; final all-capability registry and CLI/MCP parity closes in Phase 13.
 - [v0.4 Roadmap]: Human review remains mandatory before research ingest, lifecycle, or connection writes.
+- [v0.4.1 Roadmap]: Phases grouped by "what decision unblocks what work", not by requirement-ID prefix — DOC-03/FIX-02 decisions first (Phase 14), then the FIX-01 code decision (Phase 15), then the surfaces that must describe both (Phases 16–17).
+- [v0.4.1 Roadmap]: DOC-03 placed in the first phase because it gates v0.5 design; v0.5 planning must not start before Phase 14 lands.
+- [v0.4.1 Roadmap]: FIX-01 kept as its own phase despite being a single requirement — its `install_root` vs `workspace` and skill-directory-coupling decisions determine the content of four documented callers rewritten in Phases 16–17.
+- [v0.4.1 Roadmap]: DOC-01 deliberately sequenced last of the architecture docs so it is written once, against decisions already made in Phases 14–15.
+- [v0.4.1 Roadmap]: FIX-04's shrinking `_KNOWN_BROKEN` allowlist is the completion criterion for FIX-01 and FIX-03 — phase success criteria cite it mechanically rather than in prose.
+- [v0.4.1 Roadmap]: FIX-04 is intentionally unmapped to any phase (pre-milestone deliverable, commit `11f20f4`).
 - [Phase 09-02]: key_findings cleared on clamp-to-skip with clamp rationale appended to reasoning (D-14 / Pitfall 5)
 - [Phase 09-02]: score_one takes a pre-built llm (mock-injectable); factory.build_chat_model seam lives in build_scoring_llm for the Plan 03 runner
 - [Phase 09-02]: GovernanceThresholds dataclass decouples clamp/score_one from full GovernanceConfig and carries the D-06 echo fields
@@ -146,14 +154,16 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 8 with `/gsd-plan-phase 8`.
-- During Phase 10/12 planning, decide exact skill migration timing while preserving API-04 closure in Phase 12.
+- Plan Phase 14 with `/gsd-plan-phase 14`.
+- Phase 15 planning must settle two named decisions before implementation: `install_root` vs `workspace` contract (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory import coupling (`generate.py:43-51`).
+- Phase 16 planning must decide `knowledge card list` / `knowledge ref list`: implement, or rewrite `construct-synthesis` and `construct-gap-analysis` onto existing commands.
+- Phase 16: retiring `USER-TEST-PLAYBOOK-v03.md` (DOC-04) removes the `workflow run` / `workflow resume` allowlist entries — coordinate so the guard ends empty, not merely unscanned.
 
 ### Blockers/Concerns
 
 - No current blockers.
-- Phase 10 needs focused design for WorkflowRunner/LangGraph checkpoint ownership and CLI review UX.
-- Phase 12 needs focused design for curation candidate/proposal semantics.
+- v0.5 planning is blocked on DOC-03 (Phase 14) — the durable-checkpointer invariant must be settled before a UI-primary shell reasons about resumable gate state.
+- Watch scope on FIX-01: RT-01/RT-02 registry unification stays out of v0.4.1 except, if unavoidable, the views command group alone.
 
 ## Deferred Items
 
@@ -171,12 +181,12 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-06T06:12:24.420Z
-Stopped at: Phase 13 context gathered
-Resume file: .planning/phases/13-daily-cycle-composition/13-CONTEXT.md
+Last session: 2026-07-19
+Stopped at: v0.4.1 roadmap created — Phases 14–17 defined, 9/9 requirements mapped
+Resume file: .planning/ROADMAP.md
 
 ## Operator Next Steps
 
-- **Read `.planning/milestones/v0.4-MILESTONE-AUDIT.md` first** (retrospective audit, 2026-07-19 — closes the "no milestone audit run" gap noted in RETROSPECTIVE.md). It proposes a bounded **v0.4.1** patch milestone: 3 live defects, 4 doc workstreams, 1 coverage gap.
-- Start v0.4.1 with /gsd-new-milestone, using that audit's "Proposed v0.4.1 Scope" section as requirements input.
-- Note: DOC-03 (durable-checkpointer invariant) gates v0.5 design and should land before v0.5 planning.
+- Run `/gsd-plan-phase 14` to plan Durable-State & Config Truth (DOC-03, FIX-02).
+- Reference `.planning/milestones/v0.4-MILESTONE-AUDIT.md` throughout — it carries file:line evidence for every requirement.
+- Do not start v0.5 planning until Phase 14 lands: DOC-03 gates v0.5 design.

@@ -66,17 +66,25 @@ Explicit exclusions for v0.4.1, with reasoning:
 
 ## Traceability
 
-_Filled by the roadmap._
+Mapped by the roadmap (2026-07-19). Every open requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | TBD | Pending |
-| FIX-02 | TBD | Pending |
-| FIX-03 | TBD | Pending |
-| DOC-01 | TBD | Pending |
-| DOC-02 | TBD | Pending |
-| DOC-03 | TBD | Pending |
-| DOC-04 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| DEC-01 | TBD | Pending |
-| FIX-04 | — | ✅ Delivered 2026-07-19 (pre-milestone) |
+| FIX-01 | Phase 15 — views.generate_data Resolution | Pending |
+| FIX-02 | Phase 14 — Durable-State & Config Truth | Pending |
+| FIX-03 | Phase 16 — Invocation & User-Doc Truth | Pending |
+| DOC-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
+| DOC-02 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
+| DOC-03 | Phase 14 — Durable-State & Config Truth | Pending |
+| DOC-04 | Phase 16 — Invocation & User-Doc Truth | Pending |
+| UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
+| DEC-01 | Phase 16 — Invocation & User-Doc Truth | Pending |
+| FIX-04 | — (pre-milestone) | ✅ Delivered 2026-07-19, commit `11f20f4` |
+
+**Coverage:** 9/9 open requirements mapped exactly once. Unmapped: 0. Duplicated: 0.
+
+**Mechanical completion criteria** (preferred over prose judgement):
+
+- FIX-01 is complete when no permanent-failure handler for `views.generate_data` remains in `capabilities/catalog.py` and `("views", "generate")` is gone from `_KNOWN_BROKEN`.
+- FIX-03 is complete when `_KNOWN_BROKEN` in `tests/contract/test_doc_command_references.py` is **empty** with the suite green.
+- FIX-04 is not phase work; it defines the above criteria.
