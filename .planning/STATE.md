@@ -4,17 +4,17 @@ milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 15
 current_phase_name: views-generate-data-resolution
-status: executing
-stopped_at: Completed 15-04-PLAN.md
-last_updated: "2026-07-19T22:07:19.953Z"
+status: verifying
+stopped_at: Completed 15-05-PLAN.md
+last_updated: "2026-07-19T22:21:13.580Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 50
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 15 (views-generate-data-resolution) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
-Progress: [█████████░] 89% (0/4 phases)
+Status: Phase complete — ready for verification
+Progress: [██████████] 100% (0/4 phases)
 Last activity: 2026-07-19 — Phase 15 execution started
 
 ## Performance Metrics
@@ -78,6 +78,7 @@ Last activity: 2026-07-19 — Phase 15 execution started
 | Phase 15 P02 | 24min | 3 tasks | 4 files |
 | Phase 15 P03 | 38min | 3 tasks | 7 files |
 | Phase 15 P04 | 34min | 3 tasks | 6 files |
+| Phase 15 P05 | ~45min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -189,6 +190,9 @@ Recent decisions affecting current work:
 - [Phase ?]: views.confirm_refresh is a verbosity switch, not a pre-run confirmation — it never gates the refresh
 - [Phase ?]: The views refresh config gate reads the install root's .construct/config.yaml, not llm/config.py (wrong scope, extra=forbid)
 - [Phase ?]: _sanitize_error replicated into the views layer rather than imported, to keep the llm -> views dependency edge one-way
+- [Phase ?]: [Phase 15-05]: adr-0005 records the D-11 reversal of Phase 13 D-10 — the Python capability layer owns the views refresh and every workflow capability refreshes; new numbered ADR over amendment, archived D-10 record cited read-only
+- [Phase ?]: [Phase 15-05]: the two live debounced-hook.sh registrations in construct-card-create/card-connect were removed with the debounce pair — direct per-card edits now have NO views refresh path, and views.per_card_hooks.* is inert config (v0.6 backlog, OQ-3)
+- [Phase ?]: [Phase 15-05]: the three views-refresh doc sections were DELETED rather than corrected — the Python layer owns the behaviour, so the instruction has no correct form in a skill/workflow doc; each file keeps a one-sentence D-11 pointer
 
 ### Pending Todos
 
@@ -206,6 +210,7 @@ Recent decisions affecting current work:
 - views validate rejects 3 of 8 files views generate writes (stats.json, <ws>/connections.json, <ws>/events.json): generate() validates an adapted projection but writes the raw parser dict. Pre-existing, escalated by 15-03 as a Rule 4 contract decision, pinned by test_views_validate_does_not_yet_accept_generated_bytes. Needs an owner before Phase 16/17 SPA contract work.
 - T-15-12 mitigation is weaker than the threat register states: a daily cycle's later views sweeps are full 11-file rebuilds (children mutate the workspace), not near-no-ops. version.json churns ~3x per cycle — re-score before Phase 17 SPA polling.
 - decay_scan's 'archiving deferred to Phase 12' summary string in curation_run.py:414 is now stale (Phase 12 shipped) — second instance of the T-15-14 audit-trail-that-lies class, out of Plan 04's scope. Phase 16 to decide.
+- Direct card-create/card-connect edits no longer refresh views: the debounce pair was deleted with its two live skill registrations (15-05) and has no Python-layer equivalent. views.per_card_hooks.* in templates/config.yaml, references/commands.md:81 and README.md:263-264 now document an inert feature — Phase 16 (DOC-04) doc-truth item; re-homing debounce is a v0.6 candidate (OQ-3).
 
 ## Deferred Items
 
@@ -223,8 +228,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T22:07:12.351Z
-Stopped at: Completed 15-04-PLAN.md
+Last session: 2026-07-19T22:21:02.401Z
+Stopped at: Completed 15-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
