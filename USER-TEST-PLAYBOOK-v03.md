@@ -42,10 +42,17 @@ construct --version        # expect: 0.3.0
 Do **not** test against `test-ws/` — those are committed fixtures. Use a throwaway dir.
 
 ```bash
-export WS="$HOME/construct-smoke"
-rm -rf "$WS"            # only if re-running this playbook
+export INSTALL_ROOT="$HOME/construct-smoke"
+export WS="$INSTALL_ROOT/ai-gateways"
+rm -rf "$INSTALL_ROOT"  # only if re-running this playbook
+mkdir -p "$INSTALL_ROOT"
 construct init "$WS"
 ```
+
+> The workspace lives *inside* an install root. Most commands take the workspace
+> (`-w "$WS"`); the `views` commands take the install root (`--install-root
+> "$INSTALL_ROOT"`), because the views generator discovers workspaces by scanning
+> the install root's children.
 
 `init` prompts interactively. Suggested answers:
 
@@ -330,7 +337,7 @@ Streamlit ops dashboard.
 ### 7.1 Validate view data contracts
 
 ```bash
-construct views validate -w "$WS"
+construct views validate --install-root "$INSTALL_ROOT"
 ```
 
 **Expected:** `Views data validation: P passed, F failed, M missing`, one line per file.
@@ -408,7 +415,7 @@ Every data command supports `--json` / `-j` for agent/UI consumption.
 
 ```bash
 construct knowledge connection list -w "$WS" --json
-construct views validate -w "$WS" --json
+construct views validate --install-root "$INSTALL_ROOT" --json
 ```
 
 **Pass:** Output is well-formed JSON suitable for programmatic use.

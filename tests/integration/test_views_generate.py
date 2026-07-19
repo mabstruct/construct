@@ -140,10 +140,10 @@ def test_models_still_forbid_unknown_fields() -> None:
 
 
 def test_views_generate_cli_command_generates_clean(scaffolded_install_root: Path) -> None:
-    """`construct views generate` runs the generator; `views validate` confirms it.
+    """`construct views generate` runs the generator and reports success.
 
-    The two commands are the D-03 pair: neither routes through the capability
-    registry, so this is the only place the CLI path is proven end to end.
+    The generate/validate pair is the D-03 holdout: neither routes through the
+    capability registry, so this is the only place the CLI path is proven.
     """
     from typer.testing import CliRunner
 
@@ -155,8 +155,49 @@ def test_views_generate_cli_command_generates_clean(scaffolded_install_root: Pat
         app, ["views", "generate", "--install-root", str(scaffolded_install_root)]
     )
     assert result.exit_code == 0, result.stdout
+    assert "0 validation errors" in result.stdout
+
+    data_dir = scaffolded_install_root / "views" / "build" / "data"
+    assert (data_dir / "stats.json").exists()
+    assert (data_dir / "demo" / "cards.json").exists()
+
+
+def test_views_validate_does_not_yet_accept_generated_bytes(
+    scaffolded_install_root: Path,
+) -> None:
+    """Characterisation test for the writer/validator divergence (carried from 15-02).
+
+    ``generate()`` validates an *adapted projection* of each file (generate.py's
+    ``_FILE_MODEL_MAP`` / per-file adapters) but writes the **raw parser dict**.
+    ``views validate`` applies the same models to the raw bytes with no adapter,
+    so three files the generator called clean are rejected on disk.
+
+    This is pre-existing — before this plan nothing wired generation, so
+    ``views validate`` had no generator output to disagree with and the conflict
+    could not be observed. Resolving it means choosing which shape is canonical
+    (widen the models to the written bytes, share the generator's adapter with
+    the validator, or write the projection), a contract decision with Phase 16/17
+    SPA consequences that is deliberately NOT taken inside Plan 03.
+
+    This test pins the current, honest state. **It must be deleted when the
+    divergence is resolved** — it turns red the moment validate starts passing.
+    """
+    from typer.testing import CliRunner
+
+    from construct.cli import app
+
+    runner = CliRunner()
+    runner.invoke(app, ["views", "generate", "--install-root", str(scaffolded_install_root)])
 
     validated = runner.invoke(
         app, ["views", "validate", "--install-root", str(scaffolded_install_root)]
     )
-    assert validated.exit_code == 0, validated.stdout
+
+    assert validated.exit_code == 1, validated.stdout
+    # The exact divergent set, so a change in its shape is visible rather than silent.
+    failing = {
+        line.strip().removeprefix("✗ ").strip()
+        for line in validated.stdout.splitlines()
+        if line.strip().startswith("✗")
+    }
+    assert failing == {"stats.json", "demo/connections.json", "demo/events.json"}, failing

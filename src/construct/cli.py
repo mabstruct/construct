@@ -860,21 +860,61 @@ def daily_inspect_cmd(
 views_app = typer.Typer(
     no_args_is_help=True,
     name="views",
-    help="Validate and manage views data contracts.",
+    help="Generate and validate views data contracts for an install root.",
 )
 app.add_typer(views_app)
 
 
 @views_app.command()
+def generate(
+    ctx: typer.Context,
+    install_root: Path = typer.Option(Path.cwd(), "--install-root"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """Generate the views JSON data files from workspace state.
+
+    Reads every workspace under the install root and writes
+    views/build/data/*.json. Validation errors are fatal; content warnings
+    describe source material and do not fail the run.
+    """
+    from construct.views.generate import generate as run_generate
+
+    report = run_generate(install_root)
+
+    if json_output:
+        typer.echo(json.dumps({
+            "success": bool(report.success) and not report.validation_errors,
+            "build_id": report.build_id,
+            "total_files_written": report.total_files_written,
+            "validation_errors": list(report.validation_errors),
+            "warnings": list(report.warnings),
+        }, indent=2))
+    else:
+        typer.echo(
+            f"Views data generation: build {report.build_id}, "
+            f"{report.total_files_written} files written, "
+            f"{len(report.validation_errors)} validation errors, "
+            f"{len(report.warnings)} content warnings"
+        )
+        for err in report.validation_errors:
+            typer.secho(f"  ✗ validation error: {err}", fg=typer.colors.RED)
+        for warn in report.warnings:
+            typer.echo(f"  ! warning (advisory): {warn}")
+
+    if report.validation_errors:
+        raise typer.Exit(code=1)
+
+
+@views_app.command()
 def validate(
     ctx: typer.Context,
-    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    install_root: Path = typer.Option(Path.cwd(), "--install-root"),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Validate views data files against their Pydantic schemas.
 
-    Reads views/build/data/*.json and validates each file against its
-    declared contract model. Reports per-file pass/fail.
+    Reads <install-root>/views/build/data/*.json and validates each file
+    against its declared contract model. Reports per-file pass/fail.
     """
     from construct.views.models import (
         ArticlesFile,
@@ -890,7 +930,7 @@ def validate(
         validate_data,
     )
 
-    build_data_dir = workspace / "views" / "build" / "data"
+    build_data_dir = install_root / "views" / "build" / "data"
     if not build_data_dir.is_dir():
         typer.echo(f"ERROR: No views data directory at {build_data_dir}")
         raise typer.Exit(code=1)
