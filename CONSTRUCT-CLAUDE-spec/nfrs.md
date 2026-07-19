@@ -71,7 +71,9 @@ When using CONSTRUCT through Claude, the following data is sent to Anthropic:
 - Workspace file contents (when skills read configs)
 - Web search queries (during research cycles)
 
-This is identical to any Claude conversation. Users control what's in their workspace. The `governance.yaml` and `model-routing.yaml` files are informational in the Claude-native approach — Claude handles all tasks.
+This is identical to any Claude conversation. Users control what's in their workspace. The `governance.yaml` file is informational in the Claude-native approach — Claude handles all tasks.
+
+LLM provider configuration is **not** read from `model-routing.yaml`. The authority is `src/construct/llm/config.yaml`, resolved by `src/construct/llm/config.py` in this order: an explicit path argument, then the `CONSTRUCT_LLM_CONFIG` environment variable, then the packaged default. `.construct/model-routing.yaml` is **deprecated** and inert — it controls no routing and is retained only for workspace-contract stability, since it remains a `REQUIRED_PATHS` entry and removing it would be a workspace-format change.
 
 ---
 
@@ -82,7 +84,7 @@ This is identical to any Claude conversation. Users control what's in their work
 | Knowledge graph | Local files. Sent to Claude only during active conversation. |
 | Web search | Claude's web search — governed by Anthropic's privacy policy |
 | Telemetry | None from CONSTRUCT. Claude's standard telemetry applies. |
-| Third-party APIs | None. Web search replaces dedicated API clients. |
+| Third-party APIs | Tavily web search is available but opt-in. The shipped `.construct/search.yaml` sets `default_provider: mock`, so nothing leaves the machine by default; search queries egress to Tavily only when it is selected there and a `TAVILY_API_KEY` is configured. |
 
 ---
 
