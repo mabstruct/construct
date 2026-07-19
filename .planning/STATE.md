@@ -178,4 +178,6 @@ Resume file: .planning/phases/13-daily-cycle-composition/13-CONTEXT.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- **Read `.planning/milestones/v0.4-MILESTONE-AUDIT.md` first** (retrospective audit, 2026-07-19 — closes the "no milestone audit run" gap noted in RETROSPECTIVE.md). It proposes a bounded **v0.4.1** patch milestone: 3 live defects, 4 doc workstreams, 1 coverage gap.
+- Start v0.4.1 with /gsd-new-milestone, using that audit's "Proposed v0.4.1 Scope" section as requirements input.
+- Note: DOC-03 (durable-checkpointer invariant) gates v0.5 design and should land before v0.5 planning.
