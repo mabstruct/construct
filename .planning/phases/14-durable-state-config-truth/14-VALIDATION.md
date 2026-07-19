@@ -56,7 +56,16 @@ the Q1 resolver.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| _pending planner task breakdown_ | — | — | DOC-03 / FIX-02 | — | N/A | grep / unit | — | — | ⬜ pending |
+| T1 write adr-0004 | 14-01 | 1 | DOC-03 | T-14-01-01/03 | Archive untouched; no unearned durability claim | grep + git | `grep -qE '^## Decision' <adr>` + `[ -z "$(git status --porcelain .planning/milestones/)" ]` | ❌ new | ⬜ pending |
+| T2 arch carve-out + ADR index | 14-01 | 1 | DOC-03 | — | N/A | grep | `grep -F 'Add a database that owns part of the truth' arch \| grep -qF adr-0004` | ✅ | ⬜ pending |
+| T1 scope §2 invariant | 14-02 | 2 | DOC-03 | T-14-02-03 | Guarantee scoped, not silently weakened | grep | `[ "$(grep -c 'No databases, no caches' nfrs.md)" = 0 ]` + `grep -qF NetworkX nfrs.md` | ✅ | ⬜ pending |
+| T2 §3 authority + §4 Tavily | 14-02 | 2 | DOC-03 / FIX-02 | T-14-02-01/02 | Conditional egress claim; real authority named | grep | `grep -qi tavily nfrs.md` + `grep -qF 'llm/config.yaml' nfrs.md` | ✅ | ⬜ pending |
+| T1 artifacts + 4th class | 14-03 | 2 | DOC-03 | T-14-03-01/02 | Contract code untouched; sqlite not under Support | grep + pytest | `.venv/bin/python -m pytest tests/unit/test_workspace_contracts.py -q` | ✅ | ⬜ pending |
+| T2 deprecate in contract | 14-03 | 2 | FIX-02 | T-14-03-03 | Exhaustive deprecation; scaffolding intact | grep + pytest | `[ "$(grep -i model-routing wc.md \| grep -civ deprecat)" = 0 ]` | ✅ | ⬜ pending |
+| T3 deprecate in topology | 14-03 | 2 | FIX-02 | T-14-03-03/04 | Python column preserved as historical | grep + pytest | `[ "$(grep -i model-routing ct.md \| grep -civ deprecat)" = 0 ]` + `pytest -q` | ✅ | ⬜ pending |
+| T1 resolver test (RED) | 14-04 | 1 | FIX-02 | — | N/A | unit | `.venv/bin/python -m pytest tests/unit/test_llm_config_resolution.py -q` (expect RED) | ❌ new | ⬜ pending |
+| T2 extract resolver (GREEN) | 14-04 | 1 | FIX-02 | T-14-04-04/05 | Identical resolution semantics; no added validation | unit | `.venv/bin/python -m pytest -q` → 443 passed | ✅ | ⬜ pending |
+| T3 read-only sidebar | 14-04 | 1 | FIX-02 | T-14-04-01/03 | No editable path field; path-only, never contents | grep + manual | `[ "$(grep -cE 'load_llm_config\(' streamlit_app.py)" = 0 ]` + human-check | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -64,6 +73,9 @@ the Q1 resolver.
 
 ## Wave 0 Requirements
 
+- [x] **Planned as plan 14-04 Task 1 (RED) + Task 2 (GREEN).** Q1 resolved in favour of Option A
+      (extract a public resolver); the authorization rationale is recorded in 14-04-PLAN.md
+      `<scope_decision>`. Expected final collected count: **443** (439 baseline + 4).
 - [ ] `tests/unit/test_llm_config_resolution.py` — covers `resolve_llm_config_path()` (Q1 decision:
       extract a public resolver in `src/construct/llm/config.py`). Must assert all three branches of
       the resolution order: explicit arg → `CONSTRUCT_LLM_CONFIG` env → packaged default, and that

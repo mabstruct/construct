@@ -81,7 +81,11 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   3. The Streamlit ops UI's LLM config path default resolves to the file the runtime actually reads — `ui/streamlit_app.py`'s default agrees with `llm/config.py`'s resolution order (including the `CONSTRUCT_LLM_CONFIG` override).
   4. `model-routing.yaml` has exactly one recorded fate: either it is gone from `services/init.py` new-workspace scaffolding, or it is scaffolded and marked deprecated in every doc that currently calls it authoritative (`workspace-contract.md` Support table, `config-topology.md:56,135`).
   5. Full pytest suite green (≥439 tests) with no new `_KNOWN_BROKEN` entries.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 14-01-PLAN.md — Create adr-0004 (durable workflow checkpoints) and add the named carve-out + complete ADR index to `architecture-overview.md` [wave 1]
+- [ ] 14-02-PLAN.md — Scope `nfrs.md` §2's rebuild guarantee, rewrite "No Hidden State", name the LLM config authority at §3, correct §4 for Tavily [wave 2]
+- [ ] 14-03-PLAN.md — Add the three missing artifacts + durable-orchestration-state class to `workspace-contract.md`; deprecate `model-routing.yaml` there and in `config-topology.md` [wave 2]
+- [ ] 14-04-PLAN.md — Extract `resolve_llm_config_path()` with tests; make the Streamlit sidebar display the effective resolved path read-only [wave 1]
 
 ### Phase 15: views.generate_data Resolution
 **Goal**: A user or agent invoking `views.generate_data` over CLI or MCP gets real generated view data or an honest, documented absence — never a permanent-failure stub.
