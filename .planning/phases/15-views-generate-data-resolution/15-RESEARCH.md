@@ -87,7 +87,9 @@ No new libraries. This phase moves existing code and reconciles existing contrac
 |---------|--------|--------|
 | PyYAML | **Not in `pyproject.toml` dependencies.** Present in `.venv` as 6.0.3 via transitive pull (langchain-core). [VERIFIED: `pip show pyyaml` returns nothing under `[project] dependencies`; `import yaml` succeeds → 6.0.3] | Two modules D-08 vendors (`lib/frontmatter.py`, `lib/parse_domains.py`) do `import yaml` at module load. `views/generate.py:281` also does a function-local `import yaml`. Vendoring makes this a **shipped-code** import that works only by accident of another package's transitive tree. |
 
-**Two viable resolutions — planner must pick one:**
+**RESOLVED (user, 2026-07-19): Option A — declare `pyyaml>=6` in `pyproject.toml`.** D-08's "move, not a rewrite" invariant is load-bearing for D-02, so the vendored parsers stay untouched. Option B (port to ruamel) is recorded as a v0.6 convention-cleanup item. Original analysis retained:
+
+**Two viable resolutions:**
 
 | Option | Change | Tradeoff |
 |--------|--------|----------|
@@ -400,7 +402,9 @@ assert report.success and not report.validation_errors
 
 ## Open Questions
 
-**OQ-1 (blocking Wave 2): Does D-02 move `views/models.py`, or `_FILE_MODEL_MAP` too?**
+**OQ-1 — RESOLVED (user, 2026-07-19): reading (a), the narrow one. `views/models.py` moves; `_FILE_MODEL_MAP` is left alone.** Reading (b) is recorded below as a v0.6 candidate. Original analysis retained for the record:
+
+**OQ-1 (was blocking Wave 2): Does D-02 move `views/models.py`, or `_FILE_MODEL_MAP` too?**
 
 - **What we know:** D-02 says "the models move, not the parsers," and rejects narrowing the parsers *because it changes what lands in `views/build/data/`*. For `domains.json` and `bridges.json` there is no ambiguity — the adapters are pass-throughs, so only the models change. For `cards.json` the adapter (`generate.py:118-127`) invents the shape: it renames `connects_to`→`connections` and `summary_excerpt`→`summary`, and drops six parser fields.
 - **What's unclear:** an adapter is neither a parser nor a model. D-02 does not say which side of its rule it falls on.
@@ -409,6 +413,7 @@ assert report.success and not report.validation_errors
   - **(b) Wide — adapters pass through, models absorb the spec shape.** `cards.json` regains `connects_to`, `summary_excerpt`, `tags`, `author`, `sources`, `body_markdown`. Fully spec-conformant. **But** it changes what lands in `views/build/data/` — precisely what D-02's rejected branch was rejected for, even though the rejection targeted the parsers.
 - **Recommendation: (a), the narrow reading.** It is the minimal change that satisfies criterion 1, keeps the diff auditable, and cannot break an unknown consumer. Reading (b) is a genuine improvement but is a data-contract change, and this milestone's own rule is "no new runtime capability — fix what exists" (`REQUIREMENTS.md`, Out of Scope). Record (b) as a v0.6 candidate: *"align `cards.json` with spec-v02-data-model §5.2."*
 - **Note for the planner:** F9 weakens the stated rationale in both directions — see below. The recommendation stands on milestone scope, not on SPA risk.
+- **DECISION (user, 2026-07-19): (a) narrow — models only.** Set `CardRecord.connections: list[str]`; adapters at `generate.py:95-165` are not touched this phase. Rationale accepted as stated: v0.4.1's "no new runtime capability — fix what exists" rule governs, and the minimal diff cannot break an unverifiable out-of-tree consumer. **Carry to v0.6 backlog:** "align `cards.json` with spec-v02-data-model §5.2" (reading (b)). The planner must treat any adapter reshaping as out of scope.
 
 **OQ-2 (non-blocking): F9 — no in-tree consumer of generated view data exists.**
 
