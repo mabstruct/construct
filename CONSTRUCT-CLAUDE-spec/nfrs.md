@@ -40,16 +40,18 @@ For larger workspaces:
 |-------------|--------|----------------|
 | Workspace integrity | Card files never corrupted by agent failure | Atomic file writes; cards are small individual files |
 | Partial failure | One skill step failing doesn't corrupt workspace | Skills have independent steps |
-| Rebuild guarantee | Workspace files are self-contained — no hidden state | No databases, no caches, no derived state that's required |
+| Rebuild guarantee | Knowledge state — `cards/`, `refs/`, `connections.json`, `search-seeds.json`, `log/events.jsonl`, `digests/` — is self-contained in workspace files | No database owns any part of knowledge state; workflow checkpoints are the one carve-out, scoped below |
 | Event log durability | `events.jsonl` is append-only | Never truncated or edited by skills |
 
 ### The "No Hidden State" Advantage
 
-Unlike the Python approach, the Claude-native system has no derived state that can get out of sync:
-- No SQLite index to rebuild
+Unlike the Python approach, the Claude-native system keeps no derived copy of knowledge state that can get out of sync:
+- No SQLite index of cards, refs, or connections to rebuild
 - No NetworkX graph to recompute
 - No views/ directory to refresh
-- Everything is in the files — if the files are correct, the system is correct
+- Knowledge state is in the files — if the knowledge files are correct, the knowledge graph is correct
+
+One deliberate exception exists. `.construct/workflow/*.sqlite` holds pending human-review decisions and the scored findings behind them, and that content is **not reconstructible** from knowledge state: a run paused at its review gate has appended nothing to `log/events.jsonl` yet. Losing a checkpoint costs a completed search-and-scoring cycle and any decisions entered but not yet resumed; it never corrupts or loses canonical knowledge, and the affected run is simply re-run from the start. These files are not backed up and not recoverable. See `adrs/adr-0004-durable-workflow-checkpoints.md`.
 
 ---
 
