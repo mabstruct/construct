@@ -400,7 +400,7 @@ assert report.success and not report.validation_errors
 | A4 | Option A (declare PyYAML) is preferable to Option B (port to ruamel) | Standard Stack | Low — turns on reading D-08's "move, not a rewrite" as binding. If the project prefers dependency minimalism, B is defensible but contradicts D-08. |
 | A5 | A wheel build picks up `views/lib/` automatically given `__init__.py` | Runtime State | Low — standard hatchling package-directory behaviour, but this project has a custom build hook (`hatch_build.py`) that was not inspected. **Worth one build-and-inspect check.** |
 
-## Open Questions
+## Open Questions (ALL RESOLVED / ACKNOWLEDGED — see per-item markers)
 
 **OQ-1 — RESOLVED (user, 2026-07-19): reading (a), the narrow one. `views/models.py` moves; `_FILE_MODEL_MAP` is left alone.** Reading (b) is recorded below as a v0.6 candidate. Original analysis retained for the record:
 
@@ -415,11 +415,15 @@ assert report.success and not report.validation_errors
 - **Note for the planner:** F9 weakens the stated rationale in both directions — see below. The recommendation stands on milestone scope, not on SPA risk.
 - **DECISION (user, 2026-07-19): (a) narrow — models only.** Set `CardRecord.connections: list[str]`; adapters at `generate.py:95-165` are not touched this phase. Rationale accepted as stated: v0.4.1's "no new runtime capability — fix what exists" rule governs, and the minimal diff cannot break an unverifiable out-of-tree consumer. **Carry to v0.6 backlog:** "align `cards.json` with spec-v02-data-model §5.2" (reading (b)). The planner must treat any adapter reshaping as out of scope.
 
+**OQ-2 — ACKNOWLEDGED (non-blocking); not resolvable from this repo.** An out-of-tree deployed SPA is unfalsifiable from here, so this is an inherent unknown, not a decision Phase 15 can make. D-02 stands on F2 (spec corroboration), which is the stronger leg. Carried to Phase 17, which owns the architecture doc set. **Orchestrator note (2026-07-19):** REQUIREMENTS.md DOC-01 asserts `architecture-overview.md` cites "the non-existent `spec-v02-data-model.md`" — that premise is FALSE; the file exists at `CONSTRUCT-CLAUDE-spec/spec-v02-data-model.md` (25KB) and F2's §5.1/§5.2 citations are valid. Phase 17 must correct DOC-01's premise rather than inherit it.
+
 **OQ-2 (non-blocking): F9 — no in-tree consumer of generated view data exists.**
 
 - **What we know:** D-02 reasons that narrowing parsers "changes what lands in `views/build/data/`, which deployed SPAs already read." Verified: `views/build/` **does not exist** in this repo. The only SPA, `views/design-example/`, imports its own bundled `src/data/*.json` (`Home.jsx:3-4`) and never fetches generated data. No `.jsx` references `card_count`, `metrics`, `connects_to`, or `top_domain_pairs`. [VERIFIED: find + grep]
 - **What's unclear:** whether a deployed SPA exists outside this repo. Cannot be determined from here.
 - **Recommendation:** Do not weaken D-02 — F2 (spec corroboration) replaces the SPA leg with a stronger one, so the decision holds on better evidence than it was made on. **Record this in the phase summary**: the "deployed SPA is ground truth" premise is unverifiable in-repo, and the v0.2 data-model spec is the durable authority. This matters for Phase 17, which owns the architecture doc set.
+
+**OQ-3 — RESOLVED procedurally in plan 15-05 Task 1:** delete `debounced_hook.py` / `debounced-hook.sh` / `requirements.txt`, but only behind a registration-grep guard so a live hook cannot be silently broken. Original analysis:
 
 **OQ-3 (non-blocking): `debounced_hook.py` fate under D-09.**
 

@@ -28,6 +28,18 @@ is the record of which side of that fork each capability lands on.
 | Debounced file-watch auto-regeneration (`debounced_hook.py` / `debounced-hook.sh`) | OPT-OUT | explicitly out of scope — D-09 deletes these with the skill's standalone runtime. Re-homing debounce behaviour in the Python layer is new capability, excluded for v0.4.1 (RESEARCH OQ-3). |
 | `cards.json` full spec-§5.2 shape via `_FILE_MODEL_MAP` adapter widening | OPT-OUT | not needed yet — OQ-1 resolved to reading (a), the narrow one. Adapter reshaping is out of scope this phase; "align `cards.json` with spec-v02-data-model §5.2" is recorded as a v0.6 backlog candidate. |
 
+## Assumption-delta checkpoint — recorded once, phase-level
+
+The `assumption-delta` checkpoint fired `detected: true` on a **single** signal:
+`kind: pluralization, term: "second"`, matching *"sequenced second because its outcome dictates
+Phase 16 and 17 content"* in the ROADMAP section. That is ordinal phase sequencing, not the
+introduction of a second variant of a modeled thing — a **false positive**.
+
+The detector runs once over the phase scope, so the decision is phase-level and is recorded once,
+in `15-02-PLAN.md`'s `<assumption_delta_decision>` block, as **`no-change`**. It is deliberately not
+duplicated into 15-01 / 15-03 / 15-04 / 15-05: five copies of one phase-level `no-change` finding
+would imply five independent determinations were made. The checkpoint is advisory and non-blocking.
+
 ## Notes for downstream phases
 
 - **Phase 16 (FIX-03)** inherits a `_KNOWN_BROKEN` allowlist of exactly 4 entries after this phase.
