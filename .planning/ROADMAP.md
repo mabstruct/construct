@@ -84,7 +84,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. `model-routing.yaml` has exactly one recorded fate: either it is gone from `services/init.py` new-workspace scaffolding, or it is scaffolded and marked deprecated in every doc that currently calls it authoritative (`workspace-contract.md` Support table, `config-topology.md:56,135`).
   5. Full pytest suite green (≥439 tests) with no new `_KNOWN_BROKEN` entries.
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 **Wave 1**
 
 - [x] 14-01-PLAN.md — Create adr-0004 (durable workflow checkpoints) and add the named carve-out + complete ADR index to `architecture-overview.md` [wave 1]
@@ -92,7 +92,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 14-02-PLAN.md — Scope `nfrs.md` §2's rebuild guarantee, rewrite "No Hidden State", name the LLM config authority at §3, correct §4 for Tavily [wave 2]
+- [x] 14-02-PLAN.md — Scope `nfrs.md` §2's rebuild guarantee, rewrite "No Hidden State", name the LLM config authority at §3, correct §4 for Tavily [wave 2]
 - [ ] 14-03-PLAN.md — Add the three missing artifacts + durable-orchestration-state class to `workspace-contract.md`; deprecate `model-routing.yaml` there and in `config-topology.md` [wave 2]
 
 ### Phase 15: views.generate_data Resolution
@@ -187,7 +187,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete | 2026-06-29 |
 | 12. Curation L3 Gates + Review Application | v0.4 | 6/6 | Complete | 2026-07-05 |
 | 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete | 2026-07-07 |
-| 14. Durable-State & Config Truth | v0.4.1 | 2/4 | In Progress|  |
+| 14. Durable-State & Config Truth | v0.4.1 | 3/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 0/? | Not started | - |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 0/? | Not started | - |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |

@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 14
 current_phase_name: durable-state-config-truth
 status: executing
-stopped_at: Completed 14-04-PLAN.md
-last_updated: "2026-07-19T20:05:11.555Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-07-19T20:11:01.573Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 14 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 14 (durable-state-config-truth) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
-Progress: [█████░░░░░] 50% (0/4 phases)
+Progress: [████████░░] 75% (0/4 phases)
 Last activity: 2026-07-19 — Phase 14 execution started
 
 ## Performance Metrics
@@ -71,6 +71,7 @@ Last activity: 2026-07-19 — Phase 14 execution started
 |------|----------|-------|-------|
 | Phase 14 P01 | 12m | 2 tasks | 2 files |
 | Phase 14 P04 | 14m | 3 tasks | 3 files |
+| Phase 14 P02 | 9min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,9 @@ Recent decisions affecting current work:
 - [Phase ?]: adr-0004 is a new ADR rather than an amendment to adr-0003, for discoverability; it discharges Phase 10 D-02
 - [Phase ?]: [Phase 14-04]: resolve_llm_config_path extracted as a pure refactor so the ops UI and load_llm_config share one resolution code path (D-10/Q1)
 - [Phase ?]: [Phase 14-04]: sidebar LLM config path is a read-only caption, not a disabled input — an editable path wired to a loader would make the ops dashboard an arbitrary-file-read primitive
+- [Phase 14]: nfrs.md §2's rebuild guarantee is scoped by naming knowledge state explicitly, not by softening wording — a guarantee that lists what it covers stays auditable
+- [Phase 14]: nfrs.md §3 names src/construct/llm/config.yaml as the LLM config authority; model-routing.yaml marked deprecated and inert, retained only for REQUIRED_PATHS workspace-contract stability
+- [Phase 14]: nfrs.md §4's Tavily row leads with default_provider: mock so a reader stopping after one sentence has a true picture — corrects the record without over-correcting into a false egress claim
 
 ### Pending Todos
 
@@ -196,8 +200,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T20:05:11.547Z
-Stopped at: Completed 14-04-PLAN.md
+Last session: 2026-07-19T20:10:54.535Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
