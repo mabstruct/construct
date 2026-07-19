@@ -3,16 +3,17 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 14
-status: planned
-stopped_at: Phase 14 planned
-last_updated: "2026-07-19T19:54:07.102Z"
+current_phase_name: durable-state-config-truth
+status: executing
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-07-19T20:00:56.062Z"
 last_activity: 2026-07-19
-last_activity_desc: Phase 14 planned — 4 plans in 2 waves
+last_activity_desc: Phase 14 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** v0.4.1 Surface Integration & Documentation Truth — Phases 14–17 roadmapped, 9/9 requirements mapped. Next: `/gsd-execute-phase 14`.
+**Current focus:** Phase 14 — durable-state-config-truth
 
 ## Current Position
 
-Phase: 14 — Durable-State & Config Truth (planned)
-Plan: — (0/4 complete)
+Phase: 14 (durable-state-config-truth) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Progress: [░░░░░░░░░░] 0% (0/4 phases)
-Last activity: 2026-07-19 — Phase 14 planned: 4 plans in 2 waves (DOC-03, FIX-02)
+Progress: [███░░░░░░░] 25% (0/4 phases)
+Last activity: 2026-07-19 — Phase 14 execution started
 
 ## Performance Metrics
 
@@ -64,6 +65,11 @@ Last activity: 2026-07-19 — Phase 14 planned: 4 plans in 2 waves (DOC-03, FIX-
 | Phase 11 P03 | 20min | 3 tasks | 4 files |
 | Phase 12 P02 | 15min | 3 tasks | 3 files |
 | Phase 12 P03 | 25min | 2 tasks | 2 files |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 14 P01 | 12m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -154,6 +160,9 @@ Recent decisions affecting current work:
 - [Phase 12-02]: PromotionDecision + CardEvaluateInput defined in curation_promote.py (extra=forbid) to avoid catalog.py circular import; target_lifecycle limited to growing|mature|None; connection-typing input is a bridge_detect candidate pair with a required ConnectionType enum
 - [Phase 12-03]: interrupt-only process_inbox keyed by the module constant _CURATION_GATE_ID ("curation.review", never state["gate_id"]); three producers append into ONE operator.add gate_queue before the single pause; empty-queue conditional short-circuit means offline no-mock runs (provider total-outage → zero proposals) complete without pausing, keeping every legacy Phase-11 test green
 - [Phase 12-03]: added a minimal resume-only review_curation_run in Plan 03 (its -k target test_single_consolidated_gate calls it) with NO write nodes; Plan 04 grafts the post-gate apply nodes onto the same runner
+- [Phase ?]: .construct/workflow/*.sqlite is sanctioned durable orchestration state holding pending human-review decisions not reconstructible from layer 1 (adr-0004)
+- [Phase ?]: The workspace rebuild guarantee is scoped to knowledge state, not the whole workspace (adr-0004)
+- [Phase ?]: adr-0004 is a new ADR rather than an amendment to adr-0003, for discoverability; it discharges Phase 10 D-02
 
 ### Pending Todos
 
@@ -184,9 +193,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T19:54:07.102Z
-Stopped at: Phase 14 planned — 4 plans, 2 waves
-Resume file: .planning/phases/14-durable-state-config-truth/14-01-PLAN.md
+Last session: 2026-07-19T20:00:47.672Z
+Stopped at: Completed 14-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

@@ -84,10 +84,10 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. `model-routing.yaml` has exactly one recorded fate: either it is gone from `services/init.py` new-workspace scaffolding, or it is scaffolded and marked deprecated in every doc that currently calls it authoritative (`workspace-contract.md` Support table, `config-topology.md:56,135`).
   5. Full pytest suite green (≥439 tests) with no new `_KNOWN_BROKEN` entries.
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 **Wave 1**
 
-- [ ] 14-01-PLAN.md — Create adr-0004 (durable workflow checkpoints) and add the named carve-out + complete ADR index to `architecture-overview.md` [wave 1]
+- [x] 14-01-PLAN.md — Create adr-0004 (durable workflow checkpoints) and add the named carve-out + complete ADR index to `architecture-overview.md` [wave 1]
 - [ ] 14-04-PLAN.md — Extract `resolve_llm_config_path()` with tests; make the Streamlit sidebar display the effective resolved path read-only [wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -187,7 +187,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 11. Curation PIPE Steps | v0.4 | 3/3 | Complete | 2026-06-29 |
 | 12. Curation L3 Gates + Review Application | v0.4 | 6/6 | Complete | 2026-07-05 |
 | 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete | 2026-07-07 |
-| 14. Durable-State & Config Truth | v0.4.1 | 0/? | Not started | - |
+| 14. Durable-State & Config Truth | v0.4.1 | 1/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 0/? | Not started | - |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 0/? | Not started | - |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |
