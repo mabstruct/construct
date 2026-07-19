@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 15
 current_phase_name: views-generate-data-resolution
 status: executing
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-07-19T21:46:06.944Z"
+stopped_at: Completed 15-03-PLAN.md
+last_updated: "2026-07-19T21:56:19.420Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 50
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 15 (views-generate-data-resolution) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
-Progress: [███████░░░] 67% (0/4 phases)
+Progress: [████████░░] 78% (0/4 phases)
 Last activity: 2026-07-19 — Phase 15 execution started
 
 ## Performance Metrics
@@ -76,6 +76,7 @@ Last activity: 2026-07-19 — Phase 15 execution started
 | Phase 14 P03 | ~14m | 3 tasks | 2 files |
 | Phase 15 P01 | 21min | 3 tasks | 18 files |
 | Phase 15 P02 | 24min | 3 tasks | 4 files |
+| Phase 15 P03 | 38min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,9 @@ Recent decisions affecting current work:
 - [Phase ?]: F6 Option A: declared pyyaml>=6 rather than porting vendored parsers to ruamel.yaml; ruamel port deferred to v0.6
 - [Phase ?]: views models are reconciled to parser output, not the other way round: parsers are ground truth, spec-v02-data-model.md corroborates (D-02)
 - [Phase ?]: DomainRecord.cross_domain_links typed as a bare list — three element shapes exist in the wild and parse_domains guards it with only isinstance(list)
+- [Phase ?]: [Phase 15-03]: GenerateReport->OperationResult: success requires report.success AND zero validation_errors; warnings are advisory and reach only message/data, never errors (D-04)
+- [Phase ?]: [Phase 15-03]: -w dropped outright on both views commands rather than kept as an alias — a workspace-lettered flag for an install-root option perpetuates the misnaming D-05/D-06 correct
+- [Phase ?]: [Phase 15-03]: views group stays out of the capability registry (D-03) — CLI and MCP reach generate() by independent paths, RT-01/RT-02 stays open, drift covered by tests on both paths
 
 ### Pending Todos
 
@@ -195,6 +199,7 @@ Recent decisions affecting current work:
 - v0.5 planning is blocked on DOC-03 (Phase 14) — the durable-checkpointer invariant must be settled before a UI-primary shell reasons about resumable gate state.
 - Watch scope on FIX-01: RT-01/RT-02 registry unification stays out of v0.4.1 except, if unavoidable, the views command group alone.
 - generate() validates an adapted projection but writes the raw parser dict, so the schema gate does not validate the bytes the SPA consumes — Plan 03 must decide before wiring a real handler
+- views validate rejects 3 of 8 files views generate writes (stats.json, <ws>/connections.json, <ws>/events.json): generate() validates an adapted projection but writes the raw parser dict. Pre-existing, escalated by 15-03 as a Rule 4 contract decision, pinned by test_views_validate_does_not_yet_accept_generated_bytes. Needs an owner before Phase 16/17 SPA contract work.
 
 ## Deferred Items
 
@@ -212,8 +217,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T21:46:06.935Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-07-19T21:56:19.410Z
+Stopped at: Completed 15-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -108,7 +108,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. Running a daily cycle's post-run views refresh either produces view data or reports an honest, actionable skip — its remediation message never tells the user to run a command that does not exist.
   5. Full pytest suite green with no new `_KNOWN_BROKEN` entries; if the views command group had to be touched, the bounded RT-01/RT-02 exception is scoped to that group only.
 
-**Plans**: 2/5 plans executed
+**Plans**: 3/5 plans executed
 
 **Wave 1** *(parallel)*
 
@@ -117,7 +117,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 15-03-PLAN.md — Wire the real `views.generate_data` handler, rename the contract to `install_root`, add `construct views generate`, delete the views entry from `_KNOWN_BROKEN` [wave 2]
+- [x] 15-03-PLAN.md — Wire the real `views.generate_data` handler, rename the contract to `install_root`, add `construct views generate`, delete the views entry from `_KNOWN_BROKEN` [wave 2]
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -202,6 +202,6 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 12. Curation L3 Gates + Review Application | v0.4 | 6/6 | Complete | 2026-07-05 |
 | 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete | 2026-07-07 |
 | 14. Durable-State & Config Truth | v0.4.1 | 4/4 | In Progress|  |
-| 15. views.generate_data Resolution | v0.4.1 | 2/5 | In Progress|  |
+| 15. views.generate_data Resolution | v0.4.1 | 3/5 | In Progress|  |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 0/? | Not started | - |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |
