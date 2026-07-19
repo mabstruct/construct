@@ -108,7 +108,21 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. Running a daily cycle's post-run views refresh either produces view data or reports an honest, actionable skip — its remediation message never tells the user to run a command that does not exist.
   5. Full pytest suite green with no new `_KNOWN_BROKEN` entries; if the views command group had to be touched, the bounded RT-01/RT-02 exception is scoped to that group only.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1** *(parallel)*
+
+- [ ] 15-01-PLAN.md — Vendor the 15-module views lib into `src/construct/views/lib/`, delete the skill-directory path injection, declare PyYAML, guard the coupling with a unit test [wave 1]
+- [ ] 15-02-PLAN.md — Reconcile `views/models.py` with the parser output (D-02) and prove `generate()` clean on both a fresh and a populated install root [wave 1]
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 15-03-PLAN.md — Wire the real `views.generate_data` handler, rename the contract to `install_root`, add `construct views generate`, delete the views entry from `_KNOWN_BROKEN` [wave 2]
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 15-04-PLAN.md — Move views-refresh ownership into the Python workflow layer; wire `curation.run`, `research.run`, and `daily.run` as side effects that never flip status [wave 3]
+- [ ] 15-05-PLAN.md — Reduce the views skill to a CLI wrapper, remove the three refresh doc sections, record the D-11 reversal in adr-0005 + PROJECT.md [wave 3]
 
 ### Phase 16: Invocation & User-Doc Truth
 
