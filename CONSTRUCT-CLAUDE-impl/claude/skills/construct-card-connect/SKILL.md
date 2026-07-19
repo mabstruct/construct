@@ -96,21 +96,6 @@ Show direction (→ outgoing, ← incoming, ↔ symmetric).
 
 The CLI automatically logs connection events. No manual log entry needed.
 
-### Step 9: Views Refresh Hook (Direct Invocation Only)
-
-If this skill was invoked directly by the user (not as part of `curation-cycle`, `daily-cycle`, or another parent skill that owns views refresh):
-
-1. If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false` AND `.construct/config.yaml` does not set `views.per_card_hooks.enabled: false`:
-   - Run:
-     ```bash
-     bash <install-root>/.claude/skills/views-generate-data/debounced-hook.sh <install-root> card-connect
-     ```
-   - If it succeeds and prints a line, append that line to the report. This only happens when `views.confirm_refresh: true`, and the message is:
-     > Note: views refresh scheduled (5s trailing debounce).
-   - If it fails, append a warning to the report:
-     > ⚠ views refresh scheduling failed: {single-line message}. Connection update still succeeded; run `views-generate-data` manually if needed.
-2. Otherwise → skip silently.
-
 ---
 
 ## Validation

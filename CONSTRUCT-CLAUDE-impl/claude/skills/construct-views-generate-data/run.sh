@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # views-generate-data wrapper.
 #
-# Picks the right Python interpreter:
-#   1. If system python3 has PyYAML → use it directly.
-#   2. Otherwise, ensure a per-skill venv exists at .venv/ alongside this
-#      script with PyYAML installed, and use that.
-#
-# This avoids the user fighting macOS PEP-668 "externally-managed-environment"
-# errors when running `pip install pyyaml` against system Python.
+# Thin wrapper over the CONSTRUCT CLI. The generator implementation lives in the
+# Python layer (`construct.views.generate`), reached here through
+# `construct views generate` (Phase 15, D-09). There is no skill-local Python
+# runtime and no skill-local dependency bootstrap: the accepted cost of D-09 is
+# that this skill is no longer standalone and requires an installed CONSTRUCT.
 #
 # Usage: run.sh <install-root>
 
@@ -15,31 +13,16 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <install-root>" >&2
+  echo "  <install-root> is the directory containing AGENTS.md and .construct/." >&2
   exit 2
 fi
 
-SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
-INSTALL_ROOT="$1"
-
-# 1. Fast path: system python3 has yaml
-if python3 -c "import yaml" >/dev/null 2>&1; then
-  exec python3 "$SKILL_DIR/generate.py" "$INSTALL_ROOT"
+if ! command -v construct >/dev/null 2>&1; then
+  echo "Error: the 'construct' executable is not on PATH." >&2
+  echo "This skill wraps the CONSTRUCT CLI and requires an installed CONSTRUCT." >&2
+  echo "Install the CONSTRUCT package (an editable install from the repository" >&2
+  echo "root), or activate the environment it is installed into, and re-run." >&2
+  exit 127
 fi
 
-# 2. Slow path: bootstrap a per-skill venv (one-time, ~5s)
-VENV="$SKILL_DIR/.venv"
-if [[ ! -x "$VENV/bin/python" ]]; then
-  echo "Bootstrapping skill venv at $VENV (one-time setup)..." >&2
-  python3 -m venv "$VENV"
-  "$VENV/bin/pip" install --quiet --upgrade pip
-  "$VENV/bin/pip" install --quiet -r "$SKILL_DIR/requirements.txt"
-fi
-
-# Sanity: venv should now have yaml
-if ! "$VENV/bin/python" -c "import yaml" >/dev/null 2>&1; then
-  echo "Error: skill venv at $VENV does not have PyYAML. Investigate." >&2
-  echo "Try: rm -rf $VENV  and re-run." >&2
-  exit 1
-fi
-
-exec "$VENV/bin/python" "$SKILL_DIR/generate.py" "$INSTALL_ROOT"
+exec construct views generate --install-root "$1"
