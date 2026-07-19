@@ -53,7 +53,7 @@ CONSTRUCT-CLAUDE-impl/
     ├── card.md                        # Knowledge card
     ├── domains.yaml                   # Domain taxonomy
     ├── governance.yaml                # Governance thresholds
-    ├── model-routing.yaml             # LLM tier routing (informational)
+    ├── model-routing.yaml             # DEPRECATED — use llm/config.yaml
     ├── search-seeds.json              # Search patterns
     ├── connections.json               # Empty graph edge list
     ├── digest.md                      # Research cycle digest
@@ -132,7 +132,7 @@ The workspace created by `workspace-init` and populated by skills:
 | `db/` | ✅ (SQLite) | ❌ (not needed) | No persistent index |
 | `views/` | ✅ (heartbeat) | ❌ (not needed) | No React UI |
 | `inbox/` | ✅ (UI writeback) | ❌ (not needed) | No async action queue |
-| `model-routing.yaml` | ✅ (controls routing) | 🟡 (informational) | Claude handles all tasks |
+| `model-routing.yaml` | ✅ (controls routing) | 🟡 (DEPRECATED, inert) | LLM config authority is `llm/config.yaml` |
 | `workflows/` | ✅ (SKILL.md files) | ❌ (in config, not workspace) | Skills live in CONSTRUCT-CLAUDE-impl/ |
 
 **The shared subset is sufficient for workspace portability.** A workspace created by the Claude-native approach can be consumed by a future Python-approach tool (adding indexing, UI, etc.).
