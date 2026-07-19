@@ -256,3 +256,123 @@ def test_deferred_step_placeholder_is_gone() -> None:
     node_src = src[src.index("def views_refresh_hook"):]
     node_src = node_src[: node_src.index("\n# ──")] if "\n# ──" in node_src else node_src
     assert "deferred to Phase 12" not in node_src.split('"""')[-1]
+
+
+# ── Task 3: daily.run — the refresh sits OUTSIDE the status fold ──
+
+
+def _canned_daily_children(monkeypatch: pytest.MonkeyPatch, daily_run) -> None:
+    """Stub the three children so the cycle is offline and its status is fixed."""
+    from construct.llm.curation_run import CurationRunResult
+    from construct.llm.research_run import RunResult
+    from construct.services.knowledge import OperationResult
+
+    monkeypatch.setattr(
+        daily_run, "run_research_run",
+        lambda inp: RunResult(status="completed", run_id=inp.run_id),
+    )
+    monkeypatch.setattr(
+        daily_run, "run_curation_run",
+        lambda inp: CurationRunResult(status="completed", run_id=inp.run_id),
+    )
+    monkeypatch.setattr(
+        daily_run, "graph_status",
+        lambda ws_: OperationResult(
+            success=True, message="ok",
+            data={"cards": {}, "connections": {}, "domains": {}},
+        ),
+    )
+
+
+def test_daily_run_status_unchanged_when_refresh_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-12: the refresh outcome is structurally excluded from the daily status fold.
+
+    Also asserts the receipt still lands when the refresh fails — a broken cache
+    rebuild must not cost the cycle its audit record.
+    """
+    from construct.llm import daily_run
+    from tests.llm.conftest import create_test_workspace
+
+    ws = create_test_workspace(tmp_path / "ws")
+    _scaffold_build_dir(tmp_path)
+    _canned_daily_children(monkeypatch, daily_run)
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy())
+    good = daily_run.run_daily_run(
+        daily_run.DailyRunInput(workspace_path=str(ws), run_id="daily-vr-ok")
+    )
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy(raises=RuntimeError("boom")))
+    bad = daily_run.run_daily_run(
+        daily_run.DailyRunInput(workspace_path=str(ws), run_id="daily-vr-bad")
+    )
+
+    assert good.status == bad.status == "completed"
+    assert [c.status for c in good.children] == [c.status for c in bad.children]
+    # No refresh child was smuggled into the fold.
+    assert len(bad.children) == 3
+    assert all(c.capability != "views.refresh" for c in bad.children)
+    # The receipt survives a failing refresh.
+    receipt = tmp_path / "ws" / ".construct" / "workflow" / "daily" / "daily-vr-bad.json"
+    assert receipt.is_file(), "receipt must be written even when the refresh fails"
+
+
+def test_refresh_runs_at_end_of_each_workflow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The accepted D-12 cost is real and understood, not accidentally suppressed.
+
+    A daily cycle triggers MORE THAN ONE sweep because daily.run tracks no
+    parent/child relationship (Phase 13 D-09) — each child refreshes for itself and
+    daily.run refreshes again at the end. Here the curation child is real, so the
+    count is curation's sweep plus daily's own.
+    """
+    from construct.llm import daily_run
+    from construct.llm.research_run import RunResult
+    from construct.services.knowledge import OperationResult
+    from tests.llm.conftest import create_test_workspace
+
+    ws = create_test_workspace(tmp_path / "ws")
+    _scaffold_build_dir(tmp_path)
+
+    monkeypatch.setattr(
+        daily_run, "run_research_run",
+        lambda inp: RunResult(status="completed", run_id=inp.run_id),
+    )
+    monkeypatch.setattr(
+        daily_run, "graph_status",
+        lambda ws_: OperationResult(
+            success=True, message="ok",
+            data={"cards": {}, "connections": {}, "domains": {}},
+        ),
+    )
+    spy = _Spy()
+    monkeypatch.setattr("construct.views.generate.generate", spy)
+
+    daily_run.run_daily_run(daily_run.DailyRunInput(workspace_path=str(ws), run_id="daily-vr-count"))
+
+    assert len(spy.calls) > 1, (
+        "a daily cycle must sweep more than once — the D-12 accepted cost. "
+        f"got {len(spy.calls)}"
+    )
+    assert set(spy.calls) == {tmp_path}, "every sweep targets the install root (D-05)"
+
+
+def test_second_sweep_over_unchanged_root_writes_less(tmp_path: Path) -> None:
+    """The fingerprint no-op claim that makes the three-sweep cost acceptable.
+
+    Asserted rather than assumed: if a repeat sweep over an unchanged install root
+    cost the same as the first, D-12's accepted cost would be three full builds.
+    """
+    from construct.views.generate import generate
+    from tests.llm.conftest import create_test_workspace
+
+    create_test_workspace(tmp_path / "ws")
+
+    first = generate(tmp_path)
+    second = generate(tmp_path)
+
+    assert first.success and second.success
+    assert second.total_files_written < first.total_files_written
