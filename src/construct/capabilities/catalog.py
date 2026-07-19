@@ -13,6 +13,7 @@ from construct.services.help import suggest as help_suggest
 from construct.services.knowledge import (
     CardAuthor,
     ConnectionAuthor,
+    OperationError,
     OperationResult,
     add_connection,
     archive_card,
@@ -147,7 +148,11 @@ class GraphStatusInput(BaseModel):
 
 
 class ViewsGenerateDataInput(BaseModel):
-    workspace: Path
+    # D-05: the contract is install-root scoped, not workspace scoped.
+    # ``discover_workspaces`` scans only the *children* of its argument, so
+    # handing it a single workspace discovers zero workspaces and silently
+    # emits empty views.
+    install_root: Path
 
 
 class WorkflowRunInput(BaseModel):
@@ -313,7 +318,12 @@ def create_registry() -> CapabilityRegistry:
         description="Generate JSON view data from workspace state",
         input_model=ViewsGenerateDataInput,
         output_model=OperationResult,
-        handler=lambda **kwargs: OperationResult(success=False, message="Not yet implemented — see Plan 02"),
+        # V41-01 / FIX-01 (D-01): the permanent-failure placeholder is replaced
+        # by a real call into construct.views.generate.generate(). Per D-03 the
+        # `construct views generate` CLI command reaches the same function by an
+        # independent path rather than through this registry, so the two surfaces
+        # can drift — RT-01/RT-02 stays open for the views group deliberately.
+        handler=_views_generate_handler,
         mcp_tool_name="construct_views_generate_data",
     ))
     # D-10 / CUR-05: the legacy ``workflow.run`` capability existed only to drive
@@ -507,6 +517,60 @@ def create_registry() -> CapabilityRegistry:
     ))
 
     return registry
+
+
+def _views_generate_handler(install_root) -> OperationResult:
+    """V41-01 / FIX-01 (D-01): run the real views generator and report it.
+
+    A **named single parameter**, so the handler binds both the positional and
+    the keyword call form — the same property the ``graph.status`` lambda has.
+
+    D-04 splits the report's two failure channels: validation errors are fatal
+    and become ``OperationResult.errors``; content warnings are advisory and
+    never make ``success`` False. The message names both counts separately so
+    the two are not confused at a glance.
+    """
+    # Deferred import — matches the convention for heavy views imports.
+    from construct.views.generate import generate
+
+    report = generate(Path(install_root))
+    errors = [
+        OperationError(field="views.validation", reason=err, suggestion="")
+        for err in report.validation_errors
+    ]
+    success = bool(report.success) and not report.validation_errors
+
+    n_err = len(report.validation_errors)
+    n_warn = len(report.warnings)
+    if success:
+        message = (
+            f"Views data generated (build {report.build_id}): "
+            f"{report.total_files_written} files written, 0 validation errors, "
+            f"{n_warn} content warnings"
+        )
+        if n_warn:
+            message += (
+                " — the run succeeded; the warnings are advisory and describe "
+                "source content, not contract violations"
+            )
+    else:
+        message = (
+            f"Views data generation failed (build {report.build_id}): "
+            f"{n_err} validation errors, {report.total_files_written} files "
+            f"written, {n_warn} content warnings"
+        )
+
+    return OperationResult(
+        success=success,
+        message=message,
+        errors=errors,
+        data={
+            "build_id": report.build_id,
+            "workspace_stats": report.workspace_stats,
+            "total_files_written": report.total_files_written,
+            "warnings": list(report.warnings),
+        },
+    )
 
 
 def _validate_shim(*args, **kwargs):

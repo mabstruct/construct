@@ -121,7 +121,10 @@ def _payload_for(tool_name: str, ws: str) -> dict:
             "workspace": ws,
         },
         "construct_graph_status": {"workspace": ws},
-        "construct_views_generate_data": {"workspace": ws},
+        # D-05: this contract is install-root scoped, so the payload names the
+        # workspace's *parent* — discover_workspaces scans children, and handing
+        # it the workspace itself would discover nothing.
+        "construct_views_generate_data": {"install_root": str(Path(ws).parent)},
         "construct_ingest_source": {"workspace": ws, "source": "A contract-test note"},
         "construct_help_suggest": {"workspace": ws},
         "construct_ask_domain": {"workspace_path": ws, "domain_id": "cosmology", "question": "What is known?"},
