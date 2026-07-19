@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 15
 current_phase_name: views-generate-data-resolution
 status: executing
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-07-19T21:37:51.369Z"
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-07-19T21:46:06.944Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 50
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 15 (views-generate-data-resolution) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
-Progress: [██████░░░░] 56% (0/4 phases)
+Progress: [███████░░░] 67% (0/4 phases)
 Last activity: 2026-07-19 — Phase 15 execution started
 
 ## Performance Metrics
@@ -75,6 +75,7 @@ Last activity: 2026-07-19 — Phase 15 execution started
 | Phase 14 P02 | 9min | 2 tasks | 1 files |
 | Phase 14 P03 | ~14m | 3 tasks | 2 files |
 | Phase 15 P01 | 21min | 3 tasks | 18 files |
+| Phase 15 P02 | 24min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,8 @@ Recent decisions affecting current work:
 - [Phase ?]: config-topology.md's Python-approach comparison cell left intact as historically accurate; Phase 17 (D-03) may discard these edits wholesale
 - [Phase ?]: Views parsers vendored into construct.views.lib via git mv (D-08); intra-package imports kept explicit-relative so zero import lines changed
 - [Phase ?]: F6 Option A: declared pyyaml>=6 rather than porting vendored parsers to ruamel.yaml; ruamel port deferred to v0.6
+- [Phase ?]: views models are reconciled to parser output, not the other way round: parsers are ground truth, spec-v02-data-model.md corroborates (D-02)
+- [Phase ?]: DomainRecord.cross_domain_links typed as a bare list — three element shapes exist in the wild and parse_domains guards it with only isinstance(list)
 
 ### Pending Todos
 
@@ -191,6 +194,7 @@ Recent decisions affecting current work:
 - No current blockers.
 - v0.5 planning is blocked on DOC-03 (Phase 14) — the durable-checkpointer invariant must be settled before a UI-primary shell reasons about resumable gate state.
 - Watch scope on FIX-01: RT-01/RT-02 registry unification stays out of v0.4.1 except, if unavoidable, the views command group alone.
+- generate() validates an adapted projection but writes the raw parser dict, so the schema gate does not validate the bytes the SPA consumes — Plan 03 must decide before wiring a real handler
 
 ## Deferred Items
 
@@ -208,8 +212,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T21:37:51.360Z
-Stopped at: Completed 15-01-PLAN.md
+Last session: 2026-07-19T21:46:06.935Z
+Stopped at: Completed 15-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
