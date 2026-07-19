@@ -19,7 +19,26 @@ The system must reliably turn source material into connected, explorable knowled
 - Thin skill migrations for research and curation delegating to CLI/MCP, removing direct `WebSearch` / `WebFetch` (Phase 12; API-04).
 - Daily-cycle composition — thin non-blocking `daily.run` composing research → curation → graph.status with full CLI/MCP parity (Phase 13; DAY-01..03, API-01/02/03/05).
 
-**Next:** v0.5 (UI-primary experience) — define via `/gsd:new-milestone`.
+**Next:** v0.4.1 (surface integration) — see below. v0.5 (UI-primary experience) follows.
+
+## Current Milestone: v0.4.1 Surface Integration & Documentation Truth
+
+**Goal:** Reconnect the sound v0.4 runtime to the surfaces users and agents actually touch — every documented invocation path resolves and executes, the v0.4 runtime is discoverable by both users and agents, and the architecture doc set describes the system that actually exists.
+
+**Target features:**
+- Resolve `views.generate_data` — no permanent-failure handler may remain on the MCP surface (FIX-01)
+- Re-point the Streamlit LLM config default and settle `model-routing.yaml`'s fate (FIX-02)
+- Every `construct ...` string in skills, workflows, and the playbook resolves against the registry (FIX-03)
+- Rewrite `architecture-overview.md` against ADR-0003's four-layer model (DOC-01)
+- Capability/CLI/MCP inventory in `artifact-catalog.md`; fix or delete `config-topology.md` (DOC-02)
+- Record the durable-checkpointer decision in the NFR/architecture/workspace-contract invariants — **gates v0.5 design** (DOC-03)
+- CLI coverage in `USER_GUIDE.md`, corrected `README.md` / `AGENTS.md`, retired v0.3 playbook (DOC-04)
+- Claude-native entry point for `daily.run`, the flagship v0.4 capability (UX-01)
+- Close `spec-v04:436` — `WebSearch`/`WebFetch` in `construct-synthesis` (DEC-01)
+
+**Already delivered ahead of the milestone:** FIX-04 — `tests/contract/test_doc_command_references.py` (2026-07-19). Introspects the live Typer app and asserts every documented `construct ...` string resolves, with a `_KNOWN_BROKEN` allowlist that can only shrink. FIX-01 and FIX-03 are complete precisely when that allowlist is empty.
+
+**Basis:** `.planning/milestones/v0.4-MILESTONE-AUDIT.md` (retrospective audit, 2026-07-19). The runtime is sound and its 22/22 requirements genuinely met; these are integration defects in shipped work, not new capability.
 
 ## Requirements
 
@@ -36,7 +55,9 @@ The system must reliably turn source material into connected, explorable knowled
 
 ### Active
 
-_v0.4 shipped — no active requirements. Define v0.5 (UI-primary experience) via `/gsd:new-milestone`. Candidate carry-over: UI-01/02, RT-01/RT-02 registry unification, full `views.generate_data` emission, historical verification/security debt._
+**v0.4.1 Surface Integration & Documentation Truth** (see Current Milestone above). Nine open requirements: FIX-01/02/03 (live defects), DOC-01/02/03/04 (documentation truth), UX-01 (`daily.run` entry point), DEC-01 (synthesis skill tool grants). FIX-04 (doc-command guard) delivered 2026-07-19.
+
+_Deferred past v0.4.1: v0.5 UI-primary experience (UI-01/02), RT-01/RT-02 registry unification, thin-wrapper migration for `construct-bridge-detect` / `domain-init` / `search-adjust` (logged for v0.6), historical verification/security debt._
 
 ### Out of Scope
 
@@ -44,6 +65,9 @@ _v0.4 shipped — no active requirements. Define v0.5 (UI-primary experience) vi
 - Breaking current Claude-native workflows during the v0.5 UI build — existing user flows must remain usable.
 - Pulling the v0.5 browser-primary shell into v0.4 — UI-primary work waits for stable workflow capabilities.
 - Treating RT-01/RT-02 registry unification for views/spike/tag, full `views.generate_data` emission, or milestone-wide verification/security debt as primary v0.4 scope — these remain tracked follow-ups unless directly required by agent workflow delivery.
+- Any v0.5 UI work in v0.4.1 — building a UI on surfaces known to be broken would also obscure v0.5's own delivery signal.
+- RT-01/RT-02 registry unification in v0.4.1, unless FIX-01 requires touching the views group — in which case scope only that group.
+- Migrating `construct-bridge-detect` / `construct-domain-init` / `construct-search-adjust` to thin wrappers in v0.4.1 — real debt, but larger than a patch milestone. Logged for v0.6.
 
 ## Context
 
@@ -95,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 after v0.4 Agent Workflows milestone (Phases 8–13, 22/22 requirements shipped)*
+*Last updated: 2026-07-19 — v0.4.1 Surface Integration & Documentation Truth milestone started (scope from `milestones/v0.4-MILESTONE-AUDIT.md`)*

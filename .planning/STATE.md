@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.4
-milestone_name: Agent Workflows
-status: Awaiting next milestone
-stopped_at: Milestone v0.4 complete and archived
-last_updated: "2026-07-07T09:51:53.608Z"
-last_activity: 2026-07-07 — Milestone v0.4 completed and archived
+milestone: v0.4.1
+milestone_name: Surface Integration & Documentation Truth
+status: planning
+last_updated: "2026-07-19T15:31:17.495Z"
+last_activity: 2026-07-19
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 ## Current Position
 
-Phase: Milestone v0.4 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-07 — Milestone v0.4 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-19 — Milestone v0.4.1 started
 
 ## Performance Metrics
 
