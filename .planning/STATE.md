@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 15
-current_phase_name: views.generate_data Resolution
+current_phase_name: views-generate-data-resolution
 status: executing
-stopped_at: Phase 15 context gathered
-last_updated: "2026-07-19T21:30:12.275Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-07-19T21:37:51.369Z"
 last_activity: 2026-07-19
-last_activity_desc: Phase 14 complete, transitioned to Phase 15
+last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 9
+  completed_plans: 5
   percent: 50
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 14 — durable-state-config-truth
+**Current focus:** Phase 15 — views-generate-data-resolution
 
 ## Current Position
 
-Phase: 15 — views.generate_data Resolution
-Plan: Not started
+Phase: 15 (views-generate-data-resolution) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-19 — Phase 14 complete, transitioned to Phase 15
+Progress: [██████░░░░] 56% (0/4 phases)
+Last activity: 2026-07-19 — Phase 15 execution started
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Last activity: 2026-07-19 — Phase 14 complete, transitioned to Phase 15
 | Phase 14 P04 | 14m | 3 tasks | 3 files |
 | Phase 14 P02 | 9min | 2 tasks | 1 files |
 | Phase 14 P03 | ~14m | 3 tasks | 2 files |
+| Phase 15 P01 | 21min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,8 @@ Recent decisions affecting current work:
 - [Phase ?]: `.construct/workflow/*.sqlite` filed under a new fourth artifact class in workspace-contract.md, not Support — the Support preamble's denial of workspace truth is the falsehood DOC-03 removes
 - [Phase ?]: model-routing.yaml rows annotated as deprecated rather than deleted in workspace-contract.md and config-topology.md — D-01 keeps it a REQUIRED_PATHS entry
 - [Phase ?]: config-topology.md's Python-approach comparison cell left intact as historically accurate; Phase 17 (D-03) may discard these edits wholesale
+- [Phase ?]: Views parsers vendored into construct.views.lib via git mv (D-08); intra-package imports kept explicit-relative so zero import lines changed
+- [Phase ?]: F6 Option A: declared pyyaml>=6 rather than porting vendored parsers to ruamel.yaml; ruamel port deferred to v0.6
 
 ### Pending Todos
 
@@ -205,9 +208,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T20:52:10.061Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/phases/15-views-generate-data-resolution/15-CONTEXT.md
+Last session: 2026-07-19T21:37:51.360Z
+Stopped at: Completed 15-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
