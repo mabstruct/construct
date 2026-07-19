@@ -137,3 +137,26 @@ def test_models_still_forbid_unknown_fields() -> None:
         assert model.model_config.get("extra") == "forbid", (
             f"{name} does not forbid unknown fields (D-02 prohibition)"
         )
+
+
+def test_views_generate_cli_command_generates_clean(scaffolded_install_root: Path) -> None:
+    """`construct views generate` runs the generator; `views validate` confirms it.
+
+    The two commands are the D-03 pair: neither routes through the capability
+    registry, so this is the only place the CLI path is proven end to end.
+    """
+    from typer.testing import CliRunner
+
+    from construct.cli import app
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app, ["views", "generate", "--install-root", str(scaffolded_install_root)]
+    )
+    assert result.exit_code == 0, result.stdout
+
+    validated = runner.invoke(
+        app, ["views", "validate", "--install-root", str(scaffolded_install_root)]
+    )
+    assert validated.exit_code == 0, validated.stdout
