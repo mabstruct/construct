@@ -56,7 +56,7 @@ Full phase detail (goals, success criteria, plans) archived in
 
 **Pre-milestone deliverable:** FIX-04 shipped 2026-07-19 (`tests/contract/test_doc_command_references.py`, commit `11f20f4`). Its `_KNOWN_BROKEN` allowlist can only shrink and is the mechanical completion criterion for Phases 15 and 16.
 
-- [ ] **Phase 14: Durable-State & Config Truth** — settle the durable-checkpointer and LLM-config decisions and record them in the invariant docs; gates v0.5 design and every downstream doc rewrite.
+- [x] **Phase 14: Durable-State & Config Truth** — settle the durable-checkpointer and LLM-config decisions and record them in the invariant docs; gates v0.5 design and every downstream doc rewrite. (completed 2026-07-19)
 - [ ] **Phase 15: views.generate_data Resolution** — remove the permanent-failure stub from the MCP surface and make all four documented callers consistent with the decision.
 - [ ] **Phase 16: Invocation & User-Doc Truth** — empty the `_KNOWN_BROKEN` allowlist, close the synthesis tool-grant exception, and make the user doc set executable.
 - [ ] **Phase 17: Architecture Doc Set & daily.run Discoverability** — rewrite the architecture inventory against the decisions from Phases 14–15 and give the flagship daily cycle a chat entry point.
