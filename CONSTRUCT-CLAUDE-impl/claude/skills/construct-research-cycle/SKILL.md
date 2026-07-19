@@ -99,21 +99,7 @@ Relay the capability's digest/report back to the user — papers found, ingested
 
 > "Research cycle complete for {domain}: {N} findings, {N} ingested, {N} seed cards created. See digest: {path}."
 
-### Step 7: Views Refresh Hook
-
-If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent triggers a single regeneration after all child skills complete.
-
-Otherwise, if `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
-
-```bash
-construct views generate --workspace .
-```
-
-- On success: if `.construct/config.yaml` sets `views.confirm_refresh: true`, append `✓ views updated`. Otherwise stay silent (the SPA polls `version.json`).
-- On failure: append `⚠ views regeneration failed: {single-line message}. Workspace is intact; run 'construct views generate' manually to refresh the views.`
-- Always preserve this skill's success status — the hook is a side effect, not a success condition.
-
-If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently.
+> **No views refresh step here.** The `research.run` capability regenerates the views data itself in the Python layer, gated on `views/build/` and `views.auto_regenerate`, as a side effect that never changes the run's status (D-11; rationale in [`adr-0005-views-refresh-ownership.md`](../../../../CONSTRUCT-CLAUDE-spec/adrs/adr-0005-views-refresh-ownership.md)).
 
 ---
 
