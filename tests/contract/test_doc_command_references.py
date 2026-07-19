@@ -152,7 +152,6 @@ def _documented() -> dict[Path, set[tuple[str, ...]]]:
 _KNOWN_BROKEN: dict[tuple[str, ...], str] = {
     ("knowledge", "card", "list"): "V41-03 / FIX-03 — no `list` on the card sub-app",
     ("knowledge", "ref", "list"): "V41-03 / FIX-03 — no `ref` sub-app exists",
-    ("views", "generate"): "V41-01 / FIX-01 — views sub-app is `validate` only",
     ("workflow", "run"): "V41-03 / FIX-03 — removed in Phase 12 (D-10)",
     ("workflow", "resume"): "V41-03 / FIX-03 — never existed",
 }
