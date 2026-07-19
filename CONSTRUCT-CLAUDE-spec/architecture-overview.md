@@ -3,7 +3,7 @@
 **Status:** Draft (Living)
 **Date:** 2026-04-27
 **Scope:** Project-wide pattern and component layering
-**Related:** `adrs/adr-0001-claude-native-approach.md` · `adrs/adr-0002-v02-packaging.md` · `prd.md` · `prd-v02-live-views.md` · `spec-v02-runtime-topology.md` · `spec-v02-data-model.md`
+**Related:** `adrs/adr-0001-claude-native-approach.md` · `adrs/adr-0002-v02-packaging.md` · `prd.md` · `prd-v02-live-views.md` · `spec-v02-runtime-topology.md` · `spec-v02-data-model.md` · `adrs/adr-0003-v03-pipeline-v04-ui.md` · `adrs/adr-0004-durable-workflow-checkpoints.md`
 
 ---
 
@@ -240,7 +240,7 @@ Use this as a checklist before introducing any new component.
 - "Stash this small piece of state in `views/build/data/` because it's convenient" → no. If it's facts, layer 1. If it's UI state, browser-local (localStorage), not the cache.
 - "Have the browser POST back to a small server endpoint to update X" → no. Browser → Claude → skill → layer 1.
 - "Replicate part of the cache into a config file Claude reads" → no. Claude reads layer 1 directly. The cache is for the SPA only.
-- "Add a database that owns part of the truth" → reconsider. A database is fine as a derived layer (layer 2 sibling) but never as the truth. Markdown stays canonical.
+- "Add a database that owns part of the truth" → reconsider. A database is fine as a derived layer (layer 2 sibling) but never as the truth. Markdown stays canonical. One sanctioned carve-out exists: workflow orchestration state in `.construct/workflow/*.sqlite`, which holds pending human-review decisions that are not reconstructible from layer 1 — it sits outside the layer 1/2/3 model rather than violating it. See `adrs/adr-0004-durable-workflow-checkpoints.md`.
 
 ---
 
@@ -249,6 +249,8 @@ Use this as a checklist before introducing any new component.
 ### 9.1 Decisions and principles
 - `adrs/adr-0001-claude-native-approach.md` — Claude-native approach; markdown as truth
 - `adrs/adr-0002-v02-packaging.md` — v0.2 packaging; in-place implementation in `CONSTRUCT-CLAUDE-impl/`
+- `adrs/adr-0003-v03-pipeline-v04-ui.md` — v0.3 pipeline and v0.4 UI; invoke surfaces and LangGraph for the LLM layer
+- `adrs/adr-0004-durable-workflow-checkpoints.md` — durable workflow checkpoints as sanctioned orchestration state
 
 ### 9.2 Specifications
 - `prd.md` — v0.1 PRD (Claude-native agent system)
