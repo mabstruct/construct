@@ -14,8 +14,8 @@ CONSTRUCT systematically collects, curates, connects, and compounds knowledge ac
 |------|-------|
 | Specification | [`CONSTRUCT-CLAUDE-spec/`](CONSTRUCT-CLAUDE-spec/) — read [`README_FIRST.md`](CONSTRUCT-CLAUDE-spec/README_FIRST.md) first |
 | Implementation | [`CONSTRUCT-CLAUDE-impl/`](CONSTRUCT-CLAUDE-impl/) — skills, workflows, templates; read [`AGENTS.md`](CONSTRUCT-CLAUDE-impl/AGENTS.md) for runtime behavior |
-| Runtime/API layer | [`src/construct/`](src/construct/) and [`tests/`](tests/) — active v0.3 pipeline, CLI, MCP, LLM gate, and contract tests |
-| GSD state | [`.planning/`](.planning/) — v0.3 shipped; v0.4 agent workflows next; v0.5 UI-primary |
+| Runtime/API layer | [`src/construct/`](src/construct/) and [`tests/`](tests/) — pipeline, CLI, MCP, capability registry, LangGraph research/curation/daily workflows, search spine, LLM gate, and contract tests |
+| GSD state | [`.planning/`](.planning/) — v0.3 and v0.4 shipped; v0.4.1 in flight; v0.5 UI-primary planned |
 | Test fixtures | [`test-ws/`](test-ws/) — not user data |
 | Agent rules (repo) | [`AGENTS.md`](AGENTS.md) |
 
@@ -45,7 +45,9 @@ v0.2 extensions      CONSTRUCT-CLAUDE-spec/spec-v02-*  (local views, cross-domai
        ↓
 v0.3 shipped         Pipeline/API layer — src/construct/; .planning/milestones/v0.3-*
        ↓
-v0.4 next            Agent workflows — LangGraph/LangChain; model-agnostic search (see spec-v04-agentworkflows.md)
+v0.4 shipped         Agent workflows — LangGraph/LangChain; model-agnostic search; .planning/milestones/v0.4-*
+       ↓
+v0.4.1 in flight     Surface integration & documentation truth — .planning/REQUIREMENTS.md
        ↓
 v0.5 planned         UI-as-primary shell on hardened v0.4 runtime
 ```
@@ -105,14 +107,14 @@ construct/
 ├── CONSTRUCT-CLAUDE-spec/         # ACTIVE — living specification (v0.1 + v0.2)
 ├── CONSTRUCT-CLAUDE-v03-planning/ # v0.3 pipeline/API planning notes (shipped)
 ├── CONSTRUCT-CLAUDE-v02-planning/ # v0.2 backlog (historical)
-├── .planning/                     # ACTIVE — GSD state; v0.3 closed; v0.4 workflows next; v0.5 UI
+├── .planning/                     # ACTIVE — GSD state; v0.3 + v0.4 shipped; v0.4.1 in flight; v0.5 UI planned
 ├── test-ws/                       # Test workspace fixtures
 ├── archive/
 │   └── v01-python/                # ARCHIVED — v0.1 Python-first spec + GSD
 │       ├── README.md
 │       ├── spec/                  # Former CONSTRUCT-spec/
 │       └── gsd/                   # Former .planning/ (Python GSD)
-├── src/construct/                 # ACTIVE — v0.3 pipeline/API runtime
+├── src/construct/                 # ACTIVE — pipeline/API runtime, capability registry, agent workflows
 ├── tests/                         # ACTIVE — runtime contract/unit/integration tests
 ├── views/                         # Design examples / views assets
 ├── AGENTS.md                      # Repository-level agent instructions
