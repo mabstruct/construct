@@ -218,66 +218,114 @@ Your knowledge graph, cards, and digests appear in a browser dashboard, derived 
 
 ## Full Command Reference
 
+The **You say** column is the primary entry path — CONSTRUCT is driven by conversation, and
+every row below works by asking for it in natural language.
+
+The **CLI** column is the same capability reached directly from a shell, for scripting,
+automation, and CI. Not every conversational entry has one: rows marked `skill-only` are
+handled by a skill with no shell equivalent, and an empty cell means neither exists yet.
+Nothing in this column is aspirational — every invocation here is checked against the live
+command surface by `tests/contract/test_doc_command_references.py`, which is the authority on
+what actually ships. Tokens in angle brackets are placeholders for you to substitute.
+
 ### Entry & orientation
 
-| You say | What happens |
-|---------|-------------|
-| "help" / "what's next?" | Scans workspace, suggests the most valuable next action |
-| "init {domain}" | Creates a new domain workspace + runs the configuration interview |
-| "init {domain} interview" | Re-runs the domain interview |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "help" / "what's next?" | Scans workspace, suggests the most valuable next action | `construct help` |
+| "init {domain}" | Creates a new domain workspace + runs the configuration interview | `construct init <domain>` |
+| "init {domain} interview" | Re-runs the domain interview | skill-only |
+| "where is the workflow up to?" | Reports the state of any paused or in-flight workflow run | `construct workflow status` |
+| "expose CONSTRUCT to an MCP client" | Serves the capability surface over MCP for an external client | `construct mcp` |
 
 ### Research
 
-| You say | What happens |
-|---------|-------------|
-| "research {domain}" | Web search → extract → score → create refs + seed cards |
-| "research {topic}" | Targeted research on a specific topic |
-| "search adjust" | Tune search clusters, weights, and priorities |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "research {domain}" | Web search → extract → score → create refs + seed cards | `construct research run --workspace .` |
+| "research {topic}" | Targeted research on a specific topic | `construct research search --workspace .` |
+| "score what the search turned up" | Rank captured results against the domain's scoring rules | `construct research score` |
+| "review the paused research run" | Approve, reject, or amend the items a run has staged | `construct research review` |
+| "show me the last research run" | Report the per-step state of a completed run | `construct research inspect` |
+| "search adjust" | Tune search clusters, weights, and priorities | skill-only |
 
 ### Knowledge operations
 
-| You say | What happens |
-|---------|-------------|
-| "add card" | Create a knowledge card with epistemic metadata |
-| "edit card {id}" | Update an existing card |
-| "connect {A} to {B}" | Create a typed connection between two cards |
-| "evaluate {id}" | Assess a card for promotion, decay, or archival |
-| "archive {id}" | Move a card to archived lifecycle |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "add card" | Create a knowledge card with epistemic metadata | `construct knowledge card create` |
+| "edit card {id}" | Update an existing card | `construct knowledge card edit` |
+| "what cards do I have in {domain}?" | Enumerate card frontmatter (no card prose) for a domain | `construct knowledge card list --domain <domain> --json` |
+| "connect {A} to {B}" | Create a typed connection between two cards | `construct knowledge connection add` |
+| "what is connected to what?" | Enumerate the typed edges in the graph | `construct knowledge connection list --json` |
+| "disconnect {A} from {B}" | Remove a typed connection between two cards | `construct knowledge connection remove` |
+| "evaluate {id}" | Assess a card for promotion, decay, or archival | `construct card evaluate` |
+| "archive {id}" | Move a card to archived lifecycle | `construct knowledge card archive` |
 
 ### Curation
 
-| You say | What happens |
-|---------|-------------|
-| "curate {domain}" | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect |
-| "bridges" | Find cross-domain structural parallels |
-| "validate" | Full workspace integrity audit (schema, governance, consistency, health, audit trail) |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "curate {domain}" | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect | `construct curation run --workspace .` |
+| "review the paused curation run" | Approve or reject the promotions and archivals a run has staged | `construct curation review` |
+| "show me the last curation run" | Report the per-step state of a completed cycle | `construct curation inspect` |
+| "bridges" | Find cross-domain structural parallels | `construct bridge detect` |
+| "validate" | Full workspace integrity audit (schema, governance, consistency, health, audit trail) | `construct validate` |
+
+A curation cycle is designed to **degrade rather than abort**: if an individual step cannot
+complete, the run continues and records that step's state in its report. Read the per-step
+state in the `--json` payload to judge the outcome — the process exit code alone does not
+carry the verdict.
+
+### Daily cycle
+
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "run the daily cycle" | Research → curate → status in one pass over the workspace | `construct daily run --workspace .` |
+| "how did the last daily cycle go?" | Report the per-step state of the most recent cycle | `construct daily inspect` |
+
+As with curation, a degraded daily run reports its failing step in the payload rather than
+aborting the cycle — read the per-step state, not the exit code.
+
+### Ingestion, spikes & tags
+
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "ingest this source" | Pull an external source into `refs/` as a reference entry | `construct ingest source <path>` |
+| "what spikes are open?" | List the exploratory spikes defined for the workspace | `construct spike list` |
+| "run spike {id}" | Execute a single exploratory spike | `construct spike run` |
+| "extract tags" | Derive candidate tags from card content | `construct tag extract` |
+| "show me the tags" | List current and candidate tags | `construct tag list` |
+| "approve those tags" | Promote candidate tags into the workspace vocabulary | `construct tag approve` |
 
 ### Analysis
 
-| You say | What happens |
-|---------|-------------|
-| "status" | Dashboard: card counts, connections, domain health |
-| "gaps {domain}" | Coverage gaps, confidence distribution, missing categories |
-| "gaps {topic}" | Topic-specific gap report |
-| "domains" | List all domains, show status, activate/pause |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "status" | Dashboard: card counts, connections, domain health | `construct status` |
+| "ask {domain} a question" | Answer a question grounded in that domain's cards | `construct ask domain` |
+| "gaps {domain}" | Coverage gaps, confidence distribution, missing categories | skill-only |
+| "gaps {topic}" | Topic-specific gap report | skill-only |
+| "domains" | List all domains, show status, activate/pause | skill-only |
 
 ### Writing
 
-| You say | What happens |
-|---------|-------------|
-| "write {topic}" | Draft a document from accumulated knowledge |
-| "publish" | List and manage published outputs in `publish/` |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "write {topic}" | Draft a document from accumulated knowledge | skill-only |
+| "publish" | List and manage published outputs in `publish/` | skill-only |
 
 ### Views & server
 
-| You say | What happens |
-|---------|-------------|
-| "scaffold views" | One-time SPA template setup |
-| "build views" | Vite production build |
-| "update views" / "refresh data" | Parse workspace → JSON for dashboard |
-| "start" / "show views" | Start local server on port 3001–3009 |
-| "stop" | Stop local server |
-| "reset views" | Remove all views artifacts — clean slate |
+| You say | What happens | CLI |
+|---------|-------------|-----|
+| "scaffold views" | One-time SPA template setup | skill-only |
+| "build views" | Vite production build | skill-only |
+| "update views" / "refresh data" | Parse workspace → JSON for dashboard | `construct views generate` |
+| "check the generated views data" | Validate the generated dashboard data against its schema | `construct views validate` |
+| "start" / "show views" | Start local server on port 3001–3009 | skill-only |
+| "stop" | Stop local server | skill-only |
+| "reset views" | Remove all views artifacts — clean slate | skill-only |
 
 ### Workflows (multi-skill sequences)
 
