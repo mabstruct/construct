@@ -180,6 +180,44 @@ def test_validation_error_run_does_not_latch_into_permanent_success(
     )
 
 
+def test_malformed_cache_is_a_cache_miss_not_a_crash(
+    scaffolded_install_root: Path,
+) -> None:
+    """WR-03: `views/build/data/` is an untrusted boundary on the way back in.
+
+    ``_load_cached_workspace`` guarded only JSONDecodeError/OSError, so any
+    structurally wrong but syntactically valid JSON flowed straight into the
+    pipeline — a list where a dict was expected raised AttributeError, a card
+    missing ``id`` raised KeyError, a non-int ``confidence`` raised TypeError, and
+    all three escaped ``generate()``. The function's documented ``None`` contract
+    means the right answer is to re-parse from source.
+    """
+    generate(scaffolded_install_root)  # populate the cache
+
+    data_dir = scaffolded_install_root / "views" / "build" / "data"
+    cards_path = data_dir / "demo" / "cards.json"
+
+    for corruption in (
+        ["not", "an", "object"],
+        {"data": {"cards": {"not": "a list"}}},
+        {"data": {"cards": [{"title": "no id key"}]}},
+        {"data": {"cards": [{"id": "c1", "confidence": "high"}]}},
+    ):
+        cards_path.write_text(json.dumps(corruption), encoding="utf-8")
+        # Force the incremental gate to reuse the cache for the unchanged workspace
+        # by invalidating only the config fingerprint.
+        cfg_dir = scaffolded_install_root / ".construct"
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        (cfg_dir / "config.yaml").write_text(
+            f"views:\n  workspace_landing: dashboard\n# {corruption}\n", encoding="utf-8"
+        )
+
+        report = generate(scaffolded_install_root)
+
+        assert report.success is True, report.validation_errors
+        assert report.validation_errors == []
+
+
 def test_models_still_forbid_unknown_fields() -> None:
     for name in ALL_MODEL_NAMES:
         model = getattr(views_models, name)

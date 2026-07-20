@@ -619,7 +619,34 @@ def _write_atomic(path: Path, data) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _cards_are_well_shaped(cards) -> bool:
+    """Whether a cached ``cards`` payload is safe for the downstream consumers.
+
+    ``views/build/data/`` is written by this generator but read by the SPA, by
+    ``views validate`` and by users, so it is an untrusted boundary on the way back
+    in. Freshly parsed cards are coerced by ``parse_cards``; the cache path bypasses
+    the parser entirely, so a structurally wrong but syntactically valid JSON file
+    used to reach ``c["id"]`` (KeyError) and
+    ``sum(c["confidence"] for c in cards)`` (TypeError) and crash out of
+    ``generate()`` altogether.
+    """
+    if not isinstance(cards, list):
+        return False
+    return all(
+        isinstance(c, dict)
+        and isinstance(c.get("id"), str)
+        and isinstance(c.get("confidence"), int)
+        and not isinstance(c.get("confidence"), bool)
+        for c in cards
+    )
+
+
 def _load_cached_workspace(data_dir: Path, ws_id: str) -> dict | None:
+    """Load a workspace's previously generated payload, or ``None`` on any problem.
+
+    ``None`` means "cache miss" and the caller re-parses from source, so every
+    malformed-cache path below is a safe degradation rather than an error.
+    """
     ws_dir = data_dir / ws_id
     required = {
         "cards.json": "cards",
@@ -635,17 +662,36 @@ def _load_cached_workspace(data_dir: Path, ws_id: str) -> dict | None:
             return None
         try:
             envelope_data = json.loads(path.read_text(encoding="utf-8"))
-            data = envelope_data.get("data", envelope_data)
         except (json.JSONDecodeError, OSError):
             return None
-        if key == "cards":
-            result[key] = data.get("cards", [])
-        elif key == "digests":
-            result[key] = data.get("digests", [])
-        elif key == "events":
-            result[key] = data.get("events", [])
-        elif key == "curation":
+        # A top-level non-object is not an envelope and not a payload.
+        if not isinstance(envelope_data, dict):
+            return None
+        data = envelope_data.get("data", envelope_data)
+        if key == "curation":
             result[key] = data if isinstance(data, dict) else {"cycles": data}
+            continue
+
+        # Every remaining key indexes into a mapping; a non-dict payload would
+        # raise AttributeError straight out of generate().
+        if not isinstance(data, dict):
+            return None
+
+        if key == "cards":
+            cards = data.get("cards", [])
+            if not _cards_are_well_shaped(cards):
+                return None  # treat a malformed cache as a cache miss
+            result[key] = cards
+        elif key == "digests":
+            digests = data.get("digests", [])
+            if not isinstance(digests, list):
+                return None
+            result[key] = digests
+        elif key == "events":
+            events = data.get("events", [])
+            if not isinstance(events, list):
+                return None
+            result[key] = events
         else:
             result[key] = data
 
@@ -653,8 +699,10 @@ def _load_cached_workspace(data_dir: Path, ws_id: str) -> dict | None:
     if stats_path.is_file():
         try:
             stats_env = json.loads(stats_path.read_text(encoding="utf-8"))
-            stats_data = stats_env.get("data", stats_env)
-            result["refs_count"] = stats_data.get("totals", {}).get("papers", 0)
+            stats_data = stats_env.get("data", stats_env) if isinstance(stats_env, dict) else {}
+            totals = stats_data.get("totals", {}) if isinstance(stats_data, dict) else {}
+            papers = totals.get("papers", 0) if isinstance(totals, dict) else 0
+            result["refs_count"] = papers if isinstance(papers, int) else 0
         except (json.JSONDecodeError, OSError):
             result["refs_count"] = 0
     else:
