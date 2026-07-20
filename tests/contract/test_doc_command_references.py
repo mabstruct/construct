@@ -195,6 +195,7 @@ def test_command_surface_is_discoverable() -> None:
     assert ("daily", "run") in VALID_PATHS
     assert ("views", "validate") in VALID_PATHS
     assert ("knowledge", "card", "create") in VALID_PATHS
+    assert ("knowledge", "card", "list") in VALID_PATHS
     assert len(VALID_PATHS) > 25
 
 
