@@ -26,7 +26,7 @@ surface by `tests/contract/test_doc_command_references.py`; angle-bracket tokens
 
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
-| `init {domain}` | construct-workspace-init → construct-domain-init | `construct init <domain>` | Create a new domain workspace — canonical `cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`, `log/events.jsonl`, plus derived `digests/` and `publish/`. Templates sourced from `CONSTRUCT-CLAUDE-impl/construct/templates/`. Runs the configuration interview. |
+| `init {domain}` | construct-workspace-init → construct-domain-init | `construct init <path>` | Create a new domain workspace — canonical `cards/`, `refs/`, `connections.json`, `domains.yaml`, `governance.yaml`, `search-seeds.json`, `log/events.jsonl`, plus derived `digests/` and `publish/`. Templates sourced from `CONSTRUCT-CLAUDE-impl/construct/templates/`. Runs the configuration interview. |
 | `init {domain} interview` | construct-domain-init | — | Re-run the domain interview to update categories, sources, and search seeds |
 | `workflow status` | — | `construct workflow status` | Report the state of any paused or in-flight workflow run |
 | `mcp` | — | `construct mcp` | Serve the capability surface over MCP for an external client |
@@ -37,33 +37,33 @@ surface by `tests/contract/test_doc_command_references.py`; angle-bracket tokens
 |---------|-------|-----|-------------|
 | `research {domain}` | construct-research-cycle | `construct research run --workspace .` | Web search → extract → score → create refs and seed cards |
 | `research {topic}` | construct-research-cycle (targeted) | `construct research search --workspace .` | Focused research on a specific topic within a domain |
-| `score results` | — | `construct research score` | Rank captured results against the domain's scoring rules |
-| `review research` | — | `construct research review` | Approve, reject, or amend the items a paused run has staged |
-| `inspect research` | — | `construct research inspect` | Report the per-step state of a completed run |
+| `score results` | — | `construct research score --workspace .` | Rank captured results against the domain's scoring rules |
+| `review research` | — | `construct research review --workspace . --run-id <run-id>` | Approve, reject, or amend the items a paused run has staged |
+| `inspect research` | — | `construct research inspect --workspace . --run-id <run-id>` | Report the per-step state of a completed run |
 | `search adjust` | construct-search-adjust | — | Tune search clusters, weights, and priorities |
 
 ## Knowledge Operations
 
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
-| `add card` | construct-card-create | `construct knowledge card create` | Create a new knowledge card with full epistemic metadata |
-| `edit card {id}` | construct-card-edit | `construct knowledge card edit` | Update an existing card's content or metadata |
+| `add card` | construct-card-create | `construct knowledge card create --title <title> --type <type> --domains <domains>` | Create a new knowledge card with full epistemic metadata |
+| `edit card {id}` | construct-card-edit | `construct knowledge card edit <card-id>` | Update an existing card's content or metadata |
 | `list cards` | — | `construct knowledge card list --domain <domain> --json` | Enumerate card frontmatter for a domain — card prose is never returned |
-| `connect {a} → {b}` | construct-card-connect | `construct knowledge connection add` | Create a typed connection between two cards |
+| `connect {a} → {b}` | construct-card-connect | `construct knowledge connection add <from-id> <to-id> --type <type>` | Create a typed connection between two cards |
 | `list connections` | — | `construct knowledge connection list --json` | Enumerate the typed edges in the graph |
-| `disconnect {a} → {b}` | — | `construct knowledge connection remove` | Remove a typed connection between two cards |
-| `evaluate {id}` | construct-card-evaluate | `construct card evaluate` | Assess a card for promotion, decay, or archival |
-| `archive {id}` | construct-card-archive | `construct knowledge card archive` | Move a card to archived lifecycle state |
+| `disconnect {a} → {b}` | — | `construct knowledge connection remove <from-id> <to-id> --type <type>` | Remove a typed connection between two cards |
+| `evaluate {id}` | construct-card-evaluate | `construct card evaluate --workspace .` | Assess a card for promotion, decay, or archival |
+| `archive {id}` | construct-card-archive | `construct knowledge card archive <card-id>` | Move a card to archived lifecycle state |
 
 ## Curation
 
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
 | `curate {domain}` | construct-curation-cycle | `construct curation run --workspace .` | Full cycle: validate → decay scan → orphan scan → promote → connect → bridge detect |
-| `review curation` | — | `construct curation review` | Approve or reject the promotions and archivals a paused run has staged |
-| `inspect curation` | — | `construct curation inspect` | Report the per-step state of a completed cycle |
+| `review curation` | — | `construct curation review --workspace . --run-id <run-id>` | Approve or reject the promotions and archivals a paused run has staged |
+| `inspect curation` | — | `construct curation inspect --workspace . --run-id <run-id>` | Report the per-step state of a completed cycle |
 | `bridges` | construct-bridge-detect | `construct bridge detect` | Find cross-domain structural parallels and semantic overlaps |
-| `validate` | construct-workspace-validate | `construct validate` | Post-write audit: 5-layer workspace integrity check covering schema, governance, cross-file consistency, functional health, and audit trail. Pre-write rejection (invalid artifacts blocked before write) is handled by individual skill validation checklists and runtime helpers. |
+| `validate` | construct-workspace-validate | `construct validate <path>` | Post-write audit: 5-layer workspace integrity check covering schema, governance, cross-file consistency, functional health, and audit trail. Pre-write rejection (invalid artifacts blocked before write) is handled by individual skill validation checklists and runtime helpers. |
 
 A curation cycle degrades rather than aborts: a step that cannot complete is recorded in the run
 report and the cycle continues. Judge the outcome from the per-step state in the `--json` payload,
@@ -74,7 +74,7 @@ not from the process exit code.
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
 | `daily` | — | `construct daily run --workspace .` | Research → curate → status in a single pass over the workspace |
-| `inspect daily` | — | `construct daily inspect` | Report the per-step state of the most recent cycle |
+| `inspect daily` | — | `construct daily inspect --workspace . --run-id <run-id>` | Report the per-step state of the most recent cycle |
 
 A degraded daily run reports its failing step in the payload rather than aborting the cycle —
 read the per-step state, not the exit code.
@@ -83,19 +83,19 @@ read the per-step state, not the exit code.
 
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
-| `ingest {source}` | — | `construct ingest source <path>` | Pull an external source into `refs/` as a reference entry |
+| `ingest {source}` | — | `construct ingest source <source>` | Pull an external source into `refs/` as a reference entry |
 | `spikes` | — | `construct spike list` | List the exploratory spikes defined for the workspace |
-| `run spike {id}` | — | `construct spike run` | Execute a single exploratory spike |
+| `run spike {id}` | — | `construct spike run <tool-name>` | Execute a single exploratory spike |
 | `extract tags` | — | `construct tag extract` | Derive candidate tags from card content |
 | `tags` | — | `construct tag list` | List current and candidate tags |
-| `approve tags` | — | `construct tag approve` | Promote candidate tags into the workspace vocabulary |
+| `approve tags` | — | `construct tag approve <candidate-ids>` | Promote candidate tags into the workspace vocabulary |
 
 ## Analysis
 
 | Command | Skill | CLI | What it does |
 |---------|-------|-----|-------------|
-| `status` | construct-graph-status | `construct status` | Dashboard: card counts, connections, domain health, quality indicators |
-| `ask {domain}` | — | `construct ask domain` | Answer a question grounded in that domain's knowledge cards |
+| `status` | construct-graph-status | `construct status <path>` | Dashboard: card counts, connections, domain health, quality indicators |
+| `ask {domain}` | — | `construct ask domain --question <question> --domain <domain>` | Answer a question grounded in that domain's knowledge cards |
 | `gaps {domain}` | construct-gap-analysis | — | Coverage gaps, confidence distribution, missing categories |
 | `gaps {topic}` | construct-gap-analysis (scoped) | — | Topic-specific gap report |
 | `domains` | construct-domain-manage | — | List domains, show status, activate/pause |
@@ -125,8 +125,8 @@ read the per-step state, not the exit code.
 
 **Note on per-card edits:** creating a card or adding a connection directly does **not** trigger a
 views refresh — there is no per-card refresh path. Views data is regenerated by the workflow
-capabilities (`construct research run`, `construct curation run`, `construct daily run`) or on
-demand via `construct views generate`.
+capabilities (`construct research run --workspace .`, `construct curation run --workspace .`,
+`construct daily run --workspace .`) or on demand via `construct views generate`.
 
 ---
 
