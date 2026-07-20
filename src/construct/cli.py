@@ -1449,6 +1449,24 @@ def connection_remove(
     _display_result(result, json_output)
 
 
+@card_app.command("list")
+def card_list(
+    ctx: typer.Context,
+    domain: Optional[str] = typer.Option(None, "--domain", "-d", help="Filter by domain"),
+    include_archived: bool = typer.Option(False, "--include-archived", help="Include archived cards"),
+    workspace: Path = typer.Option(Path.cwd(), "--workspace", "-w"),
+    json_output: bool = typer.Option(False, "--json", "-j"),
+) -> None:
+    """List cards. Optionally filter by domain or include archived cards."""
+    try:
+        cap = get_registry().get("knowledge.card.list")
+    except KeyError:
+        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
+        raise typer.Exit(code=1)
+    result = cap.handler(workspace, domain=domain, include_archived=include_archived)
+    _display_result(result, json_output)
+
+
 @connection_app.command("list")
 def connection_list(
     ctx: typer.Context,

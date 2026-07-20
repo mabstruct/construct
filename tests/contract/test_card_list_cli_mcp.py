@@ -12,6 +12,7 @@ exception is not a precedent for a second bypass.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -127,10 +128,16 @@ def test_cli_commands_present() -> None:
 
 
 def test_cli_exposes_documented_flags() -> None:
+    """The flag surface 16-05's CLI-invocation column must be able to name.
+
+    Rich injects ANSI colour codes mid-token (``-``\\x1b[..m``-domain``), so the
+    escapes are stripped before matching.
+    """
     result = runner.invoke(app, ["knowledge", "card", "list", "--help"])
     assert result.exit_code == 0, result.stdout
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     for flag in ("--domain", "--include-archived", "--workspace", "--json"):
-        assert flag in result.stdout, flag
+        assert flag in plain, flag
 
 
 # ── CLI/MCP result-schema parity ──────────────────────────────────────────

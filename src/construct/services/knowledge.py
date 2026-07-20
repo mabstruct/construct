@@ -600,6 +600,79 @@ def list_connections(
     )
 
 
+def _json_safe(value: object) -> object:
+    """Coerce date/datetime values to ISO-8601 strings, pass everything else through.
+
+    ``WorkspaceLoader.load_cards()`` deliberately keeps ``created`` /
+    ``last_verified`` as ``datetime.date`` because the curation decay scans rely
+    on that. The coercion therefore belongs here, on the way out of the enumerate
+    handler — never in ``cli._display_result``, which every command shares.
+    """
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value
+
+
+def list_cards(
+    workspace: str | Path,
+    domain: str | None = None,
+    include_archived: bool = False,
+) -> OperationResult:
+    """List cards in a workspace, optionally filtered by domain and lifecycle.
+
+    The first parameter is named ``workspace`` (not ``workspace_root``) because
+    the CLI calls this handler positionally while MCP calls it with keyword
+    arguments derived from ``CardListInput``'s field names; one name binds both
+    callers with no shim.
+
+    Returns frontmatter only — card prose is never included (D-02).
+    """
+    root = Path(workspace)
+    cards_dir = root / "cards"
+    if not cards_dir.exists():
+        # "Not a workspace" must not look like "a workspace with no cards".
+        return OperationResult(
+            success=False,
+            message=f"Not a workspace: no cards directory at {cards_dir}",
+            errors=[
+                OperationError(
+                    field="workspace",
+                    reason=f"missing cards directory: {cards_dir}",
+                    suggestion="Point --workspace at a workspace root, or run `construct init`.",
+                )
+            ],
+        )
+
+    loader = WorkspaceLoader(root)
+    try:
+        raw_cards = loader.load_cards()
+    except WorkspaceLoadError as exc:
+        return OperationResult(
+            success=False,
+            message=f"Could not load cards: {exc}",
+            errors=[OperationError(reason=str(exc))],
+        )
+
+    cards: list[dict] = []
+    for card_data in raw_cards:
+        # D-02 / T-16-02: an enumerate call must never carry the graph's prose.
+        card_data.pop("body", None)
+        card_data = {key: _json_safe(value) for key, value in card_data.items()}
+
+        if not include_archived and card_data.get("lifecycle") == Lifecycle.archived.value:
+            continue
+        # Exact string equality against the card's plural `domains` list.
+        if domain is not None and domain not in (card_data.get("domains") or []):
+            continue
+        cards.append(card_data)
+
+    return OperationResult(
+        success=True,
+        message=f"Found {len(cards)} card(s)",
+        data=cards,
+    )
+
+
 def _get_archived_card_ids(root: Path) -> set[str]:
     """Return the set of card IDs whose lifecycle is *archived*."""
     archived: set[str] = set()

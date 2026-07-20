@@ -402,10 +402,10 @@ class TestCardList:
         workspace = workspace_with_cards
         create_card(
             workspace,
-            _sample_card_data(id="card-c", title="Card C", domains=["Cosmology"]),
+            _sample_card_data(id="card-c", title="Card C", domains=["other-domain"]),
         )
 
-        result = list_cards(workspace, domain="Cosmology")
+        result = list_cards(workspace, domain="other-domain")
 
         assert result.success is True
         assert result.data is not None
@@ -414,14 +414,12 @@ class TestCardList:
     def test_list_cards_domain_filter_is_case_sensitive(
         self, workspace_with_cards: Path
     ) -> None:
-        """Exact string equality — `cosmology` must not match `Cosmology`."""
-        workspace = workspace_with_cards
-        create_card(
-            workspace,
-            _sample_card_data(id="card-c", title="Card C", domains=["Cosmology"]),
-        )
+        """Exact string equality — no case folding, so `Test-Domain` matches nothing.
 
-        result = list_cards(workspace, domain="cosmology")
+        Card domains are schema-constrained to kebab-case, so the mismatching
+        case can only be supplied on the *query* side.
+        """
+        result = list_cards(workspace_with_cards, domain="Test-Domain")
 
         assert result.success is True
         assert result.data == []

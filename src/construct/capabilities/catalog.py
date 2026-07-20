@@ -19,6 +19,7 @@ from construct.services.knowledge import (
     archive_card,
     create_card,
     edit_card,
+    list_cards,
     list_connections,
     remove_connection,
 )
@@ -140,6 +141,16 @@ class ConnectionRemoveInput(BaseModel):
 class ConnectionListInput(BaseModel):
     workspace: Path
     card_id: str | None = None
+    include_archived: bool = False
+
+
+class CardListInput(BaseModel):
+    # ASVS V5 (T-16-09): reject unexpected MCP payload fields at the boundary.
+    # Set explicitly — this is not inherited from a module-level config.
+    model_config = {"extra": "forbid"}
+
+    workspace: Path
+    domain: str | None = None
     include_archived: bool = False
 
 
@@ -299,6 +310,16 @@ def create_registry() -> CapabilityRegistry:
         output_model=OperationResult,
         handler=list_connections,
         cli_name="knowledge.connection.list",
+    ))
+    registry.register(CapabilityRecord(
+        id="knowledge.card.list",
+        name="List Cards",
+        description="List cards, optionally filtered by domain or lifecycle",
+        input_model=CardListInput,
+        output_model=OperationResult,
+        handler=list_cards,
+        cli_name="knowledge.card.list",
+        mcp_tool_name="construct_list_cards",
     ))
     registry.register(CapabilityRecord(
         id="graph.status",
