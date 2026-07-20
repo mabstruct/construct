@@ -5,7 +5,7 @@ slug: invocation-user-doc-truth
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-07-20
 ---
 
@@ -48,7 +48,27 @@ The doc guard is **exhaustive, not sampled** — it enumerates every `construct 
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| _pending — filled by planner_ | | | | | | | | | ⬜ pending |
+| T1 per-doc non-vacuity guard | 16-01 | 1 | DOC-04 | T-16-01 | Guard fails loudly when a scanned doc yields zero invocations | contract | `pytest -k test_key_docs_are_not_vacuous -q` | ✅ | ✅ green |
+| T2 pin `card list` in discoverability | 16-01 | 1 | FIX-03 | — | Introspection breakage cannot make the suite vacuous | contract | `pytest -k test_command_surface_is_discoverable -q` | ✅ | ✅ green |
+| T3 multi-line frontmatter parser | 16-01 | 1 | DEC-01 | — | Parser sees list-form `allowed-tools`, so grants cannot hide | contract | `pytest tests/contract/test_skill_migration.py -q` | ✅ | ✅ green |
+| T1 decay_scan summary correction | 16-02 | 1 | DOC-04 | — | Reported auto-archive count matches behavior | unit | `pytest tests/unit -k decay -q` | ✅ | ✅ green |
+| T2 README / AGENTS.md correction | 16-02 | 1 | DOC-04 | — | Lineage and CLI descriptions match the shipped surface | manual+contract | `pytest -q` | ✅ | ✅ green |
+| T3 stale baseline correction | 16-02 | 1 | DOC-04 | T-16-17 | Completion evidence is measured against a true baseline | manual | `pytest -q` (count vs REQUIREMENTS.md) | ✅ | ✅ green |
+| T1 RED tests for `card list` | 16-03 | 2 | FIX-03 | — | Body exclusion + ISO dates + CLI/MCP parity asserted before impl | unit+contract | `pytest tests/unit/test_knowledge_operations.py tests/contract/test_card_list_cli_mcp.py -q` | ✅ | ✅ green |
+| T2 implement `list_cards` + CLI/MCP | 16-03 | 2 | FIX-03 | — | Capability reaches both surfaces from one registry entry | contract | `pytest tests/contract/ -k card_list_cli_mcp -q` | ✅ | ✅ green |
+| T3 delete `card list` allowlist entry | 16-03 | 2 | FIX-03 | T-16-01 | Entry removed by making the command resolve, not by narrowing scope | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
+| T1 remove web-search grants | 16-04 | 3 | DEC-01 | — | `construct-synthesis` declares no `WebSearch`/`WebFetch` | contract | `pytest tests/contract/test_skill_migration.py -q` | ✅ | ✅ green |
+| T2 rewrite `ref list` onto Read | 16-04 | 3 | FIX-03 | T-16-01 | Allowlist entry dies with the reference, doc stays scanned | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
+| T3 discharge migration-fallback note | 16-04 | 3 | DEC-01 | — | Spec no longer instructs a superseded fallback | manual | `pytest -q` | ✅ | ✅ green |
+| T1 CLI column in `USER_GUIDE.md` | 16-05 | 3 | DOC-04 | T-16-01 | Every documented row names an executable invocation | contract | `pytest -k test_key_docs_are_not_vacuous -q` | ✅ | ✅ green |
+| T2 CLI column in `commands.md` | 16-05 | 3 | DOC-04 | T-16-01 | Same, for the reference doc | contract | `pytest -k test_key_docs_are_not_vacuous -q` | ✅ | ✅ green |
+| T3 cross-check both docs vs live app | 16-05 | 3 | DOC-04 | T-16-17 | Arguments present, not just resolvable command names | manual | `pytest -q` + live `--help` diff | ✅ | ✅ green |
+| T1 playbook setup→ingestion | 16-06 | 4 | DOC-04 | T-16-04 | Offline path documented without credential dependence | manual | human execution (16-07 T3) | ✅ | ✅ green |
+| T2 playbook workflows→teardown | 16-06 | 4 | DOC-04 | T-16-04 | Successor research flow + `daily` covered | manual | human execution (16-07 T3) | ✅ | ✅ green |
+| T3 retire v0.3, swap glob, empty allowlist | 16-06 | 4 | FIX-03 | T-16-01 | Supersession, not deletion — signature `0 3` not `0 2` | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
+| T1 extend `_DOC_GLOBS` to five | 16-07 | 5 | DOC-04 | T-16-01 | User-facing doc set permanently guarded; no entry removed | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
+| T2 prove mechanical completion | 16-07 | 5 | FIX-03 | T-16-17 | Each signal checked independently of suite exit code | contract | `pytest -q` + signature script | ✅ | ✅ green |
+| T3 human playbook offline run | 16-07 | 5 | DOC-04 | T-16-04 | Steps *run*, not merely resolve (D-09 part two) | manual | fresh smoke workspace, no API key | — | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -73,14 +93,18 @@ The doc guard is **exhaustive, not sampled** — it enumerates every `construct 
 
 ## Wave 0 Requirements
 
-- [ ] Per-doc non-vacuity test in `tests/contract/test_doc_command_references.py` — DOC-04 *(must go RED before the `_DOC_GLOBS` extension lands)*
-- [ ] Multi-line frontmatter parser in `tests/contract/test_skill_migration.py::_allowed_tools_line()` — DEC-01 *(must go RED before synthesis joins `_MIGRATED_SKILLS`)*
-- [ ] `card list` body-exclusion unit test — FIX-03 / D-02
-- [ ] `card list` JSON date-serialization unit test — FIX-03
-- [ ] `card list` CLI/MCP parity contract test — FIX-03 / D-01
-- [ ] Extend `test_command_surface_is_discoverable` with `("knowledge","card","list")`
+- [x] Per-doc non-vacuity test in `tests/contract/test_doc_command_references.py` — DOC-04 *(landed 16-01 T1; went RED before the `_DOC_GLOBS` extension, green from 16-05)*
+- [x] Multi-line frontmatter parser in `tests/contract/test_skill_migration.py::_allowed_tools_line()` — DEC-01 *(landed 16-01 T3; RED before synthesis joined `_MIGRATED_SKILLS`)*
+- [x] `card list` body-exclusion unit test — FIX-03 / D-02 *(landed 16-03 T1)*
+- [x] `card list` JSON date-serialization unit test — FIX-03 *(landed 16-03 T1)*
+- [x] `card list` CLI/MCP parity contract test — FIX-03 / D-01 *(landed 16-03 T1, `tests/contract/test_card_list_cli_mcp.py`)*
+- [x] Extend `test_command_surface_is_discoverable` with `("knowledge","card","list")` *(landed 16-01 T2)*
 
-*Framework install: none needed — pytest present, 489 tests green.*
+**`wave_0_complete: true`** — all six deliverables landed across 16-01 (Wave 1) and 16-03
+(Wave 2). Each went RED before the change it guards, which is what makes the phase's green
+suite evidence rather than assertion.
+
+*Framework install: none needed — pytest present, 489 tests green at phase start; 515 at close.*
 
 ---
 
