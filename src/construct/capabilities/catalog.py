@@ -529,11 +529,27 @@ def _views_generate_handler(install_root) -> OperationResult:
     and become ``OperationResult.errors``; content warnings are advisory and
     never make ``success`` False. The message names both counts separately so
     the two are not confused at a glance.
+
+    Like every sibling shim in this module the handler NEVER raises: the MCP
+    surface must not receive raw exception text (which carries filesystem paths)
+    and the CLI must not traceback. Both the install-root guard and the generator
+    call are therefore reduced to an ``OperationResult`` naming only the
+    exception class.
     """
     # Deferred import — matches the convention for heavy views imports.
     from construct.views.generate import generate
 
-    report = generate(Path(install_root))
+    try:
+        report = generate(Path(install_root))
+    except Exception as exc:  # noqa: BLE001 — surface parity with the sibling shims
+        reason = type(exc).__name__
+        return OperationResult(
+            success=False,
+            message=f"views.generate_data failed: {reason}",
+            errors=[OperationError(field="views.generate", reason=reason, suggestion="")],
+            data={"failed": True},
+        )
+
     errors = [
         OperationError(field="views.validation", reason=err, suggestion="")
         for err in report.validation_errors

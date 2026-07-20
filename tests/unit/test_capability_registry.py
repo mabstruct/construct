@@ -217,6 +217,30 @@ def test_views_generate_data_handler_is_not_a_permanent_failure(tmp_path: Path) 
     assert by_position.errors == []
 
 
+def test_views_generate_handler_never_raises_and_never_leaks(tmp_path: Path, monkeypatch) -> None:
+    """CR-02: a raising generator must become an OperationResult, not a traceback.
+
+    Every sibling shim in ``catalog.py`` exists to keep raw exception text — which
+    carries filesystem paths — out of the MCP error channel and out of the CLI.
+    The views handler was the only one calling straight through.
+    """
+    import construct.views.generate as gen_mod
+
+    secret = tmp_path / "leaky-install-root-name"
+
+    def _boom(install_root):
+        raise FileNotFoundError(f"No such file or directory: {secret}")
+
+    monkeypatch.setattr(gen_mod, "generate", _boom)
+
+    result = get_registry().get("views.generate_data").handler(install_root=secret)
+
+    assert result.success is False
+    assert "FileNotFoundError" in result.message
+    rendered = result.message + " ".join(e.reason for e in result.errors)
+    assert str(secret) not in rendered, f"handler leaked a filesystem path: {rendered}"
+
+
 def test_views_generate_data_input_declares_install_root() -> None:
     """D-05: the contract names the install root, which is what generate() takes."""
     fields = set(ViewsGenerateDataInput.model_fields)
