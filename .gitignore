@@ -2,7 +2,11 @@ test-ws/
 tests/fixtures/v02/*/views/
 
 # Python local environments
+# Both forms: the trailing-slash pattern matches a directory only, so a `.venv`
+# SYMLINK (e.g. one pointing a git worktree at the main checkout's environment)
+# is not ignored and can be committed by `git add -A`.
 .venv/
+.venv
 
 # Local tool config
 .vscode/
