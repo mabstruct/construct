@@ -64,10 +64,15 @@ construct knowledge card list --domain <domain> --json
 ```
 to enumerate all cards in a domain, then Read the most promising ones individually.
 
-Also check `refs/` for supporting references via:
-```
-construct knowledge ref list --domain <domain> --json
-```
+Also check `refs/` for supporting references. There is no `ref` sub-app on the CLI —
+reference entries are plain JSON files, one per source, so use `Read` (already granted)
+over the domain workspace's `refs/` directory:
+
+- Read `<domain>/refs/` to enumerate the reference entries for the domain under synthesis.
+- Read the individual `refs/*.json` entries that back the cards you intend to cite.
+
+Scope the read to the domain under synthesis rather than the whole workspace — refs are
+supporting material for the cards, not a second source of claims.
 
 ### Step 3: Assess Knowledge Strength
 

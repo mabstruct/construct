@@ -171,7 +171,6 @@ def _documented() -> dict[Path, set[tuple[str, ...]]]:
 # the audit defect that owns it. Delete an entry the moment its FIX lands; the
 # test below fails if an entry starts resolving, so this cannot rot.
 _KNOWN_BROKEN: dict[tuple[str, ...], str] = {
-    ("knowledge", "ref", "list"): "V41-03 / FIX-03 — no `ref` sub-app exists",
     ("workflow", "run"): "V41-03 / FIX-03 — removed in Phase 12 (D-10)",
     ("workflow", "resume"): "V41-03 / FIX-03 — never existed",
 }
