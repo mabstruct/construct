@@ -76,7 +76,7 @@ Mapped by the roadmap (2026-07-19). Every open requirement maps to exactly one p
 | DOC-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-02 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-03 | Phase 14 — Durable-State & Config Truth | Complete |
-| DOC-04 | Phase 16 — Invocation & User-Doc Truth | Pending — both `test_key_docs_are_not_vacuous` cases still fail (16-05 closes); `USER-TEST-PLAYBOOK-v03.md` not yet superseded (16-06 closes) |
+| DOC-04 | Phase 16 — Invocation & User-Doc Truth | Pending — clauses (a) `USER_GUIDE.md` covers the v0.4 commands, (b) `commands.md` lists real commands (both discharged by 16-05: all three `test_key_docs_are_not_vacuous` cases green, 67 documented invocations execute), and (c) `README.md`/`AGENTS.md` accurate (16-02) are done; clause (d) `USER-TEST-PLAYBOOK-v03.md` not yet superseded (16-06 closes) still blocks |
 | UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DEC-01 | Phase 16 — Invocation & User-Doc Truth | Complete — closed by 16-04 |
 | FIX-04 | — (pre-milestone) | ✅ Delivered 2026-07-19, commit `11f20f4` |

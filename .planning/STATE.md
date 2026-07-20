@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
 current_phase_name: invocation-user-doc-truth
 status: executing
-stopped_at: Completed 16-04-PLAN.md
-last_updated: "2026-07-20T15:34:23.905Z"
+stopped_at: Completed 16-05-PLAN.md
+last_updated: "2026-07-20T15:49:42.461Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 16 (invocation-user-doc-truth) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
-Progress: [████████░░] 81% (0/4 phases)
+Progress: [█████████░] 88% (0/4 phases)
 Last activity: 2026-07-20 — Phase 16 execution started
 
 ## Performance Metrics
@@ -84,6 +84,7 @@ Last activity: 2026-07-20 — Phase 16 execution started
 | Phase 16 P02 | ~14m | 3 tasks | 7 files |
 | Phase 16 P03 | 25m | 3 tasks | 8 files |
 | Phase 16 P04 | 12m | 3 tasks | 4 files |
+| Phase 16 P05 | 35 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -202,6 +203,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Kept test_docs_contain_invocations alongside the new per-doc non-vacuity guard — global regex coverage and per-doc coverage are complements
 - [Phase ?]: 16-04: construct-synthesis web grants removed; refs/ lookup rewritten onto Read per D-03 (no ref sub-app)
 - [Phase ?]: 16-04: FIX-03 reverted to Pending — 16-03 marked it Complete while _KNOWN_BROKEN still holds 2 workflow entries; 16-06 closes it
+- [Phase ?]: Doc CLI cells must execute, not just resolve: the invocation guard validates the command path only, so a cell can pass every contract test and still fail with a Typer usage error when copied verbatim (16-05, 19 such defects found)
 
 ### Pending Todos
 
@@ -238,8 +240,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T15:34:06.043Z
-Stopped at: Completed 16-04-PLAN.md
+Last session: 2026-07-20T15:49:35.179Z
+Stopped at: Completed 16-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
