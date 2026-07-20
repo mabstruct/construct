@@ -868,7 +868,7 @@ app.add_typer(views_app)
 @views_app.command()
 def generate(
     ctx: typer.Context,
-    install_root: Path = typer.Option(Path.cwd(), "--install-root"),
+    install_root: Path | None = typer.Option(None, "--install-root"),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Generate the views JSON data files from workspace state.
@@ -876,8 +876,16 @@ def generate(
     Reads every workspace under the install root and writes
     views/build/data/*.json. Validation errors are fatal; content warnings
     describe source material and do not fail the run.
+
+    ``--install-root`` defaults to the working directory AT CALL TIME. Declaring
+    ``typer.Option(Path.cwd(), ...)`` would evaluate it at *import* time, so any
+    process that imports construct.cli before changing directory -- test runners,
+    long-lived hosts, anything introspecting the CLI -- would silently get the
+    wrong default (WR-09).
     """
     from construct.views.generate import generate as run_generate, install_root_error
+
+    install_root = install_root or Path.cwd()
 
     # CR-03: --install-root defaults to the process working directory, so an
     # accidental bare `construct views generate` would otherwise scaffold a
@@ -917,14 +925,17 @@ def generate(
 @views_app.command()
 def validate(
     ctx: typer.Context,
-    install_root: Path = typer.Option(Path.cwd(), "--install-root"),
+    install_root: Path | None = typer.Option(None, "--install-root"),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Validate views data files against their Pydantic schemas.
 
     Reads <install-root>/views/build/data/*.json and validates each file
     against its declared contract model. Reports per-file pass/fail.
+
+    ``--install-root`` is resolved at call time, not import time (WR-09).
     """
+    install_root = install_root or Path.cwd()
     from construct.views.models import (
         ArticlesFile,
         BridgesFile,

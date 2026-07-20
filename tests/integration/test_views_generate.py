@@ -313,3 +313,25 @@ def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(
     for warning in yaml_warnings:
         assert not warning.startswith("(root)/demo/"), warning
         assert warning.startswith("demo/domains.yaml"), warning
+
+
+def test_views_install_root_default_is_resolved_at_call_time(
+    scaffolded_install_root: Path, monkeypatch
+) -> None:
+    """WR-09: `typer.Option(Path.cwd(), ...)` bound the default at IMPORT time.
+
+    construct.cli is imported long before any command runs (test runners, the MCP
+    server importing it for introspection, long-lived hosts), so the default
+    silently pointed at whatever directory the process started in. Combined with
+    the missing install-root guard this scaffolded a views tree in an unexpected
+    place and called it a success.
+    """
+    from typer.testing import CliRunner
+
+    from construct.cli import app
+
+    monkeypatch.chdir(scaffolded_install_root)
+    result = CliRunner().invoke(app, ["views", "generate"])
+
+    assert result.exit_code == 0, result.stdout
+    assert (scaffolded_install_root / "views" / "build" / "data" / "stats.json").exists()
