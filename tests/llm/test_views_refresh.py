@@ -376,3 +376,39 @@ def test_second_sweep_over_unchanged_root_writes_less(tmp_path: Path) -> None:
 
     assert first.success and second.success
     assert second.total_files_written < first.total_files_written
+
+
+def test_refresh_keeps_reporting_failure_across_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CR-01 at the refresh boundary: a failed refresh must not self-heal.
+
+    ``refresh_views`` reports ``failed`` when the generator reports validation
+    errors. Before the CR-01 fix the failing run still saved the source
+    fingerprints, so the *second* refresh over the same unchanged install root hit
+    the generator's incremental short-circuit and reported ``succeeded`` — turning
+    a permanently broken build into a permanently clean signal.
+    """
+    import construct.views.generate as gen_mod
+    from tests.llm.conftest import create_test_workspace
+
+    create_test_workspace(tmp_path / "ws")
+    _scaffold_build_dir(tmp_path)
+
+    real_validate = gen_mod._validate_file_data
+
+    def _reject_stats(rel_path: str, raw_data: dict, errors: list[str]) -> bool:
+        if rel_path == "stats.json":
+            errors.append("stats.json: injected validation failure")
+            return True
+        return real_validate(rel_path, raw_data, errors)
+
+    monkeypatch.setattr(gen_mod, "_validate_file_data", _reject_stats)
+
+    first = refresh_views(tmp_path)
+    second = refresh_views(tmp_path)
+
+    assert first.status == "failed", first
+    assert second.status == "failed", (
+        "the refresh failure channel healed itself over unchanged state"
+    )

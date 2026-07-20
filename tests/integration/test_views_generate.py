@@ -130,6 +130,56 @@ def test_generated_card_connections_are_id_strings(tmp_path: Path) -> None:
         assert record.connections == connections
 
 
+def test_validation_error_run_does_not_latch_into_permanent_success(
+    scaffolded_install_root: Path, monkeypatch
+) -> None:
+    """CR-01: a run with validation errors must not poison the fingerprint cache.
+
+    Steps 8 and 10 used to run unconditionally, so a run that skipped writes
+    because of a validation error still advanced ``version.json`` and still saved
+    the *current* source fingerprints. The next run then hit the incremental
+    short-circuit and returned ``success=True`` with zero files written — forever,
+    until a source file was touched or ``_build_meta.json`` was deleted. This test
+    fails (second run reports success) if that gating is removed again.
+    """
+    import construct.views.generate as gen_mod
+
+    real_validate = gen_mod._validate_file_data
+
+    def _reject_stats(rel_path: str, raw_data: dict, errors: list[str]) -> bool:
+        if rel_path == "stats.json":
+            errors.append("stats.json: injected validation failure")
+            return True
+        return real_validate(rel_path, raw_data, errors)
+
+    monkeypatch.setattr(gen_mod, "_validate_file_data", _reject_stats)
+
+    build_dir = scaffolded_install_root / "views" / "build"
+    data_dir = build_dir / "data"
+
+    first = generate(scaffolded_install_root)
+    assert first.success is False, first.validation_errors
+    assert first.validation_errors
+
+    # No build state was committed for the rejected build.
+    assert not (build_dir / "version.json").exists(), (
+        "version.json advertises a build whose files were never written"
+    )
+    assert not (data_dir / "_build_meta.json").exists(), (
+        "the fingerprint cache was saved for a build that failed validation"
+    )
+
+    # The failure must still be reported on an unchanged install root.
+    second = generate(scaffolded_install_root)
+    assert second.success is False, (
+        "a failed build latched into permanent success on the next run"
+    )
+    assert second.validation_errors
+    assert second.total_files_written > 0, (
+        "the second run short-circuited instead of retrying the failed build"
+    )
+
+
 def test_models_still_forbid_unknown_fields() -> None:
     for name in ALL_MODEL_NAMES:
         model = getattr(views_models, name)

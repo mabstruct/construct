@@ -327,16 +327,27 @@ def generate(install_root: Path) -> GenerateReport:
         _write_atomic(full, env)
         total_files_written += 1
 
-    # 8. version.json
-    _write_atomic(
-        build_dir / "version.json",
-        {
-            "schema_version": envelope.SCHEMA_VERSION,
-            "build_id": build_id,
-            "generated_at": generated_at,
-        },
-    )
-    total_files_written += 1
+    # A run that rejected any file did NOT produce the build it computed. Neither
+    # the version pointer nor the fingerprint cache may be advanced for it: writing
+    # version.json would tell the SPA to refetch data files that were never
+    # updated, and saving the source fingerprints would make the *next* run
+    # short-circuit at the incremental gate above and return success with zero
+    # files written — permanently, until a source file is touched or
+    # _build_meta.json is deleted. That latch also silently converts
+    # refresh_views' "failed" into "succeeded" on every subsequent run.
+    build_ok = not validation_errors
+
+    # 8. version.json — only advertise a build whose files actually landed.
+    if build_ok:
+        _write_atomic(
+            build_dir / "version.json",
+            {
+                "schema_version": envelope.SCHEMA_VERSION,
+                "build_id": build_id,
+                "generated_at": generated_at,
+            },
+        )
+        total_files_written += 1
 
     # 9. Warnings log
     warnings_path = data_dir / "_generation-warnings.log"
@@ -345,13 +356,15 @@ def generate(install_root: Path) -> GenerateReport:
     elif warnings_path.exists():
         warnings_path.unlink()
 
-    # 10. Save build meta
-    fp.save_meta(data_dir, {
-        "workspaces": new_ws_fps,
-        "config_fingerprint": cfg_fp,
-        "articles_fingerprint": arts_fp,
-        "build_id": build_id,
-    })
+    # 10. Save build meta — only cache fingerprints for a build that succeeded, so
+    #     a failed run is retried on the next invocation rather than latched.
+    if build_ok:
+        fp.save_meta(data_dir, {
+            "workspaces": new_ws_fps,
+            "config_fingerprint": cfg_fp,
+            "articles_fingerprint": arts_fp,
+            "build_id": build_id,
+        })
 
     # 11. Clean up removed workspace dirs
     for ws_id in removed_ws:
