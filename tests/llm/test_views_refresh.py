@@ -248,10 +248,12 @@ def test_deferred_step_placeholder_is_gone() -> None:
 
     assert not hasattr(curation_run, "_deferred_step")
 
-    # Scoped to the views node rather than the whole file: `decay_scan`'s
-    # auto_archive summary carries its own, unrelated "deferred to Phase 12" string,
-    # pinned by test_auto_archive_reported_not_acted. That is a different node's
-    # contract and is out of this plan's scope — see the 15-04 summary.
+    # Scoped to the views node, and to its body rather than its docstring. The
+    # `decay_scan` exclusion this comment used to describe is gone: 16-02 rewrote
+    # that summary to state report-only behaviour with no phase reference. What
+    # remains is `views_refresh_hook`'s own docstring, which cites the stale string
+    # deliberately to record WHY this node was rewritten — hence the `"""` split
+    # below. The assertion targets live code, not the history that explains it.
     src = Path(curation_run.__file__).read_text(encoding="utf-8")
     node_src = src[src.index("def views_refresh_hook"):]
     node_src = node_src[: node_src.index("\n# ──")] if "\n# ──" in node_src else node_src

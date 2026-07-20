@@ -414,8 +414,9 @@ def decay_scan(state: CurationRunState) -> dict:
         summary = f"{len(candidate_ids)} decay candidate(s) over a {window}d window"
         if auto:
             summary += (
-                "; auto_archive_on_decay is set — archiving deferred to Phase 12 "
-                "(no card archived this phase)"
+                "; auto_archive_on_decay is set — this scan reports decay candidates "
+                "and archives nothing: each candidate is queued as an archive proposal "
+                "and is archived only after explicit operator approval at the review gate"
             )
         result = CurationStepResult(
             step="decay_scan", status="completed",

@@ -267,8 +267,9 @@ def test_no_canonical_writes(curation_workspace):
 
 def test_auto_archive_reported_not_acted(curation_workspace):
     """D-06: with ``decay.auto_archive_on_decay: true`` the decay step REPORTS the
-    flag and notes archiving is deferred to Phase 12 — but no card lifecycle is
-    flipped to archived."""
+    flag and states that it archives nothing and that archival needs explicit
+    operator approval at the review gate — and no card lifecycle is flipped to
+    archived."""
     from construct.llm import curation_run
     from construct.storage.workspace import WorkspaceLoader
 
@@ -279,7 +280,7 @@ def test_auto_archive_reported_not_acted(curation_workspace):
     )
     decay = _steps_by_name(run.steps)["decay_scan"]
     assert decay["findings"].get("auto_archive_on_decay") is True
-    assert "deferred to Phase 12" in decay["summary"]
+    assert "archived only after explicit operator approval" in decay["summary"]
 
     # No previously-non-archived card may have flipped to archived.
     cards = {c["id"]: str(c["lifecycle"]) for c in WorkspaceLoader(curation_workspace).load_cards()}
