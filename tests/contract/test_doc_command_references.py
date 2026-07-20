@@ -44,6 +44,27 @@ _DOC_GLOBS = (
     (_REPO_ROOT, "USER-TEST-PLAYBOOK-v03.md"),
 )
 
+# Documents whose whole purpose is to carry executable invocations.
+#
+# Why a repo-wide total is not enough: ``test_docs_contain_invocations`` asserts a
+# single aggregate floor across every scanned document. A document added to
+# ``_DOC_GLOBS`` whose command strings the extractor happens to miss therefore
+# passes ``test_documented_commands_resolve`` *trivially*, on an empty set, while
+# the global total stays far above its floor — a false green produced by the very
+# act of widening coverage. This named set closes that hole one level down: each
+# listed document must individually yield at least one invocation.
+#
+# These paths are resolved directly against ``_REPO_ROOT``, NOT via
+# ``_doc_files()``. The independence is deliberate and load-bearing: a document
+# can be asserted non-vacuous before it is globbed, so this guard is able to fail
+# for documents ``_DOC_GLOBS`` does not yet scan. It also means shrinking the scan
+# surface cannot silence it.
+_MUST_CARRY_INVOCATIONS: tuple[str, ...] = (
+    "CONSTRUCT-CLAUDE-impl/USER_GUIDE.md",
+    "CONSTRUCT-CLAUDE-impl/construct/references/commands.md",
+    "USER-TEST-PLAYBOOK-v03.md",
+)
+
 # Tokens that end a command path — flags, placeholders, shell noise, prose.
 _ARG_START = re.compile(r"^[-<{$\"'.,;:)\[/|]|^[A-Z]|\.\.\.")
 
@@ -183,6 +204,28 @@ def test_docs_contain_invocations() -> None:
     assert documented, "no documentation files found"
     total = sum(len(v) for v in documented.values())
     assert total > 10, f"extractor found only {total} invocations — regex likely broken"
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [pytest.param(rel, id=rel) for rel in _MUST_CARRY_INVOCATIONS],
+)
+def test_key_docs_are_not_vacuous(rel: str) -> None:
+    """Each named document must individually carry at least one invocation.
+
+    Complements ``test_docs_contain_invocations`` (which guards the extractor
+    globally) by guarding per-document coverage — see ``_MUST_CARRY_INVOCATIONS``.
+    """
+    path = _REPO_ROOT / rel
+    assert path.is_file(), (
+        f"{rel} does not exist. A document named in _MUST_CARRY_INVOCATIONS that is "
+        "renamed or deleted must fail loudly here, never vanish into a passing empty set."
+    )
+    found = _invocations(path.read_text(encoding="utf-8"))
+    assert found, (
+        f"{rel} yields zero extractable invocations — this document is expected to "
+        "carry at least one executable `construct ...` invocation in a code span."
+    )
 
 
 @pytest.mark.parametrize(
