@@ -42,6 +42,13 @@ _DOC_GLOBS = (
     (_IMPL / "claude" / "skills", "*/SKILL.md"),
     (_IMPL / "construct" / "workflows", "*.md"),
     (_REPO_ROOT, "USER-TEST-PLAYBOOK-v041.md"),
+    # The user-facing doc set (D-11). Added last, deliberately: globbing these
+    # before Phase 16's CLI-invocation columns landed would have scanned an empty
+    # set and passed while proving nothing (RESEARCH Findings 1-3). Both files are
+    # also in ``_MUST_CARRY_INVOCATIONS`` above, so a formatting change that blinds
+    # the extractor to their CLI column fails loudly instead of going vacuous.
+    (_IMPL, "USER_GUIDE.md"),
+    (_IMPL, "construct/references/commands.md"),
 )
 
 # Documents whose whole purpose is to carry executable invocations.
@@ -180,7 +187,8 @@ def _documented() -> dict[Path, set[tuple[str, ...]]]:
 # The last two are the ones worth reading carefully. They were documented ONLY in
 # the release playbook. That playbook was superseded rather than deleted: the v0.3
 # file was replaced by USER-TEST-PLAYBOOK-v041.md, which TOOK ITS PLACE in
-# ``_DOC_GLOBS`` above — the tuple still holds three entries. So these entries died
+# ``_DOC_GLOBS`` above — the tuple never lost an entry (it has since GROWN to five,
+# adding the user-facing doc set in D-11). So these entries died
 # because the invocations are gone from a document that is STILL SCANNED, not
 # because the scan surface shrank. That distinction is the whole point (D-16): an
 # allowlist emptied by narrowing the guard would satisfy FIX-03 on paper while
