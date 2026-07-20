@@ -18,6 +18,7 @@ from construct.services.knowledge import (
     archive_card,
     create_card,
     edit_card,
+    list_cards,
     list_connections,
     remove_connection,
     route_source_to_domain,
@@ -382,6 +383,114 @@ class TestConnectionList:
         assert result.success is True
         assert result.data is not None
         assert len(result.data) >= 1
+
+
+# ===================================================================
+# Card List Tests
+# ===================================================================
+
+
+class TestCardList:
+    def test_list_cards(self, workspace_with_cards: Path) -> None:
+        result = list_cards(workspace_with_cards)
+
+        assert result.success is True
+        assert result.data is not None
+        assert len(result.data) == 2
+
+    def test_list_cards_filter_by_domain(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        create_card(
+            workspace,
+            _sample_card_data(id="card-c", title="Card C", domains=["Cosmology"]),
+        )
+
+        result = list_cards(workspace, domain="Cosmology")
+
+        assert result.success is True
+        assert result.data is not None
+        assert [c["id"] for c in result.data] == ["card-c"]
+
+    def test_list_cards_domain_filter_is_case_sensitive(
+        self, workspace_with_cards: Path
+    ) -> None:
+        """Exact string equality — `cosmology` must not match `Cosmology`."""
+        workspace = workspace_with_cards
+        create_card(
+            workspace,
+            _sample_card_data(id="card-c", title="Card C", domains=["Cosmology"]),
+        )
+
+        result = list_cards(workspace, domain="cosmology")
+
+        assert result.success is True
+        assert result.data == []
+
+    def test_list_cards_exclude_archived(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        archive_card(workspace, "card-a")
+
+        result = list_cards(workspace, include_archived=False)
+
+        assert result.success is True
+        assert result.data is not None
+        assert [c["id"] for c in result.data] == ["card-b"]
+
+    def test_list_cards_include_archived(self, workspace_with_cards: Path) -> None:
+        workspace = workspace_with_cards
+        archive_card(workspace, "card-a")
+
+        result = list_cards(workspace, include_archived=True)
+
+        assert result.success is True
+        assert result.data is not None
+        assert {c["id"] for c in result.data} == {"card-a", "card-b"}
+
+    def test_list_cards_excludes_body(self, workspace_with_cards: Path) -> None:
+        """D-02 / T-16-02: an enumerate call must never carry card prose."""
+        result = list_cards(workspace_with_cards)
+
+        assert result.data is not None
+        assert result.data
+        for card in result.data:
+            assert "body" not in card
+
+    def test_list_cards_data_is_json_serializable(
+        self, workspace_with_cards: Path
+    ) -> None:
+        """Bare ``json.dumps`` — exactly what ``_display_result`` does (no default=)."""
+        result = list_cards(workspace_with_cards)
+
+        assert result.data is not None
+        encoded = json.dumps(result.data)
+        decoded = json.loads(encoded)
+        assert isinstance(decoded[0]["created"], str)
+        # ISO-8601: parses back as a date.
+        from datetime import date
+
+        date.fromisoformat(decoded[0]["created"])
+
+    def test_list_cards_empty_workspace(self, init_workspace: Path) -> None:
+        """A scaffolded workspace with no cards is an empty success, not an error."""
+        result = list_cards(init_workspace)
+
+        assert result.success is True
+        assert result.data == []
+        assert "0" in result.message
+
+    def test_list_cards_missing_cards_directory(self, tmp_path: Path) -> None:
+        """A path that is not a workspace errors — never an empty success, never a raise."""
+        result = list_cards(tmp_path / "nowhere")
+
+        assert result.success is False
+        assert len(result.errors) >= 1
+
+    def test_list_cards_order_is_stable(self, workspace_with_cards: Path) -> None:
+        first = list_cards(workspace_with_cards)
+        second = list_cards(workspace_with_cards)
+
+        assert first.data is not None and second.data is not None
+        assert [c["id"] for c in first.data] == [c["id"] for c in second.data]
 
 
 # ===================================================================
