@@ -144,3 +144,7 @@ was removed as one skill case flipped to passing.
 
 No new security-relevant surface introduced — no network endpoints, auth paths, or schema
 changes. This plan only removes capability.
+
+## Self-Check: PASSED
+
+All claimed files exist on disk; all four commit hashes resolve in git history.

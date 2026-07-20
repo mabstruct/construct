@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
 current_phase_name: invocation-user-doc-truth
 status: executing
-stopped_at: Completed 16-03-PLAN.md
-last_updated: "2026-07-20T15:28:11.848Z"
+stopped_at: Completed 16-04-PLAN.md
+last_updated: "2026-07-20T15:34:23.905Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 16 (invocation-user-doc-truth) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
-Progress: [████████░░] 75% (0/4 phases)
+Progress: [████████░░] 81% (0/4 phases)
 Last activity: 2026-07-20 — Phase 16 execution started
 
 ## Performance Metrics
@@ -83,6 +83,7 @@ Last activity: 2026-07-20 — Phase 16 execution started
 | Phase 16 P01 | 3min | 3 tasks | 2 files |
 | Phase 16 P02 | ~14m | 3 tasks | 7 files |
 | Phase 16 P03 | 25m | 3 tasks | 8 files |
+| Phase 16 P04 | 12m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -199,6 +200,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 15-05]: the three views-refresh doc sections were DELETED rather than corrected — the Python layer owns the behaviour, so the instruction has no correct form in a skill/workflow doc; each file keeps a one-sentence D-11 pointer
 - [Phase ?]: Fixed the allowed-tools frontmatter parser to read both dialects rather than reshaping construct-synthesis's list-style frontmatter
 - [Phase ?]: Kept test_docs_contain_invocations alongside the new per-doc non-vacuity guard — global regex coverage and per-doc coverage are complements
+- [Phase ?]: 16-04: construct-synthesis web grants removed; refs/ lookup rewritten onto Read per D-03 (no ref sub-app)
+- [Phase ?]: 16-04: FIX-03 reverted to Pending — 16-03 marked it Complete while _KNOWN_BROKEN still holds 2 workflow entries; 16-06 closes it
 
 ### Pending Todos
 
@@ -217,6 +220,7 @@ Recent decisions affecting current work:
 - T-15-12 mitigation is weaker than the threat register states: a daily cycle's later views sweeps are full 11-file rebuilds (children mutate the workspace), not near-no-ops. version.json churns ~3x per cycle — re-score before Phase 17 SPA polling.
 - decay_scan's 'archiving deferred to Phase 12' summary string in curation_run.py:414 is now stale (Phase 12 shipped) — second instance of the T-15-14 audit-trail-that-lies class, out of Plan 04's scope. Phase 16 to decide.
 - Direct card-create/card-connect edits no longer refresh views: the debounce pair was deleted with its two live skill registrations (15-05) and has no Python-layer equivalent. views.per_card_hooks.* in templates/config.yaml, references/commands.md:81 and README.md:263-264 now document an inert feature — Phase 16 (DOC-04) doc-truth item; re-homing debounce is a v0.6 candidate (OQ-3).
+- DOC-04 is marked Complete in REQUIREMENTS.md but both test_key_docs_are_not_vacuous cases (USER_GUIDE.md, commands.md) still fail. 16-05 owns these docs; flagged by 16-04, not edited (DOC-04 outside 16-04's frontmatter).
 
 ## Deferred Items
 
@@ -234,8 +238,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T15:28:11.839Z
-Stopped at: Completed 16-03-PLAN.md
+Last session: 2026-07-20T15:34:06.043Z
+Stopped at: Completed 16-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
