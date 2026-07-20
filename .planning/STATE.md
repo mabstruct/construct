@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
-current_phase: 15
-current_phase_name: views-generate-data-resolution
-status: verifying
+current_phase: 16
+current_phase_name: Invocation & User-Doc Truth
+status: planning
 stopped_at: Completed 15-05-PLAN.md
-last_updated: "2026-07-19T22:21:13.580Z"
-last_activity: 2026-07-19
-last_activity_desc: Phase 15 execution started
+last_updated: "2026-07-20T08:57:56.563Z"
+last_activity: 2026-07-20
+last_activity_desc: Phase 15 complete, transitioned to Phase 16
 progress:
   total_phases: 2
   completed_phases: 2
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 ## Current Position
 
-Phase: 15 (views-generate-data-resolution) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
+Phase: 16 — Invocation & User-Doc Truth
+Plan: Not started
+Status: Ready to plan
 Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-19 — Phase 15 execution started
+Last activity: 2026-07-20 — Phase 15 complete, transitioned to Phase 16
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Last activity: 2026-07-19 — Phase 15 execution started
 | 11 | 3 | - | - |
 | 13 | 3 | - | - |
 | 14 | 4 | - | - |
+| 15 | 5 | - | - |
 
 **Recent Trend:**
 
