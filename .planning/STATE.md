@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
 current_phase_name: invocation-user-doc-truth
 status: executing
-stopped_at: Completed 16-05-PLAN.md
-last_updated: "2026-07-20T15:49:42.461Z"
+stopped_at: Completed 16-06-PLAN.md
+last_updated: "2026-07-20T16:07:02.461Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 ## Current Position
 
 Phase: 16 (invocation-user-doc-truth) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
-Progress: [█████████░] 88% (0/4 phases)
+Progress: [█████████░] 94% (0/4 phases)
 Last activity: 2026-07-20 — Phase 16 execution started
 
 ## Performance Metrics
@@ -85,6 +85,7 @@ Last activity: 2026-07-20 — Phase 16 execution started
 | Phase 16 P03 | 25m | 3 tasks | 8 files |
 | Phase 16 P04 | 12m | 3 tasks | 4 files |
 | Phase 16 P05 | 35 min | 3 tasks | 3 files |
+| Phase 16 P06 | ~55 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -204,13 +205,16 @@ Recent decisions affecting current work:
 - [Phase ?]: 16-04: construct-synthesis web grants removed; refs/ lookup rewritten onto Read per D-03 (no ref sub-app)
 - [Phase ?]: 16-04: FIX-03 reverted to Pending — 16-03 marked it Complete while _KNOWN_BROKEN still holds 2 workflow entries; 16-06 closes it
 - [Phase ?]: Doc CLI cells must execute, not just resolve: the invocation guard validates the command path only, so a cell can pass every contract test and still fail with a Typer usage error when copied verbatim (16-05, 19 such defects found)
+- [Phase ?]: 16-06: _KNOWN_BROKEN emptied by supersession, not by narrowing the guard — _DOC_GLOBS still holds 3 entries. Terminal signature is '0 3'; '0 2' would mean the guard was weakened.
+- [Phase ?]: 16-06: no mock search provider exists — offline runnability comes from commands degrading with structured reporting, not from a stub provider.
+- [Phase ?]: 16-06: research run -> review -> resume is credential-marked (offline it fails on a scoring outage before the review gate); the durable-checkpoint property is additionally covered offline by curation inspect/review.
 
 ### Pending Todos
 
 - Execute Phase 14 with `/gsd-execute-phase 14` — 4 plans, 2 waves.
 - Phase 15 planning must settle two named decisions before implementation: `install_root` vs `workspace` contract (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory import coupling (`generate.py:43-51`).
 - Phase 16 planning must decide `knowledge card list` / `knowledge ref list`: implement, or rewrite `construct-synthesis` and `construct-gap-analysis` onto existing commands.
-- Phase 16: retiring `USER-TEST-PLAYBOOK-v03.md` (DOC-04) removes the `workflow run` / `workflow resume` allowlist entries — coordinate so the guard ends empty, not merely unscanned.
+- ~~Phase 16: retiring `USER-TEST-PLAYBOOK-v03.md` (DOC-04) removes the `workflow run` / `workflow resume` allowlist entries — coordinate so the guard ends empty, not merely unscanned.~~ **Resolved by 16-06:** the playbook was superseded rather than deleted — `USER-TEST-PLAYBOOK-v041.md` took its place in `_DOC_GLOBS`, which still holds 3 entries. `_KNOWN_BROKEN` is empty with the suite green. Terminal signature `0 3`, verified.
 
 ### Blockers/Concerns
 
@@ -240,8 +244,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T15:49:35.179Z
-Stopped at: Completed 16-05-PLAN.md
+Last session: 2026-07-20T16:06:56.250Z
+Stopped at: Completed 16-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
