@@ -137,7 +137,29 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. A user can invoke `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate` directly from `USER_GUIDE.md`, and `construct/references/commands.md` lists real commands.
   5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description match the live 25-command surface.
 
-**Plans**: TBD
+**Plans**: 7 plans across 5 waves
+
+**Wave 1** *(parallel — no shared files)*
+
+- [ ] 16-01-PLAN.md — Wave 0 RED guards: per-document non-vacuity assertion, multi-line frontmatter parser, `card list` pinned into the discoverability check [wave 1]
+- [ ] 16-02-PLAN.md — Correct stale facts outside the guard's reach: the decay-scan summary, README lineage, `AGENTS.md` CLI + model-routing, and the planning documents' test baseline and command count [wave 1]
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 16-03-PLAN.md — Implement `knowledge card list` registry-routed with CLI + MCP parity, frontmatter-only and JSON-safe; delete its allowlist entry [wave 2]
+
+**Wave 3** *(blocked on Wave 2 — parallel with each other)*
+
+- [ ] 16-04-PLAN.md — Remove `construct-synthesis`'s web-search grants, rewrite the `refs/` step onto `Read`, discharge `spec-v04:436` [wave 3]
+- [ ] 16-05-PLAN.md — Add executable CLI columns to `USER_GUIDE.md` and `construct/references/commands.md`; correct the inert per-card-hooks note [wave 3]
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 16-06-PLAN.md — Supersede the release playbook with `USER-TEST-PLAYBOOK-v041.md`, swap the glob entry, empty `_KNOWN_BROKEN` [wave 4]
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 16-07-PLAN.md — Bring the user-facing doc set under the invocation guard, prove the mechanical completion criterion, human-run the playbook's offline sections [wave 5]
 
 ### Phase 17: Architecture Doc Set & daily.run Discoverability
 
