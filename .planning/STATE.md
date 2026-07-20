@@ -5,16 +5,16 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
 current_phase_name: Invocation & User-Doc Truth
 status: planning
-stopped_at: Completed 15-05-PLAN.md
-last_updated: "2026-07-20T08:57:56.563Z"
+stopped_at: Phase 16 context gathered
+last_updated: "2026-07-20T10:45:45.223Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 15 complete, transitioned to Phase 16
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
   total_plans: 9
   completed_plans: 9
-  percent: 100
+  percent: 67
 ---
 
 # Project State
@@ -229,9 +229,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T22:21:02.401Z
-Stopped at: Completed 15-05-PLAN.md
-Resume file: None
+Last session: 2026-07-20T10:45:45.213Z
+Stopped at: Phase 16 context gathered
+Resume file: .planning/phases/16-invocation-user-doc-truth/16-CONTEXT.md
 
 ## Operator Next Steps
 
