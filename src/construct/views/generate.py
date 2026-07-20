@@ -21,11 +21,12 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 # D-08: the views source parsers ship inside the package. The distribution
 # packages only ``src/construct``, so the previous deployed-skill-directory
@@ -54,7 +55,6 @@ from construct.views.models import (
     DomainsFile,
     EventsFile,
     StatsFile,
-    ViewsEnvelope,
 )
 
 
@@ -79,8 +79,17 @@ class GenerateReport:
 # Model map — which Pydantic model validates each output file's data field
 # ---------------------------------------------------------------------------
 
-# Each entry: (rel_path_in_data_dir, model_class, lambda to extract inner data)
-_FILE_MODEL_MAP: list[tuple[str, type, callable]] = [
+# Each entry: (rel_path_in_data_dir, model_class, adapter from raw parser dict to
+# the model's field names).
+#
+# These two tables are the SINGLE definition of the writer→validator projection:
+# ``_validate_file_data`` iterates them rather than repeating each adapter inline.
+# They used to be dead code duplicated verbatim inside that function, which is
+# exactly the drift hazard the known writer-vs-validator divergence already
+# demonstrates — a fix applied to one copy would not have reached the other.
+_Adapter = Callable[[dict], dict]
+
+_FILE_MODEL_MAP: list[tuple[str, type[BaseModel], _Adapter]] = [
     ("bridges.json", BridgesFile, lambda d: {"bridges": d.get("bridges", []), "summary": d.get("summary", {})}),
     ("domains.json", DomainsFile, lambda d: {"settings": d.get("settings", {}), "domains": d.get("domains", [])}),
     ("articles.json", ArticlesFile, lambda d: {"articles": d.get("articles", [])}),
@@ -94,8 +103,9 @@ _FILE_MODEL_MAP: list[tuple[str, type, callable]] = [
     }),
 ]
 
-# Per-workspace files share a common pattern
-_PER_WS_FILES: list[tuple[str, type, callable]] = [
+# Per-workspace files share a common pattern; keyed on the filename, matched
+# against the trailing ``<ws_id>/<filename>`` segment of the relative path.
+_PER_WS_FILES: list[tuple[str, type[BaseModel], _Adapter]] = [
     ("cards.json", CardsFile, lambda d: {
         "cards": [
             {
@@ -455,131 +465,20 @@ def _validate_file_data(
 
     Appends error messages to *errors* and returns ``True`` if a mismatch
     was found (caller should skip the file).
+
+    Drives off ``_FILE_MODEL_MAP`` / ``_PER_WS_FILES`` so the writer→validator
+    projection is defined in exactly one place (WR-04). A file with no table entry
+    is not validated: per-workspace ``stats.json`` follows the ``compute_stats``
+    shape and ``curation-history.json`` has no contract model, so both fall through
+    to ``False`` exactly as before.
     """
-    # Global files
-    if rel_path == "bridges.json":
-        return _try_validate(
-            BridgesFile,
-            {"bridges": raw_data.get("bridges", []), "summary": raw_data.get("summary", {})},
-            rel_path,
-            errors,
-        )
-    if rel_path == "domains.json":
-        return _try_validate(
-            DomainsFile,
-            {"settings": raw_data.get("settings", {}), "domains": raw_data.get("domains", [])},
-            rel_path,
-            errors,
-        )
-    if rel_path == "articles.json":
-        return _try_validate(
-            ArticlesFile,
-            {"articles": raw_data.get("articles", [])},
-            rel_path,
-            errors,
-        )
-    if rel_path == "stats.json":
-        raw_totals = raw_data.get("totals", {})
-        return _try_validate(
-            StatsFile,
-            {
-                "total_cards": raw_totals.get("cards", 0),
-                "total_connections": raw_totals.get("connections", 0),
-                "total_domains": raw_totals.get("workspaces", 0),
-                "total_digests": raw_totals.get("digests", 0),
-                "total_articles": raw_totals.get("articles", len(raw_data.get("articles", []))),
-                "cards_by_domain": {},
-            },
-            rel_path,
-            errors,
-        )
+    for name, model_class, adapt in _FILE_MODEL_MAP:
+        if rel_path == name:
+            return _try_validate(model_class, adapt(raw_data), rel_path, errors)
 
-    # Per-workspace files
-    if "/cards.json" in rel_path:
-        return _try_validate(
-            CardsFile,
-            {
-                "cards": [
-                    {
-                        "id": c["id"],
-                        "title": c.get("title", ""),
-                        "epistemic_type": c.get("epistemic_type", ""),
-                        "confidence": c.get("confidence", 0),
-                        "source_tier": c.get("source_tier", 0),
-                        "lifecycle": c.get("lifecycle", ""),
-                        "domains": c.get("domains", []),
-                        "summary": c.get("summary_excerpt", c.get("body_markdown", "")),
-                        "connections": c.get("connects_to", []),
-                        "content_categories": c.get("content_categories", []),
-                    }
-                    for c in raw_data.get("cards", [])
-                ],
-            },
-            rel_path,
-            errors,
-        )
-    if "/connections.json" in rel_path:
-        return _try_validate(
-            ConnectionsFile,
-            {
-                "connections": [
-                    {
-                        "source": c.get("source", ""),
-                        "target": c.get("target", ""),
-                        "type": c.get("type", ""),
-                        "created_at": c.get("created", ""),
-                        "created_by": c.get("author", ""),
-                        "note": c.get("note"),
-                    }
-                    for c in raw_data.get("connections", [])
-                ],
-            },
-            rel_path,
-            errors,
-        )
-    if "/digests.json" in rel_path:
-        return _try_validate(
-            DigestsFile,
-            {
-                "digests": [
-                    {
-                        "id": d.get("id", ""),
-                        "domain_id": d.get("domain", ""),
-                        "title": d.get("theme", ""),
-                        "generated_at": d.get("date", ""),
-                        "card_ids": [],
-                        "summary": d.get("summary_text", ""),
-                    }
-                    for d in raw_data.get("digests", [])
-                ],
-            },
-            rel_path,
-            errors,
-        )
-    if "/events.json" in rel_path:
-        return _try_validate(
-            EventsFile,
-            {
-                "events": [
-                    {
-                        "timestamp": e.get("timestamp", ""),
-                        "type": e.get("type", ""),
-                        "actor": e.get("actor", e.get("author", "")),
-                        "card_id": e.get("card_id"),
-                        "details": e.get("details"),
-                    }
-                    for e in raw_data.get("events", [])
-                ],
-            },
-            rel_path,
-            errors,
-        )
-
-    # Per-workspace stats.json — skip for now (uses compute_stats shape)
-    if "/stats.json" in rel_path:
-        return False  # skip validation for stats.json (matches compute_stats shape)
-    if "/curation-history.json" in rel_path:
-        return False  # skip validation for curation-history.json
+    for name, model_class, adapt in _PER_WS_FILES:
+        if rel_path.endswith(f"/{name}"):
+            return _try_validate(model_class, adapt(raw_data), rel_path, errors)
 
     return False
 
