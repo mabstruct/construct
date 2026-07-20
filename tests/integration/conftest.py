@@ -18,6 +18,10 @@ def scaffolded_install_root(tmp_path: Path) -> Path:
     """
     root = tmp_path / "install"
     root.mkdir()
+    # The install-root marker every entrypoint guards on (CR-03). A real install
+    # root always has one; without it the CLI and the capability handler refuse
+    # the path before the generator can create anything under it.
+    (root / "AGENTS.md").write_text("# CONSTRUCT test install root\n", encoding="utf-8")
 
     initialize_workspace(
         root / "demo",

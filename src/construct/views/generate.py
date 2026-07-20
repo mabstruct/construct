@@ -155,6 +155,36 @@ _PER_WS_FILES: list[tuple[str, type, callable]] = [
 
 
 # ---------------------------------------------------------------------------
+# Install-root guard
+# ---------------------------------------------------------------------------
+
+#: The file whose presence marks a directory as a CONSTRUCT install root.
+INSTALL_ROOT_MARKER = "AGENTS.md"
+
+
+def install_root_error(install_root: Path | str) -> str | None:
+    """Return why *install_root* is not a CONSTRUCT install root, or ``None``.
+
+    Every entrypoint that can be handed an arbitrary path must call this BEFORE
+    ``generate()``: the generator creates ``views/build/data/`` under whatever it
+    is given, so an unguarded path argument scaffolds a views tree in an
+    unrelated directory and then reports an empty build as a success. The
+    ``views.generate_data`` handler's ``install_root`` is agent-supplied over MCP,
+    and the CLI option defaults to the process working directory.
+
+    The returned reason deliberately does **not** embed the path, so a caller
+    that must not echo filesystem locations (the MCP surface) can surface it
+    verbatim while a local caller (the CLI) appends the path itself.
+    """
+    root = Path(install_root)
+    if not root.is_dir():
+        return "install root is not an existing directory"
+    if not (root / INSTALL_ROOT_MARKER).is_file():
+        return f"not a CONSTRUCT installation: missing {INSTALL_ROOT_MARKER}"
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Core generator
 # ---------------------------------------------------------------------------
 
@@ -174,7 +204,11 @@ def generate(install_root: Path) -> GenerateReport:
 
     build_dir = install_root / "views" / "build"
     data_dir = build_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
+    # NOT created yet (CR-03): creating the output tree used to be this function's
+    # very first filesystem action, before anything had established that the
+    # argument is a CONSTRUCT install root. Discovery and the incremental gate
+    # below are read-only and tolerate a missing data_dir, so the directory is
+    # created at the point of the first write instead.
 
     # 1. Discover workspaces
     workspaces = discover.discover_workspaces(install_root)
@@ -312,6 +346,9 @@ def generate(install_root: Path) -> GenerateReport:
     # 7. Validate and write
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     total_files_written = 0
+
+    # First filesystem mutation of the run — everything above is read-only.
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     for rel_path, raw_data in files.items():
         full = data_dir / rel_path
@@ -638,9 +675,9 @@ def main() -> int:
         return 2
 
     root = Path(sys.argv[1]).resolve()
-    if not (root / "AGENTS.md").is_file():
-        print(f"Not a CONSTRUCT installation: missing AGENTS.md at {root}",
-              file=sys.stderr)
+    guard = install_root_error(root)
+    if guard is not None:
+        print(f"{guard} (at {root})", file=sys.stderr)
         return 1
 
     report = generate(root)

@@ -537,7 +537,19 @@ def _views_generate_handler(install_root) -> OperationResult:
     exception class.
     """
     # Deferred import — matches the convention for heavy views imports.
-    from construct.views.generate import generate
+    from construct.views.generate import generate, install_root_error
+
+    # CR-03: validate before the generator touches the filesystem. This
+    # ``install_root`` is agent-supplied over MCP, and generate() creates
+    # views/build/data/ under whatever it is handed.
+    guard = install_root_error(install_root)
+    if guard is not None:
+        return OperationResult(
+            success=False,
+            message=f"views.generate_data refused the install root: {guard}",
+            errors=[OperationError(field="views.install_root", reason=guard, suggestion="")],
+            data={"failed": True},
+        )
 
     try:
         report = generate(Path(install_root))

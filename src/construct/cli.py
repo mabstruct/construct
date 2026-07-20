@@ -877,7 +877,16 @@ def generate(
     views/build/data/*.json. Validation errors are fatal; content warnings
     describe source material and do not fail the run.
     """
-    from construct.views.generate import generate as run_generate
+    from construct.views.generate import generate as run_generate, install_root_error
+
+    # CR-03: --install-root defaults to the process working directory, so an
+    # accidental bare `construct views generate` would otherwise scaffold a
+    # views/build/data/ tree wherever the user happens to be standing and report
+    # the resulting empty build as a success.
+    guard = install_root_error(install_root)
+    if guard is not None:
+        typer.secho(f"ERROR: {guard} (at {install_root})", fg=typer.colors.RED)
+        raise typer.Exit(code=1)
 
     report = run_generate(install_root)
 

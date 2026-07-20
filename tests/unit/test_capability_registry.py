@@ -187,6 +187,8 @@ def _scaffolded_install_root(tmp_path: Path) -> Path:
 
     root = tmp_path / "install"
     root.mkdir()
+    # The install-root marker the handler guards on (CR-03).
+    (root / "AGENTS.md").write_text("# CONSTRUCT test install root\n", encoding="utf-8")
     initialize_workspace(
         root / "demo",
         DomainInitInput(
@@ -217,6 +219,37 @@ def test_views_generate_data_handler_is_not_a_permanent_failure(tmp_path: Path) 
     assert by_position.errors == []
 
 
+def _guarded_root(tmp_path: Path, name: str = "install") -> Path:
+    """A directory that passes the CR-03 install-root guard but holds no workspaces.
+
+    Used by the tests that monkeypatch ``generate`` — the guard runs first, so a
+    bare non-existent path would never reach the code under test.
+    """
+    root = tmp_path / name
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "AGENTS.md").write_text("# CONSTRUCT test install root\n", encoding="utf-8")
+    return root
+
+
+def test_views_generate_handler_rejects_a_non_install_root(tmp_path: Path) -> None:
+    """CR-03: the MCP-reachable handler must not scaffold into an arbitrary path.
+
+    ``install_root`` is agent-supplied over MCP and generate() creates
+    ``views/build/data/`` under whatever it is handed, so the AGENTS.md guard has
+    to sit at the entrypoint rather than only in ``generate.main()``.
+    """
+    stranger = tmp_path / "somebody-elses-directory"
+    stranger.mkdir()
+
+    result = get_registry().get("views.generate_data").handler(install_root=stranger)
+
+    assert result.success is False
+    assert "AGENTS.md" in result.message
+    assert not (stranger / "views").exists(), (
+        "the handler created a views tree in a directory that is not an install root"
+    )
+
+
 def test_views_generate_handler_never_raises_and_never_leaks(tmp_path: Path, monkeypatch) -> None:
     """CR-02: a raising generator must become an OperationResult, not a traceback.
 
@@ -226,7 +259,7 @@ def test_views_generate_handler_never_raises_and_never_leaks(tmp_path: Path, mon
     """
     import construct.views.generate as gen_mod
 
-    secret = tmp_path / "leaky-install-root-name"
+    secret = _guarded_root(tmp_path, "leaky-install-root-name")
 
     def _boom(install_root):
         raise FileNotFoundError(f"No such file or directory: {secret}")
@@ -248,7 +281,7 @@ def test_views_generate_data_input_declares_install_root() -> None:
     assert "workspace" not in fields
 
 
-def test_views_generate_validation_errors_are_fatal_and_surfaced(monkeypatch) -> None:
+def test_views_generate_validation_errors_are_fatal_and_surfaced(tmp_path: Path, monkeypatch) -> None:
     """D-04: validation errors make the result a failure and reach `errors`."""
     import construct.views.generate as gen_mod
     from construct.views.generate import GenerateReport
@@ -263,7 +296,9 @@ def test_views_generate_validation_errors_are_fatal_and_surfaced(monkeypatch) ->
         )
 
     monkeypatch.setattr(gen_mod, "generate", _fake_generate)
-    result = get_registry().get("views.generate_data").handler(install_root=Path("/nope"))
+    result = get_registry().get("views.generate_data").handler(
+        install_root=_guarded_root(tmp_path)
+    )
 
     assert result.success is False
     reasons = [e.reason for e in result.errors]
@@ -271,7 +306,7 @@ def test_views_generate_validation_errors_are_fatal_and_surfaced(monkeypatch) ->
     assert "2 validation errors" in result.message
 
 
-def test_views_generate_warnings_alone_are_advisory(monkeypatch) -> None:
+def test_views_generate_warnings_alone_are_advisory(tmp_path: Path, monkeypatch) -> None:
     """D-04: content warnings never make the result a failure."""
     import construct.views.generate as gen_mod
     from construct.views.generate import GenerateReport
@@ -286,7 +321,9 @@ def test_views_generate_warnings_alone_are_advisory(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(gen_mod, "generate", _fake_generate)
-    result = get_registry().get("views.generate_data").handler(install_root=Path("/nope"))
+    result = get_registry().get("views.generate_data").handler(
+        install_root=_guarded_root(tmp_path)
+    )
 
     assert result.success is True
     assert result.errors == []
