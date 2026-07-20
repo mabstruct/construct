@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
-current_phase_name: Invocation & User-Doc Truth
+current_phase_name: invocation-user-doc-truth
 status: executing
-stopped_at: Phase 16 context gathered
-last_updated: "2026-07-20T14:03:19.054Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-07-20T15:12:12.098Z"
 last_activity: 2026-07-20
-last_activity_desc: Phase 15 complete, transitioned to Phase 16
+last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 67
+  total_plans: 16
+  completed_plans: 10
+  percent: 63
 ---
 
 # Project State
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 15 — views-generate-data-resolution
+**Current focus:** Phase 16 — invocation-user-doc-truth
 
 ## Current Position
 
-Phase: 16 — Invocation & User-Doc Truth
-Plan: Not started
+Phase: 16 (invocation-user-doc-truth) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-20 — Phase 15 complete, transitioned to Phase 16
+Progress: [██████░░░░] 63% (0/4 phases)
+Last activity: 2026-07-20 — Phase 16 execution started
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Last activity: 2026-07-20 — Phase 15 complete, transitioned to Phase 16
 | Phase 15 P03 | 38min | 3 tasks | 7 files |
 | Phase 15 P04 | 34min | 3 tasks | 6 files |
 | Phase 15 P05 | ~45min | 3 tasks | 14 files |
+| Phase 16 P01 | 3min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -194,6 +195,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 15-05]: adr-0005 records the D-11 reversal of Phase 13 D-10 — the Python capability layer owns the views refresh and every workflow capability refreshes; new numbered ADR over amendment, archived D-10 record cited read-only
 - [Phase ?]: [Phase 15-05]: the two live debounced-hook.sh registrations in construct-card-create/card-connect were removed with the debounce pair — direct per-card edits now have NO views refresh path, and views.per_card_hooks.* is inert config (v0.6 backlog, OQ-3)
 - [Phase ?]: [Phase 15-05]: the three views-refresh doc sections were DELETED rather than corrected — the Python layer owns the behaviour, so the instruction has no correct form in a skill/workflow doc; each file keeps a one-sentence D-11 pointer
+- [Phase ?]: Fixed the allowed-tools frontmatter parser to read both dialects rather than reshaping construct-synthesis's list-style frontmatter
+- [Phase ?]: Kept test_docs_contain_invocations alongside the new per-doc non-vacuity guard — global regex coverage and per-doc coverage are complements
 
 ### Pending Todos
 
@@ -229,9 +232,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T10:45:45.213Z
-Stopped at: Phase 16 context gathered
-Resume file: .planning/phases/16-invocation-user-doc-truth/16-CONTEXT.md
+Last session: 2026-07-20T15:12:04.738Z
+Stopped at: Completed 16-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
