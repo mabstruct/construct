@@ -903,8 +903,11 @@ def generate(
             "success": bool(report.success) and not report.validation_errors,
             "build_id": report.build_id,
             "total_files_written": report.total_files_written,
-            "validation_errors": list(report.validation_errors),
-            "warnings": list(report.warnings),
+            # List literals, not `list(...)`: the `tag list` command below shadows
+            # the builtin in this module's globals, so a bare `list()` call here
+            # resolves to that Typer command and raises.
+            "validation_errors": [*report.validation_errors],
+            "warnings": [*report.warnings],
         }, indent=2))
     else:
         typer.echo(

@@ -250,6 +250,36 @@ def test_views_generate_cli_command_generates_clean(scaffolded_install_root: Pat
     assert (data_dir / "demo" / "cards.json").exists()
 
 
+def test_views_generate_json_flag_emits_parseable_json(
+    scaffolded_install_root: Path,
+) -> None:
+    """`--json` must emit parseable JSON, not crash.
+
+    Regression guard for the builtin-shadowing trap in ``cli.py``: the module
+    defines a Typer command named ``list`` (``construct tag list``), which
+    shadows the builtin across the whole module. A bare ``list(...)`` in the
+    ``--json`` branch therefore resolved to that command and raised
+    ``TypeError: ... not 'OptionInfo'``. The plain form never touched it, so
+    the existing CLI test passed while ``--json`` was broken.
+    """
+    from typer.testing import CliRunner
+
+    from construct.cli import app
+
+    result = CliRunner().invoke(
+        app,
+        ["views", "generate", "--install-root", str(scaffolded_install_root), "--json"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert result.exception is None, result.exception
+
+    payload = json.loads(result.stdout)
+    assert payload["success"] is True
+    assert payload["validation_errors"] == []
+    assert isinstance(payload["warnings"], list)
+
+
 def test_views_validate_does_not_yet_accept_generated_bytes(
     scaffolded_install_root: Path,
 ) -> None:
