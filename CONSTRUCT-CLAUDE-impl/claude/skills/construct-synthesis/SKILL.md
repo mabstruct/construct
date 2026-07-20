@@ -4,8 +4,6 @@ allowed-tools:
   - Read
   - Bash(construct)
   - MCP(connect)
-  - WebSearch
-  - WebFetch
 ---
 
 > **Note:** Card knowledge acquisition now uses `construct ask domain` CLI (grounded Q&A)
