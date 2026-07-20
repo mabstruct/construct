@@ -516,3 +516,56 @@ def test_research_run_survives_a_raising_refresh_helper(
     ws.mkdir(parents=True, exist_ok=True)
 
     assert node({"workspace_path": str(ws), "status": "completed"}) == {}
+
+
+# ── WR-02: views.confirm_refresh must actually reach a surface ──
+
+
+def test_confirm_refresh_reaches_the_outcome_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The flag is a verbosity switch (by design) — so it must produce verbosity."""
+    _scaffold_build_dir(tmp_path)
+    _patch_generator(monkeypatch, _Spy())
+
+    _write_views_config(tmp_path, "views:\n  confirm_refresh: true\n")
+    loud = refresh_views(tmp_path)
+
+    _write_views_config(tmp_path, "views:\n  confirm_refresh: false\n")
+    quiet = refresh_views(tmp_path)
+
+    assert loud.status == quiet.status == "succeeded"
+    assert "✓ views updated" in loud.reason
+    assert quiet.reason == ""
+
+
+def test_confirm_refresh_is_visible_in_the_curation_step_summary(
+    curation_workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-02: every caller used to discard the reason, so the flag was inert.
+
+    The curation hook is the one caller with a user-visible ``summary``, so it is
+    the one that must carry the confirmation through. ADR-0005 states as contract
+    that ``confirm_refresh: true`` "appends ✓ views updated"; before this, no
+    surface anywhere ever showed it.
+    """
+    from construct.llm import curation_run
+
+    install_root = curation_workspace.parent
+    _scaffold_build_dir(install_root)
+    _write_views_config(install_root, "views:\n  confirm_refresh: true\n")
+    monkeypatch.setattr("construct.views.generate.generate", _Spy())
+
+    run = curation_run.run_curation_run(
+        curation_run.CurationRunInput(
+            workspace_path=str(curation_workspace), run_id="cur-confirm"
+        )
+    )
+
+    step = next(
+        (s if isinstance(s, dict) else s.model_dump())
+        for s in run.steps
+        if (s if isinstance(s, dict) else s.model_dump())["step"] == "views_refresh_hook"
+    )
+    assert step["status"] == "completed"
+    assert "✓ views updated" in step["summary"], step["summary"]

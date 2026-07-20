@@ -1024,10 +1024,20 @@ def views_refresh_hook(state: CurationRunState) -> dict:
             summary=f"views refresh skipped: {outcome.reason}",
         )
     elif outcome.status == "succeeded":
+        # WR-02: `views.confirm_refresh: true` populates `outcome.reason` with
+        # "✓ views updated". This is the one caller with a user-visible surface, so
+        # it is the one that must carry the string through — otherwise the flag is
+        # inert and ADR-0005's "appends ✓ views updated" contract is not honoured
+        # anywhere. When the flag is false the reason is empty and the summary is
+        # unchanged, which is the silence the flag selects.
+        summary = f"views refreshed ({outcome.files_written} files written)"
+        if outcome.reason:
+            summary = f"{summary} — {outcome.reason}"
         result = CurationStepResult(
             step="views_refresh_hook", status="completed", required=False,
+            reason=outcome.reason,
             findings={"build_id": outcome.build_id, "files_written": outcome.files_written},
-            summary=f"views refreshed ({outcome.files_written} files written)",
+            summary=summary,
         )
     else:
         logger.warning("views_refresh_hook: refresh failed: %s", outcome.reason)

@@ -242,7 +242,14 @@ def _run_views_refresh(workspace_path: str):
     if outcome.status == "failed":
         logger.warning("daily.run: views refresh failed: %s", outcome.reason)
     else:
-        logger.info("daily.run: views refresh %s", outcome.status)
+        # WR-02: carry `outcome.reason` on the non-failure branch too — it is where
+        # `views.confirm_refresh: true` puts its "✓ views updated" confirmation, and
+        # dropping it made the flag inert.
+        logger.info(
+            "daily.run: views refresh %s%s",
+            outcome.status,
+            f" ({outcome.reason})" if outcome.reason else "",
+        )
     return outcome
 
 
