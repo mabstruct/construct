@@ -137,12 +137,12 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. A user can invoke `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate` directly from `USER_GUIDE.md`, and `construct/references/commands.md` lists real commands.
   5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description describe the live surface by capability group, asserting no command count, with `tests/contract/test_doc_command_references.py` cited as the mechanical authority.
 
-**Plans**: 1/7 plans executed
+**Plans**: 2/7 plans executed
 
 **Wave 1** *(parallel — no shared files)*
 
 - [x] 16-01-PLAN.md — Wave 0 RED guards: per-document non-vacuity assertion, multi-line frontmatter parser, `card list` pinned into the discoverability check [wave 1]
-- [ ] 16-02-PLAN.md — Correct stale facts outside the guard's reach: the decay-scan summary, README lineage, `AGENTS.md` CLI + model-routing, and the planning documents' test baseline and command count [wave 1]
+- [x] 16-02-PLAN.md — Correct stale facts outside the guard's reach: the decay-scan summary, README lineage, `AGENTS.md` CLI + model-routing, and the planning documents' test baseline and command count [wave 1]
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -225,5 +225,5 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete | 2026-07-07 |
 | 14. Durable-State & Config Truth | v0.4.1 | 4/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | In Progress|  |
-| 16. Invocation & User-Doc Truth | v0.4.1 | 1/7 | In Progress|  |
+| 16. Invocation & User-Doc Truth | v0.4.1 | 2/7 | In Progress|  |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |

@@ -27,7 +27,7 @@ Requirements for the v0.4.1 milestone. Each requirement maps to exactly one road
 - [ ] **DOC-01**: A v0.5 planner reading `architecture-overview.md` first sees the four-layer model ADR-0003 describes and the code implements — including the Python runtime layer, which the document currently omits entirely — with no surviving claim that skills are the only legitimate writers to layer 1 and no citation of the non-existent `spec-v02-data-model.md`. *(Evidence: doc audit, conflict C5.)*
 - [ ] **DOC-02**: A reader consulting `artifact-catalog.md` — which declares itself the single canonical inventory — finds rows for the 27 capabilities, 25 CLI commands, 21 MCP tools, the search spine, the LLM gates, and the missing `construct-spike-run` skill; `config-topology.md` is either corrected against the real layout or deleted. *(Evidence: doc audit, conflicts C2/C3.)*
 - [x] **DOC-03**: The durable-checkpointer decision is recorded as an intentional architectural change — `.construct/workflow/*.sqlite` holds pending human-review decisions not reconstructible from layer 1 — with the contradicting invariants in `nfrs.md` §2 and `architecture-overview.md:243` updated, `nfrs.md` §4's "Third-party APIs: None" corrected for Tavily, and `.construct/workflow/*.sqlite`, `.construct/search.yaml`, and `WORKSPACE.md` added to `workspace-contract.md`. **Gates v0.5 design — must land before v0.5 planning.** *(Evidence: architectural finding.)*
-- [ ] **DOC-04**: A user reading the user-facing doc set can invoke the v0.4 runtime from it — `USER_GUIDE.md` covers `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate`; `construct/references/commands.md` lists real commands; `README.md` lineage and `AGENTS.md:284`'s CLI description are accurate; and `USER-TEST-PLAYBOOK-v03.md` is retired or superseded so the release-validation artifact runs. *(Evidence: user doc audit.)*
+- [x] **DOC-04**: A user reading the user-facing doc set can invoke the v0.4 runtime from it — `USER_GUIDE.md` covers `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate`; `construct/references/commands.md` lists real commands; `README.md` lineage and `AGENTS.md:284`'s CLI description are accurate; and `USER-TEST-PLAYBOOK-v03.md` is retired or superseded so the release-validation artifact runs. *(Evidence: user doc audit.)*
 
 ### Discoverability
 
@@ -76,7 +76,7 @@ Mapped by the roadmap (2026-07-19). Every open requirement maps to exactly one p
 | DOC-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-02 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-03 | Phase 14 — Durable-State & Config Truth | Complete |
-| DOC-04 | Phase 16 — Invocation & User-Doc Truth | Pending |
+| DOC-04 | Phase 16 — Invocation & User-Doc Truth | Complete |
 | UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DEC-01 | Phase 16 — Invocation & User-Doc Truth | Pending |
 | FIX-04 | — (pre-milestone) | ✅ Delivered 2026-07-19, commit `11f20f4` |
