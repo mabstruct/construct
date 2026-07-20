@@ -289,3 +289,27 @@ def test_views_validate_does_not_yet_accept_generated_bytes(
         if line.strip().startswith("✗")
     }
     assert failing == {"stats.json", "demo/connections.json", "demo/events.json"}, failing
+
+
+def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(
+    scaffolded_install_root: Path,
+) -> None:
+    """WR-06: a per-workspace YAML parse warning must not be labelled `(root)`.
+
+    ``_read`` derived the label from ``path.parent.name != path.name``, which can
+    never be false for a ``.../domains.yaml``, so every warning claimed ``(root)``.
+    generate.py then prepended the bogus id to a file label that already carried
+    the real one, yielding ``(root)/demo/domains.yaml`` — one warning naming two
+    different locations for one file.
+    """
+    (scaffolded_install_root / "demo" / "domains.yaml").write_text(
+        "domains: [unclosed\n", encoding="utf-8"
+    )
+
+    report = generate(scaffolded_install_root)
+
+    yaml_warnings = [w for w in report.warnings if "domains.yaml" in w]
+    assert yaml_warnings, report.warnings
+    for warning in yaml_warnings:
+        assert not warning.startswith("(root)/demo/"), warning
+        assert warning.startswith("demo/domains.yaml"), warning

@@ -21,7 +21,7 @@ def parse(install_root: Path, workspace_data: dict, warnings: list) -> dict:
         ws_yaml = install_root / ws_id / "domains.yaml"
         if not ws_yaml.is_file():
             continue
-        for d_id, meta in _read(ws_yaml, f"{ws_id}/domains.yaml", warnings).items():
+        for d_id, meta in _read(ws_yaml, f"{ws_id}/domains.yaml", warnings, ws_id).items():
             # Don't overwrite root-level entries
             declared.setdefault(d_id, meta)
 
@@ -45,12 +45,23 @@ def parse(install_root: Path, workspace_data: dict, warnings: list) -> dict:
     return {"domains": domains}
 
 
-def _read(path: Path, label: str, warnings: list) -> dict:
+def _read(path: Path, label: str, warnings: list, ws_id: str = "(root)") -> dict:
+    """Read a domains.yaml, recording a warning under *ws_id* if it will not parse.
+
+    *ws_id* is passed in rather than derived from *path*: the old
+    ``"(root)" if path.parent.name != path.name else path.parent.name`` could never
+    take its false branch (``path.name`` is always ``domains.yaml`` and
+    ``path.parent.name`` is a directory), so every warning -- including
+    per-workspace ones -- was labelled ``(root)``. Downstream, ``generate.py``
+    prepends the workspace id to a file label that does not already start with it,
+    producing ``(root)/<ws>/domains.yaml`` -- one warning naming two different
+    locations for one file.
+    """
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (yaml.YAMLError, OSError) as e:
-        warnings.append({"workspace": "(root)" if path.parent.name != path.name else path.parent.name,
-                         "file": label, "reason": f"YAML parse error: {e}"})
+        warnings.append({"workspace": ws_id, "file": label,
+                         "reason": f"YAML parse error: {e}"})
         return {}
     if not isinstance(raw, dict):
         return {}
