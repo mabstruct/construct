@@ -20,7 +20,7 @@ Requirements for the v0.4.1 milestone. Each requirement maps to exactly one road
 
 - [x] **FIX-01**: User invoking `views.generate_data` over CLI or MCP either gets real generated view data or an honest, documented absence — no permanent-failure handler remains on the MCP surface, and all four documented callers behave consistently with the decision. Resolving this requires deciding the `install_root` vs `workspace` contract mismatch (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory coupling (`generate.py:43-51`). *(Evidence: V41-01; first logged in v0.3 audit, survived two milestones.)*
 - [x] **FIX-02**: Developer configuring LLM behavior finds exactly one authoritative config location, with the Streamlit ops UI default pointing at the file the runtime actually reads and `model-routing.yaml`'s fate (deprecate or delete from `services/init.py:58`) decided and recorded in the docs that currently describe it as authoritative. *(Evidence: V41-02, conflict C1.)*
-- [x] **FIX-03**: Every `construct ...` invocation string in skills, workflow docs, and the release playbook resolves against the live registry — proven by `_KNOWN_BROKEN` in `tests/contract/test_doc_command_references.py` being empty. Includes deciding whether to implement `knowledge card list` / `knowledge ref list` or rewrite the two dependent skills. *(Evidence: V41-03; 6 broken references across 6 files.)*
+- [ ] **FIX-03**: Every `construct ...` invocation string in skills, workflow docs, and the release playbook resolves against the live registry — proven by `_KNOWN_BROKEN` in `tests/contract/test_doc_command_references.py` being empty. Includes deciding whether to implement `knowledge card list` / `knowledge ref list` or rewrite the two dependent skills. *(Evidence: V41-03; 6 broken references across 6 files.)*
 
 ### Documentation Truth
 
@@ -35,7 +35,7 @@ Requirements for the v0.4.1 milestone. Each requirement maps to exactly one road
 
 ### Decision Closure
 
-- [ ] **DEC-01**: `construct-synthesis` either no longer declares `WebSearch` / `WebFetch` — closing `spec-v04:436`, whose condition ("when `research.run` ships") is satisfied — or is recorded as a deliberate, reasoned exception to the thin-wrapper claim in `PROJECT.md`. *(Evidence: skill migration audit; last remaining such grant.)*
+- [x] **DEC-01**: `construct-synthesis` either no longer declares `WebSearch` / `WebFetch` — closing `spec-v04:436`, whose condition ("when `research.run` ships") is satisfied — or is recorded as a deliberate, reasoned exception to the thin-wrapper claim in `PROJECT.md`. *(Evidence: skill migration audit; last remaining such grant.)*
 
 ## Delivered Ahead of Milestone
 
@@ -72,13 +72,13 @@ Mapped by the roadmap (2026-07-19). Every open requirement maps to exactly one p
 |-------------|-------|--------|
 | FIX-01 | Phase 15 — views.generate_data Resolution | Complete |
 | FIX-02 | Phase 14 — Durable-State & Config Truth | Complete |
-| FIX-03 | Phase 16 — Invocation & User-Doc Truth | Complete |
+| FIX-03 | Phase 16 — Invocation & User-Doc Truth | Pending — `_KNOWN_BROKEN` holds 2 `workflow` entries; 16-06 closes |
 | DOC-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-02 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-03 | Phase 14 — Durable-State & Config Truth | Complete |
 | DOC-04 | Phase 16 — Invocation & User-Doc Truth | Complete |
 | UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
-| DEC-01 | Phase 16 — Invocation & User-Doc Truth | Pending |
+| DEC-01 | Phase 16 — Invocation & User-Doc Truth | Complete — closed by 16-04 |
 | FIX-04 | — (pre-milestone) | ✅ Delivered 2026-07-19, commit `11f20f4` |
 
 **Coverage:** 9/9 open requirements mapped exactly once. Unmapped: 0. Duplicated: 0.
