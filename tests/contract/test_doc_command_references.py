@@ -41,7 +41,7 @@ _IMPL = _REPO_ROOT / "CONSTRUCT-CLAUDE-impl"
 _DOC_GLOBS = (
     (_IMPL / "claude" / "skills", "*/SKILL.md"),
     (_IMPL / "construct" / "workflows", "*.md"),
-    (_REPO_ROOT, "USER-TEST-PLAYBOOK-v03.md"),
+    (_REPO_ROOT, "USER-TEST-PLAYBOOK-v041.md"),
 )
 
 # Documents whose whole purpose is to carry executable invocations.
@@ -62,7 +62,7 @@ _DOC_GLOBS = (
 _MUST_CARRY_INVOCATIONS: tuple[str, ...] = (
     "CONSTRUCT-CLAUDE-impl/USER_GUIDE.md",
     "CONSTRUCT-CLAUDE-impl/construct/references/commands.md",
-    "USER-TEST-PLAYBOOK-v03.md",
+    "USER-TEST-PLAYBOOK-v041.md",
 )
 
 # Tokens that end a command path — flags, placeholders, shell noise, prose.
@@ -170,10 +170,27 @@ def _documented() -> dict[Path, set[tuple[str, ...]]]:
 # Each entry is a command path that is documented but does not resolve, mapped to
 # the audit defect that owns it. Delete an entry the moment its FIX lands; the
 # test below fails if an entry starts resolving, so this cannot rot.
-_KNOWN_BROKEN: dict[tuple[str, ...], str] = {
-    ("workflow", "run"): "V41-03 / FIX-03 — removed in Phase 12 (D-10)",
-    ("workflow", "resume"): "V41-03 / FIX-03 — never existed",
-}
+#
+# EMPTY IS THE TERMINAL STATE (FIX-03). All four V41-03 entries are discharged:
+#   - `knowledge card list`  -> the command was implemented (Phase 16 D-01)
+#   - `knowledge ref list`   -> the reference was rewritten onto a scoped Read (D-03)
+#   - `workflow run`         -> \
+#   - `workflow resume`      -> / removed from USER-TEST-PLAYBOOK-v041.md (D-05)
+#
+# The last two are the ones worth reading carefully. They were documented ONLY in
+# the release playbook. That playbook was superseded rather than deleted: the v0.3
+# file was replaced by USER-TEST-PLAYBOOK-v041.md, which TOOK ITS PLACE in
+# ``_DOC_GLOBS`` above — the tuple still holds three entries. So these entries died
+# because the invocations are gone from a document that is STILL SCANNED, not
+# because the scan surface shrank. That distinction is the whole point (D-16): an
+# allowlist emptied by narrowing the guard would satisfy FIX-03 on paper while
+# destroying the property it exists to prove. If you are ever tempted to delete an
+# entry by dropping a glob, you are removing the test, not fixing the defect.
+#
+# This dict may grow again if a future audit finds a new broken reference — but an
+# entry may only be REMOVED by making its command resolve or by deleting the
+# reference from a document that remains in ``_DOC_GLOBS``.
+_KNOWN_BROKEN: dict[tuple[str, ...], str] = {}
 
 
 def _is_known_broken(path: tuple[str, ...]) -> bool:
