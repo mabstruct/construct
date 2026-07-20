@@ -119,6 +119,7 @@ def test_catalog_loads() -> None:
         "knowledge.connection.add",
         "knowledge.connection.remove",
         "knowledge.connection.list",
+        "knowledge.card.list",
         "graph.status",
         "views.generate_data",
         "workflow.status",
