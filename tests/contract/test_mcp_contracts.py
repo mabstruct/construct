@@ -224,3 +224,86 @@ def test_help_suggest_surfaces_graph_health(workspace: str) -> None:
     assert "graph_status" in result.data, (
         "help.suggest did not surface graph_status — graph.status result was swallowed"
     )
+
+
+# ---------------------------------------------------------------------------
+# WR-10: the never-raise / never-leak property, which the TypeError gate misses
+# ---------------------------------------------------------------------------
+
+# ``test_every_mcp_handler_invokes_without_type_error`` catches TypeError and then
+# swallows everything else. That blanket clause is why CR-02 shipped: the views
+# handler raising FileNotFoundError straight through the MCP boundary passed the
+# gate. Its narrow scope ("only signature mismatch") is defensible, but nothing
+# asserted the property the sanitizer shims in catalog.py exist to provide.
+
+
+def test_views_handler_returns_a_result_for_an_invalid_install_root(tmp_path: Path) -> None:
+    """The views handler must report, not raise, on a path that is not an install root."""
+    from construct.services.knowledge import OperationResult
+
+    capability = get_registry().get_by_mcp_name("construct_views_generate_data")
+    bogus = str(tmp_path / "does" / "not" / "exist")
+
+    result = capability.handler(install_root=bogus)
+
+    assert isinstance(result, OperationResult)
+    assert result.success is False
+    # Never echo the path back through the MCP error channel.
+    assert bogus not in result.message
+    assert all(bogus not in error.reason for error in result.errors)
+
+
+def test_views_contract_payload_does_not_generate_into_the_fixture_tree(
+    workspace: str,
+) -> None:
+    """The shim-signature gate must not have a full generation as a side effect.
+
+    ``_payload_for`` hands ``construct_views_generate_data`` the workspace's parent
+    as its install root. That parent is a tmp_path copy rather than the checked-in
+    fixture, and since CR-03 it carries no AGENTS.md, so the handler refuses it
+    before the generator can create anything. This pins both facts.
+    """
+    parent = Path(workspace).parent
+    payload = _payload_for("construct_views_generate_data", workspace)
+    assert payload["install_root"] == str(parent)
+
+    get_registry().get_by_mcp_name("construct_views_generate_data").handler(**payload)
+
+    assert not (parent / "views").exists(), (
+        "a contract test performed a real build as a side effect"
+    )
+
+
+def _invalid_path_payload(tool_name: str, bogus: str) -> dict:
+    """The advertised payload with every path-shaped field pointed at a bogus path."""
+    return {
+        key: (bogus if key in {"path", "workspace", "workspace_path", "install_root"} else value)
+        for key, value in _payload_for(tool_name, bogus).items()
+    }
+
+
+def test_mcp_handlers_report_rather_than_raise_on_an_invalid_path(tmp_path: Path) -> None:
+    """The never-raise property the sanitizer shims in catalog.py exist to provide.
+
+    The TypeError gate above cannot see this: its ``except Exception: pass``
+    swallows exactly the failures that reach an MCP client as raw exception text.
+    That is why CR-02 shipped -- the views handler raising FileNotFoundError
+    straight through the boundary passed that gate.
+
+    Each handler gets its OWN bogus path. Sharing one would let an earlier
+    write-capable handler create the directory and change what the later ones see,
+    so the test would be asserting a property of the iteration order rather than of
+    the handlers.
+    """
+    registry = get_registry()
+
+    raised: dict[str, str] = {}
+    for index, tool in enumerate(registry.list_mcp_tools()):
+        name = tool["name"]
+        bogus = str(tmp_path / f"not-a-workspace-{index}")
+        try:
+            registry.get_by_mcp_name(name).handler(**_invalid_path_payload(name, bogus))
+        except Exception as exc:  # noqa: BLE001 — the property under test
+            raised[name] = type(exc).__name__
+
+    assert not raised, f"MCP handlers raised through the boundary: {raised}"
