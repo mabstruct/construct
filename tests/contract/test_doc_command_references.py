@@ -218,3 +218,38 @@ def test_known_broken_entries_are_still_broken(path: tuple[str, ...], reason: st
         f"`construct {' '.join(path)}` now resolves ({reason}). "
         "Delete this entry from _KNOWN_BROKEN."
     )
+
+
+# ---------------------------------------------------------------------------
+# WR-07: documented `bash <...>/skills/<name>/run.sh` paths must exist
+# ---------------------------------------------------------------------------
+
+# The `_INVOCATION` regex above only matches strings beginning `construct `, so a
+# skill doc naming a wrapper script under the wrong directory sailed past every
+# check here. `construct-views-generate-data/SKILL.md` documented
+# `.claude/skills/views-generate-data/run.sh` while the directory is
+# `construct-views-generate-data/` — an agent following it got
+# "No such file or directory", a failure the skill's own failure-mode table has no
+# row for.
+_SCRIPT_REF = re.compile(r"skills/([A-Za-z0-9_-]+)/([A-Za-z0-9_.-]+\.sh)\b")
+
+_SKILLS_DIR = _IMPL / "claude" / "skills"
+
+
+def test_documented_script_paths_exist() -> None:
+    """Every `.../skills/<name>/<script>.sh` path in a skill doc resolves on disk."""
+    missing: list[str] = []
+    scanned = 0
+    for doc_path in _doc_files():
+        for span in _code_spans(doc_path.read_text(encoding="utf-8")):
+            for skill_name, script in _SCRIPT_REF.findall(span):
+                scanned += 1
+                if not (_SKILLS_DIR / skill_name / script).is_file():
+                    missing.append(f"{doc_path.name}: skills/{skill_name}/{script}")
+
+    assert scanned, (
+        "no documented skill script paths found — the extractor regex is likely broken"
+    )
+    assert not missing, "documented script paths that do not exist:\n" + "\n".join(
+        sorted(set(missing))
+    )

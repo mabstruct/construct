@@ -39,7 +39,7 @@ construct views generate --install-root <install-root>
 ```
 
 ```bash
-bash <install-root>/.claude/skills/views-generate-data/run.sh <install-root>
+bash <install-root>/.claude/skills/construct-views-generate-data/run.sh <install-root>
 ```
 
 The wrapper adds only a missing-argument guard and a clear failure if the `construct` executable is not on PATH; it performs no interpreter selection and no dependency bootstrap.
