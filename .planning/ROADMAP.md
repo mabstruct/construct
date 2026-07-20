@@ -135,7 +135,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   2. `knowledge card list` / `knowledge ref list` have one recorded decision — implemented as real commands, or both dependent skills (`construct-synthesis`, `construct-gap-analysis`) rewritten onto commands that exist.
   3. `construct-synthesis/SKILL.md` either no longer declares `WebSearch` / `WebFetch`, or `PROJECT.md` records it as a deliberate, reasoned exception to the thin-wrapper claim — `spec-v04:436` is closed either way.
   4. A user can invoke `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate` directly from `USER_GUIDE.md`, and `construct/references/commands.md` lists real commands.
-  5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description match the live 25-command surface.
+  5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description describe the live surface by capability group, asserting no command count, with `tests/contract/test_doc_command_references.py` cited as the mechanical authority.
 
 **Plans**: 1/7 plans executed
 

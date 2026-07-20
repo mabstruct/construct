@@ -8,7 +8,7 @@
 
 **Definition of done:** Every documented invocation path resolves and executes; the v0.4 runtime is discoverable by both users and agents; the architecture doc set describes the system that actually exists.
 
-**Nature of this milestone:** These are integration defects in shipped work, not new capability. The v0.4 runtime is sound — 22/22 requirements genuinely met, 439 tests green. What v0.4 did not do was reconnect that runtime to the surfaces users and agents touch. Requirements here fix surfaces, not engines.
+**Nature of this milestone:** These are integration defects in shipped work, not new capability. The v0.4 runtime is sound — 22/22 requirements genuinely met, and the suite stood at 489 tests green at the start of v0.4.1 (the baseline Phase 15 left it at; a point-in-time regression anchor, not an invariant — compare a run against it to tell a real regression from expected growth). What v0.4 did not do was reconnect that runtime to the surfaces users and agents touch. Requirements here fix surfaces, not engines.
 
 **Invocation contract:** Unchanged from v0.4. "Resolves" means a documented `construct ...` string binds to a real command in the live Typer app, and a capability advertised on the MCP surface returns a genuine result rather than a permanent failure.
 
