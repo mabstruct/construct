@@ -1,6 +1,6 @@
 ---
 description: "Generate JSON data files for the views dashboard from workspace state. Use when user says 'update views', 'rebuild views data', 'refresh data'."
-allowed-tools: Bash(construct views *), Bash(bash *)
+allowed-tools: Bash(construct views *), Bash(bash */.claude/skills/construct-views-generate-data/run.sh *)
 ---
 # Skill: Views Generate Data
 
