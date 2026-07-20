@@ -335,3 +335,26 @@ def test_views_install_root_default_is_resolved_at_call_time(
 
     assert result.exit_code == 0, result.stdout
     assert (scaffolded_install_root / "views" / "build" / "data" / "stats.json").exists()
+
+
+def test_unreadable_views_config_is_reported_not_swallowed(
+    scaffolded_install_root: Path,
+) -> None:
+    """WR-11: a bare `except Exception: pass` hid operator config mistakes.
+
+    An operator who set `views.workspace_landing: wiki` and mistyped the YAML got
+    `dashboard` silently — nothing in the warnings log, nothing on stdout. The
+    sibling reader in refresh.py logs its equivalent failure.
+    """
+    cfg_dir = scaffolded_install_root / ".construct"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    (cfg_dir / "config.yaml").write_text(
+        "views:\n  workspace_landing: [unclosed\n", encoding="utf-8"
+    )
+
+    report = generate(scaffolded_install_root)
+
+    # A bad config never fails the build...
+    assert report.success is True, report.validation_errors
+    # ...but it is no longer invisible.
+    assert any("config.yaml" in w for w in report.warnings), report.warnings

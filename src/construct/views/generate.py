@@ -314,8 +314,17 @@ def generate(install_root: Path) -> GenerateReport:
             views_cfg = cfg.get("views", {})
             if views_cfg.get("workspace_landing") in ("dashboard", "wiki"):
                 spa_settings["workspace_landing"] = views_cfg["workspace_landing"]
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 — a bad config must not fail the build
+            # WR-11: this used to be a bare `pass`, so an operator who set
+            # `views.workspace_landing: wiki` with a YAML typo silently got
+            # `dashboard` with nothing in the warnings log and nothing on stdout.
+            # refresh.py::_read_views_config logs its equivalent failure; the two
+            # config readers in the same package should not disagree on this.
+            _warnings.append({
+                "workspace": "(root)",
+                "file": ".construct/config.yaml",
+                "reason": f"unreadable views config: {type(exc).__name__}",
+            })
     domains["settings"] = spa_settings
 
     for ws_id in workspace_data:
