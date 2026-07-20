@@ -28,7 +28,6 @@ This is a **fixed allowlist**. The skill must NEVER touch any path outside this 
 <install-root>/views/build/
 <install-root>/views/server.pid
 <install-root>/views/server.log
-<install-root>/.claude/skills/views-generate-data/.venv/
 ```
 
 Print the plan to the user verbatim before any deletion:
@@ -39,7 +38,6 @@ About to remove (views runtime only — research data is preserved):
   • views/build/                                             (compiled SPA + generated data)
   • views/server.pid                                          (server PID file, if present)
   • views/server.log                                          (server log, if present)
-  • .claude/skills/views-generate-data/.venv/             (per-skill Python venv)
 
 NOT touched:
   • All workspace directories (cosmology/, philosophy-of-mind/, …)
@@ -68,7 +66,6 @@ Execute the deletions in order. Each is independent — failure of one shouldn't
 rm -rf <install-root>/views/src
 rm -rf <install-root>/views/build
 rm -f  <install-root>/views/server.log
-rm -rf <install-root>/.claude/skills/views-generate-data/.venv
 ```
 
 (`server.pid` was already removed by Step 2 if it existed.)
@@ -80,7 +77,7 @@ For any `rm` that fails with permission error or other OS error, capture and sur
 After deletion, confirm nothing in the allowlist remains:
 
 ```bash
-for p in views/src views/build views/server.pid views/server.log .claude/skills/views-generate-data/.venv; do
+for p in views/src views/build views/server.pid views/server.log; do
   test -e "<install-root>/$p" && echo "STILL PRESENT: $p"
 done
 ```
@@ -95,7 +92,6 @@ If any path "STILL PRESENT" survives, fail loudly and tell the user.
     • views/src/
     • views/build/
     • views/server.log
-    • .claude/skills/views-generate-data/.venv/
     (server stopped + PID file removed if it was running)
 
   Preserved:
@@ -124,7 +120,7 @@ If any path "STILL PRESENT" survives, fail loudly and tell the user.
 
 - **Idempotent.** Re-running on an already-reset install is a clean no-op (nothing to remove). Safe to run repeatedly.
 - **Scope is narrow by design.** The fixed allowlist in Step 1 is the contract. To wipe other things (e.g., refresh skills, remove a workspace), use the appropriate other tool — `refresh-construct.sh` for skill updates, manual `rm` for workspace removal (with care!).
-- **Per-skill venv removal forces fresh bootstrap** on the next `views-generate-data` invocation. ~5s extra one-time cost. Worth it for "test newly arrived skillset free from side-effects" — old PyYAML version or stale interpreter state can't carry over.
+- **No per-skill venv to remove.** `construct-views-generate-data` is a CLI wrapper holding no Python and no virtual environment (D-09 / `adr-0005`). Earlier versions of this skill deleted `.claude/skills/views-generate-data/.venv/` and described a "~5s extra one-time cost" bootstrap on the next invocation; both the directory and the bootstrap are gone, so the cleanup was a no-op promise.
 - **NOT a fresh-install replacement.** This does NOT recreate `~/my-construct` from scratch. `.construct/`, `AGENTS.md`, and your workspaces remain. To rebuild from scratch: `rm -rf ~/my-construct` then `setup-construct.sh ~/my-construct` (DESTRUCTIVE — loses workspaces too).
 - **Browser tabs.** If you have a tab open against the server, the next request after server shutdown will fail (connection refused). After re-running the chain, reload the tab — the SPA fetches fresh data because the bundle hash changed.
 - **Hand-edits to `views/src/`** are LOST on reset. Same posture as `views-scaffold --force`. If you have local SPA changes you want to keep, copy them out first.

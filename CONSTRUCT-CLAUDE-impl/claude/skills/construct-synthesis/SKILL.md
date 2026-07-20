@@ -125,20 +125,29 @@ Present the draft to the user:
 >
 > Would you like to: review and edit, strengthen thin sections (I'll research), or finalize?"
 
-### Step 7: Views Refresh Hook
+### Step 7: Views Refresh
 
-If `views/build/` exists at the install root AND `.construct/config.yaml` does not set `views.auto_regenerate: false`:
+Synthesis is the **one skill that still carries a refresh step**, and it is an exemption recorded in [`adr-0005-views-refresh-ownership.md`](../../../../CONSTRUCT-CLAUDE-spec/adrs/adr-0005-views-refresh-ownership.md), not a leftover. `research.run`, `curation.run` and `daily.run` refresh from the Python layer; synthesis has no `synthesis.run` capability, so there is no Python entry point to hang a refresh on. Without this step a synthesis would never reach the SPA.
 
-**Skip check:** If this skill was invoked as part of `daily-cycle` or another parent workflow that runs multiple hooked skills in sequence, skip this hook — the parent will trigger a single regeneration after all child skills complete. This avoids redundant regeneration.
+Gates — both must pass, matching `construct.views.refresh`:
 
-If not skipped:
-1. Run `views-generate-data` to refresh the SPA's cached JSON
-2. If it succeeds → if `.construct/config.yaml` sets `views.confirm_refresh: true`, append to the report: `✓ views updated (build_id: {id})`. Otherwise, no extra user-facing message (the SPA picks it up via `version.json` polling within 30s).
-3. If it fails → append a warning to the report:
-   > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `views-generate-data` manually to refresh the views.
-4. Always preserve this skill's success status — the hook is a side effect, not a success condition
+1. `<install-root>/views/build/` exists.
+2. `.construct/config.yaml` does not set `views.auto_regenerate: false`.
 
-If `views/build/` does not exist, or `views.auto_regenerate` is `false` → skip silently (no log, no message).
+If either gate fails → skip silently (no log, no message).
+
+Otherwise:
+
+```bash
+construct views generate --install-root <install-root>
+```
+
+1. **Exit 0** → if `.construct/config.yaml` sets `views.confirm_refresh: true`, append `✓ views updated (build_id: {id})` to the report. Otherwise stay silent; the SPA picks it up via `version.json` polling within 30s.
+2. **Non-zero** → append a warning to the report:
+   > ⚠ views regeneration failed: {single-line message}. Workspace is intact; run `construct views generate --install-root <install-root>` manually to refresh the views.
+3. **Always preserve this skill's success status** — the refresh is a side effect, not a success condition.
+
+There is no parent-skip check. The old one told this skill to stay silent when invoked under `daily-cycle`, but `daily.run` no longer orchestrates skills and cannot signal that it is a parent — the check could never fire and only made the step look conditional.
 
 ---
 

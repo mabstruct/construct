@@ -178,7 +178,7 @@ Compute approximate bundle size from the build output:
 ## Notes
 
 - **No auto-retry.** Failures surface to the caller for diagnosis.
-- **No data regeneration.** This skill does NOT run `views-generate-data`. The two are independent writers (architecture-overview §3.2). To refresh data, the user invokes `views-generate-data` or triggers a v0.1 skill that hooks it (research-cycle, curation-cycle, synthesis).
+- **No data regeneration.** This skill does NOT run `construct-views-generate-data`. The two are independent writers (architecture-overview §3.2). To refresh data, the user invokes `construct-views-generate-data` (or `construct views generate --install-root <root>` directly), or runs any workflow capability — `research.run`, `curation.run` and `daily.run` each refresh from the Python layer at the end of their run (`adr-0005`). The v0.1 skill-hook arrangement this note used to describe is gone.
 - **No server start.** This skill does NOT invoke `construct-up`. After build, the user explicitly starts the server (or the SPA tab is reloaded against an already-running server).
 - **Stale-build detection deferred** to v0.2.1. Currently always rebuilds when invoked. Vite is fast enough that this is acceptable.
 - **Cross-platform:** Tested on macOS. Linux compatible. Windows untested in v0.2.
