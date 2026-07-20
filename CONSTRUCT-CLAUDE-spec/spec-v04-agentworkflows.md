@@ -433,7 +433,7 @@ Phase 4 explicitly preserved WebSearch in skills ("cannot be replaced by CLI") â
 | **Brave Search API** | Alternative general web | Privacy-focused; referenced in archive design examples |
 | **Exa / Serper** | Alternative | Same `SearchProvider` interface slot |
 | **arXiv / Semantic Scholar** | Academic complement | v0.1 Python used dedicated APIs; recommended as second provider for paper metadata (authors, venue, DOI) |
-| **Claude WebSearch** | Migration fallback only | Remove from skill `allowed-tools` when `research.run` ships |
+| **Claude WebSearch** | Migration fallback only | **Discharged (Phase 16 / DEC-01).** `research.run` shipped in Phase 10; the `WebSearch`/`WebFetch` grants were removed from `construct-synthesis`'s `allowed-tools`, the last skill still carrying them. `test_skill_drops_forbidden_tools` keeps them out. Retained here for the fallback rationale, not as a live instruction |
 
 ### 8.3 Search provider interface
 
