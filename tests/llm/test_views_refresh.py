@@ -412,3 +412,107 @@ def test_refresh_keeps_reporting_failure_across_runs(
     assert second.status == "failed", (
         "the refresh failure channel healed itself over unchanged state"
     )
+
+
+# ── WR-01: the call sites themselves, not just refresh_views' internal try ──
+
+
+def _patch_refresh_helper(monkeypatch: pytest.MonkeyPatch, exc: Exception) -> None:
+    """Make ``refresh_views`` ITSELF raise.
+
+    The paired tests above inject failures inside the *generator*, which
+    ``refresh_views`` catches — so they exercise the helper's guarantee, not the
+    call sites'. The prologue at each call site (deferred import, install-root
+    derivation, logging, and curation's closing ``_emit``) sits outside that
+    guarantee, and only patching the helper reaches it.
+    """
+
+    def _boom(install_root):  # noqa: ANN001, ANN202 — test double
+        raise exc
+
+    monkeypatch.setattr("construct.views.refresh.refresh_views", _boom)
+
+
+def test_daily_run_survives_a_raising_refresh_helper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-01: ``_run_views_refresh`` was the one child invocation with no try.
+
+    It sits between the status computation and the receipt write, so anything
+    raising through it aborted ``run_daily_run`` before the receipt was persisted
+    and turned the whole capability into ``success=False`` — the outcome D-12
+    forbids.
+    """
+    from construct.llm import daily_run
+    from tests.llm.conftest import create_test_workspace
+
+    ws = create_test_workspace(tmp_path / "ws")
+    _scaffold_build_dir(tmp_path)
+    _canned_daily_children(monkeypatch, daily_run)
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy())
+    good = daily_run.run_daily_run(
+        daily_run.DailyRunInput(workspace_path=str(ws), run_id="daily-helper-ok")
+    )
+
+    _patch_refresh_helper(monkeypatch, RuntimeError("helper exploded"))
+    bad = daily_run.run_daily_run(
+        daily_run.DailyRunInput(workspace_path=str(ws), run_id="daily-helper-bad")
+    )
+
+    assert good.status == bad.status == "completed"
+    assert [c.status for c in good.children] == [c.status for c in bad.children]
+    receipt = tmp_path / "ws" / ".construct" / "workflow" / "daily" / "daily-helper-bad.json"
+    assert receipt.is_file(), (
+        "the receipt was lost because a raising refresh aborted the run before the write"
+    )
+
+
+def test_curation_run_survives_a_raising_refresh_helper(
+    curation_workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-01: the curation node's contract is 'cannot fail the run'."""
+    from construct.llm import curation_run
+
+    install_root = curation_workspace.parent
+    _scaffold_build_dir(install_root)
+
+    monkeypatch.setattr("construct.views.generate.generate", _Spy())
+    good = curation_run.run_curation_run(
+        curation_run.CurationRunInput(
+            workspace_path=str(curation_workspace), run_id="cur-helper-ok"
+        )
+    )
+
+    _patch_refresh_helper(monkeypatch, RuntimeError("helper exploded"))
+    bad = curation_run.run_curation_run(
+        curation_run.CurationRunInput(
+            workspace_path=str(curation_workspace), run_id="cur-helper-bad"
+        )
+    )
+
+    assert good.status == bad.status
+    # The node still reports itself honestly rather than vanishing from the record.
+    step = next(
+        (s if isinstance(s, dict) else s.model_dump())
+        for s in bad.steps
+        if (s if isinstance(s, dict) else s.model_dump())["step"] == "views_refresh_hook"
+    )
+    assert step["required"] is False
+    assert "RuntimeError" in (step.get("reason") or "")
+
+
+def test_research_run_survives_a_raising_refresh_helper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-01: research.run's refresh node returns {} — but only if it returns."""
+    from construct.llm import research_run
+
+    node = research_run.views_refresh
+    _scaffold_build_dir(tmp_path)
+    _patch_refresh_helper(monkeypatch, RuntimeError("helper exploded"))
+
+    ws = tmp_path / "ws"
+    ws.mkdir(parents=True, exist_ok=True)
+
+    assert node({"workspace_path": str(ws), "status": "completed"}) == {}

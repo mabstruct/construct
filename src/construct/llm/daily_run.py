@@ -283,7 +283,17 @@ def run_daily_run(inp: DailyRunInput) -> DailyRunResult:
     # the receipt write so the persisted record covers a complete cycle. The returned
     # outcome is intentionally dropped: it is logged inside the helper and is not a
     # success condition of anything here.
-    _run_views_refresh(workspace)
+    #
+    # Wrapped like every other child invocation above (WR-01). ``refresh_views`` has
+    # its own never-raise guarantee, but the prologue around it does not: the
+    # deferred import, ``Path(workspace).parent`` and the logger call all sit outside
+    # it. Anything raising here would abort run_daily_run BEFORE the receipt write
+    # below and turn the whole capability into success=False — exactly the outcome
+    # D-12 forbids, reached through the one line that was not defended.
+    try:
+        _run_views_refresh(workspace)
+    except Exception as exc:  # noqa: BLE001 — D-12: the refresh can never fail the cycle
+        logger.warning("daily.run: views refresh raised: %s", _sanitize_error(exc))
 
     # Persist the receipt AFTER run_id passed the kebab validator (path safety).
     path = _receipt_path(workspace, run_id)

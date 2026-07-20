@@ -841,17 +841,27 @@ def views_refresh(state: ResearchRunState) -> dict:
     straight to END, so an outage run legitimately never reaches this node. That is
     correct — there is nothing new to publish from a run that never scored anything.
     """
-    from construct.views.refresh import refresh_views
+    # WR-01: ``refresh_views`` never raises, but the prologue around it — the deferred
+    # import and the install-root derivation — is not covered by that guarantee. The
+    # whole body is guarded so this node keeps its structural inability to affect the
+    # run, not merely its inability to set ``status``.
+    try:
+        from construct.views.refresh import refresh_views
 
-    # D-05: install-root scoped, so the workspace's PARENT. Passing the workspace would
-    # discover zero workspaces and publish an empty build that looks like a success.
-    install_root = Path(state["workspace_path"]).parent
+        # D-05: install-root scoped, so the workspace's PARENT. Passing the workspace
+        # would discover zero workspaces and publish an empty build that looks like a
+        # success.
+        install_root = Path(state["workspace_path"]).parent
 
-    outcome = refresh_views(install_root)
-    if outcome.status == "failed":
-        logger.warning("views_refresh: refresh failed: %s", outcome.reason)
-    else:
-        logger.info("views_refresh: %s (%s)", outcome.status, outcome.reason or "no detail")
+        outcome = refresh_views(install_root)
+        if outcome.status == "failed":
+            logger.warning("views_refresh: refresh failed: %s", outcome.reason)
+        else:
+            logger.info("views_refresh: %s (%s)", outcome.status, outcome.reason or "no detail")
+    except Exception as exc:  # noqa: BLE001 — D-12: the refresh can never fail the run
+        # Class name only — this module has no local sanitizer and T-10-08 forbids
+        # logging raw exception text.
+        logger.warning("views_refresh: refresh raised: %s", type(exc).__name__)
     return {}
 
 

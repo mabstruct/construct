@@ -988,15 +988,35 @@ def views_refresh_hook(state: CurationRunState) -> dict:
     rebuild. Reporting ``failed`` would be honest about the refresh but would leave a
     ``failed`` step in the run record that a future aggregation change could pick up.
     """
-    from construct.views.refresh import refresh_views
-
-    # D-05: the generator is INSTALL-ROOT scoped and discovers workspaces as its
-    # children. Passing the workspace itself would discover zero workspaces and write
-    # an empty build — a refresh that looks like it worked and produced nothing.
     workspace = state["workspace_path"]
-    install_root = Path(workspace).parent
 
-    outcome = refresh_views(install_root)
+    # WR-01: the node's contract is "cannot fail the run", but ``refresh_views``'
+    # own never-raise guarantee covers only itself — the deferred import, the
+    # install-root derivation and the closing ``_emit`` all sit outside it. The whole
+    # body is therefore guarded, so this node degrades to a reported skip rather than
+    # propagating into the graph.
+    try:
+        from construct.views.refresh import refresh_views
+
+        # D-05: the generator is INSTALL-ROOT scoped and discovers workspaces as its
+        # children. Passing the workspace itself would discover zero workspaces and
+        # write an empty build — a refresh that looks like it worked and produced
+        # nothing.
+        install_root = Path(workspace).parent
+        outcome = refresh_views(install_root)
+    except Exception as exc:  # noqa: BLE001 — D-12: this node can never fail the run
+        safe = _sanitize_error(exc)
+        logger.warning("views_refresh_hook: refresh raised: %s", safe)
+        result = CurationStepResult(
+            step="views_refresh_hook", status="skipped", required=False,
+            reason=safe,
+            summary=(
+                f"views refresh could not run: {safe}. Workspace is intact; "
+                f"run 'construct views generate' manually to refresh the views."
+            ),
+        )
+        return {"steps": [result.model_dump(mode="json")], "events": []}
+
     if outcome.status == "skipped":
         result = CurationStepResult(
             step="views_refresh_hook", status="skipped", required=False,
@@ -1020,7 +1040,13 @@ def views_refresh_hook(state: CurationRunState) -> dict:
             ),
         )
 
-    events = [_emit(workspace, "workflow_step_complete", state["run_id"], "views_refresh_hook")]
+    # WR-01: the audit emit is a side effect of a node that cannot fail the run, so a
+    # failing event write degrades to "no event" rather than propagating.
+    try:
+        events = [_emit(workspace, "workflow_step_complete", state["run_id"], "views_refresh_hook")]
+    except Exception as exc:  # noqa: BLE001 — D-12: this node can never fail the run
+        logger.warning("views_refresh_hook: event emit failed: %s", _sanitize_error(exc))
+        events = []
     return {"steps": [result.model_dump(mode="json")], "events": events}
 
 
