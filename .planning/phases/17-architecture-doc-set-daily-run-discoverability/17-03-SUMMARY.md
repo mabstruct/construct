@@ -124,6 +124,13 @@ None - no external service configuration required.
 - The catalog is now self-defending: any new capability, MCP tool, CLI leaf, or skill dir added without a catalog row will fail `test_artifact_catalog.py`.
 - Full suite green: 524 passed / 1 skipped; FIX-04 `_KNOWN_BROKEN` remains empty.
 
+## Self-Check: PASSED
+
+- FOUND: tests/contract/test_artifact_catalog.py
+- FOUND: CONSTRUCT-CLAUDE-spec/artifact-catalog.md
+- FOUND: 17-03-SUMMARY.md
+- FOUND commits: 0fd7ad3 (RED), 76821eb (GREEN), d28d123 (summary)
+
 ---
 *Phase: 17-architecture-doc-set-daily-run-discoverability*
 *Completed: 2026-07-25*
