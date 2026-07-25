@@ -283,7 +283,7 @@ Use this as a checklist before introducing any new component.
 - `spec-v02-data-model.md` — derived-view-data JSON contract; the load-bearing artefact for the derivation from layer 1
 
 ### 9.3 Reference tables
-- `references/epistemic-types.md`, `connection-types.md`, `lifecycle-states.md`, `confidence-levels.md`, `source-tiers.md` — vocabulary shared across all layers
+- `../CONSTRUCT-CLAUDE-impl/construct/references/epistemic-types.md`, `../CONSTRUCT-CLAUDE-impl/construct/references/connection-types.md`, `../CONSTRUCT-CLAUDE-impl/construct/references/lifecycle-states.md`, `../CONSTRUCT-CLAUDE-impl/construct/references/confidence-levels.md`, `../CONSTRUCT-CLAUDE-impl/construct/references/source-tiers.md` — vocabulary shared across all layers. These are workspace-shipped vocabulary docs (deployed to `.construct/references/` in a workspace); their on-disk home in this repo is `CONSTRUCT-CLAUDE-impl/construct/references/`.
 
 ### 9.4 Implementation
 - `../CONSTRUCT-CLAUDE-impl/` — runtime source (agents, skills, workflows, templates)
