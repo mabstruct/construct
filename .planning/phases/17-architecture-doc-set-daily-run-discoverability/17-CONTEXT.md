@@ -69,8 +69,8 @@ A v0.5 planner reading the architecture doc set sees the system that actually ex
 
 ### Claude's Discretion
 
-- **D-02's exact prose** for the layer-1 write-ownership framing (recommended leaning noted; user said "you decide").
-- **D-05's exact guard coverage** — which surfaces beyond capabilities+CLI+MCP are mechanically asserted vs. narrative (skills coverage recommended; `construct-spike-run` row mandatory).
+- The exact prose for D-02's layer-1 write-ownership framing (recommended leaning noted; user said "you decide").
+- The exact guard coverage for D-05 — which surfaces beyond capabilities+CLI+MCP are mechanically asserted vs. narrative (skills coverage recommended; `construct-spike-run` row mandatory).
 - Whether the `artifact-catalog.md` guard is a **new** test file or an extension of `test_doc_command_references.py`'s introspection helpers (which already walk the live Typer app recursively).
 - The `daily-cycle.md` workflow doc's treatment — keep it (it already points at `construct daily run`) and have the skill reference it; update its stale skill-composition diagram (`research-cycle → curation-cycle → graph-status`) if trivial. Not a required edit.
 - How `architecture-overview.md`'s rewrite sequences against the catalog guard and config-topology deletion (wave ordering, plan decomposition across DOC-01 / DOC-02 / UX-01).
