@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
-current_phase: 17
-status: completed
+status: Awaiting next milestone
 stopped_at: Completed 17-04-PLAN.md
-last_updated: "2026-07-25T18:12:59.592Z"
+last_updated: "2026-07-25T18:38:04.553Z"
 last_activity: 2026-07-25
-last_activity_desc: Phase 17 complete
+last_activity_desc: Milestone v0.4.1 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 20
   completed_plans: 20
   percent: 100
+current_phase: 17
 current_phase_name: Architecture Doc Set & daily.run Discoverability
 ---
 
@@ -21,18 +21,17 @@ current_phase_name: Architecture Doc Set & daily.run Discoverability
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-07)
+See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 17 — Architecture Doc Set & daily.run Discoverability
+**Current focus:** Planning next milestone — v0.5 UI-Primary Experience (DOC-03 prerequisite satisfied)
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: All phases complete
-Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-25 — Phase 17 complete
+Phase: Milestone v0.4.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-25 — Milestone v0.4.1 completed and archived
 
 ## Performance Metrics
 
@@ -59,8 +58,8 @@ Last activity: 2026-07-25 — Phase 17 complete
 
 **Recent Trend:**
 
-- Last completed milestone: v0.3 shipped 2026-06-16 with 0 unsatisfied requirements.
-- Trend: v0.4 ready to begin planning from Phase 8.
+- Last completed milestone: v0.4.1 shipped 2026-07-25 with 0 unsatisfied requirements (9/9), 515 tests green.
+- Trend: v0.4 (22/22) and v0.4.1 (9/9) both shipped clean; v0.5 UI-primary experience ready to scope.
 
 | Phase 09 P02 | 20min | 2 tasks | 5 files |
 | Phase 09 P03 | 25min | 2 tasks | 2 files |
@@ -260,12 +259,13 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T17:57:02.656Z
-Stopped at: Completed 17-04-PLAN.md
+Last session: 2026-07-25 — v0.4.1 milestone completed and archived
+Stopped at: Milestone v0.4.1 closed; awaiting v0.5 scoping
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd-execute-phase 14` to execute Durable-State & Config Truth (DOC-03, FIX-02) — Wave 1: 14-01, 14-04; Wave 2: 14-02, 14-03.
-- Reference `.planning/milestones/v0.4-MILESTONE-AUDIT.md` throughout — it carries file:line evidence for every requirement.
-- Do not start v0.5 planning until Phase 14 lands: DOC-03 gates v0.5 design.
+- Milestone v0.4.1 is shipped and tagged (`v0.4.1`). Start the next milestone with `/clear` then `/gsd-new-milestone`.
+- v0.5 (UI-Primary Experience) is unblocked — DOC-03's durable-checkpointer invariant is recorded (adr-0004).
+- Carry into v0.5 scoping the four handoff items: the `views validate`↔`views generate` byte-contract fork (pinned by test), the per-card views-refresh path (v0.6 OQ-3), the `card list` MCP-boundary hardening (WR-01/WR-02), and the stale `artifact-catalog.md` prose counts.
+- Stale `dev-v04` git branch left in place for manual handling (no branching strategy configured).

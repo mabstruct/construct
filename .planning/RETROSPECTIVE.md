@@ -79,6 +79,47 @@
 
 ---
 
+## Milestone: v0.4.1 — Surface Integration & Documentation Truth
+
+**Shipped:** 2026-07-25
+**Phases:** 4 (14–17) | **Plans:** 20 | **Tests:** 515 passing / 1 skipped (Phase 16 checkpoint)
+
+### What Was Built
+- Durable-state & config truth — `adr-0004` records `.construct/workflow/*.sqlite` as sanctioned durable state; `nfrs.md`/`architecture-overview.md`/`workspace-contract.md` scoped to match; `resolve_llm_config_path()` shares one resolution path; `model-routing.yaml` deprecated-but-scaffolded (Phase 14; DOC-03, FIX-02).
+- `views.generate_data` resolution — real MCP handler behind an `install_root` contract, the 15-module views library vendored into `src/construct/views/`, models reconciled to parser output, and post-run views refresh owned by the Python workflow layer as a status-neutral side effect (Phase 15; FIX-01, adr-0005).
+- Invocation & user-doc truth — `_KNOWN_BROKEN` emptied over a *widened* guard (`_DOC_GLOBS` 3→5), `knowledge card list` implemented with CLI/MCP parity, `construct-synthesis` web grants removed (`spec-v04:436` closed), executable user docs, and a superseded offline-runnable playbook, human-verified on a fresh workspace (Phase 16; FIX-03, DEC-01, DOC-04).
+- Architecture doc set & discoverability — `architecture-overview.md` on ADR-0003's L0–L4 model, `artifact-catalog.md` staleness-proofed by a `test_artifact_catalog.py` introspection guard, `config-topology.md` deleted, and a thin `construct-daily-cycle` chat entry point for `daily.run` (Phase 17; DOC-01, DOC-02, UX-01).
+
+### What Worked
+- **Guard-first, allowlist-that-can-only-shrink.** FIX-04 landed *before* the milestone and *defined* the remaining work — FIX-01 and FIX-03 were complete precisely when `_KNOWN_BROKEN` was empty. Mechanical completion criteria replaced prose judgement about whether a doc-truth requirement was "done."
+- **Widen the scan to prove the empty allowlist is real.** 16-07 grew `_DOC_GLOBS` from 3 to 5 (adding `USER_GUIDE.md`, `commands.md`) with the allowlist held empty — an empty allowlist that survives *widening* cannot be a narrowed-scan artefact. Strongest form of the criterion.
+- **Mechanical introspection guards pin docs to live code.** `test_artifact_catalog.py` asserts every live capability/MCP tool/Typer leaf/skill dir has a catalog row and cannot pass vacuously — the inventory physically cannot silently rot.
+- **A retrospective milestone audit was the load-bearing basis.** `v0.4-MILESTONE-AUDIT.md` (2026-07-19, file:line evidence for every defect) scoped the whole milestone — the audit v0.4 *didn't* run at close became the entry point for v0.4.1, validating v0.3's "milestone audit catches integration rot" lesson after the fact.
+
+### What Was Inefficient
+- **Doc-truth work is prose-heavy and hand-verified.** Several requirements (DOC-01/04, the playbook run) needed careful human reading and a fresh-workspace offline execution rather than a test — the mechanical guards cover *resolution*, not whether the prose describes reality.
+- **Contract forks were escalated, not resolved, and became handoff debt.** `views validate` still rejects 3 of 8 files `views generate` writes (validates a projection, writes the raw dict); per-card edits lost their refresh path with the debounce-hook removal; the `card list` MCP boundary skips `OperationError` serialization. Each was deliberately deferred with a pinning test/log rather than fixed in a patch milestone — correct, but it means v0.5 inherits a known list.
+- **The auto-generated MILESTONES/accomplishments were noisy.** `milestone.complete`'s `summary-extract` pulled `Task 1 —` fragments as one-liners; the entry was rewritten by hand — same `gsd-sdk` extraction weakness noted in v0.3/v0.4.
+
+### Patterns Established
+- **Allowlist-that-can-only-shrink + widen-to-prove** — a paired "still-broken" assertion forces deletion on a landed fix and blocks quiet widening; then *growing* the scanned surface while the allowlist stays empty proves the criterion isn't a scoping artefact.
+- **Introspection guard as anti-staleness for inventory docs** — assert doc rows against live registry/Typer/MCP/glob enumeration with a non-vacuity check, so a catalog cannot drift from the code it describes.
+- **Escalate-don't-absorb for out-of-scope contract forks** — when a fix surfaces a deeper contract question beyond the phase's scope, pin it with a test and log it as a named handoff item rather than silently deciding it.
+- **Deprecate-but-scaffold for load-bearing-but-wrong config** — `model-routing.yaml` kept as a `REQUIRED_PATHS` scaffold entry (workspace-contract stability) while marked deprecated/inert everywhere it was called authoritative, instead of deleting it and churning the workspace format.
+
+### Key Lessons
+1. Mechanical completion criteria (an empty allowlist, a passing introspection guard) beat prose "is it done?" for documentation-truth work — but only cover what they mechanically check; prose accuracy still needs a human read.
+2. Prove a negative result (empty allowlist) is real by *widening* its scope, not by trusting it under a fixed scan — a green result under a narrow scan is the failure mode.
+3. A retrospective milestone audit with file:line evidence can scope an entire remediation milestone — run the audit v0.4 skipped, and its findings become the next milestone's requirements.
+4. In a patch milestone, escalate deeper contract forks with a pinning test rather than fixing them — but track them explicitly, because they become the next milestone's inherited debt.
+
+### Cost Observations
+- Model mix: executors Opus per config (`model_profile: quality`); verifier/checker Sonnet. Mostly documentation and small code changes (one real feature: `knowledge card list`; one handler wire-up: `views.generate_data`).
+- Sessions: milestone spanned 2026-07-19 → 2026-07-25 (7 days), 145 commits, 243 files (+21,796 / −1,905 — inflated by the vendored 15-module views library).
+- Notable: a doc-heavy patch milestone, but the highest-leverage work was the *guards* (FIX-04, `test_artifact_catalog.py`) that make the fixes durable rather than one-time corrections.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -87,6 +128,7 @@
 |-----------|--------|------------|
 | v0.3 | 7 | First milestone-level audit + integration check; retrofitted verification; contract-test regression gate established |
 | v0.4 | 6 | Per-phase verification became continuous (every phase has a passing VERIFICATION.md); worktree isolation made viable via manifest-scoped cleanup; verifier runs live CLI proof; no milestone-level audit run |
+| v0.4.1 | 4 | Retrospective milestone audit (v0.4's skipped one) scoped the whole milestone; mechanical completion criteria (empty allowlist, introspection guard) replaced prose "done?" judgement; widen-to-prove and escalate-don't-absorb established |
 
 ### Cumulative Quality
 
@@ -94,8 +136,10 @@
 |-----------|-------|---------------------------|-------|
 | v0.3 | 224 | 0 (2 partial deferred to v0.4) | Verification/Nyquist/security coverage incomplete; carried as debt |
 | v0.4 | 404 | 0 | 22/22 requirements delivered; per-phase verifications all passed; 3 advisory (non-blocking) Phase-13 robustness findings carried forward |
+| v0.4.1 | 515 | 0 | 9/9 requirements delivered; artifact-open audit clear at close; 4 non-blocking contract/MCP-boundary items escalated as v0.5 handoff debt |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. (v0.3, v0.4) Integration/E2E verification must be explicit — unit-green ≠ wired. v0.4 improved this with continuous per-phase verification + live-CLI verifier proof.
-2. (v0.3, v0.4) `gsd-sdk` tracking verbs silently mis-scope (phase counts, stale status cells, orphan dirs) — verify git/ROADMAP/STATE state after every CLI write; do not trust the success JSON.
+1. (v0.3, v0.4, v0.4.1) Integration/E2E verification must be explicit — unit-green ≠ wired. v0.4 improved this with continuous per-phase verification + live-CLI verifier proof; v0.4.1 turned "wired" into a mechanical guard (documented invocations must resolve against the live Typer app).
+2. (v0.3, v0.4, v0.4.1) `gsd-sdk` tracking verbs silently mis-scope (phase counts, stale status cells, orphan dirs, noisy auto-extracted accomplishments) — verify git/ROADMAP/STATE state after every CLI write; do not trust the success JSON.
+3. (v0.3, v0.4.1) A milestone audit with file:line evidence catches integration rot a green suite hides — v0.3 caught it at close; v0.4 skipped it and v0.4.1 became the retrospective remediation. Run the audit before close, not after.

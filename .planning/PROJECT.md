@@ -21,24 +21,23 @@ The system must reliably turn source material into connected, explorable knowled
 
 **Next:** v0.4.1 (surface integration) — see below. v0.5 (UI-primary experience) follows.
 
-## Current Milestone: v0.4.1 Surface Integration & Documentation Truth
+## Current Milestone: v0.4.1 Surface Integration & Documentation Truth — ✅ SHIPPED 2026-07-25
 
 **Goal:** Reconnect the sound v0.4 runtime to the surfaces users and agents actually touch — every documented invocation path resolves and executes, the v0.4 runtime is discoverable by both users and agents, and the architecture doc set describes the system that actually exists.
 
-**Target features:**
-- Resolve `views.generate_data` — no permanent-failure handler may remain on the MCP surface (FIX-01)
-- Re-point the Streamlit LLM config default and settle `model-routing.yaml`'s fate (FIX-02)
-- Every `construct ...` string in skills, workflows, and the playbook resolves against the registry (FIX-03)
-- Rewrite `architecture-overview.md` against ADR-0003's four-layer model (DOC-01)
-- Capability/CLI/MCP inventory in `artifact-catalog.md`; fix or delete `config-topology.md` (DOC-02)
-- Record the durable-checkpointer decision in the NFR/architecture/workspace-contract invariants — **gates v0.5 design** (DOC-03)
-- CLI coverage in `USER_GUIDE.md`, corrected `README.md` / `AGENTS.md`, retired v0.3 playbook (DOC-04)
-- Claude-native entry point for `daily.run`, the flagship v0.4 capability (UX-01)
-- Close `spec-v04:436` — `WebSearch`/`WebFetch` in `construct-synthesis` (DEC-01)
+**Delivered (Phases 14–17, 9/9 requirements):**
+- `views.generate_data` runs a real handler behind an `install_root` contract — the permanent-failure stub is gone from the MCP surface, the 15-module views library is vendored into `src/construct/views/`, and post-run views refresh is owned by the Python workflow layer (Phase 15; FIX-01, adr-0005).
+- One authoritative LLM config location — `resolve_llm_config_path()` shared by the Streamlit ops UI and runtime, with `model-routing.yaml` deprecated-but-scaffolded everywhere it was called authoritative (Phase 14; FIX-02).
+- Every `construct …` string in skills, workflows, and the playbook resolves against the live Typer app — `_KNOWN_BROKEN` empty over a *widened* guard (`_DOC_GLOBS` 3→5), `knowledge card list` implemented, user docs made executable, and the v0.3 playbook superseded by an offline-runnable, human-verified v0.4.1 playbook (Phase 16; FIX-03, DOC-04).
+- `construct-synthesis` dropped its `WebSearch`/`WebFetch` grants, closing `spec-v04:436` (Phase 16; DEC-01).
+- The architecture doc set describes the system that exists — `architecture-overview.md` rewritten onto ADR-0003's L0–L4 model, `artifact-catalog.md` staleness-proofed by an introspection guard, `config-topology.md` deleted, and the durable-checkpointer decision recorded in the NFR/architecture/workspace-contract invariants (Phases 14, 17; DOC-01, DOC-02, DOC-03). **DOC-03 unblocks v0.5 design.**
+- `daily.run` — the flagship v0.4 capability — reachable from Claude-native chat via a thin `construct-daily-cycle` skill (Phase 17; UX-01).
 
-**Already delivered ahead of the milestone:** FIX-04 — `tests/contract/test_doc_command_references.py` (2026-07-19). Introspects the live Typer app and asserts every documented `construct ...` string resolves, with a `_KNOWN_BROKEN` allowlist that can only shrink. FIX-01 and FIX-03 are complete precisely when that allowlist is empty.
+**Delivered ahead of the milestone:** FIX-04 — `tests/contract/test_doc_command_references.py` (2026-07-19). Introspects the live Typer app and asserts every documented `construct ...` string resolves, with a `_KNOWN_BROKEN` allowlist that can only shrink. It supplied the mechanical completion criteria for Phases 15 and 16.
 
-**Basis:** `.planning/milestones/v0.4-MILESTONE-AUDIT.md` (retrospective audit, 2026-07-19). The runtime is sound and its 22/22 requirements genuinely met; these are integration defects in shipped work, not new capability.
+**Basis:** `.planning/milestones/v0.4-MILESTONE-AUDIT.md` (retrospective audit, 2026-07-19). The runtime was sound and its 22/22 requirements genuinely met; these were integration defects in shipped work, not new capability.
+
+**Next:** v0.5 (UI-primary experience) — browser-first shell on the hardened v0.4 runtime. DOC-03 prerequisite satisfied; scope via `/gsd-new-milestone`.
 
 ## Requirements
 
@@ -83,7 +82,9 @@ The desired user experience in the near term is still guided by Claude-native sk
 
 There are already relevant analyses in the latest specification documents covering capabilities and artifacts. Those documents should inform requirements and roadmap structure rather than re-deriving the product from scratch.
 
-**Current state (v0.4 shipped, 2026-07-07):** v0.4 Agent Workflows shipped across 6 phases (8–13) / 24 plans, delivering all 22 requirements with the full pytest suite green (404 tests). The runtime is a Python package (`src/construct/`, ~15k LOC) with a capability registry, a Typer CLI, and a stdio MCP server; Claude-native skills are thin wrappers that now delegate to CLI/MCP. On top of the v0.3 governed-workspace spine, v0.4 added: a provider-agnostic search spine (Tavily + mock, config-driven caps); a model-agnostic LLM provider factory and L3 gates (`research.score`, `card.evaluate`, connection-typing); durable checkpointed LangGraph workflows for `research.run` and `curation.run` with real `interrupt()` human review that writes nothing before approval; and a thin `daily.run` composition folding research → curation → graph.status into one non-blocking cycle. MCP parity for every new capability is free via registry auto-discovery (`mcp/server.py` never hand-edited). **Next:** v0.5 (UI-primary experience) sits on these proven pipelines; carry-over debt (RT-01/RT-02 registry unification, full `views.generate_data` emission, historical verification/security docs) remains deferred. Reference: [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md).
+**Current state (v0.4 shipped, 2026-07-07):** v0.4 Agent Workflows shipped across 6 phases (8–13) / 24 plans, delivering all 22 requirements with the full pytest suite green (404 tests). The runtime is a Python package (`src/construct/`, ~15k LOC) with a capability registry, a Typer CLI, and a stdio MCP server; Claude-native skills are thin wrappers that now delegate to CLI/MCP. On top of the v0.3 governed-workspace spine, v0.4 added: a provider-agnostic search spine (Tavily + mock, config-driven caps); a model-agnostic LLM provider factory and L3 gates (`research.score`, `card.evaluate`, connection-typing); durable checkpointed LangGraph workflows for `research.run` and `curation.run` with real `interrupt()` human review that writes nothing before approval; and a thin `daily.run` composition folding research → curation → graph.status into one non-blocking cycle. MCP parity for every new capability is free via registry auto-discovery (`mcp/server.py` never hand-edited). Reference: [`spec-v04-agentworkflows.md`](../CONSTRUCT-CLAUDE-spec/spec-v04-agentworkflows.md).
+
+**Current state (v0.4.1 shipped, 2026-07-25):** the v0.4.1 patch milestone reconnected that runtime to its surfaces across 4 phases (14–17) / 20 plans, delivering all 9 requirements. `views.generate_data` now has a real MCP handler with the views library vendored into `src/construct/views/`; every documented `construct …` invocation resolves against the live Typer app (guarded, allowlist empty over a widened scan); the architecture doc set (`architecture-overview.md`, `artifact-catalog.md`, the NFR/workspace-contract invariants) describes the system that exists, with `config-topology.md` deleted and the durable-checkpointer decision recorded (adr-0004); and `daily.run` is reachable from chat via `construct-daily-cycle`. Suite grew to 515 passed / 1 skipped at the Phase 16 checkpoint. **Next:** v0.5 (UI-primary experience) sits on these proven pipelines and now-honest surfaces — DOC-03 prerequisite satisfied. Handoff debt (the `views validate`↔`views generate` byte contract, per-card refresh path, `card list` MCP-boundary hardening, RT-01/RT-02 registry unification, historical verification/security docs) remains deferred and logged.
 
 ## Constraints
 
@@ -105,6 +106,8 @@ There are already relevant analyses in the latest specification documents coveri
 | Compose the daily cycle as thin synchronous Python over frozen children, not a parent LangGraph graph/checkpointer | Each child already owns its own checkpointer + typed result; a parent graph would duplicate state and gate logic. Isolate-and-degrade is a per-child try/except | ✓ Good — v0.4 (Phase 13, D-09); `daily.run` is 268 lines with no parent graph, full CLI/MCP parity free via registry auto-discovery |
 | Auto-apply only each gate's *recommended* decision via the child `approve_all` resume, excluding escalate | Keeps the non-blocking daily cycle safe: escalate items never get an unattended canonical write, and every applied write is event-logged by the children exactly as interactive review | ✓ Good — v0.4 (Phase 13, D-02/D-03); pending escalations surfaced as a count, never a false `completed` |
 | The Python capability layer owns the views refresh and every workflow capability refreshes — reversing Phase 13 D-10's skill-owned parent hook | A per-workflow refresh needs no parent-awareness, which Phase 13 D-09's deliberately flat `daily.run` composition cannot supply; and it leaves one tested implementation instead of a skill-local copy | ✓ Good — v0.4.1 (Phase 15, D-09/D-11/D-12); recorded in [`adr-0005-views-refresh-ownership.md`](../CONSTRUCT-CLAUDE-spec/adrs/adr-0005-views-refresh-ownership.md). Accepted cost: three full view builds per daily cycle, not one |
+| Treat `.construct/workflow/*.sqlite` as sanctioned durable state and make docs describe the system that exists, rather than softening the "no hidden state" invariant | Pending human-review decisions are genuinely not reconstructible from layer 1; a rebuild guarantee that names what it covers stays auditable, and mechanical guards beat prose for keeping the inventory honest | ✓ Good — v0.4.1 (Phase 14 adr-0004; Phase 17 introspection guard); the durable-checkpointer record unblocks v0.5 design |
+| Fix documented invocations by conforming the docs/commands to the live registry, not by weakening the guard — allowlist emptied by supersession then the scan *widened* | An empty `_KNOWN_BROKEN` only proves truth if it survives widening the scanned surface; narrowing to pass would reintroduce the drift the guard exists to catch | ✓ Good — v0.4.1 (Phase 16, FIX-03/FIX-04); `_DOC_GLOBS` 3→5 with the allowlist held empty, suite green |
 
 ## Evolution
 
@@ -124,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-25 — Phase 17 (Architecture Doc Set & daily.run Discoverability) complete; DOC-01, DOC-02, UX-01 validated — `architecture-overview.md` rewritten onto ADR-0003's L0–L4 model, `artifact-catalog.md` staleness-proofed with a new introspection guard, `config-topology.md` deleted, and `daily.run` reachable via the thin `construct-daily-cycle` skill. v0.4.1: all 9 requirements closed — ready to ship.*
+*Last updated: 2026-07-25 — after v0.4.1 milestone (Surface Integration & Documentation Truth). Shipped across Phases 14–17 / 20 plans, delivering all 9 requirements: real `views.generate_data` MCP handler with the views library vendored (FIX-01), one authoritative LLM config path (FIX-02), every documented `construct …` invocation resolving over a widened guard (FIX-03, FIX-04), the architecture/NFR/workspace-contract doc set describing the system that exists with the durable-checkpointer decision recorded (DOC-01/02/03), executable user docs and a superseded playbook (DOC-04), `construct-synthesis` web grants closed (DEC-01), and `daily.run` reachable from chat (UX-01). Tagged v0.4.1. Next: v0.5 UI-primary experience — DOC-03 prerequisite satisfied.*

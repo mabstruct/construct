@@ -1,5 +1,28 @@
 # Milestones
 
+## v0.4.1 Surface Integration & Documentation Truth (Shipped: 2026-07-25)
+
+**Phases completed:** 4 phases (14–17), 20 plans, 25 tasks
+**Git range:** v0.4 → HEAD · 145 commits · 243 files changed (+21,796 / −1,905) · 7 days (2026-07-19 → 2026-07-25)
+**Definition of done:** Reconnect the sound v0.4 runtime to the surfaces users and agents actually touch — every documented invocation path resolves and executes, the v0.4 runtime is discoverable by both users and agents, and the architecture doc set describes the system that actually exists. Integration defects in shipped work, not new capability.
+
+**Key accomplishments:**
+
+- **Phase 14 — Durable-State & Config Truth (DOC-03, FIX-02):** `adr-0004` records `.construct/workflow/*.sqlite` as sanctioned durable state holding pending human-review decisions not reconstructible from layer 1; `nfrs.md` §2/§4, `architecture-overview.md`, and `workspace-contract.md` scoped to match (rebuild guarantee named, "Third-party APIs: None" corrected for Tavily, the three missing artifacts + a fourth durable-orchestration-state class added); `resolve_llm_config_path()` gives the Streamlit ops UI and the runtime one shared resolution path; `model-routing.yaml` deprecated-but-scaffolded everywhere it was called authoritative. **Unblocks v0.5 design.**
+- **Phase 15 — views.generate_data Resolution (FIX-01, adr-0005):** the permanent-failure stub is gone from the MCP surface, replaced by a real handler wired to the views generator reachable over MCP, `construct views generate` (plain + `--json`), and a CLI-wrapper skill; the 15-module views library is vendored into `src/construct/views/lib/` so an installed CONSTRUCT can import it; `views/models.py` reconciled to the parsers' actual output; the contract is `install_root` everywhere; and post-run views refresh is owned by the Python workflow layer across `curation.run`/`research.run`/`daily.run` as a side effect that never flips workflow status.
+- **Phase 16 — Invocation & User-Doc Truth (FIX-03, DEC-01, DOC-04):** every `construct …` string in skills, workflow docs, and the release playbook resolves against the live Typer app — `_KNOWN_BROKEN` is empty and the guard was *widened* (`_DOC_GLOBS` 3→5, adding `USER_GUIDE.md` and `commands.md`) so an empty allowlist cannot be a narrowed-scan artefact; `knowledge card list` is a real registry-routed command with CLI/MCP parity; `construct-synthesis` dropped its `WebSearch`/`WebFetch` grants (closing `spec-v04:436`); the user doc set carries executable CLI invocations; and `USER-TEST-PLAYBOOK-v03.md` was superseded by an offline-runnable `USER-TEST-PLAYBOOK-v041.md`, human-verified on a fresh workspace.
+- **Phase 17 — Architecture Doc Set & daily.run Discoverability (DOC-01, DOC-02, UX-01):** `architecture-overview.md` rewritten onto ADR-0003's permanent L0–L4 runtime model (Python runtime named, the false single-writer claim removed, five broken vocab citations repointed); `artifact-catalog.md` staleness-proofed by a new `tests/contract/test_artifact_catalog.py` guard asserting every live capability, MCP tool, Typer leaf, and `construct-*` skill dir has a catalog row and cannot pass vacuously; `config-topology.md` deleted with every deferrer redirected and the `spec-v04:211/:557` model-routing fence closed; and `daily.run` gained a thin Claude-native `construct-daily-cycle` skill enrolled in the forbidden-tools guard.
+
+**Requirements:** 9/9 mapped · 9 Complete · 0 Partial · 0 unsatisfied. All phases verified; artifact-open audit clear at close (verified closeout). Suite grew to 515 passed / 1 skipped at the Phase 16 checkpoint.
+
+**Known open at close (non-blocking, logged as follow-up):**
+- `views validate` does not yet accept the bytes `views generate` writes (generator validates a projection but writes the raw dict) — a Phase 16/17 SPA-contract question, pinned by test; needs an owner before v0.5 SPA work.
+- Per-card `card-create`/`card-connect` edits have no views-refresh path after the debounced-hook removal (15-05); `views.per_card_hooks.*` is inert config — v0.6 candidate (OQ-3).
+- MCP boundary for `card list` does not serialize `OperationError` on the failure path nor enforce `CardListInput` validation — shared `mcp/server.py` debt, newly reachable (code-review WR-01/WR-02).
+- `artifact-catalog.md`'s hand-typed 28/22/34 counts are guarded by set-membership, not cardinality, so prose counts could rot on a future capability addition; one stale test docstring.
+
+---
+
 ## v0.4 Agent Workflows (Shipped: 2026-07-07)
 
 **Phases completed:** 6 phases (8–13), 24 plans, 55 tasks
