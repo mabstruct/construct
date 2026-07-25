@@ -34,7 +34,6 @@ Use it when you need to:
 | [`../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) | User-facing capabilities handbook — agents, skills, workflows, scenarios, dependencies (deployed to `.construct/references/`) |
 | [`../CONSTRUCT-CLAUDE-impl/construct/references/commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) | User-facing quick reference (commands → skills) |
 | [`../CONSTRUCT-CLAUDE-impl/AGENTS.md`](../CONSTRUCT-CLAUDE-impl/AGENTS.md) | Runtime identity, routing, governance |
-| [`config-topology.md`](config-topology.md) | Directory layout (partially outdated — defer to this catalog for counts) |
 
 ---
 
@@ -43,7 +42,7 @@ Use it when you need to:
 ```
 Layer 1  AGENTS.md              Identity — CONSTRUCT orchestrator
 Layer 2  claude/agents/*.md     Sub-roles — Curator, Researcher
-Layer 3  claude/skills/*/SKILL.md   Procedures — 23 skills
+Layer 3  claude/skills/*/SKILL.md   Procedures — construct-* skills (count guard-checked)
 Layer 4  construct/workflows/*.md   Orchestration — 3 workflows
 Layer 5  construct/references/*.md  Vocabulary — enums, commands quick-ref
 Layer 6  construct/templates/*        Workspace file formats
@@ -59,6 +58,101 @@ Layer 6  construct/templates/*        Workspace file formats
 | `CONSTRUCT-CLAUDE-impl/construct/workflows/` | `.construct/workflows/` |
 | `CONSTRUCT-CLAUDE-impl/construct/references/` | `.construct/references/` |
 | `CONSTRUCT-CLAUDE-impl/construct/templates/` | `.construct/templates/` |
+
+---
+
+## Runtime capabilities (L2/L3)
+
+The rows below are the **Python runtime surface** — the Layer 2 pipeline runtime and
+its Layer 3 invoke surface (CLI → MCP). They are distinct from the CONSTRUCT03
+skill matrix above (Layer 0 skill specs) and were absent from earlier revisions of
+this catalog.
+
+**These rows are guard-checked, not hand-maintained.**
+[`tests/contract/test_artifact_catalog.py`](../tests/contract/test_artifact_catalog.py)
+derives the truth from live introspection — `get_registry().list()`,
+`get_registry().list_mcp_tools()`, the Typer command tree, and the `construct-*`
+skills glob — and fails if any registered capability id, MCP tool name, CLI leaf,
+or skill directory is missing a row here. No count in this file is a frozen
+hand-typed integer; whatever the code registers at run time is what the guard
+enforces.
+
+### Capability registry (id → CLI → MCP)
+
+Every registered capability. A blank CLI or MCP cell means that capability
+deliberately exposes no command on that surface (e.g. `graph.status` is MCP-only;
+several `knowledge`/`workspace` capabilities are CLI-only). The registry is the
+authority for **capability id** and **MCP tool name**; the CLI column shows the
+Typer command path that binds to the capability's `cli_name`.
+
+| Capability id | CLI command | MCP tool |
+|---------------|-------------|----------|
+| `ask.domain` | `construct ask domain` | `construct_ask_domain` |
+| `bridge.detect` | `construct bridge detect` | `construct_bridge_detect` |
+| `card.evaluate` | `construct card evaluate` | `construct_card_evaluate` |
+| `curation.inspect` | `construct curation inspect` | `construct_curation_inspect` |
+| `curation.review` | `construct curation review` | `construct_curation_review` |
+| `curation.run` | `construct curation run` | `construct_curation_run` |
+| `daily.inspect` | `construct daily inspect` | `construct_daily_inspect` |
+| `daily.run` | `construct daily run` | `construct_daily_run` |
+| `graph.status` | — (MCP-only) | `construct_graph_status` |
+| `help.suggest` | `construct help` | `construct_help_suggest` |
+| `ingest.source` | `construct ingest source` | `construct_ingest_source` |
+| `knowledge.card.archive` | `construct knowledge card archive` | — (CLI-only) |
+| `knowledge.card.create` | `construct knowledge card create` | `construct_create_card` |
+| `knowledge.card.edit` | `construct knowledge card edit` | `construct_edit_card` |
+| `knowledge.card.list` | `construct knowledge card list` | `construct_list_cards` |
+| `knowledge.connection.add` | `construct knowledge connection add` | `construct_add_connection` |
+| `knowledge.connection.list` | `construct knowledge connection list` | — (CLI-only) |
+| `knowledge.connection.remove` | `construct knowledge connection remove` | — (CLI-only) |
+| `research.inspect` | `construct research inspect` | `construct_research_inspect` |
+| `research.review` | `construct research review` | `construct_research_review` |
+| `research.run` | `construct research run` | `construct_research_run` |
+| `research.score` | `construct research score` | `construct_research_score` |
+| `research.search` | `construct research search` | `construct_research_search` |
+| `views.generate_data` | `construct views generate` *(independent path — see holdout note)* | `construct_views_generate_data` |
+| `workflow.status` | `construct workflow status` | — (CLI-only) |
+| `workspace.init` | `construct init` | — (CLI-only) |
+| `workspace.status` | `construct status` | — (CLI-only) |
+| `workspace.validate` | `construct validate` | `construct_validate` |
+
+### Non-registry CLI commands (independent path)
+
+These Typer leaves reach their function by an **independent path — they are NOT
+routed through the capability registry** (the recorded Phase 15 D-03 holdout for
+`views`/`spike`/`tag`, plus the `mcp` server launcher). They carry no capability
+id and no auto-derived MCP tool; the registry (28 caps / 22 MCP tools) and the
+Typer app (34 leaves) are two distinct sources, and this table documents the gap
+between them explicitly so no reader infers a registry route that does not exist.
+
+| CLI command | Surface | Notes |
+|-------------|---------|-------|
+| `construct views validate` | cli | Views data validation — independent path, not registry-routed |
+| `construct spike run` | cli | Experiment runner — independent path (SPK); no registry id |
+| `construct spike list` | cli | List recorded spikes — independent path |
+| `construct tag extract` | cli | Tag extraction (hybrid regex) — independent path |
+| `construct tag approve` | cli | Promote extracted tags to search clusters — independent path |
+| `construct tag list` | cli | List extracted/approved tags — independent path |
+| `construct mcp` | cli | Launch the stdio MCP server — process entry point, not a capability |
+
+> **Holdout note (Phase 15 D-03):** `construct views generate` reaches the views
+> generator by an independent path rather than through the capability registry, so
+> `views.generate_data` carries no `cli_name`. Do not read the capability table
+> above as implying `views`/`spike`/`tag` route through the registry — they do not.
+
+### Search spine & LLM gates (narrative)
+
+Two cross-cutting runtime concerns are **narrative rows** — descriptive, not
+enumerable from a single registry, and therefore not asserted by the guard:
+
+- **Search provider spine** — the provider-agnostic search layer behind
+  `research.search` / `research.run` (default provider `mock`; Tavily is opt-in).
+  It is a shared substrate, not a standalone capability id.
+- **LLM grounding gates** — model judgment is invoked only at declared
+  boundaries: relevance scoring (`research.score`), promotion (`card.evaluate`),
+  connection typing, ask-domain Q&A (`ask.domain`), and synthesis voice. These
+  are cross-cutting gates layered onto the capabilities above, not a separate
+  enumerable surface.
 
 ---
 
@@ -114,9 +208,13 @@ Multi-skill orchestration sequences. In CONSTRUCT03, workflows become **internal
 
 ---
 
-## Skills (23)
+## Skills
 
 Canonical list. Source of truth for procedures: `claude/skills/<name>/SKILL.md`.
+The set of rows is **guard-checked**: every `construct-*` directory under
+`claude/skills/` must have a row here, enforced by
+[`tests/contract/test_artifact_catalog.py`](../tests/contract/test_artifact_catalog.py)
+(the count is derived from the live glob, never hand-typed).
 
 ### Entry & navigation
 
@@ -180,6 +278,13 @@ Canonical list. Source of truth for procedures: `claude/skills/<name>/SKILL.md`.
 | `construct-views-reset` | `reset views` | no | `user` | chat | `PIPE` | `UI` | Admin/settings — destructive confirm |
 | `construct-up` | `start`, `show views` | no | `user` / domain-init | chat / cli | `PIPE` | `UI` | App launch / status indicator in shell |
 | `construct-down` | `stop` | no | `user` | chat / cli | `PIPE` | `UI` | App stop in shell |
+
+### Composed & experimental cycles
+
+| Skill | Command(s) | Mutates SOT | Current trigger | Current surface | Current class | C03 target | C03 UI affordance (proposed) |
+|-------|------------|-------------|-----------------|-----------------|---------------|------------|------------------------------|
+| `construct-daily-cycle` | `daily`, `catch me up` | yes | `user` / `session` | chat / cli | `PIPE` | `UI` | "Run daily cycle" button → activity feed; thin orchestrator over `daily.run` (non-blocking, auto-applies each gate's recommended decision) |
+| `construct-spike-run` | `spike {idea}`, `spikes` | derived | `user` | chat / cli | `PIPE` + `LLM` | `HYB` | Experiment runner — `spike run`/`spike list` surfaced as a lab panel; independent path (not registry-routed) |
 
 ---
 
@@ -259,7 +364,6 @@ When adding, renaming, or removing a skill, agent, or workflow:
 3. Update [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) if user-facing command syntax changes
 4. Update [`capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) if user-facing behavior, scenarios, or dependencies change
 5. Update [`AGENTS.md`](../CONSTRUCT-CLAUDE-impl/AGENTS.md) skills table if orchestrator routing changes
-6. Update [`config-topology.md`](config-topology.md) if directory layout changes
 
 **This file is the master inventory.** [`commands.md`](../CONSTRUCT-CLAUDE-impl/construct/references/commands.md) is the deployed command quick-ref; [`capabilities.md`](../CONSTRUCT-CLAUDE-impl/construct/references/capabilities.md) is the deployed user handbook derived from it.
 
