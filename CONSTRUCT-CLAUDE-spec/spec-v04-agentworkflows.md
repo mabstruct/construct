@@ -208,7 +208,7 @@ Two new config domains alongside existing LLM config:
 |-------------|---------|
 | `src/construct/llm/config.yaml` (existing) | LLM provider, model, gate tier assignments |
 | **`src/construct/search/config.yaml` (new)** | Web search provider (Tavily default), API key env, rate/cost caps |
-| `.construct/model-routing.yaml` (workspace) | Cognitive tier documentation; **must not** duplicate provider secrets |
+| `.construct/model-routing.yaml` (workspace) | **DEPRECATED / inert** (Phase 14 D-01) — LLM config authority is `src/construct/llm/config.yaml` above; scaffolded for workspace-format compatibility but not consulted for routing |
 | `.construct/governance.yaml` (workspace) | `max_papers_per_cycle`, relevance thresholds — consumed by research graph |
 
 **Resolution order:** explicit CLI flag → env override (`CONSTRUCT_SEARCH_CONFIG`, `CONSTRUCT_LLM_CONFIG`) → repo default YAML.
@@ -554,7 +554,7 @@ Daily-cycle error handling (existing workflow doc): **web search fails → conti
 |------|----------|------------|
 | Tavily cost / quota exhaustion | Medium | Query caps, `max_papers_per_cycle`, cluster weights; degraded partial results |
 | Weak academic metadata from general search | Medium | Hybrid arXiv/S2 provider phase; L3 extraction from `raw_content` |
-| Dual config confusion (`model-routing.yaml` vs `search.yaml` vs `llm/config.yaml`) | Medium | Document ownership in spec + USER_GUIDE; validation warns on conflict |
+| Dual config confusion (`model-routing.yaml` vs `search.yaml` vs `llm/config.yaml`) | Resolved | `model-routing.yaml` deprecated/inert (Phase 14 D-01/D-02); `llm/config.yaml` is the sole LLM config authority and `search/config.yaml` owns search — no live overlap remains |
 | Migration breaks Claude-only users mid-transition | Medium | Feature flag or skill version note; keep fallback doc until `research.run` stable |
 | LangGraph complexity vs WorkflowRunner duplication | Medium | Start curation on WorkflowRunner with real handlers; introduce LangGraph where interrupts/checkpointing required; converge in one orchestration module |
 | Gate review UX gap in CLI-only sessions | Low | CLI emits JSON queue; user re-runs with `--approve-batch`; Streamlit optional |
