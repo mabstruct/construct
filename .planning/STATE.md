@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
-current_phase: 16
-current_phase_name: invocation-user-doc-truth
-status: verifying
+current_phase: 17
+current_phase_name: Architecture Doc Set & daily.run Discoverability
+status: planning
 stopped_at: Completed 16-07-PLAN.md
-last_updated: "2026-07-25T13:40:53.291Z"
-last_activity: 2026-07-20
-last_activity_desc: Phase 16 execution started
+last_updated: "2026-07-25T14:06:59.397Z"
+last_activity: 2026-07-25
+last_activity_desc: Phase 16 complete, transitioned to Phase 17
 progress:
   total_phases: 3
   completed_phases: 3
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 ## Current Position
 
-Phase: 16 (invocation-user-doc-truth) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
+Phase: 17 — Architecture Doc Set & daily.run Discoverability
+Plan: Not started
+Status: Ready to plan
 Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-20 — Phase 16 execution started
+Last activity: 2026-07-25 — Phase 16 complete, transitioned to Phase 17
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Last activity: 2026-07-20 — Phase 16 execution started
 | 13 | 3 | - | - |
 | 14 | 4 | - | - |
 | 15 | 5 | - | - |
+| 16 | 7 | - | - |
 
 **Recent Trend:**
 
