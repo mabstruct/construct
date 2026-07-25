@@ -4,17 +4,17 @@ milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 17
 current_phase_name: Architecture Doc Set & daily.run Discoverability
-status: executing
-stopped_at: Completed 17-03-PLAN.md
-last_updated: "2026-07-25T17:53:08.996Z"
+status: verifying
+stopped_at: Completed 17-04-PLAN.md
+last_updated: "2026-07-25T17:57:02.666Z"
 last_activity: 2026-07-25
 last_activity_desc: Phase 17 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 20
-  completed_plans: 19
-  percent: 75
+  completed_plans: 20
+  percent: 100
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 17 (Architecture Doc Set & daily.run Discoverability) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
-Progress: [██████████] 95% (0/4 phases)
+Status: Phase complete — ready for verification
+Progress: [██████████] 100% (0/4 phases)
 Last activity: 2026-07-25 — Phase 17 execution started
 
 ## Performance Metrics
@@ -91,6 +91,7 @@ Last activity: 2026-07-25 — Phase 17 execution started
 | Phase 17 P01 | 12min | 3 tasks | 1 files |
 | Phase 17 P02 | 12m | 2 tasks | 2 files |
 | Phase 17 P03 | 7min | 2 tasks | 2 files |
+| Phase 17 P04 | 5m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 17-03: catalog guard imports FIX-04 helpers via sys.path.insert(parent)+bare import (tests/contract is a package; pythonpath only adds repo-root+src)
 - [Phase ?]: 17-03: registry (28 caps/22 MCP) and Typer (34 leaves) documented as two distinct sources; the 7 views/spike/tag/mcp independent-path leaves live in a dedicated non-registry catalog table, not implied to route through the registry
 - [Phase ?]: 17-03: no frozen counts in artifact-catalog.md — 'Skills (23)'/'23 skills' replaced with guard-checked phrasing; capability count is 28 (never 27), derived live by test_artifact_catalog.py
+- [Phase ?]: 17-04: Deleted config-topology.md (D-06) rather than correcting it — three roles owned by workspace-contract.md/artifact-catalog.md/architecture-overview.md; correcting would duplicate the workspace contract.
+- [Phase ?]: 17-04: Marked model-routing.yaml deprecated/inert in spec-v04:211 and reframed :557 risk as Resolved (D-07); file itself untouched, workspace-format change deferred to v0.5+.
 
 ### Pending Todos
 
@@ -256,8 +259,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T17:52:59.675Z
-Stopped at: Completed 17-03-PLAN.md
+Last session: 2026-07-25T17:57:02.656Z
+Stopped at: Completed 17-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

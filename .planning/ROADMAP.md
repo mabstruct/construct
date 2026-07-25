@@ -174,7 +174,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. A user can trigger `daily.run` from Claude-native chat through a skill, and that skill's command strings pass the FIX-04 guard with zero additions to `_KNOWN_BROKEN`.
   5. The no-parent-graph design decision for `daily.run` is recorded in a durable document (PROJECT.md Key Decisions and/or the architecture doc set), not only in the `daily_run.py:10-11` docstring.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 **Wave 1** *(parallel — no shared files)*
 
@@ -187,7 +187,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 
 **Wave 3** *(blocked on 17-03 — catalog config-topology deferrers removed first)*
 
-- [ ] 17-04-PLAN.md — Delete `config-topology.md` + redirect its deferrers, close the `spec-v04:211/:557` model-routing fence (DOC-02) [wave 3]
+- [x] 17-04-PLAN.md — Delete `config-topology.md` + redirect its deferrers, close the `spec-v04:211/:557` model-routing fence (DOC-02) [wave 3]
 
 ## Coverage (v0.4.1 — active)
 
@@ -239,4 +239,4 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 14. Durable-State & Config Truth | v0.4.1 | 4/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | In Progress|  |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | In Progress|  |
-| 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 3/4 | In Progress|  |
+| 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | In Progress|  |
