@@ -39,6 +39,7 @@ _MIGRATED_SKILLS = (
     "construct-curation-cycle",
     "construct-card-evaluate",
     "construct-synthesis",
+    "construct-daily-cycle",
 )
 
 # Web-fetch tools and workspace-write tools must not survive in allowed-tools.
