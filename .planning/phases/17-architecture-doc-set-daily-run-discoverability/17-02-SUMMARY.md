@@ -81,3 +81,7 @@ The migration banner is worded "**Thin orchestrator (Phase 17, D-08)**" rather t
 ## Known Stubs
 
 None.
+
+## Self-Check: PASSED
+
+All created/modified files present on disk; all three commits (`80ee6b2`, `3eddcc3`, `f93028e`) exist in history.

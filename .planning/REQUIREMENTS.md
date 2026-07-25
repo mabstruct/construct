@@ -31,7 +31,7 @@ Requirements for the v0.4.1 milestone. Each requirement maps to exactly one road
 
 ### Discoverability
 
-- [ ] **UX-01**: User can reach `daily.run` — the flagship v0.4 capability — from the Claude-native chat interface through a skill, with its no-parent-graph design decision recorded somewhere more durable than a source docstring. *(Evidence: coverage gap.)*
+- [x] **UX-01**: User can reach `daily.run` — the flagship v0.4 capability — from the Claude-native chat interface through a skill, with its no-parent-graph design decision recorded somewhere more durable than a source docstring. *(Evidence: coverage gap.)*
 
 ### Decision Closure
 
@@ -77,7 +77,7 @@ Mapped by the roadmap (2026-07-19). Every open requirement maps to exactly one p
 | DOC-02 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
 | DOC-03 | Phase 14 — Durable-State & Config Truth | Complete |
 | DOC-04 | Phase 16 — Invocation & User-Doc Truth | **Complete** — all four clauses evidenced: (a) `USER_GUIDE.md` covers the v0.4 commands and (b) `commands.md` lists real commands (16-05: all three `test_key_docs_are_not_vacuous` cases green, 67 documented invocations execute; both are now under the invocation guard as of 16-07's five-entry `_DOC_GLOBS`); (c) `README.md`/`AGENTS.md` accurate (16-02); (d) **16-06/16-07** — `USER-TEST-PLAYBOOK-v03.md` deleted and superseded by `USER-TEST-PLAYBOOK-v041.md` (32 resolving invocations, 53 headings), with every unmarked step **executed verbatim** against a scratch workspace, not merely resolved. The offline release-validation run was **human-confirmed on a fresh test workspace at the 16-07 checkpoint** (D-09 part two) — the confirming evidence clause (d) required; no failing steps and no D-07 violation reported. Caveat for audit: the three credential-marked sections (§8.2, §9, §9.1) were not executed — no `ANTHROPIC_API_KEY` available — and are opt-in extras under D-07 rather than gates on the core run |
-| UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Pending |
+| UX-01 | Phase 17 — Architecture Doc Set & daily.run Discoverability | Complete |
 | DEC-01 | Phase 16 — Invocation & User-Doc Truth | Complete — closed by 16-04 |
 | FIX-04 | — (pre-milestone) | ✅ Delivered 2026-07-19, commit `11f20f4` |
 
