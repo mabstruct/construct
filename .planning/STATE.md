@@ -5,15 +5,15 @@ milestone_name: Surface Integration & Documentation Truth
 current_phase: 17
 current_phase_name: Architecture Doc Set & daily.run Discoverability
 status: executing
-stopped_at: Phase 17 context gathered
-last_updated: "2026-07-25T15:44:36.903Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-07-25T17:38:48.673Z"
 last_activity: 2026-07-25
-last_activity_desc: Phase 16 complete, transitioned to Phase 17
+last_activity_desc: Phase 17 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 20
+  completed_plans: 17
   percent: 75
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 16 — invocation-user-doc-truth
+**Current focus:** Phase 17 — Architecture Doc Set & daily.run Discoverability
 
 ## Current Position
 
-Phase: 17 — Architecture Doc Set & daily.run Discoverability
-Plan: Not started
+Phase: 17 (Architecture Doc Set & daily.run Discoverability) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Progress: [██████████] 100% (0/4 phases)
-Last activity: 2026-07-25 — Phase 16 complete, transitioned to Phase 17
+Progress: [█████████░] 85% (0/4 phases)
+Last activity: 2026-07-25 — Phase 17 execution started
 
 ## Performance Metrics
 
@@ -88,6 +88,7 @@ Last activity: 2026-07-25 — Phase 16 complete, transitioned to Phase 17
 | Phase 16 P05 | 35 min | 3 tasks | 3 files |
 | Phase 16 P06 | ~55 min | 3 tasks | 4 files |
 | Phase 16 P07 | ~15 min | 3 tasks | 4 files |
+| Phase 17 P01 | 12min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -249,9 +250,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T14:45:37.791Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/17-architecture-doc-set-daily-run-discoverability/17-CONTEXT.md
+Last session: 2026-07-25T17:38:48.663Z
+Stopped at: Completed 17-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
