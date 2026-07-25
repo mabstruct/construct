@@ -174,7 +174,20 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. A user can trigger `daily.run` from Claude-native chat through a skill, and that skill's command strings pass the FIX-04 guard with zero additions to `_KNOWN_BROKEN`.
   5. The no-parent-graph design decision for `daily.run` is recorded in a durable document (PROJECT.md Key Decisions and/or the architecture doc set), not only in the `daily_run.py:10-11` docstring.
 
-**Plans**: TBD
+**Plans**: 4 plans, 3 waves
+
+**Wave 1** *(parallel — no shared files)*
+
+- [ ] 17-01-PLAN.md — Rewrite `architecture-overview.md` onto ADR-0003's L0–L4 layer model: name the Python runtime layer, remove the single-writer claim, repoint the five broken vocab refs (DOC-01) [wave 1]
+- [ ] 17-02-PLAN.md — New thin `construct-daily-cycle` skill (no gate loop, no views-refresh) + enroll it in the `test_skill_migration.py` forbidden-tools guard (UX-01) [wave 1]
+
+**Wave 2** *(blocked on 17-02 — the guard counts the new skill dir)*
+
+- [ ] 17-03-PLAN.md — New `test_artifact_catalog.py` introspection guard + expand `artifact-catalog.md` with the capability/CLI/MCP runtime surface, the `construct-spike-run` row, and the `construct-daily-cycle` row (DOC-02) [wave 2]
+
+**Wave 3** *(blocked on 17-03 — catalog config-topology deferrers removed first)*
+
+- [ ] 17-04-PLAN.md — Delete `config-topology.md` + redirect its deferrers, close the `spec-v04:211/:557` model-routing fence (DOC-02) [wave 3]
 
 ## Coverage (v0.4.1 — active)
 
@@ -226,4 +239,4 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 14. Durable-State & Config Truth | v0.4.1 | 4/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | In Progress|  |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | In Progress|  |
-| 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |
+| 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/4 | Planned | - |
