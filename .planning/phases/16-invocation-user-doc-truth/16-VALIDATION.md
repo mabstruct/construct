@@ -68,7 +68,7 @@ The doc guard is **exhaustive, not sampled** — it enumerates every `construct 
 | T3 retire v0.3, swap glob, empty allowlist | 16-06 | 4 | FIX-03 | T-16-01 | Supersession, not deletion — signature `0 3` not `0 2` | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
 | T1 extend `_DOC_GLOBS` to five | 16-07 | 5 | DOC-04 | T-16-01 | User-facing doc set permanently guarded; no entry removed | contract | `pytest tests/contract/test_doc_command_references.py -q` | ✅ | ✅ green |
 | T2 prove mechanical completion | 16-07 | 5 | FIX-03 | T-16-17 | Each signal checked independently of suite exit code | contract | `pytest -q` + signature script | ✅ | ✅ green |
-| T3 human playbook offline run | 16-07 | 5 | DOC-04 | T-16-04 | Steps *run*, not merely resolve (D-09 part two) | manual | fresh smoke workspace, no API key | — | ⬜ pending |
+| T3 human playbook offline run | 16-07 | 5 | DOC-04 | T-16-04 | Steps *run*, not merely resolve (D-09 part two) | manual | fresh smoke workspace, no API key | — | ✅ human-verified |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -125,6 +125,18 @@ suite evidence rather than assertion.
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Playbook offline sections execute end to end | DOC-04 / D-09 | Playbook is a human release-validation artifact; its value is a human confirming each step runs | Run every offline step of the superseding playbook against a fresh smoke workspace; each step must execute without error |
+
+### Recorded result (16-07 T3, human-verified)
+
+The human executed the v0.4.1 playbook's offline sections against a fresh test workspace
+(not the committed `test-ws/` fixtures) and confirmed a clean run — verbatim: *"i verified
+the playbook on a test space"*. No failing steps were reported and no per-section table was
+returned; the outcome is recorded as a clean offline pass on the user's authority rather than
+as a fabricated itemised table. The three credential-marked sections (§8.2, §9, §9.1) remain
+skipped-by-design — no `ANTHROPIC_API_KEY` was set, which is exactly the D-07 offline
+guarantee under test. **No D-07 violation surfaced:** the user did not report any unmarked
+step that could not run offline. This satisfies D-09 part two — the guard proves every
+documented command *resolves*; this human run confirms the offline path *runs*.
 
 ---
 
