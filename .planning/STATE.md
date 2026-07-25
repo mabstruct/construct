@@ -4,17 +4,17 @@ milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 current_phase: 16
 current_phase_name: invocation-user-doc-truth
-status: executing
-stopped_at: Completed 16-06-PLAN.md
-last_updated: "2026-07-20T16:07:02.461Z"
+status: verifying
+stopped_at: Completed 16-07-PLAN.md
+last_updated: "2026-07-25T13:40:53.291Z"
 last_activity: 2026-07-20
 last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 15
-  percent: 67
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 16 (invocation-user-doc-truth) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
-Progress: [█████████░] 94% (0/4 phases)
+Status: Phase complete — ready for verification
+Progress: [██████████] 100% (0/4 phases)
 Last activity: 2026-07-20 — Phase 16 execution started
 
 ## Performance Metrics
@@ -86,6 +86,7 @@ Last activity: 2026-07-20 — Phase 16 execution started
 | Phase 16 P04 | 12m | 3 tasks | 4 files |
 | Phase 16 P05 | 35 min | 3 tasks | 3 files |
 | Phase 16 P06 | ~55 min | 3 tasks | 4 files |
+| Phase 16 P07 | ~15 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -208,6 +209,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 16-06: _KNOWN_BROKEN emptied by supersession, not by narrowing the guard — _DOC_GLOBS still holds 3 entries. Terminal signature is '0 3'; '0 2' would mean the guard was weakened.
 - [Phase ?]: 16-06: no mock search provider exists — offline runnability comes from commands degrading with structured reporting, not from a stub provider.
 - [Phase ?]: 16-06: research run -> review -> resume is credential-marked (offline it fails on a scoring outage before the review gate); the durable-checkpoint property is additionally covered offline by curation inspect/review.
+- [Phase ?]: [Phase 16-07]: _DOC_GLOBS widened 3->5 (USER_GUIDE.md, commands.md); allowlist held empty over the widened surface — signature 0 5, the strongest form of FIX-03 (empty after widening, not narrowing)
+- [Phase ?]: [Phase 16-07]: glob extension deliberately last — globbing the user docs before 16-05's CLI columns landed would have passed over an empty invocation set, the drift class the phase eliminates
+- [Phase ?]: [Phase 16-07]: D-09 part two satisfied by the HUMAN's offline playbook run on a fresh test workspace, recorded faithfully as a clean pass on user authority; no D-07 violation surfaced
 
 ### Pending Todos
 
@@ -244,8 +248,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T16:06:56.250Z
-Stopped at: Completed 16-06-PLAN.md
+Last session: 2026-07-25T13:40:38.077Z
+Stopped at: Completed 16-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

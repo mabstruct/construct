@@ -137,7 +137,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
   4. A user can invoke `research search|score|run|review|inspect`, `curation run|review|inspect`, `daily run|inspect`, and `card evaluate` directly from `USER_GUIDE.md`, and `construct/references/commands.md` lists real commands.
   5. The release-validation artifact runs end to end — `USER-TEST-PLAYBOOK-v03.md` is retired or superseded by a playbook whose every step executes — and `README.md` lineage plus `AGENTS.md:284`'s CLI description describe the live surface by capability group, asserting no command count, with `tests/contract/test_doc_command_references.py` cited as the mechanical authority.
 
-**Plans**: 6/7 plans executed
+**Plans**: 7/7 plans executed
 
 **Wave 1** *(parallel — no shared files)*
 
@@ -159,7 +159,7 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 16-07-PLAN.md — Bring the user-facing doc set under the invocation guard, prove the mechanical completion criterion, human-run the playbook's offline sections [wave 5]
+- [x] 16-07-PLAN.md — Bring the user-facing doc set under the invocation guard, prove the mechanical completion criterion, human-run the playbook's offline sections [wave 5]
 
 ### Phase 17: Architecture Doc Set & daily.run Discoverability
 
@@ -225,5 +225,5 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 13. Daily-Cycle Composition | v0.4 | 3/3 | Complete | 2026-07-07 |
 | 14. Durable-State & Config Truth | v0.4.1 | 4/4 | In Progress|  |
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | In Progress|  |
-| 16. Invocation & User-Doc Truth | v0.4.1 | 6/7 | In Progress|  |
+| 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | In Progress|  |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 0/? | Not started | - |
