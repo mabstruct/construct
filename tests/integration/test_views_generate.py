@@ -15,8 +15,10 @@ from pathlib import Path
 
 import pydantic
 
+from construct.services.knowledge import create_card
 from construct.views import models as views_models
 from construct.views.generate import generate
+from construct.views.lib import frontmatter, parse_cards
 from construct.views.models import CardRecord, unwrap_payload
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
@@ -388,3 +390,121 @@ def test_unreadable_views_config_is_reported_not_swallowed(
     assert report.success is True, report.validation_errors
     # ...but it is no longer invisible.
     assert any("config.yaml" in w for w in report.warnings), report.warnings
+
+
+def _create_demo_card(install_root: Path) -> str:
+    """Write one well-formed card into the ``demo`` workspace via the real writer.
+
+    Returns the resolved card id. The writer's own result is asserted here so a
+    refusal to write surfaces as *its* error list, not downstream as a confusing
+    KeyError or missing-file error in the test that called this helper.
+    """
+    result = create_card(
+        install_root / "demo",
+        {
+            "title": "Round trip guard card",
+            "epistemic_type": "finding",
+            "domains": ["demo"],
+            "confidence": 3,
+            "source_tier": 3,
+            "_summary": "A card written by the service writer, read back by the views parser.",
+        },
+    )
+    assert result.success is True, result.errors
+    return result.data["id"]
+
+
+def test_written_card_frontmatter_satisfies_views_parser_contract(
+    scaffolded_install_root: Path,
+) -> None:
+    """The card writer must emit every field the views parser requires (D-01).
+
+    ``schemas/card.py`` declares ``lifecycle`` with a Pydantic default, so
+    ``validate_card_write`` passes on a card whose *bytes on disk* never carry the
+    key — Pydantic fills the default in memory. ``views/lib/parse_cards.py`` reads
+    **raw** frontmatter and lists ``lifecycle`` in ``REQUIRED_FIELDS``, so it drops
+    that card. The contract owner is the writer: frontmatter on disk is
+    self-describing (adr-0001), and no reader re-derives schema defaults.
+
+    The naive version of this check — validating the written file through
+    ``schemas.card.parse_card_markdown`` — is blind by construction: the Pydantic
+    path fills exactly the default the raw path cannot see, so it would report
+    success on the very bytes that ``views generate`` throws away. This test
+    therefore uses the parser's own splitter, and derives its expectation from
+    ``parse_cards.REQUIRED_FIELDS`` at call time rather than hardcoding a field
+    name, so a *future* required field the writer omits fails here immediately.
+    """
+    card_id = _create_demo_card(scaffolded_install_root)
+    card_path = scaffolded_install_root / "demo" / "cards" / f"{card_id}.md"
+    assert card_path.exists(), f"writer reported success but {card_path} does not exist"
+
+    # The parser's own splitter, NOT schemas.card.parse_card_markdown — see docstring.
+    meta, _body = frontmatter.parse(card_path.read_text(encoding="utf-8"))
+
+    # Non-vacuity floors: without these, an empty or unparseable file would
+    # trivially satisfy the subset check below.
+    assert isinstance(meta, dict) and meta, (
+        f"{card_path} parsed to empty frontmatter; the subset check below would pass vacuously"
+    )
+    assert parse_cards.REQUIRED_FIELDS, (
+        "parse_cards.REQUIRED_FIELDS is empty; the subset check below would pass vacuously"
+    )
+
+    # Anti-weakening pin: the parser is the locked contract owner's counterparty
+    # (D-01). Deleting `lifecycle` from REQUIRED_FIELDS is NOT an allowed way to
+    # make this suite green — the writer is the side that must change.
+    assert "lifecycle" in parse_cards.REQUIRED_FIELDS, (
+        "'lifecycle' was removed from parse_cards.REQUIRED_FIELDS. D-01 locks the "
+        "contract on the writer, not the parser; restore the field and fix the writer."
+    )
+
+    missing = parse_cards.REQUIRED_FIELDS - set(meta.keys())
+    assert not missing, (
+        f"{card_path} is missing parser-required frontmatter field(s) {sorted(missing)}; "
+        f"views generate will silently drop this card"
+    )
+
+    # Named regression pin for the specific field this guard was written for, so a
+    # regression reports the symptom by name alongside the derived check above.
+    assert meta["lifecycle"] == "seed", (
+        f"{card_path} carries lifecycle={meta['lifecycle']!r}, expected the schema default 'seed'"
+    )
+
+
+def test_written_card_reaches_generated_cards_json(
+    scaffolded_install_root: Path,
+) -> None:
+    """A freshly written card must appear in the generated per-workspace cards.json.
+
+    This is the end-to-end symptom the v0.4.1 milestone audit reproduced:
+    ``views generate`` reported ``0 validation errors`` and exited 0 while writing
+    ``{"cards": []}``, because the parser dropped the card over missing raw
+    ``lifecycle``. The naive check — asserting only ``report.validation_errors ==
+    []`` — is blind here, because the drop is an advisory *warning* and the run is
+    a success by design (D-03). Membership in ``cards.json`` is the only assertion
+    that sees it.
+
+    ``generate()`` is called exactly once: a second call can be served by the
+    incremental fingerprint cache and would not re-exercise the parser.
+    """
+    card_id = _create_demo_card(scaffolded_install_root)
+
+    report = generate(scaffolded_install_root)
+    assert report.validation_errors == [], report.validation_errors
+
+    cards_path = scaffolded_install_root / "views" / "build" / "data" / "demo" / "cards.json"
+    assert cards_path.exists(), f"generator wrote no {cards_path}"
+    payload = unwrap_payload(json.loads(cards_path.read_text(encoding="utf-8")))
+    ids = [card["id"] for card in payload["cards"]]
+
+    # Non-vacuity floor, so a fully-empty cards.json fails by naming the real
+    # cause rather than as a bare membership error.
+    assert ids, f"the generator produced zero cards in {cards_path}"
+    assert card_id in ids, f"card {card_id!r} is missing from {cards_path}; got {ids}"
+
+    # The targeted message first, so a regression names the offending file...
+    assert not [w for w in report.warnings if f"{card_id}.md" in str(w)], (
+        f"generate() warned about {card_id}.md: {report.warnings}"
+    )
+    # ...then the full clean-run contract a fresh scaffold must satisfy.
+    assert report.warnings == [], report.warnings
