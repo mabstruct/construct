@@ -172,7 +172,9 @@ def _write_workspace_doc(root: Path) -> None:
         "- `digests/` contains rebuildable workflow summaries.\n"
         "- `publish/` contains derived outward-facing outputs.\n\n"
         "## Support Paths\n\n"
-        "- `.construct/model-routing.yaml` stores runtime routing guidance.\n"
+        "- `.construct/model-routing.yaml` — **deprecated and inert**; nothing reads it. "
+        "Retained only for workspace-contract stability. "
+        "LLM configuration authority is `src/construct/llm/config.yaml`.\n"
         "- `.construct/search.yaml` stores search provider configuration.\n",
         encoding="utf-8",
     )
