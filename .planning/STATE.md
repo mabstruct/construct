@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: UI-Primary Experience — Proof of Concept
-status: planning
-last_updated: "2026-07-26T16:02:45.107Z"
+status: roadmapped
+last_updated: "2026-07-26T18:30:00.000Z"
 last_activity: 2026-07-26
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Planning next milestone — v0.5 UI-Primary Experience (DOC-03 prerequisite satisfied)
+**Current focus:** v0.5 UI-Primary Experience (PoC) — roadmapped as Phases 18–24 on branch `dev-v05`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 18 — Contract & Governance Foundations (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-26 — Milestone v0.5 started
+Status: Roadmapped — ready for `/gsd-plan-phase 18`
+Progress: [--------------------] 0% (0/7 v0.5 phases)
+Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
+Last activity: 2026-07-26 — v0.5 roadmap created (Phases 18–24, 48/48 requirements mapped)
 
 ## Performance Metrics
 
@@ -99,6 +101,8 @@ Last activity: 2026-07-26 — Milestone v0.5 started
 - v0.4 continues numbering at Phase 8 and contains 6 phases: search spine, score gate, reviewed research run, curation PIPE, curation gates, daily-cycle composition.
 - v0.4.1 continues numbering at Phase 14 and contains 4 phases: durable-state & config truth (14), views.generate_data resolution (15), invocation & user-doc truth (16), architecture doc set & daily.run discoverability (17). Patch milestone — no phase adds runtime capability.
 - Scope boundary: keep v0.5 UI, HTTP/cloud, broad RT-01/RT-02 cleanup, full views emission, and historical verification/security debt out unless directly blocking v0.4 workflows.
+- v0.5 continues numbering at Phase 18 and contains 7 phases: contract & governance foundations (18), HTTP API over the capability registry (19), real document extraction (20), served app shell & guided action layer (21), wizard flows (22), live-data browse (23), evaluation spikes & UX verdict (24). All 48 requirements mapped exactly once.
+- v0.5 consolidates the research SUMMARY's proposed 9-phase structure into 7: SPA promotion merged into the guided-layer phase (a move-and-serve phase delivers no user-observable behaviour alone), and the ingestion wizard merged with the two review wizards (WIZ-04/WIZ-09 are cross-cutting across all four flows and would otherwise be duplicated).
 
 ### Decisions
 
@@ -164,6 +168,14 @@ Recent decisions affecting current work:
 - [v0.4.1 Roadmap]: DOC-01 deliberately sequenced last of the architecture docs so it is written once, against decisions already made in Phases 14–15.
 - [v0.4.1 Roadmap]: FIX-04's shrinking `_KNOWN_BROKEN` allowlist is the completion criterion for FIX-01 and FIX-03 — phase success criteria cite it mechanically rather than in prose.
 - [v0.4.1 Roadmap]: FIX-04 is intentionally unmapped to any phase (pre-milestone deliverable, commit `11f20f4`).
+- [v0.5 Roadmap]: Phase 19 (HTTP adapter) is the universal hard gate — nothing browser-side exists before it; Phase 18 (byte contract + governance seams) runs in parallel because VFIX-01 blocks *trusting* browse data, not building the API.
+- [v0.5 Roadmap]: GOV-01 (the shared validating seam) placed in Phase 18, with or before the HTTP adapter — HTTP is the surface that forces the input-model-validation question, so the seam exists before the third adapter routes through it.
+- [v0.5 Roadmap]: GOV-02/GOV-03 (proposal-id decisions, stale-queue detection) placed in Phase 18, strictly before the Phase 22 review wizards — building the wizards against the positional decision shape and repairing it afterwards means building twice on the one surface where a wrong decision writes canonical truth.
+- [v0.5 Roadmap]: Extraction (Phase 20) front-loaded in parallel with 18/19 despite its number — zero API dependency, testable through existing CLI/MCP, and it de-risks the E2E demo gate the whole verdict rests on.
+- [v0.5 Roadmap]: The guided layer ships with the shell (Phase 21), before browse and wizards — it is the cheapest item carrying the milestone's success criterion, so the UX signal must arrive with milestone left to react to it.
+- [v0.5 Roadmap]: The EVAL-05 verdict *template* is a Phase 21 obligation, not a Phase 24 deliverable — a retrofitted template is a documented PoC failure mode. Phase 24 verifies the commit ordering mechanically against git history.
+- [v0.5 Roadmap]: GUIDE-01's wording resolves the research's open priority→action ownership question in favour of the backend ("identically to CLI, MCP, and HTTP callers"), not a frontend-only lookup table.
+- [v0.5 Roadmap]: REQUIREMENTS.md's "47 total" was an off-by-one prose count — the list and traceability table both hold 48 entries. Corrected in place; no requirement was missing.
 - [Phase 09-02]: key_findings cleared on clamp-to-skip with clamp rationale appended to reasoning (D-14 / Pitfall 5)
 - [Phase 09-02]: score_one takes a pre-built llm (mock-injectable); factory.build_chat_model seam lives in build_scoring_llm for the Plan 03 runner
 - [Phase 09-02]: GovernanceThresholds dataclass decouples clamp/score_one from full GovernanceConfig and carries the D-06 echo fields
@@ -222,6 +234,15 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- Plan Phase 18 with `/gsd-plan-phase 18` — Contract & Governance Foundations (VFIX-01, GOV-01..05).
+- Create and switch to branch `dev-v05` (off `main`, pushed to origin) before any v0.5 implementation commit. `main` stays releasable at v0.4.1; stale `dev-v04` left untouched.
+- Phase 18 planning must decide `gate_review.py`'s disposition (fix, fence, or delete) alongside GOV-04, and must record the views byte-contract direction as an explicit decision — conforming `views/models.py` to the written bytes looks like a reversal of ING-02 but is not, because views is a derived projection whose author is the generator.
+- Phase 19 planning owes OQ-4: the checkpoint concurrency contract (WAL / `busy_timeout` / single-flight locking) once a browser and a CLI can both resume the same run. Extends adr-0004. Research flag: the localhost threat model and the `registry.invoke()` seam design warrant a research pass.
+- Phase 20 planning owes OQ-1 (where uploaded bytes live) and OQ-3 (the extraction failure taxonomy + its fixture set) as recorded decisions, not defaults.
+- Phase 21 must commit the EVAL-05 UX verdict template before any Phase 22/23 UI polish begins.
+- Phase 22 planning: research flag on the ETag / optimistic-concurrency design for stale-queue detection.
+- Phase 23 planning owes OQ-2: graph data source at scale — views JSON projection or live API traversal.
+- Phase 24 planning owes OQ-5: fresh workspace vs fixture for the demo — `test-ws/` carries pre-`4e2b909` damage, which changes what the UX verdict measures.
 - Execute Phase 14 with `/gsd-execute-phase 14` — 4 plans, 2 waves.
 - Phase 15 planning must settle two named decisions before implementation: `install_root` vs `workspace` contract (`catalog.py:149-150` vs `views/generate.py:175`) and the deployed-skill-directory import coupling (`generate.py:43-51`).
 - Phase 16 planning must decide `knowledge card list` / `knowledge ref list`: implement, or rewrite `construct-synthesis` and `construct-gap-analysis` onto existing commands.
@@ -229,7 +250,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- No current blockers.
+- No current blockers. v0.5 is roadmapped (Phases 18–24) and Phase 18 is ready to plan.
 - v0.5 planning is blocked on DOC-03 (Phase 14) — the durable-checkpointer invariant must be settled before a UI-primary shell reasons about resumable gate state.
 - Watch scope on FIX-01: RT-01/RT-02 registry unification stays out of v0.4.1 except, if unavoidable, the views command group alone.
 - generate() validates an adapted projection but writes the raw parser dict, so the schema gate does not validate the bytes the SPA consumes — Plan 03 must decide before wiring a real handler
@@ -269,13 +290,13 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26 — retrospective v0.4.1 milestone audit, then quick tasks 260726-lqd, 260726-m0e, 260726-n3x
-Stopped at: Completed quick task 260726-n3x (archive body loss + newline accretion closed; 531 passed, 1 skipped)
+Last session: 2026-07-26 — v0.5 milestone scoped, researched (4 parallel researchers), requirements defined, roadmap created
+Stopped at: v0.5 roadmap written — Phases 18–24, 48/48 requirements mapped, traceability populated
 Resume file: None
 
 ## Operator Next Steps
 
-- Milestone v0.4.1 is shipped and tagged (`v0.4.1`). Start the next milestone with `/clear` then `/gsd-new-milestone`.
-- v0.5 (UI-Primary Experience) is unblocked — DOC-03's durable-checkpointer invariant is recorded (adr-0004).
-- Carry into v0.5 scoping the four handoff items: the `views validate`↔`views generate` byte-contract fork (pinned by test), the per-card views-refresh path (v0.6 OQ-3), the `card list` MCP-boundary hardening (WR-01/WR-02), and the stale `artifact-catalog.md` prose counts.
-- Stale `dev-v04` git branch left in place for manual handling (no branching strategy configured).
+- Review `.planning/ROADMAP.md` (v0.5 section, Phases 18–24) and `.planning/REQUIREMENTS.md` traceability, then plan Phase 18 with `/gsd-plan-phase 18`.
+- Create branch `dev-v05` off `main` and push to origin before the first v0.5 implementation commit. `main` stays releasable at v0.4.1.
+- Of the four v0.4.1 handoff items, three are now owned by v0.5: the `views validate`↔`views generate` byte contract is VFIX-01 (Phase 18); the `card list` MCP-boundary hardening is partially subsumed by GOV-01's shared seam (Phase 18); the views group is forced through the registry by VFIX-01/HTTP-02. Still deferred: the per-card views-refresh path (v0.6) and the stale `artifact-catalog.md` prose counts.
+- Stale `dev-v04` git branch left in place for manual handling.

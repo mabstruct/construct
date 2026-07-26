@@ -147,69 +147,78 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VFIX-01 | TBD | Pending |
-| HTTP-01 | TBD | Pending |
-| HTTP-02 | TBD | Pending |
-| HTTP-03 | TBD | Pending |
-| HTTP-04 | TBD | Pending |
-| HTTP-05 | TBD | Pending |
-| HTTP-06 | TBD | Pending |
-| HTTP-07 | TBD | Pending |
-| GOV-01 | TBD | Pending |
-| GOV-02 | TBD | Pending |
-| GOV-03 | TBD | Pending |
-| GOV-04 | TBD | Pending |
-| GOV-05 | TBD | Pending |
-| EXTR-01 | TBD | Pending |
-| EXTR-02 | TBD | Pending |
-| EXTR-03 | TBD | Pending |
-| EXTR-04 | TBD | Pending |
-| EXTR-05 | TBD | Pending |
-| EXTR-06 | TBD | Pending |
-| SHELL-01 | TBD | Pending |
-| SHELL-02 | TBD | Pending |
-| SHELL-03 | TBD | Pending |
-| GUIDE-01 | TBD | Pending |
-| GUIDE-02 | TBD | Pending |
-| GUIDE-03 | TBD | Pending |
-| GUIDE-04 | TBD | Pending |
-| WIZ-01 | TBD | Pending |
-| WIZ-02 | TBD | Pending |
-| WIZ-03 | TBD | Pending |
-| WIZ-04 | TBD | Pending |
-| WIZ-05 | TBD | Pending |
-| WIZ-06 | TBD | Pending |
-| WIZ-07 | TBD | Pending |
-| WIZ-08 | TBD | Pending |
-| WIZ-09 | TBD | Pending |
-| BRWS-01 | TBD | Pending |
-| BRWS-02 | TBD | Pending |
-| BRWS-03 | TBD | Pending |
-| BRWS-04 | TBD | Pending |
-| BRWS-05 | TBD | Pending |
-| BRWS-06 | TBD | Pending |
-| BRWS-07 | TBD | Pending |
-| BRWS-08 | TBD | Pending |
-| EVAL-01 | TBD | Pending |
-| EVAL-02 | TBD | Pending |
-| EVAL-03 | TBD | Pending |
-| EVAL-04 | TBD | Pending |
-| EVAL-05 | TBD | Pending |
+| VFIX-01 | Phase 18 | Pending |
+| GOV-01 | Phase 18 | Pending |
+| GOV-02 | Phase 18 | Pending |
+| GOV-03 | Phase 18 | Pending |
+| GOV-04 | Phase 18 | Pending |
+| GOV-05 | Phase 18 | Pending |
+| HTTP-01 | Phase 19 | Pending |
+| HTTP-02 | Phase 19 | Pending |
+| HTTP-03 | Phase 19 | Pending |
+| HTTP-04 | Phase 19 | Pending |
+| HTTP-05 | Phase 19 | Pending |
+| HTTP-06 | Phase 19 | Pending |
+| HTTP-07 | Phase 19 | Pending |
+| EXTR-01 | Phase 20 | Pending |
+| EXTR-02 | Phase 20 | Pending |
+| EXTR-03 | Phase 20 | Pending |
+| EXTR-04 | Phase 20 | Pending |
+| EXTR-05 | Phase 20 | Pending |
+| EXTR-06 | Phase 20 | Pending |
+| SHELL-01 | Phase 21 | Pending |
+| SHELL-02 | Phase 21 | Pending |
+| SHELL-03 | Phase 21 | Pending |
+| GUIDE-01 | Phase 21 | Pending |
+| GUIDE-02 | Phase 21 | Pending |
+| GUIDE-03 | Phase 21 | Pending |
+| GUIDE-04 | Phase 21 | Pending |
+| WIZ-01 | Phase 22 | Pending |
+| WIZ-02 | Phase 22 | Pending |
+| WIZ-03 | Phase 22 | Pending |
+| WIZ-04 | Phase 22 | Pending |
+| WIZ-05 | Phase 22 | Pending |
+| WIZ-06 | Phase 22 | Pending |
+| WIZ-07 | Phase 22 | Pending |
+| WIZ-08 | Phase 22 | Pending |
+| WIZ-09 | Phase 22 | Pending |
+| BRWS-01 | Phase 23 | Pending |
+| BRWS-02 | Phase 23 | Pending |
+| BRWS-03 | Phase 23 | Pending |
+| BRWS-04 | Phase 23 | Pending |
+| BRWS-05 | Phase 23 | Pending |
+| BRWS-06 | Phase 23 | Pending |
+| BRWS-07 | Phase 23 | Pending |
+| BRWS-08 | Phase 23 | Pending |
+| EVAL-01 | Phase 24 | Pending |
+| EVAL-02 | Phase 24 | Pending |
+| EVAL-03 | Phase 24 | Pending |
+| EVAL-04 | Phase 24 | Pending |
+| EVAL-05 | Phase 24 | Pending |
 
 **Coverage:**
-- v0.5 requirements: 47 total
-- Mapped to phases: 0
-- Unmapped: 47 ⚠️ (populated by roadmap creation)
+- v0.5 requirements: 48 total (VFIX 1 · HTTP 7 · GOV 5 · EXTR 6 · SHELL 3 · GUIDE 4 · WIZ 9 · BRWS 8 · EVAL 5)
+- Mapped to phases: 48 ✓ (roadmap created 2026-07-26, Phases 18–24)
+- Unmapped: 0 · Duplicated: 0
+
+> **Count correction (2026-07-26, roadmap creation):** this section previously read "47 total".
+> The requirement list and the traceability table both contain 48 entries — the prose count was
+> off by one, not a missing requirement. Corrected above.
 
 ## Open Questions for Phase Planning
 
 Recorded rather than silently defaulted. Each needs a decision during the owning phase's planning.
 
-1. **Where do uploaded bytes live?** CONSTRUCT's file ingestion routes an *existing* path; an upload has no path. None of the three options (a new workspace artifact class, temp with dangling provenance, keep nothing and forgo re-extraction) is clearly right. Owned by the extraction phase.
-2. **Graph data source at scale** — the views JSON projection or live API traversal. Materially changes the cost of BRWS-04/05. Owned by the browse phase.
-3. **Extraction failure taxonomy** — the enumerated list behind EXTR-03's named reasons (scanned PDF, encrypted PDF, empty file, mislabeled type, CJK/UTF-16, very large document), and the fixture set that proves each. Owned by the extraction phase.
-4. **Checkpoint concurrency contract** — WAL/busy_timeout and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004. Owned by the run-resources phase.
-5. **Does the PoC demo run on a fresh workspace or a fixture?** Existing `test-ws/` fixtures carry pre-`4e2b909` damage (destroyed card bodies, newline accretion). This affects what the UX verdict actually measures. EVAL-04/05 currently specify fresh — confirm at planning.
+1. **Where do uploaded bytes live?** CONSTRUCT's file ingestion routes an *existing* path; an upload has no path. None of the three options (a new workspace artifact class, temp with dangling provenance, keep nothing and forgo re-extraction) is clearly right. Owned by **Phase 20** (Real Document Extraction).
+2. **Graph data source at scale** — the views JSON projection or live API traversal. Materially changes the cost of BRWS-04/05. Owned by **Phase 23** (Live-Data Browse).
+3. **Extraction failure taxonomy** — the enumerated list behind EXTR-03's named reasons (scanned PDF, encrypted PDF, empty file, mislabeled type, CJK/UTF-16, very large document), and the fixture set that proves each. Owned by **Phase 20** (Real Document Extraction).
+4. **Checkpoint concurrency contract** — WAL/busy_timeout and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004. Owned by **Phase 19** (HTTP API — run resources).
+5. **Does the PoC demo run on a fresh workspace or a fixture?** Existing `test-ws/` fixtures carry pre-`4e2b909` damage (destroyed card bodies, newline accretion). This affects what the UX verdict actually measures. EVAL-04/05 currently specify fresh — confirm at planning. Owned by **Phase 24** (Evaluation Spikes & UX Verdict).
+
+Two further decisions surfaced by research and assigned during roadmap creation:
+
+6. **`gate_review.py`'s disposition** — fix, fence, or delete. Research states that leaving a second UI that forges gates is worse than either keeping or deleting it. Owned by **Phase 18** alongside GOV-04.
+7. **Who owns the priority→action mapping?** Resolved by requirement wording, not left open: GUIDE-01 places it in the backend ("available identically to CLI, MCP, and HTTP callers"), rejecting a frontend-only lookup table. Owned by **Phase 21**.
 
 ---
 *Requirements defined: 2026-07-26*

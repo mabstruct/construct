@@ -9,7 +9,7 @@ This roadmap hardens CONSTRUCT's Claude-native foundation first (v0.3), then mig
 - ✅ **v0.3 Claude-Native Runtime & Workflow Hardening** — Phases 1–7 (shipped 2026-06-16)
 - ✅ **v0.4 Agent Workflows (LangGraph / LangChain)** — Phases 8–13 (shipped 2026-07-07)
 - ✅ **v0.4.1 Surface Integration & Documentation Truth** — Phases 14–17 (shipped 2026-07-25)
-- 📋 **v0.5 UI-Primary Experience** — planned (browser-first shell on the hardened v0.4 runtime)
+- 🚧 **v0.5 UI-Primary Experience (Proof of Concept)** — Phases 18–24 (roadmapped 2026-07-26)
 
 ## Phases
 
@@ -64,15 +64,230 @@ Full phase detail (goals, success criteria, plans) archived in
 
 </details>
 
-### 📋 v0.5 UI-Primary Experience (Planned)
+### 🚧 v0.5 UI-Primary Experience — Proof of Concept (Phases 18–24)
 
-Browser-first product shell on the v0.4 workflow runtime. HTTP API, capability buttons, LLM modals, extend v0.2 views SPA or CoPilotKit (decision deferred until scope is set).
+**Milestone Goal:** Prove on an isolated branch that a browser-first shell over the v0.4 runtime can guide a user through CONSTRUCT's core loops without touching the CLI — a technical *and* UX proof of concept, judged on whether the guided/wizard model actually makes the system usable unaided.
 
-Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do **not** replace it.
+**Branch:** all v0.5 work lands on `dev-v05` (off `main`, pushed to origin). `main` stays releasable at v0.4.1. The stale `dev-v04` branch is left untouched.
 
-**Prerequisite satisfied:** DOC-03 landed in Phase 14 — the durable-checkpointer invariant is recorded, so a UI-primary shell can reason about resumable gate state. Define scope via `/gsd-new-milestone`.
+- [ ] **Phase 18: Contract & Governance Foundations** - Make the byte contract, the invocation seam, and the review-decision model honest before any browser depends on them
+- [ ] **Phase 19: HTTP API over the Capability Registry** - The third registry adapter — generated routes, workspace ids, one error shape, loopback hardening, runs as resources
+- [ ] **Phase 20: Real Document Extraction** - Ingestion reads the file it routes; "no extractable text" becomes a named outcome, not a silent success
+- [ ] **Phase 21: Served App Shell & Guided Action Layer** - The SPA becomes a first-class served app and `help.suggest` becomes an action engine — the earliest UX signal
+- [ ] **Phase 22: Wizard Flows** - Workspace creation, document ingestion, and the two HITL review gates completable entirely in the browser
+- [ ] **Phase 23: Live-Data Browse — Workspaces, Wiki, Graph** - Find and read the knowledge: workspace list, wiki reading view, focused graph, deep links
+- [ ] **Phase 24: Evaluation Spikes, E2E Demo Gate & UX Verdict** - The milestone answers its own question in writing, on evidence
 
-**Known handoff items into v0.5 planning:** the `views validate` ↔ `views generate` byte-contract fork (pinned by test) needs an owner before SPA work; per-card refresh path and `card list` MCP-boundary hardening are logged follow-ups.
+## Phase Details
+
+> Phases 1–17 are shipped; their detail is archived under [`milestones/`](milestones/).
+> The sections below are the active v0.5 milestone.
+
+### Phase 18: Contract & Governance Foundations
+**Goal**: Every contract a browser will depend on tells the truth before a browser exists — the views projection validates against its own validator, all invocation surfaces validate against one seam, and a human-review decision cannot be misapplied.
+**Depends on**: Nothing (first v0.5 phase). Runs in parallel with Phase 19; VFIX-01 does not block the API, only the *trusting* of browse data.
+**Requirements**: VFIX-01, GOV-01, GOV-02, GOV-03, GOV-04, GOV-05
+**Success Criteria** (what must be TRUE):
+  1. `views validate` accepts every one of the 8 files `views generate` writes, proven by a non-vacuous round-trip guard that *replaces* `test_views_validate_does_not_yet_accept_generated_bytes` rather than deleting it.
+  2. The same capability id and payload produce an identical structured result whether invoked from the CLI or from MCP, and an unknown field is rejected on both — proven by a differential test over one shared validating seam, not by set-membership inventory.
+  3. A human-review decision names the proposal it applies to; a resume against a queue that changed since it was rendered is rejected with zero canonical writes, and a missing decision never falls back to applying a write.
+  4. Approving a proposal in the Streamlit gate-review screen produces exactly the same canonical writes and event records as approving it through the reviewed workflow's own resume path — no direct-write shortcut remains, and no approval event exists for a decision that was never applied.
+  5. A degraded or partially-applied run reports degraded on every surface that can report it, and escalated items surface as pending rather than folded into a success count.
+**Why first**: All five GOV items are repairs to *live* code found by the research (`ui/gate_review.py:252-281`, inert `input_model` validation, positional `_resolve_decisions`), not new-build concerns. GOV-01 must land with or before the HTTP adapter because HTTP is the surface that forces the question; GOV-02/GOV-03 must land before the review wizards so the API is never built against the positional decision shape.
+**Named decision to record**: the views byte-contract fix conforms `views/models.py` to the written bytes. On its face this looks like a reversal of the standing "conform the data to the gate" decision (ING-02) — it is not, because views is a derived projection whose author is the generator, but it must be recorded explicitly as a decision, not slipped in.
+**Open decision carried in**: `gate_review.py`'s disposition (fix, fence, or delete) — research states that leaving a second UI that forges gates is worse than either keeping or deleting it.
+**Plans**: TBD
+
+### Phase 19: HTTP API over the Capability Registry
+**Goal**: Every registry capability is reachable from a browser over a loopback-bound HTTP surface that is a third peer of CLI and MCP — never a fork of them — and a workflow run is an addressable resource that outlives the process that started it.
+**Depends on**: Phase 18 for GOV-01 (the shared validating seam the adapter routes through). Otherwise independent — can start in parallel with Phase 18's VFIX-01 work.
+**Requirements**: HTTP-01, HTTP-02, HTTP-03, HTTP-04, HTTP-05, HTTP-06, HTTP-07
+**Success Criteria** (what must be TRUE):
+  1. A user starts the server with one command and reaches every registry capability from a browser; the server binds loopback only, and adding a capability adds an endpoint with **zero** edits to the server module — guarded by a test, the same structural guarantee `mcp/server.py` already has.
+  2. A request naming a workspace by id succeeds; a request carrying a filesystem path or a traversal (`workspace: "../../etc"`) is rejected with no filesystem effect.
+  3. A known-failing input returns the same reason and suggestion strings over HTTP as over CLI and MCP — one error shape across three surfaces, with no raw exception text or filesystem paths in the body.
+  4. A request carrying a foreign `Origin`/`Host`, or missing the per-launch token, is refused before it reaches a capability.
+  5. A workflow run started in the browser returns an id immediately, is pollable while it is still running, appears in a run listing even while paused, and is resumable from the CLI — and a run started from the CLI is resumable in the browser.
+**Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
+**Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
+**Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
+**Plans**: TBD
+
+### Phase 20: Real Document Extraction
+**Goal**: Ingesting a document actually reads it — the card it seeds stands for content that was extracted and measured, and a file that yields nothing says so.
+**Depends on**: Nothing. **Deliberately front-loaded in parallel with Phases 18–19** — extraction has zero API dependency and is fully testable through the existing CLI and MCP surfaces, which de-risks the E2E demo gate (Phase 24) that the whole verdict mechanically rests on.
+**Requirements**: EXTR-01, EXTR-02, EXTR-03, EXTR-04, EXTR-05, EXTR-06
+**Success Criteria** (what must be TRUE):
+  1. Ingesting a pdf, txt, or md file produces a card seeded from text extracted out of that file — not a ref pointing at an unread file — and the extraction step is reachable as a registry capability from CLI and MCP, not only from a browser.
+  2. An image-only, encrypted, or empty PDF is never reported as fully extracted; it reports a named "no extractable text" reason drawn from an enumerated failure taxonomy, and extraction status is derived from measured extractor yield rather than from caller-supplied title or metadata.
+  3. A `.doc` or `.docx` file is detected and rejected with a "convert to pdf, txt, or md first" message rather than failing obscurely.
+  4. Every fixture in the hostile-input set (oversized, mislabeled content type, XXE payload, zero-byte, CJK/UTF-16, 200-page) fails or succeeds cleanly with a sanitized message and no partial write; type is detected from file contents, never from a client-supplied type.
+**Open decision (OQ-1)**: where uploaded bytes live. CONSTRUCT's file ingestion routes an *existing* path; an upload has no path. None of the three options (a new workspace artifact class, temp with dangling provenance, keep nothing and forgo re-extraction) is clearly right — this must be a recorded decision with its workspace-contract implications named, not defaulted into existence.
+**Open decision (OQ-3)**: the extraction failure taxonomy — the enumerated list behind EXTR-03's named reasons, plus the fixture set that proves each one.
+**Plans**: TBD
+
+### Phase 21: Served App Shell & Guided Action Layer
+**Goal**: A user opens a browser, sees the app the project ships, and is told what to do next — the milestone's earliest and cheapest UX signal.
+**Depends on**: Phase 19 (there must be something to serve against and to call). Benefits from Phase 18 (a trustworthy data contract) but is not blocked by it.
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, GUIDE-01, GUIDE-02, GUIDE-03, GUIDE-04
+**Success Criteria** (what must be TRUE):
+  1. A user with no Node installed can install CONSTRUCT, run the serve command, and reach the app in a browser — the frontend ships prebuilt and its dependencies are pinned by a committed lockfile.
+  2. An already-scaffolded per-workspace views build keeps working unchanged after promotion — nothing a user already has breaks.
+  3. `help.suggest` returns a next step carrying a verb, a capability, and a destination for every priority state it can report, identically to CLI, MCP, and HTTP callers.
+  4. A user sees prioritized next actions in the browser and launches each one directly from its suggestion, can see the evidence behind it, and never has one execute without explicitly confirming it.
+  5. After a mutating action, the guidance list reflects the new workspace state without a manual reload; a healthy workspace renders as informational rather than as a nagging call to action.
+**Why sequenced here**: `help.suggest` is a diagnosis engine today — it emits priorities and reasons but no verb, capability, or destination, and an LLM improvises that mapping in chat. With chat demoted, something must own it, or the guided layer degrades to a status widget and the UX verdict comes back "no" for reasons unrelated to the UI. It is also the cheapest item that carries the milestone's actual success criterion, so the signal must arrive while there is still milestone left to react to it.
+**Resolved by requirement wording**: GUIDE-01 places the priority→action mapping in the *backend* ("available identically to CLI, MCP, and HTTP callers"), closing the research's open question in favour of one shared contract over a frontend-only lookup table.
+**Phase obligation (gates EVAL-05)**: the UX verdict template must be written and committed **in this phase**, before any wizard or browse UI polish begins. A retrofitted verdict template is a documented PoC failure mode — fixed questions cannot be reverse-engineered from whatever shipped. Phase 24 verifies the commit ordering mechanically.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 22: Wizard Flows
+**Goal**: A user can complete CONSTRUCT's write loops — create a workspace, ingest a document, and clear both human-review gates — entirely in the browser, without anything being written before they confirm it.
+**Depends on**: Phase 18 (GOV-02/GOV-03 — proposal-id decisions and stale-queue detection must exist before the review wizards are built against them), Phase 19 (API + run resources), Phase 20 (real extraction — there is nothing to review without it), Phase 21 (a served shell). Can run in parallel with Phase 23.
+**Requirements**: WIZ-01, WIZ-02, WIZ-03, WIZ-04, WIZ-05, WIZ-06, WIZ-07, WIZ-08, WIZ-09
+**Success Criteria** (what must be TRUE):
+  1. A user creates a workspace and sets up its first domain through a guided multi-step flow without touching the CLI.
+  2. A user uploads a document, sees the extracted content previewed and the proposed routing before anything is written to disk, and can override that routing before confirming.
+  3. Cancelling any wizard at any step leaves the filesystem exactly as it was — nothing is written before the confirm step — and every wizard shows step progress with non-destructive back navigation.
+  4. A user reviews one queue of machine proposals (research findings; curation promotions, connections, and archives) with supporting evidence visible without a click, decides per item, can undo a decision before it is applied, and can accept all recommended items in one explicitly-labeled action with escalate-flagged items excluded.
+  5. A review in progress survives navigation, refresh, and process restart — resuming from the durable checkpoint — and after applying, the user sees a summary of what was written and what was skipped, including partial success.
+**Constraint that must not bend**: `approve_all` may exist as an explicit, consequence-labelled action; it is never a default and the UI never presses it on the user's behalf. The apply nodes sit strictly downstream of the human interrupt by construction, and a convenience button that inverts that turns propose-then-approve into auto-ingest.
+**Research flag**: the ETag / optimistic-concurrency design for stale-queue detection and the sqlite concurrency contract (see OQ-4, Phase 19) are LangGraph-checkpointer-specific and not fully worked out — worth a research pass during phase planning.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 23: Live-Data Browse — Workspaces, Wiki, Graph
+**Goal**: A user can find and read their knowledge — across workspaces, as a wiki, and as a graph — on data the running server serves, and can tell when what they are looking at is stale.
+**Depends on**: Phase 18 (VFIX-01 — a trustworthy byte contract, or the pages get built twice), Phase 19, Phase 21. Can run in parallel with Phase 22.
+**Requirements**: BRWS-01, BRWS-02, BRWS-03, BRWS-04, BRWS-05, BRWS-06, BRWS-07, BRWS-08
+**Success Criteria** (what must be TRUE):
+  1. A user sees every workspace under the install root and opens any one of them.
+  2. A user reads a knowledge card in a wiki reading view where links resolve and provenance is visible — and the workspace landing is the dashboard, with the existing `workspace_landing === 'wiki'` redirect pinned off by a guard rather than merely avoided.
+  3. A user opens the graph focused on a single card's local neighbourhood by default, searches and filters it, can tell what they are currently looking at, and opts in to the global view deliberately.
+  4. A user moves between the wiki and the graph for the same card in both directions, and every card, wiki page, and graph node has a URL that can be shared and reopened.
+  5. An empty or near-empty workspace renders a meaningful state rather than a blank canvas, and a user can tell when displayed data is stale relative to the workspace.
+**Locked decisions honored**: D5/D8 (`spec-v02-knowledge-views-spike.md`, 2026-05-02) — the wiki is a sibling reading view, not the workspace default, and topic synthesis stays with the `synthesis` workflow. No auto-generated topic/hub pages; no in-place wiki editing (the views layer is a read-only derived projection).
+**Open decision (OQ-2)**: the graph's data source at scale — the views JSON projection or live API traversal. This materially changes the cost of BRWS-04 and BRWS-05 and should be pinned down before planning, not during implementation.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 24: Evaluation Spikes, E2E Demo Gate & UX Verdict
+**Goal**: The milestone answers its own question in writing, on evidence — three framework/format verdicts and one UX verdict, backed by a demo path that actually completes.
+**Depends on**: Phase 19 (SEED-001 needs the real HTTP API to produce an honest verdict rather than a guess), and Phases 20–23 for the E2E gate and the UX verdict. Last by construction, not by habit.
+**Requirements**: EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05
+**Success Criteria** (what must be TRUE):
+  1. Three verdict documents exist and each carries a recommendation — CoPilotKit evaluated against the running HTTP API rather than from documentation, graphify.net evaluated in the existing spike sandbox and answering the governance and egress questions, and open-wiki-format answering whether CONSTRUCT can emit an open format as a read-only projection without changing the canonical workspace format. A negative recommendation counts as a verdict; an absent one does not.
+  2. On a fresh, offline workspace, a person uploads a PDF and reaches cards they can browse in both the wiki and the graph, with zero CLI intervention.
+  3. A written UX verdict answers whether a person can navigate CONSTRUCT unaided, produced by someone actually attempting it on a fresh workspace — against the template whose commit predates the first wizard/browse UI commit, checkable in git history.
+  4. The demo path renders degraded runs and escalated items honestly — no spinner or success state stands in for an outcome that did not happen, and "escalate" never implies an action it does not take.
+**Open decision (OQ-5)**: does the PoC demo run on a fresh workspace or a fixture? Existing `test-ws/` fixtures carry pre-`4e2b909` damage (destroyed card bodies, newline accretion), which changes what the UX verdict actually measures. EVAL-04/05 currently specify fresh — confirm at planning.
+**Research flag**: SEED-001 (CoPilotKit) and SEED-003 (open wiki format) are framed as *evaluations*, not established patterns — by definition under-researched until the spike runs.
+**Plans**: TBD
+
+## Coverage (v0.5 — active)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| VFIX-01 | Phase 18 | Pending |
+| GOV-01 | Phase 18 | Pending |
+| GOV-02 | Phase 18 | Pending |
+| GOV-03 | Phase 18 | Pending |
+| GOV-04 | Phase 18 | Pending |
+| GOV-05 | Phase 18 | Pending |
+| HTTP-01 | Phase 19 | Pending |
+| HTTP-02 | Phase 19 | Pending |
+| HTTP-03 | Phase 19 | Pending |
+| HTTP-04 | Phase 19 | Pending |
+| HTTP-05 | Phase 19 | Pending |
+| HTTP-06 | Phase 19 | Pending |
+| HTTP-07 | Phase 19 | Pending |
+| EXTR-01 | Phase 20 | Pending |
+| EXTR-02 | Phase 20 | Pending |
+| EXTR-03 | Phase 20 | Pending |
+| EXTR-04 | Phase 20 | Pending |
+| EXTR-05 | Phase 20 | Pending |
+| EXTR-06 | Phase 20 | Pending |
+| SHELL-01 | Phase 21 | Pending |
+| SHELL-02 | Phase 21 | Pending |
+| SHELL-03 | Phase 21 | Pending |
+| GUIDE-01 | Phase 21 | Pending |
+| GUIDE-02 | Phase 21 | Pending |
+| GUIDE-03 | Phase 21 | Pending |
+| GUIDE-04 | Phase 21 | Pending |
+| WIZ-01 | Phase 22 | Pending |
+| WIZ-02 | Phase 22 | Pending |
+| WIZ-03 | Phase 22 | Pending |
+| WIZ-04 | Phase 22 | Pending |
+| WIZ-05 | Phase 22 | Pending |
+| WIZ-06 | Phase 22 | Pending |
+| WIZ-07 | Phase 22 | Pending |
+| WIZ-08 | Phase 22 | Pending |
+| WIZ-09 | Phase 22 | Pending |
+| BRWS-01 | Phase 23 | Pending |
+| BRWS-02 | Phase 23 | Pending |
+| BRWS-03 | Phase 23 | Pending |
+| BRWS-04 | Phase 23 | Pending |
+| BRWS-05 | Phase 23 | Pending |
+| BRWS-06 | Phase 23 | Pending |
+| BRWS-07 | Phase 23 | Pending |
+| BRWS-08 | Phase 23 | Pending |
+| EVAL-01 | Phase 24 | Pending |
+| EVAL-02 | Phase 24 | Pending |
+| EVAL-03 | Phase 24 | Pending |
+| EVAL-04 | Phase 24 | Pending |
+| EVAL-05 | Phase 24 | Pending |
+
+**Coverage:** 48/48 v0.5 requirements mapped exactly once. Unmapped: 0. Duplicated: 0.
+
+> **Count correction.** `REQUIREMENTS.md` summarised the milestone as "47 total"; the requirement
+> list and the traceability table both contain **48** entries (VFIX 1, HTTP 7, GOV 5, EXTR 6,
+> SHELL 3, GUIDE 4, WIZ 9, BRWS 8, EVAL 5). The prose count was off by one; no requirement was
+> missing. The traceability table in `REQUIREMENTS.md` has been corrected to 48.
+
+### v0.5 Sequencing Rationale
+
+- **Two blockers, ordered first and run in parallel.** Phase 19 (HTTP adapter) is the universal hard
+  gate — CONSTRUCT has no HTTP surface today, so literally nothing browser-side exists without it.
+  Phase 18 (byte contract + governance seams) is the *other* prerequisite, but it blocks *trusting*
+  browse data rather than building the API, so the two proceed together. GOV-01 sits in Phase 18
+  because HTTP is the surface that forces the input-model-validation question, and the seam should
+  exist before the third adapter routes through it.
+- **Extraction (Phase 20) is deliberately front-loaded in parallel**, not sequenced behind the wizard
+  that consumes it. It has zero API dependency, is fully testable through the existing CLI and MCP
+  surfaces, and it de-risks the part of the E2E demo gate most likely to surprise late (scanned and
+  hostile PDFs). Discovering PDF problems in the final phase would be the worst possible timing.
+- **The guided layer arrives with the shell (Phase 21), before browse and wizards.** It is the
+  cheapest item on the list and the one that actually carries the milestone's success criterion, so
+  the UX signal must land while there is still milestone left to react to it. Merging SHELL (3
+  mechanical requirements) into the same phase avoids a thin move-and-serve phase that delivers no
+  user-observable behaviour on its own.
+- **GOV-02/GOV-03 precede the review wizards by construction.** The current HITL resume model is
+  positional and a missing decision falls back to *applying a write*. Building the review wizards
+  against that shape and repairing it afterwards would mean building twice, on the one surface where
+  a wrong decision writes canonical truth.
+- **Wizards and browse (Phases 22, 23) are siblings, not a sequence.** They share only the shell and
+  the API; they can proceed in parallel once Phase 21 lands.
+- **The verdict phase (Phase 24) is last by construction.** SEED-001 needs the real HTTP API to
+  produce an honest verdict rather than a guess, and the UX verdict needs the rest finished. But the
+  *verdict template* is a Phase 21 obligation — a retrofitted template is itself a documented PoC
+  failure mode, because fixed questions cannot be reverse-engineered from whatever shipped.
+
+### v0.5 Open Questions Carried into Phase Planning
+
+Recorded in `REQUIREMENTS.md`, assigned here so none is silently defaulted.
+
+| # | Question | Owning phase |
+|---|----------|--------------|
+| OQ-1 | Where do uploaded bytes live? An upload has no path; none of the three options is clearly right | Phase 20 |
+| OQ-2 | Graph data source at scale — views JSON projection or live API traversal | Phase 23 |
+| OQ-3 | Extraction failure taxonomy and the fixture set that proves each reason | Phase 20 |
+| OQ-4 | Checkpoint concurrency contract — WAL / `busy_timeout` / single-flight locking (extends adr-0004) | Phase 19 |
+| OQ-5 | Does the PoC demo run on a fresh workspace or a fixture? `test-ws/` carries pre-`4e2b909` damage | Phase 24 |
+
+Two further decisions surfaced by research and assigned the same way: `gate_review.py`'s disposition
+(fix, fence, or delete) is owned by **Phase 18** alongside GOV-04, and the priority→action mapping's
+ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**).
 
 ## Coverage (v0.4.1 — shipped)
 
@@ -125,3 +340,10 @@ Streamlit ops UI (v0.3) and view data contracts prepare this milestone; they do 
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | Complete | 2026-07-20 |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
+| 18. Contract & Governance Foundations | v0.5 | 0/? | Not started | - |
+| 19. HTTP API over the Capability Registry | v0.5 | 0/? | Not started | - |
+| 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
+| 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
+| 22. Wizard Flows | v0.5 | 0/? | Not started | - |
+| 23. Live-Data Browse — Workspaces, Wiki, Graph | v0.5 | 0/? | Not started | - |
+| 24. Evaluation Spikes, E2E Demo Gate & UX Verdict | v0.5 | 0/? | Not started | - |
