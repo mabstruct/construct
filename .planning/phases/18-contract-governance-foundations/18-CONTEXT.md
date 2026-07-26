@@ -156,6 +156,45 @@ browser-side use (Phase 22), extraction (Phase 20), any UI build.
   `gate_review_approved` must not be emitted for a write that did not happen — `gate_review_approved`
   currently double-fires per item regardless of no-op writes at `curation_run.py:872`, `:923`, `:968`.
 
+### Post-research corrections (VFIX-01 scope)
+
+Added 2026-07-26 after `18-RESEARCH.md` measured the live repo and invalidated two premises D-01/D-04
+rested on. These are **user decisions**, not planner discretion — both enlarge VFIX-01 deliberately.
+
+- **D-17:** **The Python emitter shape (`ts` / `agent` / `action` / …) is canonical for `events.json`,
+  chosen and conformed in this phase.** Research found D-01's premise ("the SPA already reads these
+  bytes") is true for cards and digests but **false for events**: four mutually incompatible shapes exist
+  — the Python emitter, legacy fixture logs (`event` / `timestamp` / `details`), the views model
+  (`timestamp` / `type` / `actor` / …), and the SPA reader (`e.actor` / `e.type` / `e.subject.card_id`) —
+  and `parse_events` passes lines through verbatim, so "conform to the bytes" had no single referent.
+  Rather than paper over it with tolerant aliases, this phase **picks the emitter shape as the contract**
+  and conforms **both** the views model **and** the SPA reader to it; legacy fixture-log lines are
+  migrated or ignored, not silently accepted. This is the larger option and was chosen knowingly: it
+  leaves `events.json` with a real contract instead of a permissive model that only looks like one, and
+  it removes the Phase 23 convergence debt the alternative would have created. The new `escalate` event
+  type from D-16 threads into this same canonical shape. — **Reversibility:** costly — the SPA reader and
+  any existing `views/build/` event copies are conformed together; reverting means re-forking them.
+
+- **D-18:** **`<ws>/stats.json` and `<ws>/curation-history.json` get contract models in this phase.**
+  Research found these are the only files `views generate` writes with **no gate at all**. Modelling
+  them closes the last silent hole, so the D-04 round-trip guard's coverage claim is 100% of written
+  files rather than "most of them". — **Reversibility:** reversible.
+
+- **D-19:** **D-04's cardinality clause is restated as `4 + 6·N_workspaces + 1`.** The literal
+  "count equals 8" is arithmetically wrong — the generator writes 10 data files plus `version.json` for a
+  single workspace, so the original clause would have failed on its first run. Cardinality-not-set-
+  membership (the WR-01 lesson) is **unchanged**; only the arithmetic is corrected. With D-18 landing,
+  no file is excluded from the count. The guard still **replaces** rather than deletes
+  `test_views_validate_does_not_yet_accept_generated_bytes`.
+
+- **D-20:** **Field renames are fixed as renames, not absorbed by `extra="ignore"`.** Research measured
+  `views validate` failing **5 of 8** files on a *populated* install root (not 3), and **4 of those 5**
+  fail with `Field required` from field renames — which D-03's `extra="ignore"` does not fix.
+  `extra="ignore"` (D-03) still stands for *additive* parser drift; it is not a substitute for
+  conforming renamed fields. Note also that `DigestRecord` is a **writer** model
+  (`research_run.py:644` writes `digests/digests.json` with it), so renaming its fields changes a
+  workspace file, not only a projection — that write path must be conformed in the same task.
+
 ### Claude's Discretion
 
 The user delegated these; planner and researcher have latitude within the stated preference:
