@@ -236,6 +236,45 @@ class TestCardArchive:
         assert len(raw["connects_to"]) == 1
         assert raw["connects_to"][0]["target"] == "another-card"
 
+    def test_archive_card_preserves_body(self, init_workspace: Path) -> None:
+        """Archiving must leave the markdown body byte-identical."""
+        from construct.services.knowledge import _read_card_file
+
+        workspace = init_workspace
+        body = (
+            "## Summary\n\nA populated summary that must survive archiving.\n\n"
+            "## Evidence\n\nEvidence paragraph with a citation marker.\n\n"
+            "## Significance\n\nWhy this finding matters to the graph.\n\n"
+            "## Open Questions\n\nWhat remains unresolved.\n"
+        )
+        create_card(workspace, _sample_card_data(), body=body)
+
+        # Derive the expectation from the live module rather than hardcoding it.
+        body_before = _read_card_file(workspace, "test-card")[1]
+
+        result = archive_card(workspace, "test-card")
+
+        assert result.success is True
+        body_after = _read_card_file(workspace, "test-card")[1]
+        assert body_after == body_before
+
+        # Guard against a vacuous pass on a card that was never archived.
+        raw = _read_card_raw(workspace, "test-card")
+        assert raw["lifecycle"] == Lifecycle.archived.value
+
+    def test_archive_card_preserves_summary_section(self, init_workspace: Path) -> None:
+        """The live repro: summary prose must not be wiped by archive."""
+        from construct.services.knowledge import _read_card_file
+
+        workspace = init_workspace
+        create_card(workspace, _sample_card_data(_summary="IMPORTANT BODY TEXT"))
+
+        result = archive_card(workspace, "test-card")
+
+        assert result.success is True
+        body_after = _read_card_file(workspace, "test-card")[1]
+        assert "IMPORTANT BODY TEXT" in body_after
+
 
 # ===================================================================
 # Connection Add Tests
