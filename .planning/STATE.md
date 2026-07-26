@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 status: Awaiting next milestone
-stopped_at: "Completed quick task 260726-lqd (FIX-02 doc gap: generated WORKSPACE.md model-routing prose)"
-last_updated: "2026-07-26T13:46:12.561Z"
+stopped_at: "Completed quick task 260726-m0e (card writer vs views parser lifecycle frontmatter contract)"
+last_updated: "2026-07-26T14:32:00.000Z"
 last_activity: 2026-07-26
-last_activity_desc: "Completed quick task 260726-lqd: FIX-02 doc gap closed"
+last_activity_desc: "Completed quick task 260726-m0e: card writer now always serializes lifecycle"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -242,7 +242,9 @@ Recent decisions affecting current work:
 - decay_scan's 'archiving deferred to Phase 12' summary string in curation_run.py:414 is now stale (Phase 12 shipped) — second instance of the T-15-14 audit-trail-that-lies class, out of Plan 04's scope. Phase 16 to decide.
 - Direct card-create/card-connect edits no longer refresh views: the debounce pair was deleted with its two live skill registrations (15-05) and has no Python-layer equivalent. views.per_card_hooks.* in templates/config.yaml, references/commands.md:81 and README.md:263-264 now document an inert feature — Phase 16 (DOC-04) doc-truth item; re-homing debounce is a v0.6 candidate (OQ-3).
 - DOC-04 is marked Complete in REQUIREMENTS.md but both test_key_docs_are_not_vacuous cases (USER_GUIDE.md, commands.md) still fail. 16-05 owns these docs; flagged by 16-04, not edited (DOC-04 outside 16-04's frontmatter).
-- **From the v0.4.1 milestone audit (2026-07-26), open for v0.5 scoping:** the card writer and the views parser disagree on the card frontmatter contract — `schemas/card.py:103` declares `lifecycle` optional-with-default so `create_card` never serializes it, while `views/lib/parse_cards.py:7` requires the literal key. CLI-created cards are silently dropped from `cards.json` and `stats.json` while `views generate` still exits 0. Reproduced end-to-end. This is the third views contract fork alongside the `views validate`↔`views generate` byte mismatch and the missing per-card refresh path; treat the three as one unowned views data contract. See `.planning/milestones/v0.4.1-MILESTONE-AUDIT.md`.
+- ~~**From the v0.4.1 milestone audit (2026-07-26):** the card writer and the views parser disagree on the card frontmatter contract — `schemas/card.py:103` declares `lifecycle` optional-with-default so `create_card` never serializes it, while `views/lib/parse_cards.py:7` requires the literal key. CLI-created cards are silently dropped from `cards.json` and `stats.json` while `views generate` still exits 0.~~ **Closed by quick task 260726-m0e** (`ac45d0e`): `_card_dict_to_markdown` — the sole card serializer — now applies the `Lifecycle.seed` default, so every writer emits the key. Pinned by two round-trip guards in `tests/integration/test_views_generate.py`. The other two forks of the same cluster remain open: the `views validate`↔`views generate` byte mismatch (pinned by `test_views_validate_does_not_yet_accept_generated_bytes`) and the missing per-card refresh path (v0.6 OQ-3). See `.planning/milestones/v0.4.1-MILESTONE-AUDIT.md`.
+- `archive_card` destroys the card body on every archive (`src/construct/services/knowledge.py:327`, `:342`). It discards the body from `_read_card_file` (`_, _, raw = ...`) and calls `_card_dict_to_markdown(raw)` with `body=None`, which substitutes the empty canonical section template — while the sibling `edit_card:276` correctly passes `body=body`. Verified live: a card created with `--summary "Important summary text."` came back from archive with an empty `## Summary`. Real data loss, unrelated to the lifecycle contract, discovered and deliberately left alone during quick task 260726-m0e (out of its boundary). Needs an owner.
+- Cards already sitting in a **user's** workspace without `lifecycle` stay invisible to `views generate` until something re-saves them (`card update`, `card archive`, or a curation promotion). The 260726-m0e fix is writer-side by design (D-01); there is no migration/backfill path for existing user workspaces.
 - Nyquist coverage: all four v0.4.1 phases have a VALIDATION.md but all read `status: draft` (NOT-VALIDATED, a coverage TODO not a compliance failure). 17-VALIDATION.md is still an unfilled template.
 
 ### Quick Tasks Completed
@@ -250,6 +252,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260726-lqd | Fix FIX-02 gap: WORKSPACE.md model-routing deprecation truth | 2026-07-26 | 0f95f8d | [260726-lqd-fix-fix-02-gap-workspace-md-model-routin](./quick/260726-lqd-fix-fix-02-gap-workspace-md-model-routin/) |
+| 260726-m0e | Card writer vs views parser lifecycle frontmatter contract | 2026-07-26 | ac45d0e | [260726-m0e-card-writer-vs-views-parser-lifecycle-fr](./quick/260726-m0e-card-writer-vs-views-parser-lifecycle-fr/) |
 
 ## Deferred Items
 
@@ -267,8 +270,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26 — retrospective v0.4.1 milestone audit, then quick task 260726-lqd
-Stopped at: Milestone v0.4.1 audited (gaps_found); FIX-02 doc gap closed; awaiting v0.5 scoping
+Last session: 2026-07-26 — retrospective v0.4.1 milestone audit, then quick tasks 260726-lqd and 260726-m0e
+Stopped at: Completed quick task 260726-m0e (card writer lifecycle frontmatter contract closed; 528 passed, 1 skipped)
 Resume file: None
 
 ## Operator Next Steps
