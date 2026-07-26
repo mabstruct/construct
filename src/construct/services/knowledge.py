@@ -100,7 +100,15 @@ def _card_dict_to_markdown(card_dict: dict[str, Any], body: str | None = None) -
 
     When *body* is provided it is used verbatim as the markdown body; otherwise a
     canonical empty section template is emitted.
+
+    This serializer owns the ``lifecycle`` contract: ``views/lib/parse_cards.py``
+    requires the literal key in raw frontmatter, so the schema default is applied
+    here rather than left implicit for readers to re-derive.
     """
+    # Copy before defaulting — the caller's dict must not be mutated.
+    card_dict = dict(card_dict)
+    card_dict.setdefault("lifecycle", Lifecycle.seed.value)
+
     buf = StringIO()
     _yaml.dump(card_dict, buf)
     frontmatter_text = buf.getvalue()
