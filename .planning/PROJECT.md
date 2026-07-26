@@ -37,7 +37,29 @@ The system must reliably turn source material into connected, explorable knowled
 
 **Basis:** `.planning/milestones/v0.4-MILESTONE-AUDIT.md` (retrospective audit, 2026-07-19). The runtime was sound and its 22/22 requirements genuinely met; these were integration defects in shipped work, not new capability.
 
-**Next:** v0.5 (UI-primary experience) — browser-first shell on the hardened v0.4 runtime. DOC-03 prerequisite satisfied; scope via `/gsd-new-milestone`.
+**Next:** v0.5 (UI-primary experience) — browser-first shell on the hardened v0.4 runtime. DOC-03 prerequisite satisfied; scoped below.
+
+## Current Milestone: v0.5 UI-Primary Experience — Proof of Concept
+
+**Goal:** Prove on an isolated branch that a browser-first shell over the v0.4 runtime can guide a user through CONSTRUCT's core loops without touching the CLI — a technical *and* UX proof of concept, judged on whether the guided/wizard model actually makes the system usable unaided.
+
+**Target features:**
+- Reconcile the `views generate` ↔ `views validate` byte contract (3 of 8 files currently rejected; pinned by `test_views_validate_does_not_yet_accept_generated_bytes`) — the shared prerequisite named by both SEED-001 and SEED-003.
+- An HTTP API over the capability registry serving both reads and capability invocation — CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only), so HTTP becomes a third adapter over the same 28-capability contract.
+- Promote the views SPA (React 19 / Vite 7 / Tailwind 4 / react-router 7) from a per-workspace skill template to a first-class app in the repo, served by the API.
+- Document ingestion with real text extraction for txt, md, pdf, doc — `ingestion.py` today routes a file to a domain and writes a ref + seed card without reading it.
+- A guided action layer that renders the existing `help.suggest` engine (`services/help.py:32`) in the browser, testing whether its prioritized next-steps are good enough to guide a person.
+- Four wizard flows: workspace creation (`workspace.init` + domain setup), document ingestion (upload → extract → route → review), and the two HITL review gates (`research.review`, `curation.review`) — the latter two share one queue-of-proposals surface.
+- Browse workspaces, the wiki reading view, and the knowledge graph on live API data (pages exist scaffolded but static-file-fed).
+- Three evaluation spikes producing verdict documents, not shipped features: CoPilotKit as the Layer 4 framework (SEED-001), graphify.net for content ingestion (SEED-002), and LLM-Wiki alignment / open wiki-format interop (SEED-003).
+
+**Key context:**
+- Work happens on branch `dev-v05` off `main`, pushed to origin, so the v0.4.1 backend on `main` stays releasable. The stale `dev-v04` branch is left untouched.
+- `daily.run` / daily-cycle composition is explicitly out of scope for this iteration.
+- CoPilotKit is **evaluated, not adopted** — the PoC ships on the existing views SPA and the spike produces a framework verdict for v0.6. This deliberately defers the Layer 4 decision a third time, but with real evidence behind it for the first time.
+- The Wiki honors locked decisions D5/D8 (`spec-v02-knowledge-views-spike.md`, 2026-05-02): it is a sibling reading view rather than the workspace default, and topic synthesis stays with the `synthesis` workflow.
+- SEED-003's format question is scoped to "can CONSTRUCT emit an open wiki format as a read-only projection?" — the same shape as the views layer. A canonical workspace-format change stays out of scope.
+- Success is a **UX verdict** — whether a person can navigate CONSTRUCT unaided — with an end-to-end demo path (upload a PDF → cards → wiki + graph) as the mechanical gate that supports it.
 
 ## Requirements
 
@@ -58,9 +80,9 @@ The system must reliably turn source material into connected, explorable knowled
 
 ### Active
 
-**No open requirements.** v0.4.1 Surface Integration & Documentation Truth is functionally complete — all 9 requirements delivered: FIX-04 (2026-07-19, pre-milestone); DOC-03 and FIX-02 (Phase 14, 2026-07-19); FIX-01 (Phase 15, 2026-07-20); FIX-03, DEC-01, and DOC-04 (Phase 16, 2026-07-25); DOC-01, DOC-02, and UX-01 (Phase 17, 2026-07-25). Ready for milestone ship/close.
+**v0.5 UI-Primary Experience (Proof of Concept)** — requirements being defined. Scope gathered 2026-07-26: data-contract reconciliation, an HTTP API over the capability registry, the views SPA promoted to a served app, real document extraction, a `help.suggest`-driven guided layer, four wizard flows, live-data browse/wiki/graph views, and three evaluation spikes (SEED-001/002/003). See `.planning/REQUIREMENTS.md` once written.
 
-_Deferred past v0.4.1: v0.5 UI-primary experience (UI-01/02), RT-01/RT-02 registry unification, thin-wrapper migration for `construct-bridge-detect` / `domain-init` / `search-adjust` (logged for v0.6), historical verification/security debt._
+_Deferred past v0.4.1: RT-01/RT-02 registry unification, thin-wrapper migration for `construct-bridge-detect` / `domain-init` / `search-adjust` (logged for v0.6), historical verification/security debt, the per-card views-refresh path (v0.6 OQ-3), `card list` MCP-boundary hardening (WR-01/WR-02), and stale `artifact-catalog.md` prose counts._
 
 ### Out of Scope
 
@@ -71,6 +93,11 @@ _Deferred past v0.4.1: v0.5 UI-primary experience (UI-01/02), RT-01/RT-02 regist
 - Any v0.5 UI work in v0.4.1 — building a UI on surfaces known to be broken would also obscure v0.5's own delivery signal.
 - RT-01/RT-02 registry unification in v0.4.1, unless FIX-01 requires touching the views group — in which case scope only that group.
 - Migrating `construct-bridge-detect` / `construct-domain-init` / `construct-search-adjust` to thin wrappers in v0.4.1 — real debt, but larger than a patch milestone. Logged for v0.6.
+- `daily.run` / daily-cycle composition in the v0.5 UI — explicitly excluded from this iteration so the PoC's guidance signal is not diluted by the most complex composed workflow.
+- Adopting CoPilotKit in v0.5 — it is evaluated by spike only (SEED-001). Building the PoC on an unvalidated framework would make a negative verdict cost the whole slice.
+- Changing the canonical workspace format for open wiki-format interop (SEED-003) — the answerable v0.5 question is whether an open format can be emitted as a read-only projection, the same shape as the views layer.
+- Repositioning the Wiki away from locked decisions D5/D8 — it stays a sibling reading view, not the workspace default, and topic synthesis stays with the `synthesis` workflow. Any change here is a deliberate repositioning, not v0.5 scope.
+- Production hardening of the v0.5 HTTP API (auth, multi-user, remote hosting) — this is a local-first proof of concept on an isolated branch, not a deployable service.
 
 ## Context
 
@@ -127,4 +154,6 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-25 — after v0.4.1 milestone (Surface Integration & Documentation Truth). Shipped across Phases 14–17 / 20 plans, delivering all 9 requirements: real `views.generate_data` MCP handler with the views library vendored (FIX-01), one authoritative LLM config path (FIX-02), every documented `construct …` invocation resolving over a widened guard (FIX-03, FIX-04), the architecture/NFR/workspace-contract doc set describing the system that exists with the durable-checkpointer decision recorded (DOC-01/02/03), executable user docs and a superseded playbook (DOC-04), `construct-synthesis` web grants closed (DEC-01), and `daily.run` reachable from chat (UX-01). Tagged v0.4.1. Next: v0.5 UI-primary experience — DOC-03 prerequisite satisfied.*
+*Last updated: 2026-07-26 — started milestone v0.5 (UI-Primary Experience — Proof of Concept). Scope gathered in conversation: fix the `views generate`↔`views validate` byte contract, build an HTTP API over the capability registry, promote the views SPA to a served first-class app, add real document extraction (txt/md/pdf/doc), render `help.suggest` as the guided action layer, deliver four wizard flows (workspace creation, ingestion, research review, curation review), serve browse/wiki/graph on live data, and run three evaluation spikes (SEED-001 CoPilotKit, SEED-002 graphify.net, SEED-003 LLM-Wiki open format). Work isolated on branch `dev-v05`; `daily.run` out of scope; success judged as a UX verdict with an E2E demo path as the mechanical gate. Phases continue from 17.*
+
+*Previously updated: 2026-07-25 — after v0.4.1 milestone (Surface Integration & Documentation Truth). Shipped across Phases 14–17 / 20 plans, delivering all 9 requirements: real `views.generate_data` MCP handler with the views library vendored (FIX-01), one authoritative LLM config path (FIX-02), every documented `construct …` invocation resolving over a widened guard (FIX-03, FIX-04), the architecture/NFR/workspace-contract doc set describing the system that exists with the durable-checkpointer decision recorded (DOC-01/02/03), executable user docs and a superseded playbook (DOC-04), `construct-synthesis` web grants closed (DEC-01), and `daily.run` reachable from chat (UX-01). Tagged v0.4.1. Next: v0.5 UI-primary experience — DOC-03 prerequisite satisfied.*

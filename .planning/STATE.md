@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.4.1
-milestone_name: Surface Integration & Documentation Truth
-status: Awaiting next milestone
-stopped_at: "Completed quick task 260726-n3x (archive_card body destruction + newline accretion)"
-last_updated: "2026-07-26T14:32:00.000Z"
+milestone: v0.5
+milestone_name: UI-Primary Experience — Proof of Concept
+status: planning
+last_updated: "2026-07-26T16:02:45.107Z"
 last_activity: 2026-07-26
-last_activity_desc: "Completed quick task 260726-n3x: archive_card preserves the card body"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
-current_phase: 17
-current_phase_name: Architecture Doc Set & daily.run Discoverability
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 ## Current Position
 
-Phase: Milestone v0.4.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-25 — Milestone v0.4.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-26 — Milestone v0.5 started
 
 ## Performance Metrics
 
