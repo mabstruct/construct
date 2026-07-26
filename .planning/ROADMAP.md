@@ -91,12 +91,24 @@ Full phase detail (goals, success criteria, plans) archived in
   1. `views validate` accepts every one of the 8 files `views generate` writes, proven by a non-vacuous round-trip guard that *replaces* `test_views_validate_does_not_yet_accept_generated_bytes` rather than deleting it.
   2. The same capability id and payload produce an identical structured result whether invoked from the CLI or from MCP, and an unknown field is rejected on both — proven by a differential test over one shared validating seam, not by set-membership inventory.
   3. A human-review decision names the proposal it applies to; a resume against a queue that changed since it was rendered is rejected with zero canonical writes, and a missing decision never falls back to applying a write.
-  4. Approving a proposal in the Streamlit gate-review screen produces exactly the same canonical writes and event records as approving it through the reviewed workflow's own resume path — no direct-write shortcut remains, and no approval event exists for a decision that was never applied.
+  4. No surface writes canonical truth outside the reviewed workflow's resume path — satisfied by removing the Streamlit gate-review screen (D-13) and guarded by a repo-wide source-level test rather than by the absence of one named file — **and** no approval event exists for a decision that was never applied. *(Restated per D-14: the original wording named the gate-review screen as its subject, and D-13 deletes that screen. Both halves stand independently; the second is enforced by D-16's conditional emission.)*
   5. A degraded or partially-applied run reports degraded on every surface that can report it, and escalated items surface as pending rather than folded into a success count.
 **Why first**: All five GOV items are repairs to *live* code found by the research (`ui/gate_review.py:252-281`, inert `input_model` validation, positional `_resolve_decisions`), not new-build concerns. GOV-01 must land with or before the HTTP adapter because HTTP is the surface that forces the question; GOV-02/GOV-03 must land before the review wizards so the API is never built against the positional decision shape.
-**Named decision to record**: the views byte-contract fix conforms `views/models.py` to the written bytes. On its face this looks like a reversal of the standing "conform the data to the gate" decision (ING-02) — it is not, because views is a derived projection whose author is the generator, but it must be recorded explicitly as a decision, not slipped in.
-**Open decision carried in**: `gate_review.py`'s disposition (fix, fence, or delete) — research states that leaving a second UI that forges gates is worse than either keeping or deleting it.
-**Plans**: TBD
+**Named decision to record**: the views byte-contract fix conforms `views/models.py` to the written bytes. On its face this looks like a reversal of the standing "conform the data to the gate" decision (ING-02) — it is not, because views is a derived projection whose author is the generator, but it must be recorded explicitly as a decision, not slipped in. *(Recorded as D-01; the reconciliation is written into the `views/models.py` module docstring by plan 18-04.)*
+**Open decision carried in**: `gate_review.py`'s disposition (fix, fence, or delete) — research states that leaving a second UI that forges gates is worse than either keeping or deleting it. *(Resolved as D-13: delete, with the removal made permanent by a category-level source guard in plan 18-07.)*
+**Plans**: 8 plans in 4 waves
+
+Plans:
+- [ ] 18-01-PLAN.md — GOV-01 tracer: one validating invocation seam, proven end-to-end on one capability across the real CLI process and real MCP dispatch (wave 1)
+- [ ] 18-02-PLAN.md — GOV-01: forbid-by-default across every capability input model, and the five capabilities whose model does not describe their handler (wave 2)
+- [ ] 18-03-PLAN.md — GOV-01: every in-repo caller onto the seam, positional-passthrough shims retired, `views validate` registered as a capability (wave 3)
+- [ ] 18-04-PLAN.md — VFIX-01: conform the views contract models to the writer bytes, pick the canonical `events.json` shape, model the two ungated files (wave 1)
+- [ ] 18-05-PLAN.md — VFIX-01: validating writer with no adapter, canonical SPA event reader, and the round-trip guard that replaces the pin test (wave 2)
+- [ ] 18-06-PLAN.md — GOV-02/GOV-03: proposal-id decisions, complete-coverage rejection, checkpoint-id ETag, migrate-on-read (wave 2, one blocking decision checkpoint)
+- [ ] 18-07-PLAN.md — GOV-04: delete the second canonical writer and make "exactly one canonical writer" a source-level invariant (wave 2)
+- [ ] 18-08-PLAN.md — GOV-04/GOV-05: honest escalation, approval events only after a write, degraded reads as degraded on all three surfaces (wave 4)
+
+Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Same-wave plans have zero `files_modified` overlap.
 
 ### Phase 19: HTTP API over the Capability Registry
 **Goal**: Every registry capability is reachable from a browser over a loopback-bound HTTP surface that is a third peer of CLI and MCP — never a fork of them — and a workflow run is an addressable resource that outlives the process that started it.
