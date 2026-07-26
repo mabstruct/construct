@@ -115,6 +115,11 @@ def _card_dict_to_markdown(card_dict: dict[str, Any], body: str | None = None) -
 
     if body is None:
         body = "## Summary\n\n\n\n## Evidence\n\n\n\n## Significance\n\n\n\n## Open Questions\n\n"
+    # ``parse_card_markdown`` splits on "\n---\n" and so returns a body carrying one
+    # leading newline, while this serializer emits its own blank line after the closing
+    # "---".  Normalizing makes the on-disk form a round-trip fixed point; without it
+    # every rewrite (edit_card, archive_card) accreted one extra leading blank line.
+    body = body.lstrip("\n")
     return f"---\n{frontmatter_text}---\n\n{body}"
 
 
@@ -332,7 +337,7 @@ def archive_card(
 
     # Read existing card
     try:
-        _, _, raw = _read_card_file(root, card_id)
+        _, body, raw = _read_card_file(root, card_id)
     except FileNotFoundError as exc:
         return OperationResult(success=False, message=str(exc), errors=[OperationError(reason=str(exc))])
     except (SchemaParseError, PydanticValidationError, ValueError, OSError) as exc:
@@ -347,7 +352,7 @@ def archive_card(
 
     # Validate
     try:
-        markdown = _card_dict_to_markdown(raw)
+        markdown = _card_dict_to_markdown(raw, body=body)
         validate_card_write(markdown)
     except (ArtifactValidationError, PydanticValidationError, ValueError) as exc:
         return OperationResult(
