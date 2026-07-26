@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v0.4.1
 milestone_name: Surface Integration & Documentation Truth
 status: Awaiting next milestone
-stopped_at: Completed 17-04-PLAN.md
-last_updated: "2026-07-25T18:38:04.553Z"
-last_activity: 2026-07-25
-last_activity_desc: Milestone v0.4.1 completed and archived
+stopped_at: "Completed quick task 260726-lqd (FIX-02 doc gap: generated WORKSPACE.md model-routing prose)"
+last_updated: "2026-07-26T13:46:12.561Z"
+last_activity: 2026-07-26
+last_activity_desc: "Completed quick task 260726-lqd: FIX-02 doc gap closed"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -242,6 +242,14 @@ Recent decisions affecting current work:
 - decay_scan's 'archiving deferred to Phase 12' summary string in curation_run.py:414 is now stale (Phase 12 shipped) — second instance of the T-15-14 audit-trail-that-lies class, out of Plan 04's scope. Phase 16 to decide.
 - Direct card-create/card-connect edits no longer refresh views: the debounce pair was deleted with its two live skill registrations (15-05) and has no Python-layer equivalent. views.per_card_hooks.* in templates/config.yaml, references/commands.md:81 and README.md:263-264 now document an inert feature — Phase 16 (DOC-04) doc-truth item; re-homing debounce is a v0.6 candidate (OQ-3).
 - DOC-04 is marked Complete in REQUIREMENTS.md but both test_key_docs_are_not_vacuous cases (USER_GUIDE.md, commands.md) still fail. 16-05 owns these docs; flagged by 16-04, not edited (DOC-04 outside 16-04's frontmatter).
+- **From the v0.4.1 milestone audit (2026-07-26), open for v0.5 scoping:** the card writer and the views parser disagree on the card frontmatter contract — `schemas/card.py:103` declares `lifecycle` optional-with-default so `create_card` never serializes it, while `views/lib/parse_cards.py:7` requires the literal key. CLI-created cards are silently dropped from `cards.json` and `stats.json` while `views generate` still exits 0. Reproduced end-to-end. This is the third views contract fork alongside the `views validate`↔`views generate` byte mismatch and the missing per-card refresh path; treat the three as one unowned views data contract. See `.planning/milestones/v0.4.1-MILESTONE-AUDIT.md`.
+- Nyquist coverage: all four v0.4.1 phases have a VALIDATION.md but all read `status: draft` (NOT-VALIDATED, a coverage TODO not a compliance failure). 17-VALIDATION.md is still an unfilled template.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260726-lqd | Fix FIX-02 gap: WORKSPACE.md model-routing deprecation truth | 2026-07-26 | 0f95f8d | [260726-lqd-fix-fix-02-gap-workspace-md-model-routin](./quick/260726-lqd-fix-fix-02-gap-workspace-md-model-routin/) |
 
 ## Deferred Items
 
@@ -259,8 +267,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25 — v0.4.1 milestone completed and archived
-Stopped at: Milestone v0.4.1 closed; awaiting v0.5 scoping
+Last session: 2026-07-26 — retrospective v0.4.1 milestone audit, then quick task 260726-lqd
+Stopped at: Milestone v0.4.1 audited (gaps_found); FIX-02 doc gap closed; awaiting v0.5 scoping
 Resume file: None
 
 ## Operator Next Steps
