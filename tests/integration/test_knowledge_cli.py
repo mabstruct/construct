@@ -172,12 +172,15 @@ def test_card_edit_cli_updates_summary_without_losing_body(init_workspace: Path,
 
 
 def test_card_archive_cli(init_workspace: Path, cli_runner: CliRunner) -> None:
+    summary = "Archiving must not destroy this summary prose."
+
     # Create first
     cli_runner.invoke(app, [
         "knowledge", "card", "create",
         "--title", "Archivable Card",
         "--type", "finding", "--domains", "test",
         "--confidence", "3", "--source-tier", "3",
+        "--summary", summary,
         "--workspace", str(init_workspace),
     ])
     card_id = list((init_workspace / "cards").glob("*.md"))[0].stem
@@ -188,6 +191,38 @@ def test_card_archive_cli(init_workspace: Path, cli_runner: CliRunner) -> None:
     assert result.exit_code == 0, result.stdout
     content = (init_workspace / "cards" / f"{card_id}.md").read_text()
     assert "archived" in content or "lifecycle: archived" in content
+    # The body must survive the archive, not be replaced by the empty template.
+    assert f"## Summary\n\n{summary}" in content
+
+
+def test_card_archive_cli_body_stable_across_repeated_archives(
+    init_workspace: Path, cli_runner: CliRunner
+) -> None:
+    """Repeated archives must be a fixed point — no blank-line accretion."""
+    cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", "Twice Archived",
+        "--type", "finding", "--domains", "test",
+        "--confidence", "3", "--source-tier", "3",
+        "--summary", "Stable body prose.",
+        "--workspace", str(init_workspace),
+    ])
+    card_path = init_workspace / "cards" / "twice-archived.md"
+
+    def _archive() -> None:
+        result = cli_runner.invoke(app, [
+            "knowledge", "card", "archive", "twice-archived",
+            "--workspace", str(init_workspace),
+        ])
+        assert result.exit_code == 0, result.stdout
+
+    _archive()
+    after_first = card_path.read_text(encoding="utf-8")
+    _archive()
+    after_second = card_path.read_text(encoding="utf-8")
+
+    assert after_second == after_first
+    assert "Stable body prose." in after_second
 
 
 # ---------------------------------------------------------------------------
