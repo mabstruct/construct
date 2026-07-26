@@ -743,23 +743,35 @@ Both are contradicted by the current state of the repository: `.planning/` is th
 | A4 | No consumer other than `views validate`, the SPA, and `research_run` reads `views/build/data/*.json` field names | Finding V2 | A missed consumer breaks on the rename. Greps covered `src/`, `tests/`, and the scaffold template; a user's own local SPA fork would not be visible. |
 | A5 | `<ws>/curation-history.json` genuinely has no contract model anywhere | Finding V1 | If one exists elsewhere it should be wired in rather than a new one written. |
 
-## Open Questions
+## Open Questions (ALL RESOLVED)
 
-1. **OQ-A — What is `events.json`'s contract, given four incompatible shapes?** (blocks the `events.json` half of VFIX-01)
+> **Resolution status (added at `/gsd-plan-phase 18`, after this research was written):**
+>
+> | OQ | Resolved by | Outcome |
+> |----|-------------|---------|
+> | **OQ-A** | CONTEXT.md **D-17** (user decision at the plan-phase research gate) | **Research's lean was NOT taken.** Instead of tolerant aliases, the **Python emitter shape is canonical**; both the views model (plan 18-04 T2) and the SPA reader (plan 18-05 T2) conform to it. This removes the Phase 23 convergence deferral the tolerant option would have created. |
+> | **OQ-B** | CONTEXT.md **D-18** (user decision) | **Both** files get contract models — `stats.json` *and* `curation-history.json` (plan 18-04 T1), not just the stable-shaped one. Related: **D-19** restates D-04's cardinality as `4 + 6·N_workspaces + 1`. |
+> | **OQ-C** | Plan **18-05 T1** | Recommendation taken — the writer keeps validating, via direct `model_validate` of the raw dict against the conformed model, preserving the "a run that rejected any file did not produce the build" invariant. |
+> | **OQ-D** | Plan **18-03 T2** | Recommendation taken — routed through `registry.invoke("graph.status", {"workspace": workspace_id})`, inside the widened call-site budget (25 `cli.py` sites + 3 external callers, not D-07's assumed 3). |
+>
+> The original text of each question is preserved below unedited, as the record of what was open at
+> research time.
+
+1. **OQ-A — What is `events.json`'s contract, given four incompatible shapes?** (blocks the `events.json` half of VFIX-01) — **RESOLVED by D-17; research's tolerant-alias lean was not taken.**
    - What we know: four shapes exist and are enumerated in Finding V3; `parse_events` renames nothing; the SPA matches neither the current Python emitter nor the legacy fixtures.
    - What's unclear: D-01 says "conform to the bytes", but the bytes differ by emitter. Conforming to the fixtures codifies legacy data; conforming to the Python emitter breaks against every existing workspace log; conforming to the SPA means changing the *emitter*, which is a canonical-write change and squarely inside ING-02's territory rather than outside it.
    - Recommendation: make this its own named decision alongside D-01, decided in `/gsd-plan-phase` before Wave 1 starts. Research's lean is a **tolerant `EventRecord` with aliases covering shapes #1 and #2 plus `extra="ignore"`**, combined with a separate, explicitly-deferred item to converge emitter and SPA in Phase 23 when the browse surface is built. That satisfies VFIX-01 (validate accepts what generate writes) without silently blessing legacy data as the forward contract.
 
-2. **OQ-B — Do `<ws>/stats.json` and `<ws>/curation-history.json` get contract models in this phase?**
+2. **OQ-B — Do `<ws>/stats.json` and `<ws>/curation-history.json` get contract models in this phase?** — **RESOLVED by D-18: both get models, not just `stats.json`.**
    - What we know: they are written with no validation at all, and `views validate` does not look at them (Finding V1, V6).
    - What's unclear: the "8 files" phrasing in ROADMAP/CONTEXT implicitly excludes them, but D-04's own argument ("the guard is the only drift detector") applies most strongly to files with no gate whatsoever.
    - Recommendation: include `<ws>/stats.json` (it has a stable computed shape from `compute_stats.compute_workspace`); defer `curation-history.json` if its shape is not yet stable. Either way, state the choice — do not let the phrase decide.
 
-3. **OQ-C — Does `views generate` keep validating before writing?**
+3. **OQ-C — Does `views generate` keep validating before writing?** — **RESOLVED in plan 18-05 T1: yes, via direct `model_validate`.**
    - What we know: deleting the adapter tables per D-01 removes `_validate_file_data`'s only input (Finding V6).
    - Recommendation: replace it with a direct `model_validate` of the raw dict against the conformed model. After D-01 the adapter is the identity function, so this is nearly free and preserves the "a run that rejected any file did not produce the build" invariant at `generate.py:394-423`, which several existing tests depend on.
 
-4. **OQ-D — How does `services/help.py:141` call `graph.status` under a strict seam?**
+4. **OQ-D — How does `services/help.py:141` call `graph.status` under a strict seam?** — **RESOLVED in plan 18-03 T2: via `registry.invoke`.**
    - What we know: it calls `cap.handler(workspace_id)` positionally, and `catalog.py:331` documents the handler as deliberately shaped to accept both forms.
    - Recommendation: route it through `registry.invoke("graph.status", {"workspace": workspace_id})`. Small, but it is an internal caller that D-07's "three CLI call sites" framing does not cover.
 
