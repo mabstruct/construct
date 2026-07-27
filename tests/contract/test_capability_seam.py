@@ -46,39 +46,20 @@ FIXTURE_WS = Path(__file__).resolve().parents[2] / "test-ws" / "my-construct"
 # edit here, which is what forces the author past the two guards below.
 REGISTRY_SIZE = 28
 
-# Capabilities whose declared model does not describe their handler. Task 2 of
-# plan 18-02 repairs all five and deletes this set together with its xfail marks.
-_KNOWN_MISMATCHES = frozenset(
-    {
-        "knowledge.card.archive",
-        "knowledge.connection.list",
-        "knowledge.connection.remove",
-        "workflow.status",
-        "workspace.init",
-    }
-)
-
 
 def _forbids(model: type) -> bool:
     """Whether a model's resolved config rejects undeclared fields."""
     return (model.model_config or {}).get("extra") == "forbid"
 
 
-def _binding_params() -> list:
-    params = []
-    for capability in get_registry().list():
-        marks = (
-            [
-                pytest.mark.xfail(
-                    strict=True,
-                    reason="18-02 Task 2 repairs this model-to-handler mismatch",
-                )
-            ]
-            if capability.id in _KNOWN_MISMATCHES
-            else []
-        )
-        params.append(pytest.param(capability.id, marks=marks))
-    return params
+def _capability_ids() -> list[str]:
+    """Every registered capability, audited unconditionally.
+
+    There is deliberately no exemption set here. The five capabilities whose
+    models did not describe their handlers were repaired rather than excused —
+    an exemption list would have grown into exactly the allowlist D-05 refused.
+    """
+    return [capability.id for capability in get_registry().list()]
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +127,7 @@ def test_a_previously_unforbidden_write_model_rejects_an_undeclared_field() -> N
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("cap_id", _binding_params())
+@pytest.mark.parametrize("cap_id", _capability_ids())
 def test_declared_fields_bind_to_the_handler(cap_id: str) -> None:
     """Every declared field must be a parameter the handler can receive.
 
