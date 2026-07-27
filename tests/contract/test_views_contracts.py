@@ -171,6 +171,35 @@ WRITER_WORKSPACE_STATS: dict = {
     "search_clusters": [],
 }
 
+#: ``lib/parse_digests._parse_one`` — one element of its ``digests`` list.
+WRITER_DIGEST: dict = {
+    "id": "2026-04-26-cosmology",
+    "date": "2026-04-26",
+    "domain": "cosmology",
+    "theme": "Dark energy equation of state",
+    "summary_text": "Papers found: 12\nPapers ingested: 4",
+    "papers_found": 12,
+    "papers_ingested": 4,
+    "papers_skipped": 8,
+    "seed_cards_created": 3,
+    "top_findings": [
+        {
+            "rank": 1,
+            "title": "DESI BAO results",
+            "relevance": 5,
+            "summary": "Evidence for evolving dark energy.",
+            "url": "https://arxiv.org/abs/2503.14738",
+            "cluster": "",
+        }
+    ],
+    "search_clusters": [
+        {"id": "dark-energy", "queries": 3, "results": 12, "ingested": 4}
+    ],
+    "coverage_notes": "Good coverage of BAO.",
+    "suggested_adjustments": "Add a weak-lensing cluster.",
+    "raw_path": "digests/2026-04-26-cosmology.md",
+}
+
 #: ``services/event_log.append_event`` — one line of ``log/events.jsonl``.
 #: D-17 makes this the canonical ``events.json`` record shape.
 WRITER_EVENT: dict = {
@@ -830,6 +859,65 @@ class TestStatsContractsAreDistinct:
             WorkspaceStatsFile.model_validate(malformed)
 
 
+class TestWriterConformedDigestRecord:
+    """``DigestRecord`` is the one model with two legitimate authors (D-20).
+
+    It validates the views projection *and* it is the model
+    ``llm/research_run.compile_digest`` uses to write a workspace's
+    ``digests/digests.json``. ``Field(alias=...)`` was weighed for exactly this
+    reason and rejected: an alias is a second contract surface and it changes
+    ``model_json_schema()`` output, which Phase 19's generated adapter consumes.
+    """
+
+    def test_raw_generated_digest_validates(self) -> None:
+        record = DigestRecord.model_validate(WRITER_DIGEST)
+
+        assert record.domain == "cosmology"
+        assert record.theme == "Dark energy equation of state"
+        assert record.date == "2026-04-26"
+        assert record.summary_text.startswith("Papers found")
+
+    def test_consumer_read_keys_are_declared_fields(self) -> None:
+        """Every key the scaffold SPA's Digests/DigestDetail pages render."""
+        declared = set(DigestRecord.model_fields)
+
+        assert {
+            "papers_found",
+            "papers_ingested",
+            "papers_skipped",
+            "seed_cards_created",
+            "top_findings",
+            "search_clusters",
+            "coverage_notes",
+            "suggested_adjustments",
+        } <= declared
+
+    def test_phantom_card_ids_field_is_gone(self) -> None:
+        """No parser emitted it; the generator's adapter hard-coded it to ``[]``."""
+        assert "card_ids" not in DigestRecord.model_fields
+
+    def test_digests_file_accepts_the_raw_payload(self) -> None:
+        payload = DigestsFile.model_validate({"digests": [WRITER_DIGEST]})
+
+        assert payload.digests[0].theme == "Dark energy equation of state"
+
+    def test_digest_missing_required_field_rejected(self) -> None:
+        malformed = {k: v for k, v in WRITER_DIGEST.items() if k != "id"}
+
+        with pytest.raises(ValidationError):
+            DigestRecord.model_validate(malformed)
+
+    def test_digest_wrong_typed_field_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            DigestRecord.model_validate({**WRITER_DIGEST, "papers_found": "twelve"})
+
+    def test_partial_parse_status_is_declared(self) -> None:
+        """``parse_digests`` adds this key only when a section failed to parse."""
+        record = DigestRecord.model_validate({**WRITER_DIGEST, "parse_status": "partial"})
+
+        assert record.parse_status == "partial"
+
+
 class TestCurationHistoryContract:
     """``<ws>/curation-history.json`` had no contract model at all (D-18).
 
@@ -1002,6 +1090,20 @@ class TestWriterBytesAreTheContract:
 
         WorkspaceStatsFile.model_validate(compute_stats.compute_workspace(ws_data))
         StatsFile.model_validate(compute_stats.compute_global({"cosmology": ws_data}, []))
+
+    def test_parsed_digests_validate(self) -> None:
+        from construct.views.lib import parse_cards, parse_digests
+
+        if not self.V02_WORKSPACE.is_dir():
+            pytest.skip(f"fixture not found: {self.V02_WORKSPACE}")
+
+        warnings: list[dict] = []
+        cards = parse_cards.parse(self.V02_WORKSPACE, warnings)
+        digests = parse_digests.parse(self.V02_WORKSPACE, warnings, cards=cards)
+
+        assert digests, "fixture produced zero digests — the assertion is vacuous"
+        payload = DigestsFile.model_validate({"digests": digests})
+        assert len(payload.digests) == len(digests)
 
     def test_parsed_curation_history_validates(self) -> None:
         from construct.views.lib import parse_curation

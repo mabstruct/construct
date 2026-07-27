@@ -67,12 +67,20 @@ def test_full_run_offline(
     assert digest_path.exists()
     assert digest_path.parent == test_workspace / "digests"
 
-    # DigestRecord appended to digests/digests.json.
+    # DigestRecord appended to digests/digests.json, in the parser's spelling
+    # (D-20): the same model validates the views projection and writes this file,
+    # so one spelling has to serve both.
     store_path = test_workspace / "digests" / "digests.json"
     assert store_path.exists()
     store = DigestsFile.model_validate_json(store_path.read_text(encoding="utf-8"))
     assert len(store.digests) == 1
     assert store.digests[0].id == "digest-run-full"
+    assert store.digests[0].theme.startswith("Research cycle digest")
+    assert store.digests[0].date
+    assert "considered=" in store.digests[0].summary_text
+    on_disk = json.loads(store_path.read_text(encoding="utf-8"))["digests"][0]
+    assert set(on_disk) >= {"id", "domain", "theme", "date", "summary_text"}
+    assert "card_ids" not in on_disk
 
     # last_queried stamped on the queried clusters.
     seeds = json.loads((test_workspace / "search-seeds.json").read_text(encoding="utf-8"))
@@ -125,6 +133,170 @@ def test_digest_degraded_notice(
 
     markdown = Path(result["digest_path"]).read_text(encoding="utf-8")
     assert "Degraded notice" in markdown
+
+
+def _digest_state(workspace: Path, run_id: str) -> dict:
+    """The minimum ``compile_digest`` reads — it is a plain node, not a graph."""
+    return {
+        "workspace_path": str(workspace),
+        "run_id": run_id,
+        "gate_queue": [],
+        "refs_created": [],
+        "cards_created": [],
+        "skipped_existing": [],
+        "decisions": [],
+        "retrieval": {},
+    }
+
+
+def test_digest_store_written_in_the_parser_spelling(test_workspace):
+    """D-20: ``compile_digest`` writes the same spelling the views parser emits."""
+    import json
+
+    from construct.llm.research_run import compile_digest
+
+    compile_digest(_digest_state(test_workspace, "run-spelling"))
+
+    on_disk = json.loads(
+        (test_workspace / "digests" / "digests.json").read_text(encoding="utf-8")
+    )
+    record = on_disk["digests"][0]
+
+    assert record["domain"]
+    assert record["theme"].startswith("Research cycle digest")
+    assert record["date"]
+    assert "considered=" in record["summary_text"]
+    # The pre-rename spellings are gone, and so is the phantom field the
+    # generator's adapter used to hard-code to an empty list.
+    for gone in ("domain_id", "title", "generated_at", "summary", "card_ids"):
+        assert gone not in record, gone
+
+
+def test_pre_rename_digest_store_is_migrated_on_read(test_workspace):
+    """T-18-18: renaming required fields must not cost a user a digest.
+
+    Existing workspaces hold a ``digests/digests.json`` in the pre-rename
+    spelling. Without read-side migration those records fail validation, and the
+    prior ``except ValueError`` path silently replaced the whole store with an
+    empty one — a rename quietly deleting a user's research history.
+    """
+    import json
+
+    from construct.llm.research_run import compile_digest
+
+    digests_dir = test_workspace / "digests"
+    digests_dir.mkdir(parents=True, exist_ok=True)
+    legacy_store = {
+        "digests": [
+            {
+                "id": "digest-legacy-one",
+                "domain_id": "cosmology",
+                "title": "An older research cycle",
+                "generated_at": "2026-03-01T09:00:00+00:00",
+                "card_ids": ["card-hubble-tension"],
+                "summary": "considered=3, approved=2, rejected=1, ingested=2",
+            },
+            {
+                "id": "digest-legacy-two",
+                "domain_id": "philosophy-of-mind",
+                "title": "A second older cycle",
+                "generated_at": "2026-03-02T09:00:00+00:00",
+                "card_ids": [],
+                "summary": "considered=1, approved=1, rejected=0, ingested=1",
+            },
+        ]
+    }
+    store_path = digests_dir / "digests.json"
+    store_path.write_text(json.dumps(legacy_store, indent=2), encoding="utf-8")
+
+    compile_digest(_digest_state(test_workspace, "run-after-migration"))
+
+    rewritten = json.loads(store_path.read_text(encoding="utf-8"))
+    by_id = {d["id"]: d for d in rewritten["digests"]}
+
+    # Nothing was discarded: both pre-existing digests plus the new one.
+    assert set(by_id) == {
+        "digest-legacy-one",
+        "digest-legacy-two",
+        "digest-run-after-migration",
+    }
+
+    # Content survived the rename intact, under the new spelling.
+    one = by_id["digest-legacy-one"]
+    assert one["domain"] == "cosmology"
+    assert one["theme"] == "An older research cycle"
+    assert one["date"] == "2026-03-01T09:00:00+00:00"
+    assert one["summary_text"] == "considered=3, approved=2, rejected=1, ingested=2"
+
+    # And the file is rewritten in the new spelling, not left mixed.
+    for record in rewritten["digests"]:
+        for gone in ("domain_id", "title", "generated_at", "summary", "card_ids"):
+            assert gone not in record, (record["id"], gone)
+
+
+def test_digest_rerun_replaces_rather_than_appends(test_workspace):
+    """The replace-by-id idempotency contract survives the rename."""
+    import json
+
+    from construct.llm.research_run import compile_digest
+
+    compile_digest(_digest_state(test_workspace, "run-idempotent"))
+    compile_digest(_digest_state(test_workspace, "run-idempotent"))
+
+    store = json.loads(
+        (test_workspace / "digests" / "digests.json").read_text(encoding="utf-8")
+    )
+
+    ids = [d["id"] for d in store["digests"]]
+    assert ids == ["digest-run-idempotent"]
+
+
+def test_digest_record_matches_the_views_parser_field_names():
+    """One spelling, two authors: the parser's keys are the model's fields."""
+    from construct.views.models import DigestRecord
+
+    fields = set(DigestRecord.model_fields)
+
+    assert {"id", "domain", "theme", "date", "summary_text"} <= fields
+    # The adapter hard-coded this to ``[]`` and no parser ever emitted it.
+    assert "card_ids" not in fields
+
+
+def test_unreadable_digest_store_does_not_discard_a_valid_one(test_workspace):
+    """A record that cannot be migrated is dropped; its neighbours are not."""
+    import json
+
+    from construct.llm.research_run import compile_digest
+
+    digests_dir = test_workspace / "digests"
+    digests_dir.mkdir(parents=True, exist_ok=True)
+    store_path = digests_dir / "digests.json"
+    store_path.write_text(
+        json.dumps(
+            {
+                "digests": [
+                    {"domain_id": "cosmology", "title": "no id at all"},
+                    {
+                        "id": "digest-survivor",
+                        "domain_id": "cosmology",
+                        "title": "keeps its content",
+                        "generated_at": "2026-03-01T09:00:00+00:00",
+                        "summary": "considered=1",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    compile_digest(_digest_state(test_workspace, "run-partial"))
+
+    rewritten = json.loads(store_path.read_text(encoding="utf-8"))
+    by_id = {d["id"]: d for d in rewritten["digests"]}
+
+    assert "digest-survivor" in by_id
+    assert by_id["digest-survivor"]["theme"] == "keeps its content"
+    assert "digest-run-partial" in by_id
 
 
 def test_no_writes_before_approval(test_workspace, sample_search_results, scored_findings_batch, monkeypatch):
