@@ -10,10 +10,11 @@ CONSTRUCT is a local-first, agent-powered personal knowledge system. You systema
 
 | Track | Status | Paths |
 |-------|--------|-------|
-| **Claude-native (active)** | Current product | `CONSTRUCT-CLAUDE-impl/`, `CONSTRUCT-CLAUDE-spec/` |
-| **Python v0.1 (archived)** | Paused; preserved for future runtime work | `archive/v01-python/spec/`, `archive/v01-python/gsd/`, `src/`, `tests/` |
+| **Claude-native (active)** | Current product surface | `CONSTRUCT-CLAUDE-impl/`, `CONSTRUCT-CLAUDE-spec/` |
+| **Python runtime (active)** | Resumed at v0.4; v0.5 milestone work happens here | `src/`, `tests/` |
+| **Python v0.1 (archived)** | Frozen; preserved for reference only | `archive/v01-python/spec/`, `archive/v01-python/gsd/` |
 
-**Default:** All work uses the Claude-native track unless the user explicitly asks to resume Python runtime exploration.
+**Default:** Both active tracks are in play. `src/` and `tests/` carry the v0.4/v0.5 runtime work; `archive/v01-python/` is the only frozen tree.
 
 ## Current focus
 
@@ -59,8 +60,8 @@ v0.1 Python spec (archive/v01-python/) → Claude-native pivot → v0.1 impl →
 ## Guardrails
 
 - Do not introduce cloud-first, multi-user, or auth-heavy architecture into v0.1.
-- Do not modify `archive/v01-python/`, `src/`, or `tests/` unless explicitly resuming the Python approach.
-- **No active GSD.** `.planning/` was archived to `archive/v01-python/gsd/`. Do not recreate GSD state until CONSTRUCT03 implementation begins — use `CONSTRUCT-CLAUDE-v03-planning/` for planning work now.
+- Do not modify `archive/v01-python/`. That tree is genuinely frozen — the v0.1 record, kept for reference and superseded by the active runtime. `src/` and `tests/` are **not** frozen: the Python approach was resumed at v0.4, and the v0.5 milestone is built there.
+- **GSD is active.** `.planning/` is the live planning tree — current `STATE.md`, the active v0.5 `ROADMAP.md`, and per-phase artifacts under `.planning/phases/`. GSD commands are the working method for planning and execution. (`CONSTRUCT-CLAUDE-v03-planning/` is the historical v0.3 planning tree, not the current one.)
 - Do not treat `archive/v01-python/spec/` as the living specification — use `CONSTRUCT-CLAUDE-spec/`.
 - Keep the knowledge model and workspace format shared between both approaches.
 
@@ -181,6 +182,7 @@ CONSTRUCT is a local-first knowledge management system that helps a user collabo
 - None (direct package imports via `pythonpath = ["src"]` in pytest; package installed in `.venv`)
 ### Pydantic Conventions
 - Every Pydantic model sets `model_config = ConfigDict(extra="forbid")` — no extra fields allowed
+  - Sole exception: the derived-views projection models use `extra="ignore"` (D-03), a deliberate user-locked decision — do not "restore" them to forbid.
 - Use `Field()` for constraints: `Field(ge=1, le=5)`, `Field(min_length=1)`, `Field(default_factory=list)`
 - Use `@field_validator("field_name")` + `@classmethod` pattern (Pydantic v2)
 - Use `@model_validator(mode="after")` for cross-field validation
