@@ -709,3 +709,195 @@ def test_curation_events_emitted(curation_workspace, monkeypatch):
     events_log = (curation_workspace / "log" / "events.jsonl").read_text(encoding="utf-8")
     assert "gate_review_approved" in events_log
     assert "curation_cycle_complete" in events_log
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 18 Plan 06 — GOV-02 / GOV-03: opaque proposal ids, id-keyed decisions,
+# complete-coverage rejection, and the checkpoint-id ETag
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# The defect these pin: ``_resolve_decisions`` zipped the resume payload against
+# the queue POSITIONALLY and, when the payload was short or absent, substituted
+# each proposal's own recommended ``decision`` — a canonical write the user never
+# approved. Every test below asserts zero writes by reading the WORKSPACE back,
+# never by trusting a return value.
+
+#: One PRE-Phase-18 queued proposal: the exact dict shape the old producers
+#: persisted, carrying NO ``proposal_id``. Seeded into the initial state so the
+#: ``operator.add`` reducer lands it in the checkpoint verbatim.
+_LEGACY_PROPOSAL = {
+    "kind": "archive",
+    "decision": "archive",
+    "payload": {"card_id": "stale-orphan-card"},
+}
+
+
+def _pause_legacy_run(ws: _Path, run_id: str = "cur-legacy") -> list:
+    """Build a REAL paused sqlite checkpoint whose queue carries no proposal ids.
+
+    Writes through the module's own ``_open_checkpointer`` (the same
+    ``.construct/workflow/curation-run.sqlite`` the review/inspect entry points
+    re-open), seeding ``gate_queue`` with ``_LEGACY_PROPOSAL`` before the graph
+    runs. Offline the three producers enqueue nothing, so the persisted queue is
+    exactly the legacy entry — a faithful pre-Phase-18 pause. Returns the queue as
+    persisted (still id-less).
+    """
+    from construct.llm import curation_run
+
+    saver, conn = curation_run._open_checkpointer(ws)
+    try:
+        graph = curation_run.build_curation_run_graph(saver)
+        cfg = {"configurable": {"thread_id": run_id}}
+        state = curation_run._initial_state(
+            curation_run.CurationRunInput(workspace_path=str(ws), run_id=run_id)
+        )
+        state["gate_queue"] = [dict(_LEGACY_PROPOSAL)]
+        graph.invoke(state, cfg)
+        snap = graph.get_state(cfg)
+        assert snap.next == ("process_inbox",), snap.next
+        return list(snap.values["gate_queue"])
+    finally:
+        conn.close()
+
+
+def _raw_snapshot(ws: _Path, run_id: str):
+    """Read the persisted snapshot through a fresh checkpointer (no migration)."""
+    from construct.llm import curation_run
+
+    saver, conn = curation_run._open_checkpointer(ws)
+    try:
+        graph = curation_run.build_curation_run_graph(saver)
+        return graph.get_state({"configurable": {"thread_id": run_id}})
+    finally:
+        conn.close()
+
+
+# ── Task 1: an opaque id on every proposal, minted at enqueue ────────────────
+
+
+def test_proposal_id_is_opaque_and_unique(curation_workspace):
+    """GOV-02 / D-09: ``CurationProposal`` carries ``proposal_id``, minted at
+    enqueue, and two TEXTUALLY IDENTICAL proposals receive different ids — the
+    property a content hash could never provide."""
+    from construct.llm import curation_run
+
+    assert "proposal_id" in curation_run.CurationProposal.model_fields
+
+    payload = {"card_id": "stale-orphan-card"}
+    first = curation_run.CurationProposal(kind="archive", decision="archive", payload=dict(payload))
+    second = curation_run.CurationProposal(kind="archive", decision="archive", payload=dict(payload))
+
+    assert first.proposal_id and second.proposal_id
+    assert first.proposal_id != second.proposal_id, "identical proposals must not share an id"
+    # The chosen form: the FULL 32-character uuid4 hex — never truncated.
+    assert len(first.proposal_id) == 32, first.proposal_id
+    # Opaque: nothing about the queue, the run, or the payload is readable from it.
+    assert "stale-orphan-card" not in first.proposal_id
+    assert "archive" not in first.proposal_id
+
+
+def test_proposal_id_rejects_non_opaque_values():
+    """T-18-08: a caller-supplied id carrying a path separator, a parent-directory
+    segment, or whitespace is rejected by the identifier guard, and the message
+    carries an example of the correct form (AGENTS.md validator convention)."""
+    import pytest
+    from pydantic import ValidationError
+
+    from construct.llm import curation_run
+
+    for evil in ("../../../tmp/evil", "a/b", "has space", "UPPER", "", "trailing-"):
+        with pytest.raises(ValidationError) as excinfo:
+            curation_run.CurationProposal(kind="archive", proposal_id=evil)
+        message = str(excinfo.value)
+        assert "proposal_id" in message
+        # An example of a VALID id must appear so the caller can self-correct.
+        assert curation_run._PROPOSAL_ID_EXAMPLE in message, message
+
+    # A real minted id passes the same guard unchanged.
+    good = curation_run._new_proposal_id()
+    assert curation_run.CurationProposal(kind="archive", proposal_id=good).proposal_id == good
+
+
+def test_proposal_id_survives_pause_and_reload(curation_workspace, monkeypatch):
+    """D-09: the id is persisted INTO the sqlite checkpoint — a reload through a
+    fresh checkpointer/connection surfaces exactly the ids the pause produced."""
+    from construct.llm import curation_run
+
+    _install_gate_mocks(monkeypatch, promotion_decision="promote", target_lifecycle="growing")
+
+    run = curation_run.run_curation_run(
+        curation_run.CurationRunInput(
+            workspace_path=str(curation_workspace), run_id="cur-idpersist"
+        )
+    )
+    assert run.status == "awaiting_review"
+    paused_ids = [entry["proposal_id"] for entry in run.gate_queue]
+    assert paused_ids and all(paused_ids), "every queued proposal must carry an id"
+    assert len(set(paused_ids)) == len(paused_ids), "ids must be unique within the queue"
+
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-idpersist"
+        )
+    )
+    assert [entry["proposal_id"] for entry in insp.gate_queue] == paused_ids
+
+
+def test_legacy_checkpoint_migrated_on_read(curation_workspace):
+    """D-12 / T-18-25: a run paused BEFORE this phase loads rather than erroring —
+    ids are injected at the raw-dictionary stage, so the forbid-extra model never
+    sees an id-less proposal — and migration restores the QUEUE and no decision."""
+    from construct.llm import curation_run
+
+    persisted = _pause_legacy_run(curation_workspace)
+    assert persisted, "the legacy fixture must persist a queue"
+    assert all("proposal_id" not in entry for entry in persisted), persisted
+
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-legacy"
+        )
+    )
+    assert insp.status == "awaiting_review", insp.message
+    migrated_ids = [entry["proposal_id"] for entry in insp.gate_queue]
+    assert len(migrated_ids) == len(persisted)
+    assert all(migrated_ids), "every migrated proposal must have an id"
+    assert len(set(migrated_ids)) == len(migrated_ids)
+
+    # Migration is STABLE: the id a reader is shown is the id a resume accepts.
+    # (It must also be write-free — persisting it would advance the checkpoint
+    # that D-11 uses as an ETag, making every subsequent resume stale.)
+    again = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-legacy"
+        )
+    )
+    assert [entry["proposal_id"] for entry in again.gate_queue] == migrated_ids
+
+    # NO decision was carried over: the resume payload channel is still unset and
+    # the migrated entry still carries only the gate's own recommendation.
+    snap = _raw_snapshot(curation_workspace, "cur-legacy")
+    assert snap.values.get("decisions") is None, "migration must never carry a decision"
+    assert all("proposal_id" not in entry for entry in snap.values["gate_queue"]), (
+        "migration must not write back into the checkpoint"
+    )
+
+
+def test_research_gate_entries_carry_the_same_shape():
+    """GOV-02: both graphs carry ONE shape — the research queue entry gains the
+    same opaque id, minted the same way, guarded by the same validator."""
+    import pytest
+    from pydantic import ValidationError
+
+    from construct.llm import research_run
+
+    assert "proposal_id" in research_run.GateQueueEntry.model_fields
+    first = research_run.GateQueueEntry(finding={"url": None}, decision="skip")
+    second = research_run.GateQueueEntry(finding={"url": None}, decision="skip")
+    # Two findings with a NULL url — the exact case the old url-keyed mode could
+    # not distinguish — still receive distinct ids.
+    assert first.proposal_id != second.proposal_id
+    assert len(first.proposal_id) == 32
+
+    with pytest.raises(ValidationError):
+        research_run.GateQueueEntry(finding={}, decision="skip", proposal_id="../evil")
