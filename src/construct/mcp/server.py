@@ -30,7 +30,7 @@ def create_server() -> FastMCP:
         def make_handler(capability=cap) -> Any:
             def handler(**kwargs: Any) -> str:
                 try:
-                    result = capability.handler(**kwargs)
+                    result = registry.invoke(capability.id, kwargs)
                     serialized = _serialize_result(result)
                     return json.dumps(serialized, indent=2)
                 except Exception as exc:
