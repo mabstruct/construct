@@ -1,9 +1,12 @@
 """Local ops dashboard — run with: streamlit run src/construct/ui/streamlit_app.py
 
-Per ADV-04 and D-03: Streamlit app with 3 panels:
+Per ADV-04 and D-03 (as amended by D-13): Streamlit app with 2 panels:
   - Dashboard: graph health (card/connection/domain counts, recent events)
   - Capability Runner: list & execute capabilities from registry (dynamic form)
-  - Gate Review: review ask.domain Q&A results and bridge candidates
+
+The Gate Review panel was deleted in Phase 18 (D-13/GOV-04): it was a second
+canonical writer with no run behind it. Review now happens only through the
+reviewed workflow's own resume path.
 
 All capability executions go through the capability registry per D-04.
 No SOT writes from the UI.
@@ -43,7 +46,6 @@ with st.sidebar:
 # Page routing (per PRD §10.1)
 home = st.Page("dashboard.py", title="Dashboard", icon="📊")
 runner = st.Page("capability_runner.py", title="Capability Runner", icon="⚡")
-gates = st.Page("gate_review.py", title="Gate Review", icon="🔍")
 
-pg = st.navigation([home, runner, gates])
+pg = st.navigation([home, runner])
 pg.run()
