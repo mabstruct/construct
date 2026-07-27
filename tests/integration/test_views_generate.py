@@ -18,6 +18,10 @@ import pytest
 
 from construct.services.knowledge import create_card
 from construct.views import models as views_models
+from construct.views.contracts import (
+    GLOBAL_FILE_CONTRACTS,
+    PER_WORKSPACE_FILE_CONTRACTS,
+)
 from construct.views.generate import generate
 from construct.views.lib import frontmatter, parse_cards
 from construct.views.models import CardRecord, unwrap_payload
@@ -30,6 +34,13 @@ FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 # produces non-empty ``connects_to`` lists and the CardRecord.connections
 # contract is genuinely exercised. No connected cards had to be added.
 POPULATED_FIXTURE = FIXTURES_DIR / "v02" / "multi-domain-medium"
+
+# D-19's cardinality expression is ``4 + 6·N_workspaces + 1``. An expression
+# checked at a single N is indistinguishable from a constant fitted to that N, so
+# the round-trip guard runs against a one-workspace root and a two-workspace root
+# and the same expression has to hold for both.
+ONE_WORKSPACE_FIXTURE = FIXTURES_DIR / "v02" / "single-domain-small"
+TWO_WORKSPACE_FIXTURE = POPULATED_FIXTURE
 
 # Every model declared in construct.views.models (D-02 strictness guard).
 ALL_MODEL_NAMES = [
@@ -59,17 +70,212 @@ ALL_MODEL_NAMES = [
 ]
 
 
-def _populated_install_root(tmp_path: Path) -> Path:
-    """Copy the shared populated fixture into *tmp_path* and clear its build dir.
+def _populated_install_root(
+    tmp_path: Path, fixture: Path = POPULATED_FIXTURE, *, name: str = "populated"
+) -> Path:
+    """Copy a populated fixture into *tmp_path* and clear its build dir.
 
     The fixture is shared and generation writes files, so it is never generated
     into in place. The pre-built ``views/build/`` is removed so the fingerprint
     cache cannot short-circuit generation and mask the model change (Pitfall 2).
+
+    *fixture* defaults to the two-workspace root every existing caller uses; the
+    round-trip guard passes the one-workspace root as well so D-19's cardinality
+    expression is proven at two values of N rather than fitted to one.
     """
-    root = tmp_path / "populated"
-    shutil.copytree(POPULATED_FIXTURE, root)
+    root = tmp_path / name
+    shutil.copytree(fixture, root)
     shutil.rmtree(root / "views" / "build", ignore_errors=True)
     return root
+
+
+def _data_dir(root: Path) -> Path:
+    return root / "views" / "build" / "data"
+
+
+def _payload(path: Path) -> dict:
+    return unwrap_payload(json.loads(path.read_text(encoding="utf-8")))
+
+
+def _expected_slots(data_dir: Path) -> set[str]:
+    """The slot names the shared contract tables enumerate for this build.
+
+    Derived from ``views.contracts`` rather than hand-listed, so a file dropped
+    from the tables changes this expectation and the set-equality assertions
+    below fail instead of quietly checking one file fewer (WR-01).
+    """
+    ws_ids = sorted(d.name for d in data_dir.iterdir() if d.is_dir())
+    slots = set(GLOBAL_FILE_CONTRACTS)
+    for ws_id in ws_ids:
+        slots |= {f"{ws_id}/{name}" for name in PER_WORKSPACE_FILE_CONTRACTS}
+    return slots
+
+
+def _validate_slots(install_root: Path) -> tuple[set[str], set[str], set[str], int]:
+    """Run ``views validate`` and return (passing, failing, missing, exit_code)."""
+    from typer.testing import CliRunner
+
+    from construct.cli import app
+
+    result = CliRunner().invoke(
+        app, ["views", "validate", "--install-root", str(install_root)]
+    )
+
+    def _marked(marker: str) -> set[str]:
+        return {
+            line.strip().removeprefix(marker).strip().removesuffix("(missing)").strip()
+            for line in result.stdout.splitlines()
+            if line.strip().startswith(marker)
+        }
+
+    return _marked("✓"), _marked("✗"), _marked("?"), result.exit_code
+
+
+# ---------------------------------------------------------------------------
+# The shared contract table (Plan 18-05 Task 1)
+# ---------------------------------------------------------------------------
+
+
+def test_contract_tables_are_the_single_file_enumeration() -> None:
+    """``views/contracts.py`` replaces two independent file→model maps.
+
+    Before this plan the same mapping existed twice — ``generate.py``'s adapter
+    tables and ``cli.py``'s hand-enumerated list inside ``views validate`` — so
+    the writer and the validator could (and did) disagree about which files
+    exist. Both now read one table, and the adapter callable is gone: after the
+    models were conformed to the writer in Plan 04 the adapter was the identity
+    function, and reintroducing one is how the fork happened in the first place.
+    """
+    import construct.views.generate as gen_mod
+
+    assert len(GLOBAL_FILE_CONTRACTS) == 4, GLOBAL_FILE_CONTRACTS
+    assert len(PER_WORKSPACE_FILE_CONTRACTS) == 6, PER_WORKSPACE_FILE_CONTRACTS
+
+    for removed in ("_FILE_MODEL_MAP", "_PER_WS_FILES", "_Adapter", "_as_written"):
+        assert not hasattr(gen_mod, removed), (
+            f"generate.py still defines {removed}; the adapter tables are the "
+            f"second copy of the file→model map this plan deletes"
+        )
+
+    # The global and per-workspace ``stats.json`` are different files with
+    # different writers and different contracts. One table cannot express that,
+    # which is why there are two.
+    assert GLOBAL_FILE_CONTRACTS["stats.json"] is not PER_WORKSPACE_FILE_CONTRACTS["stats.json"]
+
+
+def test_every_written_data_file_is_gated_by_a_contract(tmp_path: Path) -> None:
+    """No data file reaches disk unvalidated (research Finding V6, OQ-C).
+
+    Files that fell through the old adapter tables to a bare ``return False``
+    were written blind. Deleting those tables without replacing the validation
+    would have downgraded ``views generate`` from a validating writer to a blind
+    one and left the phase depending on ``views validate`` being run separately,
+    which no workflow guarantees.
+    """
+    root = _populated_install_root(tmp_path)
+    report = generate(root)
+    assert report.validation_errors == [], report.validation_errors
+
+    data_dir = _data_dir(root)
+    ungated = []
+    for path in sorted(data_dir.rglob("*.json")):
+        # ``_build_meta.json`` is build metadata, not view data.
+        if path.name.startswith("_"):
+            continue
+        rel = path.relative_to(data_dir).as_posix()
+        if rel in GLOBAL_FILE_CONTRACTS:
+            continue
+        if any(rel.endswith(f"/{name}") for name in PER_WORKSPACE_FILE_CONTRACTS):
+            continue
+        ungated.append(rel)
+
+    assert ungated == [], f"data files written with no contract model: {ungated}"
+
+
+def test_a_model_violating_payload_is_rejected_and_no_build_is_published(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """T-18-21: the writer validates the bytes it is about to write.
+
+    The corruption here is applied to a *parser's own output*, not to the
+    validator, so what fails is the real payload against its real model — which
+    is the only way to prove the writer stopped validating an adapted projection
+    it then discarded.
+
+    Scope note: the sibling data files ARE rewritten by the failing run, because
+    the write loop validates and writes file-by-file. What the run must not do is
+    *publish*: ``version.json`` is the pointer the SPA polls and
+    ``_build_meta.json`` is the fingerprint cache that would latch the failure
+    into permanent success, and neither may advance for a build whose files did
+    not all land.
+    """
+    from construct.views.lib import compute_stats
+
+    root = _populated_install_root(tmp_path)
+    first = generate(root)
+    assert first.validation_errors == [], first.validation_errors
+
+    build_dir = root / "views" / "build"
+    data_dir = _data_dir(root)
+    untouched = {
+        path: path.read_bytes()
+        for path in (
+            build_dir / "version.json",
+            data_dir / "_build_meta.json",
+            data_dir / "stats.json",
+        )
+    }
+
+    # ``GlobalStatsTotals.workspaces`` is required — it is the discriminator that
+    # keeps the global stats.json from validating against the per-workspace
+    # model — so a totals map without it is a genuine contract violation of the
+    # exact dict the write loop would otherwise hand to ``_write_atomic``.
+    monkeypatch.setattr(compute_stats, "compute_global", lambda *a, **k: {"totals": {}})
+
+    # Invalidate only the config fingerprint, so the incremental gate re-runs the
+    # build (from cached workspace payloads) rather than short-circuiting.
+    cfg_dir = root / ".construct"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    (cfg_dir / "config.yaml").write_text(
+        "views:\n  workspace_landing: dashboard\n", encoding="utf-8"
+    )
+
+    second = generate(root)
+
+    assert second.success is False, "a model-violating payload was accepted"
+    assert any(err.startswith("stats.json:") for err in second.validation_errors), (
+        second.validation_errors
+    )
+
+    for path, before in untouched.items():
+        assert path.read_bytes() == before, (
+            f"{path.name} changed on a run that failed validation — a partial "
+            f"build was published"
+        )
+
+
+def test_views_validate_gates_the_two_previously_ungated_workspace_files(
+    tmp_path: Path,
+) -> None:
+    """D-18's models are only gates if the user's own check invokes them.
+
+    ``<ws>/stats.json`` and ``<ws>/curation-history.json`` were the two files
+    with no contract model, and they were also the two files ``views validate``
+    never looked at. Both sides now read the same table, so the validator's slot
+    list grows with it automatically.
+    """
+    root = _populated_install_root(tmp_path)
+    assert generate(root).validation_errors == []
+
+    passing, failing, _missing, exit_code = _validate_slots(root)
+
+    assert failing == set(), failing
+    assert exit_code == 0
+
+    ws_ids = sorted(d.name for d in _data_dir(root).iterdir() if d.is_dir())
+    assert ws_ids, "the populated fixture produced no workspace directories"
+    for ws_id in ws_ids:
+        assert {f"{ws_id}/stats.json", f"{ws_id}/curation-history.json"} <= passing, passing
 
 
 def test_fresh_workspace_generates_clean(scaffolded_install_root: Path) -> None:
