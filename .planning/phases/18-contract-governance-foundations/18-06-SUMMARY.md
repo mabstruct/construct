@@ -328,6 +328,15 @@ None.
 
 None. No new network endpoint, auth path, file-access pattern, or schema change at a trust boundary was introduced beyond the two guarded input fields (`proposal_id`, validated; `checkpoint_id`, compared by equality and never used in a path).
 
+## Self-Check: PASSED
+
+All 6 modified source/test files and the SUMMARY exist on disk; all 7 plan commits
+(`245fe97`, `65fa35a`, `8c2148f`, `903ed18`, `01b38e3`, `6001fae`, `50146d0`) are present
+on the worktree branch; the working tree is clean. Every task's `<acceptance_criteria>`
+was re-run and logged in the Verification section above — the only unmet item is
+`pytest -q` with no new failures, which is the documented `test_research_run.py` issue
+(file owned by concurrent plan 18-07; fixes tabulated under Issues Encountered).
+
 ## Next
 
 Ready for phase verification. Phase 19's API and Phase 22's review wizards should be built against the `proposal_id` map contract and the rejection shapes documented above — and must use `_wrap_resume` if they invoke the graph directly.
