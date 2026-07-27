@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from construct.capabilities.registry import CapabilityRegistry, CapabilityRecord
 from construct.pipelines.workflow_runner import WorkflowRunner
@@ -87,13 +87,41 @@ from construct.llm.daily_run import (
 # ---------------------------------------------------------------------------
 # Input models
 # ---------------------------------------------------------------------------
+#
+# D-06: every model below sets ``extra="forbid"``. The seam validates a payload
+# against the declared model before dispatch (GOV-01), so a model that forbids
+# nothing is a seam that enforces nothing — it would type-check the declared
+# fields and then hand the handler whatever else the caller sent.
+# ``tests/contract/test_capability_seam.py`` holds this as a cardinality guard:
+# the number of forbidding models must equal the registry size, so a capability
+# cannot be added unguarded.
 
 
 class WorkspacePathInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     path: Path
 
 
+class WorkspaceInitInput(BaseModel):
+    """Input for ``workspace.init`` — describes ``initialize_workspace``.
+
+    ``WorkspacePathInput`` declared a single ``path`` and was therefore a
+    contract for a call nobody could make: the service takes ``root`` and a
+    ``domain``. T-18-13: ``domain`` is the *typed* ``DomainInitInput``, not an
+    open dict, so its own shape is enforced at the boundary before any directory
+    is created.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    root: Path
+    domain: DomainInitInput
+
+
 class CardCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     title: str
     epistemic_type: str
@@ -106,6 +134,8 @@ class CardCreateInput(BaseModel):
 
 
 class CardEditInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     card_id: str
     workspace: Path
     title: str | None = None
@@ -117,12 +147,16 @@ class CardEditInput(BaseModel):
 
 
 class CardArchiveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     card_id: str
     workspace: Path
     author: str = "curator"
 
 
 class ConnectionAddInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     from_id: str
     to_id: str
     conn_type: str
@@ -132,6 +166,8 @@ class ConnectionAddInput(BaseModel):
 
 
 class ConnectionRemoveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     from_id: str
     to_id: str
     conn_type: str
@@ -139,6 +175,8 @@ class ConnectionRemoveInput(BaseModel):
 
 
 class ConnectionListInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     card_id: str | None = None
     include_archived: bool = False
@@ -155,10 +193,14 @@ class CardListInput(BaseModel):
 
 
 class GraphStatusInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
 
 
 class ViewsGenerateDataInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # D-05: the contract is install-root scoped, not workspace scoped.
     # ``discover_workspaces`` scans only the *children* of its argument, so
     # handing it a single workspace discovers zero workspaces and silently
@@ -167,12 +209,29 @@ class ViewsGenerateDataInput(BaseModel):
 
 
 class WorkflowRunInput(BaseModel):
+    # Retained per plan 18-02. A grep at the time of that change found no
+    # remaining consumer: ``workflow.run`` was removed by D-10/CUR-05, and
+    # ``workflow.status`` moved to ``WorkflowStatusInput`` below because this
+    # model's ``workflow_name`` / ``start_step`` are fields its single-parameter
+    # runner lambda cannot receive.
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     workflow_name: str = "workflow"
     start_step: int = 0
 
 
+class WorkflowStatusInput(BaseModel):
+    """Input for ``workflow.status`` — one workspace, which is all its handler takes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workspace: Path
+
+
 class IngestSourceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     source: str
     domain_hint: str | None = None
@@ -189,6 +248,8 @@ class IngestSourceInput(BaseModel):
 
 
 class HelpSuggestInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
 
 
@@ -226,9 +287,11 @@ def create_registry() -> CapabilityRegistry:
         id="workspace.init",
         name="Initialize Workspace",
         description="Create a new CONSTRUCT workspace",
-        input_model=WorkspacePathInput,
+        input_model=WorkspaceInitInput,
         output_model=type(None),
-        handler=initialize_workspace,
+        # 18-02 adapter: the seam dumps nested models, so the shim rebuilds the
+        # DomainInitInput dataclass before calling initialize_workspace.
+        handler=_workspace_init_shim,
         cli_name="init",
     ))
     registry.register(CapabilityRecord(
@@ -279,7 +342,9 @@ def create_registry() -> CapabilityRegistry:
         description="Archive a knowledge card, preserving its connections",
         input_model=CardArchiveInput,
         output_model=OperationResult,
-        handler=archive_card,
+        # 18-02 adapter: map schema workspace → archive_card's workspace_root,
+        # coerce the author enum. Dual-mode until plan 18-03 normalizes cli.py.
+        handler=_archive_card_shim,
         cli_name="knowledge.card.archive",
     ))
     registry.register(CapabilityRecord(
@@ -299,7 +364,9 @@ def create_registry() -> CapabilityRegistry:
         description="Remove a typed connection between two cards",
         input_model=ConnectionRemoveInput,
         output_model=OperationResult,
-        handler=remove_connection,
+        # 18-02 adapter: map schema workspace → remove_connection's
+        # workspace_root, coerce conn_type. Dual-mode until plan 18-03.
+        handler=_remove_connection_shim,
         cli_name="knowledge.connection.remove",
     ))
     registry.register(CapabilityRecord(
@@ -308,7 +375,9 @@ def create_registry() -> CapabilityRegistry:
         description="List typed connections, optionally filtered by card",
         input_model=ConnectionListInput,
         output_model=OperationResult,
-        handler=list_connections,
+        # 18-02 adapter: map schema workspace → list_connections's
+        # workspace_root. Dual-mode until plan 18-03 normalizes cli.py.
+        handler=_list_connections_shim,
         cli_name="knowledge.connection.list",
     ))
     registry.register(CapabilityRecord(
@@ -356,7 +425,7 @@ def create_registry() -> CapabilityRegistry:
         id="workflow.status",
         name="Workflow Status",
         description="Check active workflow status",
-        input_model=WorkflowRunInput,
+        input_model=WorkflowStatusInput,
         output_model=OperationResult,
         handler=lambda workspace: WorkflowRunner(workspace).status(),
         cli_name="workflow.status",
@@ -924,6 +993,92 @@ def _add_connection_shim(*args, **kwargs):
         note=kwargs.get("note"),
         created_by=ConnectionAuthor(kwargs.get("created_by", "construct")),
     )
+
+
+def _workspace_init_shim(root: str | Path, domain: DomainInitInput | dict) -> Path:
+    """18-02 adapter for workspace.init.
+
+    ``initialize_workspace`` takes ``root`` and a ``DomainInitInput`` dataclass,
+    while the seam dispatches ``handler(**model.model_dump())`` — and
+    ``model_dump()`` flattens a nested model into a plain dict. The dict is
+    already *validated* (``WorkspaceInitInput.domain`` is typed), so rebuilding
+    the dataclass here is a re-hydration, not a second validation.
+
+    Named parameters rather than ``*args``/``**kwargs``, so the binding audit in
+    ``tests/contract/test_capability_seam.py`` can still see this handler's
+    shape; they bind the positional and the keyword call form alike.
+    """
+    if isinstance(domain, dict):
+        domain = DomainInitInput(**domain)
+    return initialize_workspace(root, domain)
+
+
+def _archive_card_shim(
+    *args: object,
+    workspace: str | Path | None = None,
+    card_id: str | None = None,
+    author: str | CardAuthor = "curator",
+) -> OperationResult:
+    """18-02 adapter for knowledge.card.archive.
+
+    - Seam/keyword form: ``workspace`` maps to ``archive_card``'s
+      ``workspace_root`` and ``author`` is coerced to its enum.
+    - CLI positional form (cli.py:1362): ``handler(workspace, card_id,
+      author=…)`` already passes a ``CardAuthor`` — pass straight through.
+
+    The positional branch is dead once plan 18-03 normalizes ``cli.py`` onto the
+    seam, and only then (research Finding G5's ordering constraint). Unlike the
+    six older shims the keyword parameters are *declared*, so the model-to-handler
+    binding audit is not blinded by a bare ``**kwargs``.
+    """
+    if args:
+        return archive_card(*args, author=CardAuthor(author))
+    return archive_card(workspace, card_id, author=CardAuthor(author))
+
+
+def _list_connections_shim(
+    *args: object,
+    workspace: str | Path | None = None,
+    card_id: str | None = None,
+    include_archived: bool = False,
+) -> OperationResult:
+    """18-02 adapter for knowledge.connection.list.
+
+    - Seam/keyword form: ``workspace`` maps to ``list_connections``'s
+      ``workspace_root``.
+    - CLI form (cli.py:1503): ``handler(workspace, card_id=…, include_archived=…)``.
+
+    The positional branch is retired by plan 18-03, not before.
+    """
+    if args:
+        return list_connections(
+            *args, card_id=card_id, include_archived=include_archived
+        )
+    return list_connections(
+        workspace, card_id=card_id, include_archived=include_archived
+    )
+
+
+def _remove_connection_shim(
+    *args: object,
+    workspace: str | Path | None = None,
+    from_id: str | None = None,
+    to_id: str | None = None,
+    conn_type: str | ConnectionType | None = None,
+) -> OperationResult:
+    """18-02 adapter for knowledge.connection.remove.
+
+    - Seam/keyword form: ``workspace`` maps to ``remove_connection``'s
+      ``workspace_root`` and ``conn_type`` is coerced to its enum, mirroring
+      ``_add_connection_shim``.
+    - CLI positional form (cli.py:1459): ``handler(workspace, from_id, to_id,
+      ctype)`` already passes a ``ConnectionType`` — pass straight through.
+
+    The positional branch is retired by plan 18-03, not before.
+    """
+    if args:
+        return remove_connection(*args)
+    return remove_connection(workspace, from_id, to_id, ConnectionType(conn_type))
 
 
 def _ingest_source_shim(*args, **kwargs):
