@@ -452,11 +452,7 @@ def test_reviewed_promotion_applied(curation_workspace, monkeypatch):
     )
     assert start.status == "awaiting_review"
 
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-promote", approve_all=True
-        )
-    )
+    done = _review(curation_workspace, "cur-promote", approve_all=True)
     assert done.status == "completed"
     after_approve = _card_lifecycles(curation_workspace)
     # seed cards approved for promotion advance to their target lifecycle.
@@ -467,11 +463,7 @@ def test_reviewed_promotion_applied(curation_workspace, monkeypatch):
     curation_run.run_curation_run(
         curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-reject")
     )
-    curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-reject", reject_all=True
-        )
-    )
+    _review(curation_workspace, "cur-reject", reject_all=True)
     assert _card_lifecycles(curation_workspace) == before_reject, "reject must not write lifecycle"
 
 
@@ -489,11 +481,7 @@ def test_reviewed_connection_idempotent(curation_workspace, monkeypatch):
     curation_run.run_curation_run(
         curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-conn")
     )
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-conn", approve_all=True
-        )
-    )
+    done = _review(curation_workspace, "cur-conn", approve_all=True)
     assert done.status == "completed"
     after_first = _connection_keys(curation_workspace)
 
@@ -501,11 +489,7 @@ def test_reviewed_connection_idempotent(curation_workspace, monkeypatch):
     curation_run.run_curation_run(
         curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-conn-2")
     )
-    curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-conn-2", approve_all=True
-        )
-    )
+    _review(curation_workspace, "cur-conn-2", approve_all=True)
     after_second = _connection_keys(curation_workspace)
     assert after_second == after_first, "idempotent connection apply must not duplicate edges"
     # No duplicate (from,to,type) tuples ever appear.
@@ -528,11 +512,7 @@ def test_reviewed_archive_applied(curation_workspace, monkeypatch):
     )
     assert start.status == "awaiting_review"
 
-    curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-archive", approve_all=True
-        )
-    )
+    _review(curation_workspace, "cur-archive", approve_all=True)
     after = _card_lifecycles(curation_workspace)
     # A stale decay-candidate is archived once approved under the flag.
     assert after["stale-orphan-card"] == "archived"
@@ -561,11 +541,7 @@ def test_single_consolidated_gate(curation_workspace, monkeypatch):
     assert kinds, "gate_queue must carry tagged proposal envelopes"
     assert kinds <= {"promotion", "connection", "archive", "escalate"}
 
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-consolidated", approve_all=True
-        )
-    )
+    done = _review(curation_workspace, "cur-consolidated", approve_all=True)
     assert done.status == "completed"
 
 
@@ -705,11 +681,7 @@ def test_curation_events_emitted(curation_workspace, monkeypatch):
     curation_run.run_curation_run(
         curation_run.CurationRunInput(workspace_path=str(curation_workspace), run_id="cur-events")
     )
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-events", approve_all=True
-        )
-    )
+    done = _review(curation_workspace, "cur-events", approve_all=True)
     assert done.status == "completed"
 
     events_log = (curation_workspace / "log" / "events.jsonl").read_text(encoding="utf-8")
@@ -776,6 +748,26 @@ def _raw_snapshot(ws: _Path, run_id: str):
         return graph.get_state({"configurable": {"thread_id": run_id}})
     finally:
         conn.close()
+
+
+def _review(ws: _Path, run_id: str, **kwargs):
+    """Resume a paused run the way a real caller must: read the current ETag first.
+
+    D-11 makes ``checkpoint_id`` a REQUIRED field on the review input, so every
+    resume is a conditional request. Tests that are not themselves about
+    staleness go through this helper; the GOV-03 tests below pass explicit
+    (stale, near-miss, replayed) ids instead.
+    """
+    from construct.llm import curation_run
+
+    return curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(ws),
+            run_id=run_id,
+            checkpoint_id=curation_run._checkpoint_id(_raw_snapshot(ws, run_id)) or "",
+            **kwargs,
+        )
+    )
 
 
 # ── Task 1: an opaque id on every proposal, minted at enqueue ────────────────
@@ -938,11 +930,7 @@ def test_complete_decision_map_is_applied(curation_workspace, monkeypatch):
     queue = _paused_queue(curation_workspace, "cur-map-ok", monkeypatch)
     decisions = {entry["proposal_id"]: entry["decision"] for entry in queue}
 
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-map-ok", decisions=decisions
-        )
-    )
+    done = _review(curation_workspace, "cur-map-ok", decisions=decisions)
     assert done.status == "completed", done.message
     assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
 
@@ -959,11 +947,7 @@ def test_incomplete_decision_map_rejected_in_full(curation_workspace, monkeypatc
     decisions = {entry["proposal_id"]: entry["decision"] for entry in queue[1:]}
 
     before = _workspace_state(curation_workspace)
-    rejected = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-map-short", decisions=decisions
-        )
-    )
+    rejected = _review(curation_workspace, "cur-map-short", decisions=decisions)
 
     assert rejected.status == "failed", rejected.message
     assert uncovered in rejected.message, rejected.message
@@ -993,11 +977,7 @@ def test_unknown_decision_id_rejected_in_full(curation_workspace, monkeypatch):
     decisions[stranger] = "reject"
 
     before = _workspace_state(curation_workspace)
-    rejected = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-map-extra", decisions=decisions
-        )
-    )
+    rejected = _review(curation_workspace, "cur-map-extra", decisions=decisions)
     assert rejected.status == "failed", rejected.message
     assert stranger in rejected.message, rejected.message
     assert _workspace_state(curation_workspace) == before
@@ -1012,11 +992,7 @@ def test_resume_with_no_decisions_is_rejected(curation_workspace, monkeypatch):
     queue = _paused_queue(curation_workspace, "cur-map-none", monkeypatch)
     before = _workspace_state(curation_workspace)
 
-    rejected = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-map-none"
-        )
-    )
+    rejected = _review(curation_workspace, "cur-map-none")
     assert rejected.status == "failed", rejected.message
     for entry in queue:
         assert entry["proposal_id"] in rejected.message
@@ -1073,22 +1049,13 @@ def test_migrated_queue_requires_a_complete_map(curation_workspace):
     migrated_id = insp.gate_queue[0]["proposal_id"]
 
     before = _workspace_state(curation_workspace)
-    rejected = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-legacy-resume"
-        )
-    )
+    rejected = _review(curation_workspace, "cur-legacy-resume")
     assert rejected.status == "failed", rejected.message
     assert migrated_id in rejected.message
     assert _workspace_state(curation_workspace) == before
 
     # The migrated id is the one a resume accepts — the pending work is not lost.
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-legacy-resume",
-            decisions={migrated_id: "archive"},
-        )
-    )
+    done = _review(curation_workspace, "cur-legacy-resume", decisions={migrated_id: "archive"})
     assert done.status in ("completed", "degraded"), done.message
     assert _card_lifecycles(curation_workspace)["stale-orphan-card"] == "archived"
 
@@ -1103,24 +1070,17 @@ def test_blanket_flags_expand_into_a_complete_map(curation_workspace, monkeypatc
 
     queue = _paused_queue(curation_workspace, "cur-approve-all", monkeypatch)
     ids = {entry["proposal_id"] for entry in queue}
-    assert curation_run._build_resume_decisions(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-approve-all", approve_all=True
-        ),
-        queue,
-    ).keys() == ids
-    assert curation_run._build_resume_decisions(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-approve-all", reject_all=True
-        ),
-        queue,
-    ).keys() == ids
-
-    done = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-approve-all", approve_all=True
+    for flag in ("approve_all", "reject_all"):
+        expanded = curation_run._build_resume_decisions(
+            curation_run.CurationReviewInput(
+                workspace_path=str(curation_workspace), run_id="cur-approve-all",
+                checkpoint_id="unused-here", **{flag: True},
+            ),
+            queue,
         )
-    )
+        assert expanded.keys() == ids, f"{flag} must expand to a COMPLETE map"
+
+    done = _review(curation_workspace, "cur-approve-all", approve_all=True)
     assert done.status == "completed", done.message
     assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
 
@@ -1130,11 +1090,7 @@ def test_blanket_flags_expand_into_a_complete_map(curation_workspace, monkeypatc
     shutil.rmtree(ws_r / ".construct", ignore_errors=True)
     _paused_queue(ws_r, "cur-reject-all", monkeypatch)
     before = _workspace_state(ws_r)
-    rejected = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(ws_r), run_id="cur-reject-all", reject_all=True
-        )
-    )
+    rejected = _review(ws_r, "cur-reject-all", reject_all=True)
     assert rejected.status == "completed", rejected.message
     assert _workspace_state(ws_r) == before, "reject-all must write nothing"
 
@@ -1159,16 +1115,8 @@ def test_decision_key_order_does_not_change_the_outcome(curation_workspace, monk
     reverse = {e["proposal_id"]: e["decision"] for e in reversed(queue_b)}
     assert list(reverse) != [q["proposal_id"] for q in queue_b] or len(queue_b) == 1
 
-    done_a = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(curation_workspace), run_id="cur-order-a", decisions=forward
-        )
-    )
-    done_b = curation_run.review_curation_run(
-        curation_run.CurationReviewInput(
-            workspace_path=str(ws_b), run_id="cur-order-b", decisions=reverse
-        )
-    )
+    done_a = _review(curation_workspace, "cur-order-a", decisions=forward)
+    done_b = _review(ws_b, "cur-order-b", decisions=reverse)
 
     assert done_a.status == done_b.status == "completed"
     assert done_a.events == done_b.events, "event sequence must not depend on key order"
@@ -1208,3 +1156,178 @@ def test_research_url_keyed_decision_mode_is_gone():
     }
     with pytest.raises(curation_run.IncompleteDecisionMap):
         research_run._resolve_decisions(state)
+
+
+# ── Task 3: the checkpoint id as an ETag (GOV-03 / D-11) ────────────────────
+
+
+def test_inspect_returns_the_checkpoint_id_etag(curation_workspace, monkeypatch):
+    """D-11: inspecting a paused run returns the queue TOGETHER WITH the run's
+    current checkpoint id, and that id is stable across repeated reads and across
+    a second, independent connection to the same checkpoint database."""
+    from construct.llm import curation_run
+
+    _paused_queue(curation_workspace, "cur-etag", monkeypatch)
+
+    first = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag"
+        )
+    )
+    assert first.status == "awaiting_review"
+    assert first.checkpoint_id, "the queue must be returned with its ETag"
+    assert first.gate_queue
+
+    second = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag"
+        )
+    )
+    assert second.checkpoint_id == first.checkpoint_id, "stable across repeated reads"
+
+    # A separate connection to the same DB reads the same id (cross-process).
+    snap = _raw_snapshot(curation_workspace, "cur-etag")
+    assert curation_run._checkpoint_id(snap) == first.checkpoint_id
+
+
+def test_resume_with_current_checkpoint_id_proceeds(curation_workspace, monkeypatch):
+    """D-11: a resume carrying the run's current checkpoint id proceeds normally."""
+    from construct.llm import curation_run
+
+    _paused_queue(curation_workspace, "cur-etag-ok", monkeypatch)
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-ok"
+        )
+    )
+
+    done = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-ok",
+            checkpoint_id=insp.checkpoint_id, approve_all=True,
+        )
+    )
+    assert done.status == "completed", done.message
+    assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
+
+
+def test_stale_checkpoint_id_rejected_with_zero_writes(curation_workspace, monkeypatch):
+    """GOV-03 boundary edge: a checkpoint id differing by a SINGLE character is
+    rejected, nothing is written, and the run stays paused."""
+    from construct.llm import curation_run
+
+    _paused_queue(curation_workspace, "cur-etag-stale", monkeypatch)
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-stale"
+        )
+    )
+    current = insp.checkpoint_id
+    tampered = current[:-1] + ("0" if current[-1] != "0" else "1")
+    assert tampered != current and len(tampered) == len(current)
+
+    before = _workspace_state(curation_workspace)
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-stale",
+            checkpoint_id=tampered, approve_all=True,
+        )
+    )
+    assert rejected.status == "failed", rejected.message
+    assert tampered in rejected.message and current in rejected.message
+    assert _workspace_state(curation_workspace) == before
+
+    after = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-stale"
+        )
+    )
+    assert after.status == "awaiting_review"
+    assert after.checkpoint_id == current, "a rejected resume must not advance the run"
+
+
+def test_checkpoint_id_comparison_is_exact_string_equality(curation_workspace, monkeypatch):
+    """GOV-03 precision edge: no trimming, no case folding, no prefix matching.
+    Each near-miss below is rejected, and each rejection writes nothing."""
+    from construct.llm import curation_run
+
+    _paused_queue(curation_workspace, "cur-etag-exact", monkeypatch)
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-exact"
+        )
+    )
+    current = insp.checkpoint_id
+    near_misses = [
+        f" {current}",
+        f"{current} ",
+        f"\t{current}\n",
+        current.upper(),
+        current[:-4],
+        f"{current}0",
+    ]
+
+    before = _workspace_state(curation_workspace)
+    for candidate in near_misses:
+        if candidate == current:  # pragma: no cover - defensive
+            continue
+        rejected = curation_run.review_curation_run(
+            curation_run.CurationReviewInput(
+                workspace_path=str(curation_workspace), run_id="cur-etag-exact",
+                checkpoint_id=candidate, approve_all=True,
+            )
+        )
+        assert rejected.status == "failed", f"{candidate!r} must be rejected"
+        assert _workspace_state(curation_workspace) == before, candidate
+
+
+def test_replayed_resume_is_rejected_as_stale(curation_workspace, monkeypatch):
+    """GOV-03 idempotency edge — the sharpest of them: replaying a SUCCESSFUL
+    resume (the same complete map, the same checkpoint id) is rejected, because
+    the first resume advanced the checkpoint. This is what actually protects a
+    user from a double-submitted review."""
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-etag-replay", monkeypatch)
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-replay"
+        )
+    )
+    decisions = {entry["proposal_id"]: entry["decision"] for entry in insp.gate_queue}
+    assert len(decisions) == len(queue)
+
+    first = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-replay",
+            checkpoint_id=insp.checkpoint_id, decisions=decisions,
+        )
+    )
+    assert first.status == "completed", first.message
+
+    after_first = _workspace_state(curation_workspace)
+    replay = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-etag-replay",
+            checkpoint_id=insp.checkpoint_id, decisions=decisions,
+        )
+    )
+    assert replay.status == "failed", replay.message
+    assert "checkpoint" in replay.message.lower()
+    assert _workspace_state(curation_workspace) == after_first, "a replay must write nothing"
+
+
+def test_concurrency_configuration_stays_phase_19s(curation_workspace):
+    """T-18-26: the checkpoint concurrency contract (write-ahead logging, busy
+    timeouts, locking) is Phase 19's (OQ-4). The ETag stops cross-process
+    MISAPPLICATION; it does not claim to survive lock contention, and this phase
+    must not quietly start claiming otherwise."""
+    from pathlib import Path as _P
+
+    from construct.llm import curation_run, research_run
+
+    for module in (curation_run, research_run):
+        src = _P(module.__file__).read_text(encoding="utf-8")
+        for forbidden in ("busy_timeout", "journal_mode"):
+            assert forbidden not in src, f"{module.__name__} must not configure {forbidden}"
+        assert "WAL" not in src, f"{module.__name__} must not configure WAL"
