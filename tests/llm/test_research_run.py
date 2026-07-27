@@ -928,18 +928,26 @@ import inspect
 
 
 def test_gate_review_is_interrupt_only():
-    """T-10-07: the gate node body contains a single interrupt() and no writes."""
+    """T-10-07 / GOV-04: the gate node body has a single interrupt() and no writes.
+
+    The forbidden-token list is the union of this node's own write primitives and
+    the canonical write functions derived by the repo-wide boundary guard
+    (tests/contract/test_canonical_write_boundary.py). The two checks are
+    complements — per-node and category-level — so the narrower one is widened
+    from the same derivation rather than left to rot behind the broader one.
+    """
     from construct.llm import research_run
+    from tests.contract.test_canonical_write_boundary import canonical_write_functions
 
     src = inspect.getsource(research_run.gate_review)
     assert src.count("interrupt(") == 1
     for forbidden in (
         "_write_ref_file",
-        "create_card",
         "append_event",
         "append_rejected",
         "write_text",
         ".write(",
+        *canonical_write_functions(),
     ):
         assert forbidden not in src, f"gate node must not perform {forbidden}"
 
