@@ -16,6 +16,7 @@ from construct.schemas.workspace import ConnectionAuthor, ConnectionType
 from construct.services.init import DomainInitInput, WorkspaceInitError, initialize_workspace
 from construct.services.knowledge import OperationResult
 from construct.capabilities.catalog import get_registry
+from construct.capabilities.errors import CapabilityInputError, CapabilityNotFoundError
 from construct.mcp.server import run_server
 
 
@@ -1458,12 +1459,20 @@ def card_list(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """List cards. Optionally filter by domain or include archived cards."""
+    # GOV-01: dispatch through the one validating seam rather than reaching for
+    # the record and calling its handler directly. Typer has already produced a
+    # well-formed payload here, so the seam is a no-op for a valid invocation —
+    # the point is that CLI and MCP now share one validation and one error shape.
+    payload = {
+        "workspace": workspace,
+        "domain": domain,
+        "include_archived": include_archived,
+    }
     try:
-        cap = get_registry().get("knowledge.card.list")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, domain=domain, include_archived=include_archived)
+        result = get_registry().invoke("knowledge.card.list", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 

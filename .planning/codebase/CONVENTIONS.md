@@ -66,6 +66,7 @@ This project spans three distinct layers, each with its own conventions:
 
 **Model configuration:**
 - Every Pydantic model sets `model_config = ConfigDict(extra="forbid")` — no extra fields allowed
+  - Sole exception: the derived-views projection models use `extra="ignore"` (D-03), a deliberate user-locked decision — do not "restore" them to forbid.
 - Use `Field()` for constraints: `Field(ge=1, le=5)`, `Field(min_length=1)`, `Field(default_factory=list)`
 
 **Validators:**

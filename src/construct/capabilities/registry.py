@@ -5,7 +5,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+
+from construct.capabilities.errors import (
+    CapabilityInputError,
+    CapabilityNotFoundError,
+)
 
 
 InputModel = type[BaseModel]
@@ -38,6 +43,37 @@ class CapabilityRegistry:
             available = ", ".join(sorted(self._capabilities))
             raise KeyError(f"Capability '{cap_id}' not found. Available: {available}")
         return self._capabilities[cap_id]
+
+    def invoke(self, cap_id: str, payload: dict[str, Any]) -> Any:
+        """Resolve, validate, then run a capability — the one seam all surfaces share.
+
+        This is the GOV-01 contract. Three steps, in this order, with no surface
+        allowed to skip any of them:
+
+        1. resolve the record (``get``), converting its ``KeyError`` to a typed error;
+        2. validate ``payload`` against the capability's declared ``input_model``;
+        3. call the handler with the *validated* model's fields.
+
+        Step 2 is what was missing. ``input_model`` was computed into a JSON Schema
+        for MCP discovery and then discarded, so ``extra="forbid"`` never ran on any
+        real payload (WR-02). Routing every surface through here is what makes a
+        model's declared contract actually enforced rather than merely advertised.
+
+        There is deliberately no strict/lenient flag, no allowlist argument, and no
+        per-surface exception (D-05): a knob here would let one surface diverge from
+        another, which is the fork this seam exists to prevent.
+        """
+        try:
+            cap = self.get(cap_id)
+        except KeyError as exc:
+            raise CapabilityNotFoundError(cap_id, sorted(self._capabilities)) from exc
+
+        try:
+            model = cap.input_model.model_validate(payload)
+        except ValidationError as exc:
+            raise CapabilityInputError.from_validation_error(cap_id, exc) from exc
+
+        return cap.handler(**model.model_dump())
 
     def list(self) -> list[CapabilityRecord]:
         return sorted(self._capabilities.values(), key=lambda c: c.id)
