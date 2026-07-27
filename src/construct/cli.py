@@ -944,10 +944,12 @@ def validate(
         BridgesFile,
         CardsFile,
         ConnectionsFile,
+        CurationHistoryFile,
         DigestsFile,
         DomainsFile,
         EventsFile,
         StatsFile,
+        WorkspaceStatsFile,
         schema_for,
         unwrap_payload,
         validate_data,
@@ -994,11 +996,19 @@ def validate(
     for ws_dir in sorted(build_data_dir.iterdir()):
         if not ws_dir.is_dir():
             continue
+        # D-18: ``stats.json`` and ``curation-history.json`` used to be absent
+        # here, so the two files with no contract model were also the two files
+        # this command never looked at. A gate the user's check does not invoke
+        # is not a gate. The per-workspace ``stats.json`` takes
+        # ``WorkspaceStatsFile``, never the global ``StatsFile`` above — same
+        # filename, different writer, different contract.
         ws_files: list[tuple[str, type]] = [
             ("cards.json", CardsFile),
             ("connections.json", ConnectionsFile),
             ("digests.json", DigestsFile),
             ("events.json", EventsFile),
+            ("stats.json", WorkspaceStatsFile),
+            ("curation-history.json", CurationHistoryFile),
         ]
         for fname, mclass in ws_files:
             fpath = ws_dir / fname

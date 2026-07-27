@@ -360,6 +360,15 @@ def test_views_validate_accepts_generated_bytes(
     assert failing == set(), failing
     assert validated.exit_code == 0, validated.stdout
 
+    # D-18: the two previously ungated files are now among the files this
+    # command actually looks at — a model nothing invokes is not a gate.
+    checked = {
+        line.strip().removeprefix("✓ ").strip()
+        for line in validated.stdout.splitlines()
+        if line.strip().startswith("✓")
+    }
+    assert {"demo/stats.json", "demo/curation-history.json"} <= checked, checked
+
 
 def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(
     scaffolded_install_root: Path,
