@@ -651,11 +651,13 @@ def test_cross_process_resume(curation_workspace, sqlite_checkpointer, monkeypat
     assert snap.values.get("gate_queue"), "pending consolidated queue persisted across processes"
 
     # Phase 18 / GOV-02: the resume payload names each proposal by its opaque id.
+    # It MUST cross Command(resume=…) inside _wrap_resume's envelope — a bare dict
+    # is read by LangGraph as an interrupt-id mapping and silently discarded.
     decisions = {
         entry["proposal_id"]: entry.get("decision", "approve")
         for entry in snap.values["gate_queue"]
     }
-    res2 = graph2.invoke(Command(resume=decisions), cfg)
+    res2 = graph2.invoke(Command(resume=curation_run._wrap_resume(decisions)), cfg)
     assert graph2.get_state(cfg).next == ()
     assert res2["status"] == "completed"
 
@@ -1023,19 +1025,37 @@ def test_resume_with_no_decisions_is_rejected(curation_workspace, monkeypatch):
 
 def test_legacy_positional_payload_is_rejected(curation_workspace, monkeypatch):
     """D-10 and D-12 are one contract: a MIGRATED queue still demands a complete
-    id-keyed map, so no legacy positional payload can ever be applied to it."""
+    id-keyed map, so no legacy positional payload can ever be applied to it.
+
+    Rejected at BOTH layers: the input model no longer admits a list at all, and a
+    list smuggled straight into graph state (past every surface) still resolves to
+    zero decisions and is refused by the coverage check rather than being zipped
+    against the queue."""
+    import pytest
+    from pydantic import ValidationError
+
     from construct.llm import curation_run
 
-    _paused_queue(curation_workspace, "cur-map-pos", monkeypatch)
+    queue = _paused_queue(curation_workspace, "cur-map-pos", monkeypatch)
     before = _workspace_state(curation_workspace)
 
-    rejected = curation_run.review_curation_run(
+    # Layer 1 — the trust boundary refuses the shape outright.
+    with pytest.raises(ValidationError):
         curation_run.CurationReviewInput(
             workspace_path=str(curation_workspace), run_id="cur-map-pos",
             decisions=["approve", "approve", "approve"],
         )
-    )
-    assert rejected.status == "failed", rejected.message
+
+    # Layer 2 — even past the boundary, a positional list is never applied.
+    smuggled = {
+        "run_id": "cur-map-pos",
+        "gate_queue": queue,
+        "decisions": ["approve"] * len(queue),
+    }
+    with pytest.raises(curation_run.IncompleteDecisionMap) as excinfo:
+        curation_run._resolve_decisions(smuggled)
+    assert excinfo.value.missing == sorted(e["proposal_id"] for e in queue)
+
     assert _workspace_state(curation_workspace) == before
 
 
