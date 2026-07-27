@@ -46,9 +46,17 @@ asserts a malformed-payload rejection for each one.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# D-17: the views ``EventRecord`` below is conformed to the emitter's shape and
+# reuses the emitter's closed vocabularies. Only the two enums are imported —
+# ``construct.schemas.config`` also exports a class named ``EventRecord`` and the
+# two are entirely different models, so importing it here unqualified would be a
+# trap rather than a convenience.
+from construct.schemas.config import EventAgent, EventResult
 
 T = TypeVar("T")
 
@@ -420,21 +428,41 @@ class DigestsFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-# D-02: ``lib/parse_events.parse`` passes ``log/events.jsonl`` lines through
-# verbatim, and ``details`` is free-form there — spec §5.6 explicitly declines to
-# enumerate event shapes. Real logs carry a human-readable string
-# (``"Created card-hubble-tension"``); structured emitters carry a dict. The
-# union describes both rather than rejecting the string form.
+# D-17: this is ``construct.schemas.config.EventRecord``'s field set, and that
+# is deliberate — the two classes share a name and, until now, no fields at all.
+# Always import qualified when both are in scope.
+#
+# ``events.json`` had four mutually incompatible shapes: the Python emitter's
+# (``ts``/``agent``/``action``/``target``/``detail``/``result``), the legacy
+# Claude-native fixtures' (``event``/``timestamp``/``details``), this model's
+# previous one (``timestamp``/``type``/``actor``/``card_id``/``details``), and the
+# SPA's. ``parse_events`` renamed nothing, so the file's on-disk shape was
+# whichever emitter had last written the log, and D-01's "conform the model to
+# the bytes" had no single referent. D-17 picks the emitter: it is the only live
+# author, it is what CONSTRUCT writes today, and conforming *it* to anything else
+# would be a canonical-write change squarely inside ING-02's territory. Plan 05
+# conforms the SPA reader to this same shape.
+#
+# ``agent`` and ``result`` reuse the emitter's enums rather than restating them:
+# a second copy of a closed vocabulary is a second thing to drift.
+# ``action`` stays a free string, so the escalate action Plan 08 introduces
+# threads through to the projection without a change here (D-16).
+#
+# ``ts`` is a ``datetime`` rather than a string so the projection actually
+# validates the instant: an unparseable timestamp is rejected instead of sorting
+# arbitrarily, microseconds and the UTC offset survive validation intact, and an
+# offset-bearing value is never reinterpreted against the host's local zone.
 class EventRecord(BaseModel):
-    """One audit-trail event entry."""
+    """One audit-trail event entry, in the canonical emitter shape."""
 
     model_config = ConfigDict(extra="ignore")
 
-    timestamp: str
-    type: str
-    actor: str
-    card_id: str | None = None
-    details: str | dict | None = None
+    ts: datetime
+    agent: EventAgent
+    action: str = Field(min_length=1)
+    target: str | None = None
+    detail: str | None = None
+    result: EventResult
 
 
 class EventsFile(BaseModel):

@@ -321,25 +321,25 @@ def test_views_generate_json_flag_emits_parseable_json(
     assert isinstance(payload["warnings"], list)
 
 
-def test_views_validate_does_not_yet_accept_generated_bytes(
+def test_views_validate_accepts_generated_bytes(
     scaffolded_install_root: Path,
 ) -> None:
-    """Characterisation test for the writer/validator divergence (carried from 15-02).
+    """VFIX-01: ``views validate`` accepts every file ``views generate`` writes.
 
-    ``generate()`` validates an *adapted projection* of each file (generate.py's
-    ``_FILE_MODEL_MAP`` / per-file adapters) but writes the **raw parser dict**.
-    ``views validate`` applies the same models to the raw bytes with no adapter,
-    so three files the generator called clean are rejected on disk.
+    This replaces the characterisation test carried from 15-02, which pinned the
+    writer/validator divergence: ``generate()`` validated an *adapted projection*
+    of each file and then wrote the raw parser dict, while ``views validate``
+    applied the same models to those raw bytes with no adapter and rejected
+    three of them. D-01 conformed the models to the writer and reduced the
+    generator's adapters to identity, so both commands now gate the same object.
 
-    This is pre-existing — before this plan nothing wired generation, so
-    ``views validate`` had no generator output to disagree with and the conflict
-    could not be observed. Resolving it means choosing which shape is canonical
-    (widen the models to the written bytes, share the generator's adapter with
-    the validator, or write the projection), a contract decision with Phase 16/17
-    SPA consequences that is deliberately NOT taken inside Plan 03.
-
-    This test pins the current, honest state. **It must be deleted when the
-    divergence is resolved** — it turns red the moment validate starts passing.
+    **This assertion is deliberately weak and Plan 05 replaces it.** The
+    scaffolded fixture's ``demo`` workspace has no cards, no connections and no
+    digests, so most record models are never instantiated and pass vacuously
+    (RESEARCH Pitfall 1). The non-vacuous guard belongs with the file-contract
+    tables Plan 05 introduces; the populated round-trip above
+    (``test_populated_workspace_generates_clean``) is what carries real weight
+    until then.
     """
     from typer.testing import CliRunner
 
@@ -352,17 +352,13 @@ def test_views_validate_does_not_yet_accept_generated_bytes(
         app, ["views", "validate", "--install-root", str(scaffolded_install_root)]
     )
 
-    assert validated.exit_code == 1, validated.stdout
-    # The exact divergent set, so a change in its shape is visible rather than silent.
-    # D-01 conformed stats.json and connections.json to the writer, so both have
-    # left this set. events.json remains: four incompatible event shapes exist and
-    # choosing one is D-17's job, in the next task.
     failing = {
         line.strip().removeprefix("✗ ").strip()
         for line in validated.stdout.splitlines()
         if line.strip().startswith("✗")
     }
-    assert failing == {"demo/events.json"}, failing
+    assert failing == set(), failing
+    assert validated.exit_code == 0, validated.stdout
 
 
 def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(
