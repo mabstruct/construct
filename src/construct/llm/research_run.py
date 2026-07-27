@@ -41,9 +41,21 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field, field_validator
 
+from construct.llm.curation_run import (
+    _ensure_proposal_ids,
+    _new_proposal_id,
+    _validate_proposal_id,
+)
 from construct.schemas.config import KEBAB_CASE_PATTERN
 
 logger = logging.getLogger(__name__)
+
+# GOV-02: the proposal-identity primitives are imported from ``curation_run``
+# rather than re-declared here ON PURPOSE. Two independent implementations of the
+# same contract is the parity fork this requirement exists to close — it is how
+# this module ended up with a url-keyed decision mode the curation graph never
+# had. ``curation_run`` imports nothing from this module, so the direction is
+# acyclic.
 
 # Title fuzzy near-dup threshold (D-05 — basic this phase).
 _TITLE_FUZZY_THRESHOLD = 0.90
@@ -145,11 +157,19 @@ class GateQueueEntry(BaseModel):
     The default ``decision`` is the LLM's ``ingest_action`` from ``research.score``
     (D-04): ``approve-all`` reproduces the recommended ingest set; ``reject-all``
     sets every decision to ``skip``.
+
+    ``proposal_id`` (GOV-02 / D-09) is the same opaque 32-character name the
+    curation queue carries, minted at enqueue by the same factory. It replaces the
+    finding ``url`` this module previously keyed decisions on — a content-derived
+    value that may be ``None`` and is not unique across findings.
     """
 
     model_config = {"extra": "forbid"}
+    proposal_id: str = Field(default_factory=_new_proposal_id)
     finding: dict
     decision: str  # skip | ref_only | ref_and_card
+
+    _check_proposal_id = field_validator("proposal_id")(_validate_proposal_id)
 
 
 class RunResult(BaseModel):
@@ -1053,7 +1073,7 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=snap.values.get("gate_id", run_id),
-                gate_queue=snap.values.get("gate_queue", []),
+                gate_queue=_ensure_proposal_ids(snap.values.get("gate_queue", []), run_id),
                 degraded=bool(snap.values.get("retrieval", {}).get("degraded", False)),
                 message="Paused for human review; resume with research.review.",
             )
@@ -1082,7 +1102,7 @@ def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
         status=status,
         run_id=run_id,
         gate_id=values.get("gate_id", run_id),
-        gate_queue=values.get("gate_queue", []),
+        gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
         refs_created=values.get("refs_created", []),
         cards_created=values.get("cards_created", []),
         digest_path=values.get("digest_path"),
@@ -1186,7 +1206,7 @@ def inspect_research_run(inp: InspectInput) -> RunResult:
             status=status,
             run_id=inp.run_id,
             gate_id=values.get("gate_id", inp.run_id),
-            gate_queue=values.get("gate_queue", []),
+            gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
             refs_created=values.get("refs_created", []),
             cards_created=values.get("cards_created", []),
             digest_path=values.get("digest_path"),

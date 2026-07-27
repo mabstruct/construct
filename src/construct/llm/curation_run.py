@@ -40,6 +40,7 @@ import logging
 import operator
 import secrets
 import sqlite3
+import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypedDict
@@ -75,6 +76,95 @@ def _validate_run_id(value: str | None) -> str | None:
     if value is not None and KEBAB_CASE_PATTERN.fullmatch(value) is None:
         raise ValueError("run_id must be kebab-case ([a-z0-9] segments joined by single hyphens)")
     return value
+
+
+# ── Opaque proposal identity (GOV-02 / D-09) ──
+#
+# The id form was settled at a blocking checkpoint: the FULL 32-character
+# ``uuid4().hex``, persisted under ``proposal_id``. Uniqueness spans runs as well
+# as queues, so a decision payload cannot be replayed against a DIFFERENT run by
+# accident — the property neither a run-scoped counter nor a truncated hex had.
+# The id is deliberately NOT sortable: queue order lives in the queue list only
+# and is never encoded in, or inferred from, the id.
+
+#: A syntactically valid id, quoted in the validator's error message so a caller
+#: who supplied a bad one can see the shape being asked for (AGENTS.md convention).
+_PROPOSAL_ID_EXAMPLE = "3f2a9c1e5b7d4a8f9012345678abcdef"
+
+#: Namespace for the ids assigned to PRE-Phase-18 queues by ``_ensure_proposal_ids``.
+#: Fixed forever: changing it would rename every migrated proposal mid-review.
+_MIGRATION_NAMESPACE = uuid.UUID("6f0c9b2e-1f7a-4c3d-9a5e-0b8d7c6e5f41")
+
+
+def _new_proposal_id() -> str:
+    """Mint one opaque proposal id: the full 32-character ``uuid4().hex``."""
+    return uuid.uuid4().hex
+
+
+def _validate_proposal_id(value: str) -> str:
+    """Reject any ``proposal_id`` that is not opaque-shaped (T-18-08 guard).
+
+    Built on the same identifier guard as ``_validate_run_id`` and for the same
+    reason its docstring gives: the MCP/CLI surfaces pass caller-supplied
+    ``**kwargs`` straight into the input models, and a resume payload names the
+    proposals it applies to — so an unvalidated id would cross from an untrusted
+    payload into the persistence layer. ``KEBAB_CASE_PATTERN`` ([a-z0-9] segments
+    joined by single hyphens) admits a 32-character uuid4 hex as a single segment
+    while excluding path separators, parent-directory segments and whitespace.
+    """
+    if KEBAB_CASE_PATTERN.fullmatch(value) is None:
+        raise ValueError(
+            "proposal_id must be an opaque lowercase [a-z0-9] identifier (segments "
+            f"joined by single hyphens) — for example {_PROPOSAL_ID_EXAMPLE}; a value "
+            "containing a path separator, a parent-directory segment, uppercase, or "
+            "whitespace is rejected at the trust boundary"
+        )
+    return value
+
+
+def _migrated_proposal_id(run_id: str, index: int) -> str:
+    """Mint the id a PRE-Phase-18 queued proposal is migrated to (D-12).
+
+    Deterministic ON PURPOSE, because migration must perform NO write. Persisting
+    migrated ids would advance the LangGraph checkpoint, and the checkpoint id is
+    this phase's ETag (D-11) — an ``inspect`` that advanced it would make every
+    subsequent resume read as stale, and the user could never resume at all.
+    Deriving the id from ``uuid5(namespace, "{run_id}:{index}")`` instead yields
+    the same 32-character opaque hex on every read, in every process, so the id a
+    reader is shown is exactly the id a resume accepts.
+
+    Queue position feeds the digest but does not survive it: uuid5 is a hash, so
+    the index cannot be recovered from the id, and the ids are not ordered. The
+    D-09 invariant holds — queue order lives in the queue list, never in the id.
+    """
+    return uuid.uuid5(_MIGRATION_NAMESPACE, f"{run_id}:{index}").hex
+
+
+def _ensure_proposal_ids(gate_queue: list[dict], run_id: str) -> list[dict]:
+    """Inject ids into a legacy id-less queue at the RAW-DICTIONARY stage (D-12).
+
+    The gate queue is persisted as plain dictionaries in graph state, never as
+    model instances, so this runs immediately after a state snapshot is read and
+    strictly BEFORE any model validation. Doing it later fails — ``CurationProposal``
+    forbids extra fields and would reject a dictionary that gained an id after
+    validation — and doing it earlier is impossible.
+
+    Only the gaps are filled: an entry that already carries an id keeps it, so a
+    mixed queue (some legacy, some current) migrates without renaming anything.
+    Nothing but the id is added; a migrated proposal carries the gate's own
+    recommendation and NO reviewer decision, which is exactly what makes
+    preserving the queue safe rather than a reintroduction of the positional
+    assumption (D-10 and D-12 are one contract).
+    """
+    migrated: list[dict] = []
+    for index, entry in enumerate(gate_queue):
+        if entry.get("proposal_id"):
+            migrated.append(entry)
+            continue
+        patched = dict(entry)
+        patched["proposal_id"] = _migrated_proposal_id(run_id, index)
+        migrated.append(patched)
+    return migrated
 
 
 # ── State schema (TypedDict — plain serializable data ONLY; Pitfall 3) ──
@@ -170,12 +260,20 @@ class CurationProposal(BaseModel):
     may override it. ``payload`` carries the plain-serializable fields the Plan 04
     apply node needs (card_id / target_lifecycle / from-to / connection_type …).
     ``extra="forbid"`` keeps a malicious card body from smuggling extra keys.
+
+    ``proposal_id`` (GOV-02 / D-09) is the stable opaque name a human-review
+    decision addresses. The ``default_factory`` fires when a producer CONSTRUCTS
+    the proposal — i.e. at enqueue time, which is the only correct moment: minting
+    lazily at read time would leave a proposal that is never read without a name.
     """
 
     model_config = {"extra": "forbid"}
+    proposal_id: str = Field(default_factory=_new_proposal_id)
     kind: Literal["promotion", "connection", "archive", "escalate"]
     decision: str = ""  # default = the gate recommendation (D-07)
     payload: dict = Field(default_factory=dict)
+
+    _check_proposal_id = field_validator("proposal_id")(_validate_proposal_id)
 
 
 class CurationStepResult(BaseModel):
@@ -1176,7 +1274,7 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=run_id,
-                gate_queue=values.get("gate_queue", []),
+                gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
                 steps=[CurationStepResult(**s) for s in values.get("steps", [])],
                 events=list(values.get("events", [])),
                 message="Curation run paused for human review; resume with curation.review.",
@@ -1284,7 +1382,7 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
             steps = [CurationStepResult(**s) for s in values.get("steps", [])]
             return CurationRunResult(
                 status="awaiting_review", run_id=inp.run_id, gate_id=inp.run_id,
-                gate_queue=values.get("gate_queue", []),
+                gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
                 steps=steps, events=list(values.get("events", [])),
                 message="Curation run paused awaiting human review.",
             )
