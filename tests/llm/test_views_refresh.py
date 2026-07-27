@@ -208,8 +208,15 @@ def test_research_run_status_unchanged_when_refresh_raises(
             ),
             cfg,
         )
-        defaults = [e["decision"] for e in graph.get_state(cfg).values["gate_queue"]]
-        return graph.invoke(Command(resume=defaults), cfg)["status"]
+        # Phase 18 / GOV-02: the resume payload is an id-keyed map, and it crosses
+        # Command(resume=…) inside _wrap_resume's envelope (a bare dict would be
+        # read as a LangGraph interrupt-id mapping and silently discarded).
+        defaults = {
+            e["proposal_id"]: e["decision"] for e in graph.get_state(cfg).values["gate_queue"]
+        }
+        return graph.invoke(
+            Command(resume=research_run._wrap_resume(defaults)), cfg
+        )["status"]
 
     root_ok = tmp_path / "ok"
     root_bad = tmp_path / "bad"

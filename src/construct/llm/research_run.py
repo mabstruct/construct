@@ -41,9 +41,28 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field, field_validator
 
+from construct.llm.curation_run import (
+    IncompleteDecisionMap,
+    StaleQueue,
+    _check_coverage,
+    _checkpoint_id,
+    _decision_map,
+    _ensure_proposal_ids,
+    _new_proposal_id,
+    _unwrap_resume,
+    _validate_proposal_id,
+    _wrap_resume,
+)
 from construct.schemas.config import KEBAB_CASE_PATTERN
 
 logger = logging.getLogger(__name__)
+
+# GOV-02: the proposal-identity primitives are imported from ``curation_run``
+# rather than re-declared here ON PURPOSE. Two independent implementations of the
+# same contract is the parity fork this requirement exists to close — it is how
+# this module ended up with a content-keyed decision mode the curation graph
+# never had. ``curation_run`` imports nothing from this module, so the direction
+# is acyclic.
 
 # Title fuzzy near-dup threshold (D-05 — basic this phase).
 _TITLE_FUZZY_THRESHOLD = 0.90
@@ -122,7 +141,14 @@ class ReviewInput(BaseModel):
     model_config = {"extra": "forbid"}
     workspace_path: str
     run_id: str
-    decisions: list[dict] | None = None
+    #: GOV-03 / D-11: the checkpoint id the queue was rendered at — an ETag, so
+    #: every resume is a conditional request. REQUIRED, for the reason given on
+    #: ``CurationReviewInput.checkpoint_id``. Read it from ``research.run``'s or
+    #: ``research.inspect``'s result.
+    checkpoint_id: str
+    #: GOV-02: an id-keyed map ``{proposal_id: decision}``. This replaces BOTH the
+    #: positional list and the content-keyed list the module previously accepted.
+    decisions: dict[str, str] | None = None
     approve_all: bool = False
     reject_all: bool = False
 
@@ -145,11 +171,19 @@ class GateQueueEntry(BaseModel):
     The default ``decision`` is the LLM's ``ingest_action`` from ``research.score``
     (D-04): ``approve-all`` reproduces the recommended ingest set; ``reject-all``
     sets every decision to ``skip``.
+
+    ``proposal_id`` (GOV-02 / D-09) is the same opaque 32-character name the
+    curation queue carries, minted at enqueue by the same factory. It replaces the
+    finding field this module previously keyed decisions on — see
+    ``_queue_and_decisions`` for why that field could never have worked.
     """
 
     model_config = {"extra": "forbid"}
+    proposal_id: str = Field(default_factory=_new_proposal_id)
     finding: dict
     decision: str  # skip | ref_only | ref_and_card
+
+    _check_proposal_id = field_validator("proposal_id")(_validate_proposal_id)
 
 
 class RunResult(BaseModel):
@@ -164,6 +198,9 @@ class RunResult(BaseModel):
     status: str  # awaiting_review | completed | failed
     run_id: str
     gate_id: str | None = None
+    #: GOV-03 / D-11: the run's checkpoint id at the moment this result was built,
+    #: returned alongside the queue so a caller can submit it back on resume.
+    checkpoint_id: str | None = None
     gate_queue: list[dict] = Field(default_factory=list)
     refs_created: list[str] = Field(default_factory=list)
     cards_created: list[str] = Field(default_factory=list)
@@ -449,7 +486,7 @@ def gate_review(state: ResearchRunState) -> dict:
             "gate_queue": state["gate_queue"],  # per-finding, default = ingest_action (D-04)
         }
     )
-    return {"decisions": decisions}
+    return {"decisions": _unwrap_resume(decisions)}
 
 
 # ── Post-gate write nodes (REAL — run ONLY after Command(resume); RSCH-03 holds) ──
@@ -459,16 +496,17 @@ _INGEST_ACTIONS = ("ref_only", "ref_and_card")
 
 
 def _normalize_decision(value: Any, default: str) -> str:
-    """Map a resume decision token to a concrete per-finding action.
+    """Map an EXPLICIT resume decision token to a concrete per-finding action.
 
     Accepts the concrete actions (``skip``/``ref_only``/``ref_and_card``) plus the
     convenience synonyms ``approve`` (→ the LLM's recommended ``default``) and
-    ``reject`` (→ ``skip``). ``None`` falls back to the per-finding default. This
-    keeps both the structured per-finding payload and the approve-all/reject-all
-    shortcuts expressible through one channel.
+    ``reject`` (→ ``skip``). Every value reaching here was supplied by a human for
+    a named proposal; the coverage check upstream guarantees it.
+
+    The ``None`` → ``default`` branch is DELETED (T-18-03). A missing decision now
+    rejects the whole resume rather than silently ingesting what the scoring gate
+    happened to recommend.
     """
-    if value is None:
-        return default
     if value == "approve":
         return default if default in _INGEST_ACTIONS else "skip"
     if value == "reject":
@@ -476,30 +514,32 @@ def _normalize_decision(value: Any, default: str) -> str:
     return str(value)
 
 
-def _resolve_decisions(state: ResearchRunState) -> list[str]:
-    """Resolve the effective per-finding action list aligned with ``gate_queue``.
+def _queue_and_decisions(state: ResearchRunState) -> list[tuple[dict, str]]:
+    """Pair each queued finding with its resolved action, IN QUEUE ORDER.
 
-    The resume payload (``state['decisions']``) may be ``None`` (use each entry's
-    default ``ingest_action``), a positional ``list[str]`` of actions, or a
-    ``list[dict]`` keyed by finding ``url``. Anything missing falls back to the
-    per-finding default, so a short/partial payload never drops findings.
+    GOV-02: this function replaces three decision shapes with one. The removed
+    shapes were a positional list, a no-payload default, and a map keyed on the
+    finding ``url`` — content-derived, nullable, and not unique across findings,
+    which is the concrete demonstration of why D-09 chose opaque ids. Keeping that
+    keyed mode as a "compatible alternative" would be the parity fork GOV-02
+    exists to close, so it is removed rather than deprecated.
     """
-    gate_queue = state.get("gate_queue", [])
-    raw = state.get("decisions")
-    resolved: list[str] = []
-    if isinstance(raw, list) and raw and isinstance(raw[0], dict):
-        by_url = {d.get("url"): d.get("decision") for d in raw}
-        for entry in gate_queue:
-            url = entry.get("finding", {}).get("url")
-            resolved.append(_normalize_decision(by_url.get(url), entry.get("decision", "skip")))
-    elif isinstance(raw, list):
-        for i, entry in enumerate(gate_queue):
-            value = raw[i] if i < len(raw) else None
-            resolved.append(_normalize_decision(value, entry.get("decision", "skip")))
-    else:
-        for entry in gate_queue:
-            resolved.append(entry.get("decision", "skip"))
-    return resolved
+    gate_queue = _ensure_proposal_ids(state.get("gate_queue", []), state.get("run_id", ""))
+    supplied = _decision_map(state.get("decisions"))
+    _check_coverage([entry["proposal_id"] for entry in gate_queue], supplied)
+    return [
+        (entry, _normalize_decision(supplied[entry["proposal_id"]], entry.get("decision", "skip")))
+        for entry in gate_queue
+    ]
+
+
+def _resolve_decisions(state: ResearchRunState) -> list[str]:
+    """Resolve the effective per-finding action list, aligned with ``gate_queue``.
+
+    Id-keyed and complete-coverage-checked: a payload that does not name every
+    queued proposal exactly once raises rather than defaulting.
+    """
+    return [decision for _entry, decision in _queue_and_decisions(state)]
 
 
 def ingest_batch(state: ResearchRunState) -> dict:
@@ -533,8 +573,7 @@ def ingest_batch(state: ResearchRunState) -> dict:
 
     workspace = Path(state["workspace_path"])
     gate_id = state.get("gate_id") or state["run_id"]
-    gate_queue = state.get("gate_queue", [])
-    decisions = _resolve_decisions(state)
+    reviewed = _queue_and_decisions(state)
     domain_id = _get_first_domain(workspace) or "general"
 
     refs_created: list[str] = []
@@ -542,7 +581,7 @@ def ingest_batch(state: ResearchRunState) -> dict:
     skipped_existing: list[str] = []
     rejected: list[str] = []
 
-    for entry, decision in zip(gate_queue, decisions):
+    for entry, decision in reviewed:
         finding = entry.get("finding", {})
         url = finding.get("url", "")
         title = finding.get("title") or "Untitled"
@@ -724,14 +763,13 @@ def compile_digest(state: ResearchRunState) -> dict:
 
     workspace = Path(state["workspace_path"])
     run_id = state.get("run_id") or state.get("gate_id") or "run"
-    gate_queue = state.get("gate_queue", [])
     refs_created = state.get("refs_created", [])
     cards_created = state.get("cards_created", [])
     skipped_existing = state.get("skipped_existing", [])
-    decisions = _resolve_decisions(state)
+    reviewed = _queue_and_decisions(state)
 
-    considered = len(gate_queue)
-    approved = sum(1 for d in decisions if d in _INGEST_ACTIONS)
+    considered = len(reviewed)
+    approved = sum(1 for _entry, d in reviewed if d in _INGEST_ACTIONS)
     rejected = considered - approved
     ingested = len(refs_created) + len(cards_created) + len(skipped_existing)
 
@@ -779,7 +817,7 @@ def compile_digest(state: ResearchRunState) -> dict:
         lines += ["", "## Created cards", ""]
         lines += [f"- `{card_id}`" for card_id in cards_created]
     lines += ["", "## Approved findings", ""]
-    for entry, decision in zip(gate_queue, decisions):
+    for entry, decision in reviewed:
         if decision in _INGEST_ACTIONS:
             finding = entry.get("finding", {})
             lines.append(f"- {finding.get('title', 'Untitled')} ({decision})")
@@ -878,8 +916,7 @@ def update_seeds_and_log(state: ResearchRunState) -> dict:
     events.append("research_score_gate_complete")
 
     # Per-finding gate decisions (reuse the gate_review protocol agent — construct).
-    decisions = _resolve_decisions(state)
-    for entry, decision in zip(state.get("gate_queue", []), decisions):
+    for entry, decision in _queue_and_decisions(state):
         title = entry.get("finding", {}).get("title", "")
         if decision in _INGEST_ACTIONS:
             append_event(
@@ -1053,7 +1090,8 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=snap.values.get("gate_id", run_id),
-                gate_queue=snap.values.get("gate_queue", []),
+                checkpoint_id=_checkpoint_id(snap),
+                gate_queue=_ensure_proposal_ids(snap.values.get("gate_queue", []), run_id),
                 degraded=bool(snap.values.get("retrieval", {}).get("degraded", False)),
                 message="Paused for human review; resume with research.review.",
             )
@@ -1074,7 +1112,9 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
 # ── Review/inspect runners (resume + read-only inspect; cross-process via the DB) ──
 
 
-def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
+def _completion_result(
+    run_id: str, values: dict, completed: bool, checkpoint_id: str | None = None
+) -> RunResult:
     """Assemble the D-12 ``RunResult`` from the final/merged graph state (SC5)."""
     retrieval = values.get("retrieval", {}) or {}
     status = values.get("status") or ("completed" if completed else "awaiting_review")
@@ -1082,7 +1122,8 @@ def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
         status=status,
         run_id=run_id,
         gate_id=values.get("gate_id", run_id),
-        gate_queue=values.get("gate_queue", []),
+        checkpoint_id=checkpoint_id,
+        gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
         refs_created=values.get("refs_created", []),
         cards_created=values.get("cards_created", []),
         digest_path=values.get("digest_path"),
@@ -1093,21 +1134,25 @@ def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
     )
 
 
-def _build_resume_decisions(inp: ReviewInput, gate_queue: list[dict]) -> Any:
-    """Translate a ``ReviewInput`` into the per-finding resume payload.
+def _build_resume_decisions(inp: ReviewInput, gate_queue: list[dict]) -> dict[str, str]:
+    """Translate a ``ReviewInput`` into the id-keyed resume payload (GOV-02).
 
-    Explicit ``decisions`` win; otherwise ``reject_all`` → every finding ``skip``,
-    ``approve_all`` → each finding's recommended ``ingest_action`` (the default),
-    and the bare default (no flag) → ``None`` so ``ingest_batch`` uses the per-entry
-    recommended decisions (i.e. the LLM's proposed ingest set).
+    Explicit ``decisions`` win; otherwise the blanket flags EXPAND into a complete
+    map over the queued ids — ``reject_all`` → every finding ``skip``,
+    ``approve_all`` → each finding's recommended ``ingest_action``.
+
+    The bare default (no flag, no payload) now yields an EMPTY map, which the
+    coverage check rejects against a non-empty queue. It previously returned
+    ``None``, which made ``ingest_batch`` write the scoring gate's proposed ingest
+    set with no human input at all — a canonical write nobody approved (T-18-03).
     """
     if inp.decisions is not None:
-        return inp.decisions
+        return _decision_map(inp.decisions)
     if inp.reject_all:
-        return ["skip"] * len(gate_queue)
+        return {entry["proposal_id"]: "skip" for entry in gate_queue}
     if inp.approve_all:
-        return [entry.get("decision", "skip") for entry in gate_queue]
-    return None
+        return {entry["proposal_id"]: entry.get("decision", "skip") for entry in gate_queue}
+    return {}
 
 
 def review_research_run(inp: ReviewInput) -> RunResult:
@@ -1126,6 +1171,21 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         graph = build_research_run_graph(saver)
         cfg = {"configurable": {"thread_id": inp.run_id}}
         snap = graph.get_state(cfg)
+        current = _checkpoint_id(snap)
+
+        # D-11: STALENESS FIRST — before the coverage check and before
+        # Command(resume=…), by exact string equality. See the equivalent block in
+        # ``curation_run.review_curation_run`` for why the order and the exactness
+        # both matter, and for why a replayed resume necessarily lands here.
+        if current is not None and inp.checkpoint_id != current:
+            return RunResult(
+                status="failed",
+                run_id=inp.run_id,
+                gate_id=(snap.values or {}).get("gate_id", inp.run_id),
+                checkpoint_id=current,
+                message=StaleQueue(supplied=inp.checkpoint_id, current=current).safe_message,
+            )
+
         # WR-05: only resume a run that is actually paused at the gate. Resuming a
         # completed run would re-execute the post-gate write nodes, re-emitting
         # D-11 audit events and re-stamping seed timestamps; a nonexistent run has
@@ -1133,21 +1193,36 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         if snap.next != ("gate_review",):
             values = snap.values or {}
             if values and not snap.next:
-                return _completion_result(inp.run_id, values, True)
+                return _completion_result(inp.run_id, values, True, current)
             return RunResult(
                 status="failed",
                 run_id=inp.run_id,
                 gate_id=values.get("gate_id", inp.run_id) if values else inp.run_id,
+                checkpoint_id=current,
                 message="No paused run awaiting review for this run_id.",
             )
-        gate_queue = snap.values.get("gate_queue", []) if snap.values else []
+        raw_queue = snap.values.get("gate_queue", []) if snap.values else []
+        gate_queue = _ensure_proposal_ids(raw_queue, inp.run_id)
         decisions = _build_resume_decisions(inp, gate_queue)
+        # D-10: coverage is checked HERE, before Command(resume=…) — never inside a
+        # node, because a node-raised error still advances the checkpoint.
+        try:
+            _check_coverage([entry["proposal_id"] for entry in gate_queue], decisions)
+        except IncompleteDecisionMap as exc:
+            return RunResult(
+                status="failed",
+                run_id=inp.run_id,
+                gate_id=(snap.values or {}).get("gate_id", inp.run_id),
+                checkpoint_id=current,
+                gate_queue=gate_queue,
+                message=exc.safe_message,
+            )
 
-        result = graph.invoke(Command(resume=decisions), cfg)
+        result = graph.invoke(Command(resume=_wrap_resume(decisions)), cfg)
         final = graph.get_state(cfg)
         completed = not final.next
         values = final.values if final.values else result
-        return _completion_result(inp.run_id, values, completed)
+        return _completion_result(inp.run_id, values, completed, _checkpoint_id(final))
     finally:
         conn.close()
 
@@ -1186,7 +1261,8 @@ def inspect_research_run(inp: InspectInput) -> RunResult:
             status=status,
             run_id=inp.run_id,
             gate_id=values.get("gate_id", inp.run_id),
-            gate_queue=values.get("gate_queue", []),
+            checkpoint_id=_checkpoint_id(snap),
+            gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
             refs_created=values.get("refs_created", []),
             cards_created=values.get("cards_created", []),
             digest_path=values.get("digest_path"),

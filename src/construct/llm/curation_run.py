@@ -40,6 +40,7 @@ import logging
 import operator
 import secrets
 import sqlite3
+import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypedDict
@@ -75,6 +76,156 @@ def _validate_run_id(value: str | None) -> str | None:
     if value is not None and KEBAB_CASE_PATTERN.fullmatch(value) is None:
         raise ValueError("run_id must be kebab-case ([a-z0-9] segments joined by single hyphens)")
     return value
+
+
+# ── Opaque proposal identity (GOV-02 / D-09) ──
+#
+# The id form was settled at a blocking checkpoint: the FULL 32-character
+# ``uuid4().hex``, persisted under ``proposal_id``. Uniqueness spans runs as well
+# as queues, so a decision payload cannot be replayed against a DIFFERENT run by
+# accident — the property neither a run-scoped counter nor a truncated hex had.
+# The id is deliberately NOT sortable: queue order lives in the queue list only
+# and is never encoded in, or inferred from, the id.
+
+#: A syntactically valid id, quoted in the validator's error message so a caller
+#: who supplied a bad one can see the shape being asked for (AGENTS.md convention).
+_PROPOSAL_ID_EXAMPLE = "3f2a9c1e5b7d4a8f9012345678abcdef"
+
+#: Namespace for the ids assigned to PRE-Phase-18 queues by ``_ensure_proposal_ids``.
+#: Fixed forever: changing it would rename every migrated proposal mid-review.
+_MIGRATION_NAMESPACE = uuid.UUID("6f0c9b2e-1f7a-4c3d-9a5e-0b8d7c6e5f41")
+
+
+def _new_proposal_id() -> str:
+    """Mint one opaque proposal id: the full 32-character ``uuid4().hex``."""
+    return uuid.uuid4().hex
+
+
+def _validate_proposal_id(value: str) -> str:
+    """Reject any ``proposal_id`` that is not opaque-shaped (T-18-08 guard).
+
+    Built on the same identifier guard as ``_validate_run_id`` and for the same
+    reason its docstring gives: the MCP/CLI surfaces pass caller-supplied
+    ``**kwargs`` straight into the input models, and a resume payload names the
+    proposals it applies to — so an unvalidated id would cross from an untrusted
+    payload into the persistence layer. ``KEBAB_CASE_PATTERN`` ([a-z0-9] segments
+    joined by single hyphens) admits a 32-character uuid4 hex as a single segment
+    while excluding path separators, parent-directory segments and whitespace.
+    """
+    if KEBAB_CASE_PATTERN.fullmatch(value) is None:
+        raise ValueError(
+            "proposal_id must be an opaque lowercase [a-z0-9] identifier (segments "
+            f"joined by single hyphens) — for example {_PROPOSAL_ID_EXAMPLE}; a value "
+            "containing a path separator, a parent-directory segment, uppercase, or "
+            "whitespace is rejected at the trust boundary"
+        )
+    return value
+
+
+def _migrated_proposal_id(run_id: str, index: int) -> str:
+    """Mint the id a PRE-Phase-18 queued proposal is migrated to (D-12).
+
+    Deterministic ON PURPOSE, because migration must perform NO write. Persisting
+    migrated ids would advance the LangGraph checkpoint, and the checkpoint id is
+    this phase's ETag (D-11) — an ``inspect`` that advanced it would make every
+    subsequent resume read as stale, and the user could never resume at all.
+    Deriving the id from ``uuid5(namespace, "{run_id}:{index}")`` instead yields
+    the same 32-character opaque hex on every read, in every process, so the id a
+    reader is shown is exactly the id a resume accepts.
+
+    Queue position feeds the digest but does not survive it: uuid5 is a hash, so
+    the index cannot be recovered from the id, and the ids are not ordered. The
+    D-09 invariant holds — queue order lives in the queue list, never in the id.
+    """
+    return uuid.uuid5(_MIGRATION_NAMESPACE, f"{run_id}:{index}").hex
+
+
+def _ensure_proposal_ids(gate_queue: list[dict], run_id: str) -> list[dict]:
+    """Inject ids into a legacy id-less queue at the RAW-DICTIONARY stage (D-12).
+
+    The gate queue is persisted as plain dictionaries in graph state, never as
+    model instances, so this runs immediately after a state snapshot is read and
+    strictly BEFORE any model validation. Doing it later fails — ``CurationProposal``
+    forbids extra fields and would reject a dictionary that gained an id after
+    validation — and doing it earlier is impossible.
+
+    Only the gaps are filled: an entry that already carries an id keeps it, so a
+    mixed queue (some legacy, some current) migrates without renaming anything.
+    Nothing but the id is added; a migrated proposal carries the gate's own
+    recommendation and NO reviewer decision, which is exactly what makes
+    preserving the queue safe rather than a reintroduction of the positional
+    assumption (D-10 and D-12 are one contract).
+    """
+    migrated: list[dict] = []
+    for index, entry in enumerate(gate_queue):
+        if entry.get("proposal_id"):
+            migrated.append(entry)
+            continue
+        patched = dict(entry)
+        patched["proposal_id"] = _migrated_proposal_id(run_id, index)
+        migrated.append(patched)
+    return migrated
+
+
+# ── Typed review rejections (GOV-02 / GOV-03) ──
+#
+# Both are raised BEFORE ``Command(resume=…)`` is submitted, so a rejected resume
+# performs zero canonical writes and leaves the run paused exactly where the user
+# left it. Raising inside a graph node would not do: a node-raised error still
+# advances the checkpoint.
+#
+# T-18-10: every message names proposal ids and checkpoint ids ONLY — never a
+# workspace path, a card body, or any other content the caller did not already
+# hold. ``research_run`` imports both so the two graphs return one rejection shape.
+
+
+class ReviewRejected(Exception):
+    """Base for a resume refused at the entry point, before any apply node ran."""
+
+    #: A message safe to surface verbatim on the CLI/MCP boundary.
+    safe_message: str = "Review rejected."
+
+
+class IncompleteDecisionMap(ReviewRejected):
+    """The decision map does not cover the queue exactly (D-10).
+
+    ``missing`` are queued proposals the payload said nothing about; ``unknown``
+    are keys naming proposals this queue does not contain. Either one rejects the
+    WHOLE resume — a partially-covered queue is never partially applied.
+    """
+
+    def __init__(self, *, missing, unknown) -> None:
+        self.missing = sorted(missing)
+        self.unknown = sorted(unknown)
+        parts: list[str] = []
+        if self.missing:
+            parts.append(f"no decision was supplied for {', '.join(self.missing)}")
+        if self.unknown:
+            parts.append(f"unknown proposal id(s) {', '.join(self.unknown)}")
+        self.safe_message = (
+            "Review rejected — " + "; ".join(parts) + ". Nothing was written; the run is "
+            "still paused. Resubmit a decision for every queued proposal."
+        )
+        super().__init__(self.safe_message)
+
+
+class StaleQueue(ReviewRejected):
+    """The queue moved between being rendered and being submitted (D-11).
+
+    Carries the checkpoint id the caller submitted and the run's current one. The
+    comparison that raises this is exact string equality — no trimming, no case
+    folding, no prefix matching.
+    """
+
+    def __init__(self, *, supplied: str, current: str | None) -> None:
+        self.supplied = supplied
+        self.current = current
+        self.safe_message = (
+            "Review rejected — the queue changed since it was rendered (submitted "
+            f"checkpoint {supplied!r}, current checkpoint {current!r}). Nothing was "
+            "written. Re-read the queue and resubmit against the current checkpoint."
+        )
+        super().__init__(self.safe_message)
 
 
 # ── State schema (TypedDict — plain serializable data ONLY; Pitfall 3) ──
@@ -154,7 +305,15 @@ class CurationReviewInput(BaseModel):
     model_config = {"extra": "forbid"}
     workspace_path: str
     run_id: str
-    decisions: list | None = None
+    #: GOV-03 / D-11: the checkpoint id the queue was rendered at — an ETag, so
+    #: every resume is a conditional request. REQUIRED: a resume that cannot say
+    #: which queue it read cannot be checked for staleness, and an unverifiable
+    #: resume is exactly the confused-deputy case this field exists to stop. Read
+    #: it from ``curation.run``'s or ``curation.inspect``'s result.
+    checkpoint_id: str
+    #: GOV-02: an id-keyed map ``{proposal_id: decision}``, replacing the positional
+    #: list whose alignment with the queue was the defect this phase removes.
+    decisions: dict[str, str] | None = None
     approve_all: bool = False
     reject_all: bool = False
 
@@ -170,12 +329,20 @@ class CurationProposal(BaseModel):
     may override it. ``payload`` carries the plain-serializable fields the Plan 04
     apply node needs (card_id / target_lifecycle / from-to / connection_type …).
     ``extra="forbid"`` keeps a malicious card body from smuggling extra keys.
+
+    ``proposal_id`` (GOV-02 / D-09) is the stable opaque name a human-review
+    decision addresses. The ``default_factory`` fires when a producer CONSTRUCTS
+    the proposal — i.e. at enqueue time, which is the only correct moment: minting
+    lazily at read time would leave a proposal that is never read without a name.
     """
 
     model_config = {"extra": "forbid"}
+    proposal_id: str = Field(default_factory=_new_proposal_id)
     kind: Literal["promotion", "connection", "archive", "escalate"]
     decision: str = ""  # default = the gate recommendation (D-07)
     payload: dict = Field(default_factory=dict)
+
+    _check_proposal_id = field_validator("proposal_id")(_validate_proposal_id)
 
 
 class CurationStepResult(BaseModel):
@@ -205,6 +372,9 @@ class CurationRunResult(BaseModel):
     status: Literal["completed", "degraded", "failed", "awaiting_review"]
     run_id: str
     gate_id: str | None = None
+    #: GOV-03 / D-11: the run's checkpoint id at the moment this result was built.
+    #: Returned alongside the queue so a caller can submit it back on resume.
+    checkpoint_id: str | None = None
     gate_queue: list[dict] = Field(default_factory=list)
     steps: list[CurationStepResult] = Field(default_factory=list)
     events: list[str] = Field(default_factory=list)
@@ -750,23 +920,27 @@ def process_inbox(state: CurationRunState) -> dict:
     decisions = interrupt(
         {"gate_id": _CURATION_GATE_ID, "gate_queue": state["gate_queue"]}
     )
-    return {"decisions": decisions}
+    return {"decisions": _unwrap_resume(decisions)}
 
 
 # ── Post-gate write nodes (WRITE BOUNDARY — run ONLY after Command(resume); CUR-03) ──
 
 
 def _normalize_decision(value: Any, default: str) -> str:
-    """Map a resume decision token to a concrete per-proposal verdict (D-07).
+    """Map an EXPLICIT resume decision token to a concrete per-proposal verdict.
 
-    ``None`` falls back to the proposal's recommended ``default`` decision (the
-    gate's own verdict); the convenience synonym ``approve`` also expands to that
-    default so approve-all reproduces every gate recommendation, and ``reject``
-    collapses to a hard ``"reject"`` (no write). Any explicit token is passed
-    through verbatim so a structured per-item payload keeps full control.
+    Every value reaching this function was supplied by a human for a named
+    proposal — the coverage check upstream guarantees it. The convenience synonym
+    ``approve`` expands to the proposal's recommended ``default`` (an explicit
+    "yes, do what you proposed", not a silent default), ``reject`` collapses to a
+    hard ``"reject"`` (no write), and any other token passes through verbatim so a
+    structured per-item payload keeps full control.
+
+    The ``None`` → ``default`` branch this function used to carry is DELETED: it
+    was the mechanism by which a short or absent payload performed a canonical
+    write the user never approved (T-18-03). A missing decision is now a rejection
+    of the whole resume, never a substitution.
     """
-    if value is None:
-        return default
     if value == "approve":
         return default
     if value == "reject":
@@ -774,26 +948,117 @@ def _normalize_decision(value: Any, default: str) -> str:
     return str(value)
 
 
-def _resolve_decisions(state: CurationRunState) -> list[str]:
-    """Resolve the effective per-proposal verdict list aligned with ``gate_queue``.
+def _decision_map(raw: Any) -> dict[str, str]:
+    """Coerce the resume payload to an id-keyed map; anything else is EMPTY.
 
-    The resume payload (``state['decisions']``) is a positional ``list`` aligned
-    with the consolidated ``gate_queue`` (built by ``_build_resume_decisions``); a
-    short/absent payload falls back to each proposal's recommended ``decision`` so
-    no proposal is ever dropped. Only ``approved`` verdicts authorize a write — the
-    apply nodes below enforce the only-approved invariant per proposal kind.
+    A legacy positional ``list`` payload therefore reads as "no decisions", which
+    the coverage check turns into a rejection naming every queued id. That is the
+    intended outcome: a positional payload can no longer be applied to a queue by
+    accident, which is what makes D-12's migrate-on-read safe (D-10 and D-12 are
+    one contract).
     """
-    gate_queue = state.get("gate_queue", [])
-    raw = state.get("decisions")
-    resolved: list[str] = []
-    if isinstance(raw, list):
-        for i, entry in enumerate(gate_queue):
-            value = raw[i] if i < len(raw) else None
-            resolved.append(_normalize_decision(value, entry.get("decision", "")))
-    else:
-        for entry in gate_queue:
-            resolved.append(entry.get("decision", ""))
-    return resolved
+    if isinstance(raw, dict):
+        return {str(key): value for key, value in raw.items()}
+    return {}
+
+
+def _checkpoint_id(snap: Any) -> str | None:
+    """Read the LangGraph checkpoint id from a state snapshot — the D-11 ETag.
+
+    ``StateSnapshot.config["configurable"]["checkpoint_id"]`` is already maintained
+    by LangGraph and has all four properties staleness detection needs, verified
+    empirically against the pinned langgraph / langgraph-checkpoint-sqlite: present
+    while paused, stable across repeated reads, stable across a separate connection
+    or process, and changed by both a state update and a resume.
+
+    Deliberately NOT hand-rolled. A hash of the serialized queue would miss a state
+    advance that leaves the queue textually identical, and a modification time on
+    the database file is weaker still.
+    """
+    config = getattr(snap, "config", None) or {}
+    return (config.get("configurable") or {}).get("checkpoint_id")
+
+
+def _wrap_resume(decisions: dict[str, str]) -> list[dict[str, str]]:
+    """Wrap the id-keyed decision map for transport through ``Command(resume=…)``.
+
+    *** Do not send the map bare. *** ``Command.resume`` accepts EITHER a single
+    resume value OR a mapping of LangGraph **interrupt ids** to resume values, and
+    it distinguishes the two by inspecting the value: a ``dict`` is read as the
+    interrupt-id mapping. A ``proposal_id`` is a 32-character ``uuid4().hex`` —
+    exactly the shape of a LangGraph interrupt id — so a bare decision map matches
+    no pending interrupt, is silently consumed as an empty resume, and leaves the
+    run PAUSED with zero writes and no error. [VERIFIED empirically against the
+    pinned langgraph: a 32-hex-keyed dict resume returns the run still interrupted.]
+
+    Wrapping in a one-element list makes the payload a plain "single value" again,
+    which LangGraph hands to ``interrupt()`` untouched. The envelope is purely a
+    transport detail: ``_unwrap_resume`` removes it at the gate node, so the state
+    channel — and the capability contract Phase 19's API and Phase 22's wizards are
+    built against — stays the id-keyed map.
+    """
+    return [dict(decisions)]
+
+
+def _unwrap_resume(value: Any) -> Any:
+    """Undo ``_wrap_resume`` at the gate node; pass anything else through.
+
+    A payload that is not the one-element envelope (a legacy positional list, say)
+    is returned verbatim so it reaches ``_decision_map`` unchanged and is rejected
+    there rather than being coerced into something appliable.
+    """
+    if isinstance(value, list) and len(value) == 1 and isinstance(value[0], dict):
+        return value[0]
+    return value
+
+
+def _check_coverage(queued_ids: list[str], supplied: dict[str, str]) -> None:
+    """Raise unless the supplied key set EXACTLY equals the queued id set (D-10).
+
+    Both differences are reported together so one round trip tells the caller
+    everything that is wrong with the payload. An empty queue with an empty map
+    has no difference in either direction and is therefore accepted — a resume
+    with nothing to review succeeds with zero writes rather than erroring.
+    """
+    queued = set(queued_ids)
+    keys = set(supplied)
+    missing = queued - keys
+    unknown = keys - queued
+    if missing or unknown:
+        raise IncompleteDecisionMap(missing=missing, unknown=unknown)
+
+
+def _queue_and_decisions(state: CurationRunState) -> list[tuple[dict, str]]:
+    """Pair each queued proposal with its resolved verdict, IN QUEUE ORDER.
+
+    The single place the apply nodes read the review outcome from. Returning
+    pairs (rather than two positionally-aligned lists to be zipped back together)
+    removes the last place a positional assumption could re-enter: there is no
+    longer any index arithmetic between a proposal and its decision.
+
+    Queue order — not decision-map key order — drives the result, so the same
+    decisions submitted in two different key orders produce identical writes and
+    an identical event sequence.
+    """
+    gate_queue = _ensure_proposal_ids(state.get("gate_queue", []), state.get("run_id", ""))
+    supplied = _decision_map(state.get("decisions"))
+    queued_ids = [entry["proposal_id"] for entry in gate_queue]
+    _check_coverage(queued_ids, supplied)
+    return [
+        (entry, _normalize_decision(supplied[entry["proposal_id"]], entry.get("decision", "")))
+        for entry in gate_queue
+    ]
+
+
+def _resolve_decisions(state: CurationRunState) -> list[str]:
+    """Resolve the effective per-proposal verdict list, aligned with ``gate_queue``.
+
+    Id-keyed: the resume payload names the proposal each decision applies to, and
+    a payload that does not cover the queue exactly raises rather than defaulting.
+    Only ``approved`` verdicts authorize a write — the apply nodes below enforce
+    the only-approved invariant per proposal kind.
+    """
+    return [decision for _entry, decision in _queue_and_decisions(state)]
 
 
 def _card_lifecycle_map(workspace: str) -> dict[str, str]:
@@ -832,8 +1097,7 @@ def apply_promotions(state: CurationRunState) -> dict:
     from construct.services.knowledge import edit_card
 
     workspace = state["workspace_path"]
-    gate_queue = state.get("gate_queue", [])
-    decisions = _resolve_decisions(state)
+    reviewed = _queue_and_decisions(state)
     lifecycles = _card_lifecycle_map(workspace)
 
     promoted: list[str] = []
@@ -841,7 +1105,7 @@ def apply_promotions(state: CurationRunState) -> dict:
     escalated: list[str] = []
     events: list[str] = []
 
-    for entry, decision in zip(gate_queue, decisions):
+    for entry, decision in reviewed:
         kind = entry.get("kind")
         if kind not in ("promotion", "escalate"):
             continue
@@ -891,14 +1155,13 @@ def apply_connections(state: CurationRunState) -> dict:
     from construct.services.knowledge import add_connection
 
     workspace = state["workspace_path"]
-    gate_queue = state.get("gate_queue", [])
-    decisions = _resolve_decisions(state)
+    reviewed = _queue_and_decisions(state)
 
     added: list[str] = []
     rejected: list[str] = []
     events: list[str] = []
 
-    for entry, decision in zip(gate_queue, decisions):
+    for entry, decision in reviewed:
         if entry.get("kind") != "connection":
             continue
         payload = entry.get("payload", {})
@@ -940,15 +1203,14 @@ def apply_archives(state: CurationRunState) -> dict:
     from construct.services.knowledge import archive_card
 
     workspace = state["workspace_path"]
-    gate_queue = state.get("gate_queue", [])
-    decisions = _resolve_decisions(state)
+    reviewed = _queue_and_decisions(state)
     lifecycles = _card_lifecycle_map(workspace)
 
     archived: list[str] = []
     rejected: list[str] = []
     events: list[str] = []
 
-    for entry, decision in zip(gate_queue, decisions):
+    for entry, decision in reviewed:
         if entry.get("kind") != "archive":
             continue
         card_id = entry.get("payload", {}).get("card_id")
@@ -1176,7 +1438,8 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=run_id,
-                gate_queue=values.get("gate_queue", []),
+                checkpoint_id=_checkpoint_id(snap),
+                gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
                 steps=[CurationStepResult(**s) for s in values.get("steps", [])],
                 events=list(values.get("events", [])),
                 message="Curation run paused for human review; resume with curation.review.",
@@ -1193,21 +1456,30 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
         conn.close()
 
 
-def _build_resume_decisions(inp: CurationReviewInput, gate_queue: list[dict]) -> list:
-    """Resolve the resume payload for one consolidated review (D-07).
+def _build_resume_decisions(inp: CurationReviewInput, gate_queue: list[dict]) -> dict[str, str]:
+    """Build the id-keyed resume payload for one consolidated review (D-07/D-10).
 
-    ``reject_all`` maps every proposal to ``"reject"`` (no write); ``approve_all``
-    reproduces each proposal's recommended ``decision`` (the gate's own verdict);
-    an explicit ``decisions`` list is passed through verbatim. Plan 03 resumes the
-    graph with this payload but performs no canonical write (the apply nodes that
-    consume these decisions are Plan 04).
+    An explicit ``decisions`` map wins. Otherwise the blanket flags EXPAND into a
+    complete map over the queued ids — ``reject_all`` to a hard ``"reject"`` (no
+    write), ``approve_all`` to each proposal's recommended ``decision`` (the gate's
+    own verdict, explicitly endorsed). Expanding rather than short-circuiting is
+    the point (T-18-24): the flags then satisfy the coverage check like any other
+    payload instead of becoming a second path to a write.
+
+    With neither flag nor payload the result is an EMPTY map, which covers an
+    empty queue cleanly and is rejected against a non-empty one. That is the
+    D-10 contract: no decisions means no writes, never the gate's recommendation
+    applied on the user's behalf.
     """
-    if inp.reject_all:
-        return ["reject" for _ in gate_queue]
     if inp.decisions is not None:
-        return list(inp.decisions)
-    # approve_all (or default): reproduce the recommended per-item decision.
-    return [entry.get("decision", "approve") for entry in gate_queue]
+        return _decision_map(inp.decisions)
+    if inp.reject_all:
+        return {entry["proposal_id"]: "reject" for entry in gate_queue}
+    if inp.approve_all:
+        return {
+            entry["proposal_id"]: entry.get("decision") or "approve" for entry in gate_queue
+        }
+    return {}
 
 
 def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
@@ -1228,6 +1500,25 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
         cfg = {"configurable": {"thread_id": inp.run_id}}
         snap = graph.get_state(cfg)
         values = snap.values or {}
+        current = _checkpoint_id(snap)
+
+        # D-11: STALENESS FIRST, before the coverage check and before
+        # Command(resume=…). Order matters: a stale queue means the coverage check
+        # would be comparing the payload against a queue the caller never saw, so
+        # its verdict would be meaningless. Exact string equality — no trimming,
+        # no case folding, no prefix matching.
+        #
+        # This is also what makes a REPLAY safe: a successful resume advances the
+        # checkpoint, so re-submitting the same decisions with the same id lands
+        # here and is refused. ``current is None`` means there is no checkpoint at
+        # all (an unknown run), which the paused-state guard below reports more
+        # precisely than a staleness message could.
+        if current is not None and inp.checkpoint_id != current:
+            return CurationRunResult(
+                status="failed", run_id=inp.run_id, gate_id=inp.run_id,
+                checkpoint_id=current,
+                message=StaleQueue(supplied=inp.checkpoint_id, current=current).safe_message,
+            )
 
         if snap.next != ("process_inbox",):
             # Not paused: already-completed run → report as-is; unknown → failed.
@@ -1235,22 +1526,39 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
                 steps = [CurationStepResult(**s) for s in values.get("steps", [])]
                 return CurationRunResult(
                     status=_aggregate_status(steps),
-                    run_id=inp.run_id, steps=steps,
+                    run_id=inp.run_id, checkpoint_id=current, steps=steps,
                     events=list(values.get("events", [])),
                     message="Curation run already complete (no re-review).",
                 )
             return CurationRunResult(
-                status="failed", run_id=inp.run_id,
+                status="failed", run_id=inp.run_id, checkpoint_id=current,
                 message="No paused curation run to review.",
             )
 
-        decisions = _build_resume_decisions(inp, values.get("gate_queue", []))
-        result = graph.invoke(Command(resume=decisions), cfg)
+        gate_queue = _ensure_proposal_ids(values.get("gate_queue", []), inp.run_id)
+        decisions = _build_resume_decisions(inp, gate_queue)
+        # D-10: coverage is checked HERE, before Command(resume=…) is submitted —
+        # never inside a node, because a node-raised error still advances the
+        # checkpoint and would leave the run somewhere other than where the user
+        # left it. On rejection the graph is not touched at all.
+        try:
+            _check_coverage([entry["proposal_id"] for entry in gate_queue], decisions)
+        except IncompleteDecisionMap as exc:
+            return CurationRunResult(
+                status="failed", run_id=inp.run_id, gate_id=inp.run_id,
+                checkpoint_id=current, gate_queue=gate_queue,
+                steps=[CurationStepResult(**s) for s in values.get("steps", [])],
+                events=list(values.get("events", [])),
+                message=exc.safe_message,
+            )
+
+        result = graph.invoke(Command(resume=_wrap_resume(decisions)), cfg)
 
         steps = [CurationStepResult(**s) for s in result["steps"]]
         status = result.get("status") or _aggregate_status(steps)
         return CurationRunResult(
             status=status, run_id=inp.run_id, gate_id=inp.run_id, gate_queue=[],
+            checkpoint_id=_checkpoint_id(graph.get_state(cfg)),
             steps=steps, events=list(result.get("events", [])),
             message=f"Curation review {status}.",
         )
@@ -1284,7 +1592,8 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
             steps = [CurationStepResult(**s) for s in values.get("steps", [])]
             return CurationRunResult(
                 status="awaiting_review", run_id=inp.run_id, gate_id=inp.run_id,
-                gate_queue=values.get("gate_queue", []),
+                checkpoint_id=_checkpoint_id(snap),
+                gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
                 steps=steps, events=list(values.get("events", [])),
                 message="Curation run paused awaiting human review.",
             )
@@ -1298,8 +1607,8 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
         steps = [CurationStepResult(**s) for s in values.get("steps", [])]
         status = values.get("status") or _aggregate_status(steps)
         return CurationRunResult(
-            status=status, run_id=inp.run_id, steps=steps,
-            events=list(values.get("events", [])),
+            status=status, run_id=inp.run_id, checkpoint_id=_checkpoint_id(snap),
+            steps=steps, events=list(values.get("events", [])),
             message="Curation run inspected (read-only).",
         )
     finally:

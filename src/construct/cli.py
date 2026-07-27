@@ -592,8 +592,18 @@ def research_run_cmd(
 def research_review_cmd(
     workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
     run_id: str = typer.Option(..., "--run-id", help="The paused run/gate handle to resume"),
+    checkpoint_id: str = typer.Option(
+        ...,
+        "--checkpoint-id",
+        help=(
+            "The checkpoint id the queue was rendered at (read it from "
+            "'research inspect --json'). The resume is refused if the run has moved on."
+        ),
+    ),
     decisions_file: Optional[Path] = typer.Option(
-        None, "--decisions-file", help="JSON file of per-finding decisions (or pipe on stdin)"
+        None,
+        "--decisions-file",
+        help='JSON object of per-proposal decisions, {"proposal_id": "decision"} (or pipe on stdin)',
     ),
     approve_all: bool = typer.Option(
         False, "--approve-all", help="Approve every finding's recommended ingest action"
@@ -606,7 +616,11 @@ def research_review_cmd(
         typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
         raise typer.Exit(code=1)
 
-    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace), "run_id": run_id}
+    handler_kwargs: dict[str, object] = {
+        "workspace_path": str(workspace),
+        "run_id": run_id,
+        "checkpoint_id": checkpoint_id,
+    }
 
     raw: str | None = None
     if decisions_file is not None:
@@ -730,8 +744,18 @@ def curation_inspect_cmd(
 def curation_review_cmd(
     workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
     run_id: str = typer.Option(..., "--run-id", help="The paused curation run to resume"),
+    checkpoint_id: str = typer.Option(
+        ...,
+        "--checkpoint-id",
+        help=(
+            "The checkpoint id the queue was rendered at (read it from "
+            "'curation inspect --json'). The resume is refused if the run has moved on."
+        ),
+    ),
     decisions_file: Optional[Path] = typer.Option(
-        None, "--decisions-file", help="JSON file of per-item decisions (or pipe on stdin)"
+        None,
+        "--decisions-file",
+        help='JSON object of per-proposal decisions, {"proposal_id": "decision"} (or pipe on stdin)',
     ),
     approve_all: bool = typer.Option(
         False, "--approve-all", help="Approve every proposal's recommended write"
@@ -746,7 +770,11 @@ def curation_review_cmd(
         typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
         raise typer.Exit(code=1)
 
-    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace), "run_id": run_id}
+    handler_kwargs: dict[str, object] = {
+        "workspace_path": str(workspace),
+        "run_id": run_id,
+        "checkpoint_id": checkpoint_id,
+    }
 
     raw: str | None = None
     if decisions_file is not None:
