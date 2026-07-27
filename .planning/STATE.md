@@ -3,11 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: UI-Primary Experience (Proof of Concept)
 current_phase: 18
-status: planned
+current_phase_name: contract-governance-foundations
+status: executing
 stopped_at: Phase 18 planned — ready to execute
-last_updated: "2026-07-26T21:50:00.000Z"
-last_activity: 2026-07-26
-last_activity_desc: Phase 18 planned — 8 plans in 4 waves (VFIX-01, GOV-01..05)
+last_updated: "2026-07-27T07:11:51.621Z"
+last_activity: 2026-07-27
+last_activity_desc: Phase 18 execution started
 progress:
   total_phases: 7
   completed_phases: 0
@@ -23,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** v0.5 UI-Primary Experience (PoC) — roadmapped as Phases 18–24 on branch `dev-v05`
+**Current focus:** Phase 18 — contract-governance-foundations
 
 ## Current Position
 
-Phase: 18 — Contract & Governance Foundations (planned)
-Plan: —
-Status: Ready to execute — 8 plans in 4 waves
+Phase: 18 (contract-governance-foundations) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 18
 Progress: [--------------------] 0% (0/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
-Last activity: 2026-07-26 — Phase 18 planned (8 plans, 4 waves; research + patterns + validation strategy in place)
+Last activity: 2026-07-27 — Phase 18 execution started
 
 ## Performance Metrics
 

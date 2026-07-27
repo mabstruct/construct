@@ -99,13 +99,13 @@ Full phase detail (goals, success criteria, plans) archived in
 **Why first**: All five GOV items are repairs to *live* code found by the research (`ui/gate_review.py:252-281`, inert `input_model` validation, positional `_resolve_decisions`), not new-build concerns. GOV-01 must land with or before the HTTP adapter because HTTP is the surface that forces the question; GOV-02/GOV-03 must land before the review wizards so the API is never built against the positional decision shape.
 **Named decision to record**: the views byte-contract fix conforms `views/models.py` to the written bytes. On its face this looks like a reversal of the standing "conform the data to the gate" decision (ING-02) — it is not, because views is a derived projection whose author is the generator, but it must be recorded explicitly as a decision, not slipped in. *(Recorded as D-01; the reconciliation is written into the `views/models.py` module docstring by plan 18-04.)*
 **Open decision carried in**: `gate_review.py`'s disposition (fix, fence, or delete) — research states that leaving a second UI that forges gates is worse than either keeping or deleting it. *(Resolved as D-13: delete, with the removal made permanent by a category-level source guard in plan 18-07.)*
-**Plans**: 8 plans in 4 waves
+**Plans**: 2/8 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 18-01-PLAN.md — GOV-01 tracer: one validating invocation seam, proven end-to-end on one capability across the real CLI process and real MCP dispatch (wave 1)
-- [ ] 18-04-PLAN.md — VFIX-01: conform the views contract models to the writer bytes, pick the canonical `events.json` shape, model the two ungated files (wave 1)
+- [x] 18-01-PLAN.md — GOV-01 tracer: one validating invocation seam, proven end-to-end on one capability across the real CLI process and real MCP dispatch (wave 1)
+- [x] 18-04-PLAN.md — VFIX-01: conform the views contract models to the writer bytes, pick the canonical `events.json` shape, model the two ungated files (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -389,7 +389,7 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | Complete | 2026-07-20 |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
-| 18. Contract & Governance Foundations | v0.5 | 0/? | Not started | - |
+| 18. Contract & Governance Foundations | v0.5 | 2/8 | In Progress|  |
 | 19. HTTP API over the Capability Registry | v0.5 | 0/? | Not started | - |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
