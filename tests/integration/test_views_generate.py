@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 
 import pydantic
+import pytest
 
 from construct.services.knowledge import create_card
 from construct.views import models as views_models
@@ -49,6 +50,12 @@ ALL_MODEL_NAMES = [
     "DigestsFile",
     "EventRecord",
     "EventsFile",
+    # D-18: the two files that had no contract model at all.
+    "WorkspaceStatsFile",
+    "CurationHistoryFile",
+    "CurationCycleRecord",
+    "GlobalStatsTotals",
+    "WorkspaceStatsTotals",
 ]
 
 
@@ -106,7 +113,7 @@ def test_generated_card_connections_are_id_strings(tmp_path: Path) -> None:
     # Load-bearing precondition: without a non-empty list somewhere, the type
     # assertion below passes vacuously — the Pitfall 1 failure mode.
     assert any(card["connects_to"] for card in all_cards), (
-        "no generated card has connections; CardRecord.connections is untested"
+        "no generated card has connections; CardRecord.connects_to is untested"
     )
 
     for card in all_cards:
@@ -118,18 +125,10 @@ def test_generated_card_connections_are_id_strings(tmp_path: Path) -> None:
         assert connections == sorted(connections), (
             f"card {card['id']} connections are not sorted: {connections}"
         )
-        # The value the writer emits must satisfy the model the validator applies.
-        record = CardRecord(
-            id=card["id"],
-            title=card["title"],
-            epistemic_type=card["epistemic_type"],
-            confidence=card["confidence"],
-            source_tier=card["source_tier"],
-            lifecycle=card["lifecycle"],
-            summary=card.get("summary_excerpt", ""),
-            connections=connections,
-        )
-        assert record.connections == connections
+        # D-01: the model now reads the writer's own key, so the raw written
+        # record validates whole rather than through a field-renaming projection.
+        record = CardRecord.model_validate(card)
+        assert record.connects_to == connections
 
 
 def test_validation_error_run_does_not_latch_into_permanent_success(
@@ -220,13 +219,53 @@ def test_malformed_cache_is_a_cache_miss_not_a_crash(
         assert report.validation_errors == []
 
 
-def test_models_still_forbid_unknown_fields() -> None:
+def test_models_ignore_unknown_fields() -> None:
+    """D-03 supersedes the D-02 prohibition this test used to assert.
+
+    The views models are a *derived projection*: a parser that starts emitting
+    one more key must not invalidate them, nor invalidate the ``views/build/``
+    copies already on users' disks. Forbid-extra stays where an unexpected field
+    crosses a trust boundary — see ``test_projection_relaxation_is_scoped``.
+    """
     for name in ALL_MODEL_NAMES:
         model = getattr(views_models, name)
         assert issubclass(model, pydantic.BaseModel), name
-        assert model.model_config.get("extra") == "forbid", (
-            f"{name} does not forbid unknown fields (D-02 prohibition)"
+        assert model.model_config.get("extra") == "ignore", (
+            f"{name} does not ignore unknown fields (D-03 relaxation)"
         )
+
+
+def test_projection_relaxation_is_scoped() -> None:
+    """D-03 stops at the projection — the canonical emitters keep forbid."""
+    from construct.schemas.config import EventRecord as EmitterEventRecord
+    from construct.schemas.workspace import ConnectionsFile as CanonicalConnectionsFile
+
+    assert EmitterEventRecord.model_config.get("extra") == "forbid"
+    assert CanonicalConnectionsFile.model_config.get("extra") == "forbid"
+
+
+def test_relaxed_models_still_reject_malformed_records() -> None:
+    """Ignore-extra must not have become accept-anything (D-03 risk).
+
+    A model that ignores extras and requires nothing validates literally
+    anything, which removes the gate instead of fixing it.
+    """
+    for model_name, malformed in (
+        # missing required id
+        ("CardRecord", {"title": "t", "epistemic_type": "claim", "confidence": 3,
+                        "source_tier": 2, "lifecycle": "seed"}),
+        # required field of the wrong type
+        ("ConnectionRecord", {"source": ["a"], "target": "b", "type": "supports"}),
+        # global stats without its totals map
+        ("StatsFile", {"by_lifecycle": {}}),
+        # workspace stats without its graph metrics
+        ("WorkspaceStatsFile", {"totals": {}}),
+        # a history payload with no cycles key at all
+        ("CurationHistoryFile", {}),
+    ):
+        model = getattr(views_models, model_name)
+        with pytest.raises(pydantic.ValidationError):
+            model.model_validate(malformed)
 
 
 def test_views_generate_cli_command_generates_clean(scaffolded_install_root: Path) -> None:
@@ -282,25 +321,25 @@ def test_views_generate_json_flag_emits_parseable_json(
     assert isinstance(payload["warnings"], list)
 
 
-def test_views_validate_does_not_yet_accept_generated_bytes(
+def test_views_validate_accepts_generated_bytes(
     scaffolded_install_root: Path,
 ) -> None:
-    """Characterisation test for the writer/validator divergence (carried from 15-02).
+    """VFIX-01: ``views validate`` accepts every file ``views generate`` writes.
 
-    ``generate()`` validates an *adapted projection* of each file (generate.py's
-    ``_FILE_MODEL_MAP`` / per-file adapters) but writes the **raw parser dict**.
-    ``views validate`` applies the same models to the raw bytes with no adapter,
-    so three files the generator called clean are rejected on disk.
+    This replaces the characterisation test carried from 15-02, which pinned the
+    writer/validator divergence: ``generate()`` validated an *adapted projection*
+    of each file and then wrote the raw parser dict, while ``views validate``
+    applied the same models to those raw bytes with no adapter and rejected
+    three of them. D-01 conformed the models to the writer and reduced the
+    generator's adapters to identity, so both commands now gate the same object.
 
-    This is pre-existing — before this plan nothing wired generation, so
-    ``views validate`` had no generator output to disagree with and the conflict
-    could not be observed. Resolving it means choosing which shape is canonical
-    (widen the models to the written bytes, share the generator's adapter with
-    the validator, or write the projection), a contract decision with Phase 16/17
-    SPA consequences that is deliberately NOT taken inside Plan 03.
-
-    This test pins the current, honest state. **It must be deleted when the
-    divergence is resolved** — it turns red the moment validate starts passing.
+    **This assertion is deliberately weak and Plan 05 replaces it.** The
+    scaffolded fixture's ``demo`` workspace has no cards, no connections and no
+    digests, so most record models are never instantiated and pass vacuously
+    (RESEARCH Pitfall 1). The non-vacuous guard belongs with the file-contract
+    tables Plan 05 introduces; the populated round-trip above
+    (``test_populated_workspace_generates_clean``) is what carries real weight
+    until then.
     """
     from typer.testing import CliRunner
 
@@ -313,14 +352,22 @@ def test_views_validate_does_not_yet_accept_generated_bytes(
         app, ["views", "validate", "--install-root", str(scaffolded_install_root)]
     )
 
-    assert validated.exit_code == 1, validated.stdout
-    # The exact divergent set, so a change in its shape is visible rather than silent.
     failing = {
         line.strip().removeprefix("✗ ").strip()
         for line in validated.stdout.splitlines()
         if line.strip().startswith("✗")
     }
-    assert failing == {"stats.json", "demo/connections.json", "demo/events.json"}, failing
+    assert failing == set(), failing
+    assert validated.exit_code == 0, validated.stdout
+
+    # D-18: the two previously ungated files are now among the files this
+    # command actually looks at — a model nothing invokes is not a gate.
+    checked = {
+        line.strip().removeprefix("✓ ").strip()
+        for line in validated.stdout.splitlines()
+        if line.strip().startswith("✓")
+    }
+    assert {"demo/stats.json", "demo/curation-history.json"} <= checked, checked
 
 
 def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(

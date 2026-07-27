@@ -627,6 +627,85 @@ def ingest_batch(state: ResearchRunState) -> dict:
     }
 
 
+#: Canonical ``DigestRecord`` field → the spelling it carried before D-20.
+#: Read-side only: the store is migrated, never a decision (the same discipline
+#: D-12 applies to checkpoints).
+_DIGEST_LEGACY_KEYS = {
+    "domain": "domain_id",
+    "theme": "title",
+    "date": "generated_at",
+    "summary_text": "summary",
+}
+
+
+def _migrate_digest_record(raw: dict) -> dict:
+    """Map a pre-D-20 digest record onto the current spelling.
+
+    A record already in the new spelling passes through untouched: each
+    canonical key is only filled from its legacy name when it is absent. The
+    dropped ``card_ids`` needs no handling — the model ignores unknown keys, so
+    it simply does not survive into the rewritten file.
+    """
+    migrated = dict(raw)
+    for canonical, legacy in _DIGEST_LEGACY_KEYS.items():
+        if canonical not in migrated and legacy in migrated:
+            migrated[canonical] = migrated.pop(legacy)
+    return migrated
+
+
+def _load_digest_store(store_path: Path) -> DigestsFile:
+    """Load ``digests/digests.json``, migrating pre-D-20 records on read.
+
+    T-18-18: renaming required fields invalidates every record an existing
+    workspace already holds. The previous ``except ValueError: DigestsFile()``
+    path would have turned that into silent deletion of a user's entire research
+    history on the next ``research.run``, so validation happens per record and a
+    record that cannot be migrated is dropped with a warning rather than taking
+    its neighbours with it.
+    """
+    import json
+
+    from pydantic import ValidationError
+
+    from construct.views.models import DigestRecord, DigestsFile
+
+    try:
+        raw = json.loads(store_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.warning(
+            "digest store at %s is unreadable (%s); starting a new one",
+            store_path,
+            exc,
+        )
+        return DigestsFile()
+
+    entries = raw.get("digests") if isinstance(raw, dict) else None
+    if not isinstance(entries, list):
+        logger.warning("digest store at %s has no digests list; starting a new one", store_path)
+        return DigestsFile()
+
+    kept: list[DigestRecord] = []
+    dropped = 0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            dropped += 1
+            continue
+        try:
+            kept.append(DigestRecord.model_validate(_migrate_digest_record(entry)))
+        except ValidationError:
+            dropped += 1
+
+    if dropped:
+        logger.warning(
+            "digest store at %s: %d record(s) could not be migrated and were dropped; "
+            "%d kept",
+            store_path,
+            dropped,
+            len(kept),
+        )
+    return DigestsFile(digests=kept)
+
+
 def compile_digest(state: ResearchRunState) -> dict:
     """Render the cycle digest markdown + append a ``DigestRecord`` (template, no LLM).
 
@@ -717,19 +796,17 @@ def compile_digest(state: ResearchRunState) -> dict:
     md_path.write_text(markdown, encoding="utf-8")
 
     store_path = digests_dir / "digests.json"
-    store = DigestsFile()
-    if store_path.exists():
-        try:
-            store = DigestsFile.model_validate_json(store_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            store = DigestsFile()
+    store = _load_digest_store(store_path) if store_path.exists() else DigestsFile()
+    # D-20: the parser's spelling, which is now also the model's. The prior
+    # ``card_ids`` argument is gone with the field — the created card ids are
+    # still listed in the digest markdown's "Created cards" section above, which
+    # is the artifact a reader actually opens.
     record = DigestRecord(
         id=digest_id,
-        domain_id=domain_id,
-        title=title,
-        generated_at=now_iso,
-        card_ids=list(cards_created),
-        summary=summary_line,
+        domain=domain_id,
+        theme=title,
+        date=now_iso,
+        summary_text=summary_line,
     )
     # Idempotent append: drop any prior record with the same id, then add.
     store.digests = [d for d in store.digests if d.id != digest_id]

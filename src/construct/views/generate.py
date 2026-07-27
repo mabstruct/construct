@@ -51,10 +51,12 @@ from construct.views.models import (
     BridgesFile,
     CardsFile,
     ConnectionsFile,
+    CurationHistoryFile,
     DigestsFile,
     DomainsFile,
     EventsFile,
     StatsFile,
+    WorkspaceStatsFile,
 )
 
 
@@ -89,78 +91,42 @@ class GenerateReport:
 # demonstrates — a fix applied to one copy would not have reached the other.
 _Adapter = Callable[[dict], dict]
 
+
+def _as_written(data: dict) -> dict:
+    """The identity adapter — validate exactly the bytes the writer will write.
+
+    D-01: every adapter that used to sit here renamed writer keys into a model
+    field set that disagreed with them, so ``generate`` validated a projection it
+    then discarded and wrote the raw parser dict instead. ``views validate``
+    applied the same models to those raw bytes with no adapter and rejected them.
+    With the models conformed to the writer, the adapter has nothing left to do,
+    and the two commands finally gate the same object.
+    """
+    return data
+
+
 _FILE_MODEL_MAP: list[tuple[str, type[BaseModel], _Adapter]] = [
-    ("bridges.json", BridgesFile, lambda d: {"bridges": d.get("bridges", []), "summary": d.get("summary", {})}),
-    ("domains.json", DomainsFile, lambda d: {"settings": d.get("settings", {}), "domains": d.get("domains", [])}),
-    ("articles.json", ArticlesFile, lambda d: {"articles": d.get("articles", [])}),
-    ("stats.json", StatsFile, lambda d: {
-        "total_cards": d.get("totals", {}).get("cards", 0),
-        "total_connections": d.get("totals", {}).get("connections", 0),
-        "total_domains": d.get("totals", {}).get("workspaces", 0),
-        "total_digests": d.get("totals", {}).get("digests", 0),
-        "total_articles": d.get("totals", {}).get("articles", len(d.get("articles", []))),
-        "cards_by_domain": {},
-    }),
+    ("bridges.json", BridgesFile, _as_written),
+    ("domains.json", DomainsFile, _as_written),
+    ("articles.json", ArticlesFile, _as_written),
+    ("stats.json", StatsFile, _as_written),
 ]
 
 # Per-workspace files share a common pattern; keyed on the filename, matched
 # against the trailing ``<ws_id>/<filename>`` segment of the relative path.
+#
+# The global ``stats.json`` above and the ``stats.json`` below are different
+# files with different writers and different models. ``_validate_file_data``
+# keeps them apart by matching the global table on an exact path and this one on
+# a trailing ``/<filename>``, so a per-workspace file can never be validated
+# against the global contract or vice versa.
 _PER_WS_FILES: list[tuple[str, type[BaseModel], _Adapter]] = [
-    ("cards.json", CardsFile, lambda d: {
-        "cards": [
-            {
-                "id": c["id"],
-                "title": c.get("title", ""),
-                "epistemic_type": c.get("epistemic_type", ""),
-                "confidence": c.get("confidence", 0),
-                "source_tier": c.get("source_tier", 0),
-                "lifecycle": c.get("lifecycle", ""),
-                "domains": c.get("domains", []),
-                "summary": c.get("summary_excerpt", c.get("body_markdown", "")),
-                "connections": c.get("connects_to", []),
-                "content_categories": c.get("content_categories", []),
-            }
-            for c in d.get("cards", [])
-        ],
-    }),
-    ("connections.json", ConnectionsFile, lambda d: {
-        "connections": [
-            {
-                "source": c.get("source", ""),
-                "target": c.get("target", ""),
-                "type": c.get("type", ""),
-                "created_at": c.get("created", ""),
-                "created_by": c.get("author", ""),
-                "note": c.get("note"),
-            }
-            for c in d.get("connections", [])
-        ],
-    }),
-    ("digests.json", DigestsFile, lambda d: {
-        "digests": [
-            {
-                "id": digest.get("id", ""),
-                "domain_id": digest.get("domain", ""),
-                "title": digest.get("theme", ""),
-                "generated_at": digest.get("date", ""),
-                "card_ids": [],
-                "summary": digest.get("summary_text", ""),
-            }
-            for digest in d.get("digests", [])
-        ],
-    }),
-    ("events.json", EventsFile, lambda d: {
-        "events": [
-            {
-                "timestamp": e.get("timestamp", ""),
-                "type": e.get("type", ""),
-                "actor": e.get("actor", e.get("author", "")),
-                "card_id": e.get("card_id"),
-                "details": e.get("details"),
-            }
-            for e in d.get("events", [])
-        ],
-    }),
+    ("cards.json", CardsFile, _as_written),
+    ("connections.json", ConnectionsFile, _as_written),
+    ("stats.json", WorkspaceStatsFile, _as_written),
+    ("curation-history.json", CurationHistoryFile, _as_written),
+    ("digests.json", DigestsFile, _as_written),
+    ("events.json", EventsFile, _as_written),
 ]
 
 
@@ -476,10 +442,13 @@ def _validate_file_data(
     was found (caller should skip the file).
 
     Drives off ``_FILE_MODEL_MAP`` / ``_PER_WS_FILES`` so the writer→validator
-    projection is defined in exactly one place (WR-04). A file with no table entry
-    is not validated: per-workspace ``stats.json`` follows the ``compute_stats``
-    shape and ``curation-history.json`` has no contract model, so both fall through
-    to ``False`` exactly as before.
+    projection is defined in exactly one place (WR-04).
+
+    D-18: per-workspace ``stats.json`` and ``curation-history.json`` used to have
+    no table entry and fell through to ``False`` — written with no gate at all.
+    Both now carry a model. A file that still has no entry (``version.json``,
+    ``_build_meta.json``, the warnings log) is build metadata rather than view
+    data and is deliberately not validated here.
     """
     for name, model_class, adapt in _FILE_MODEL_MAP:
         if rel_path == name:
