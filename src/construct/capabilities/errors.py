@@ -15,8 +15,9 @@ exists to close. This is a deliberate, documented exception to the
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any, Optional
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 
 class CapabilityError(Exception):
@@ -48,7 +49,10 @@ class CapabilityInputError(CapabilityError):
 
     @classmethod
     def from_validation_error(
-        cls, cap_id: str, exc: ValidationError
+        cls,
+        cap_id: str,
+        exc: ValidationError,
+        model: Optional[type[BaseModel]] = None,
     ) -> CapabilityInputError:
         """Build the seam's reason string from a pydantic ``ValidationError``.
 
@@ -58,13 +62,42 @@ class CapabilityInputError(CapabilityError):
         be filesystem paths or other sensitive payload content — out of a string
         that is rendered straight back to an MCP client.
 
-        Pydantic reports errors in a deterministic order for a given model and
-        payload, so both surfaces build a byte-identical reason.
+        ``model`` is the capability's declared input model. When supplied, the
+        errors are put into a **total order that does not depend on the payload**:
+        declared fields first in model declaration order, then undeclared fields
+        sorted by name. Pydantic is deterministic for a *given* payload, but it
+        reports ``extra_forbidden`` errors in payload key-insertion order — so an
+        MCP client and a CLI call site building the same logical payload with its
+        keys in different orders would otherwise receive two different reason
+        strings for one identical rejection. That is the contract fork GOV-01
+        exists to close, so the ordering is imposed here rather than left to the
+        caller's dict literal.
         """
+        errors = list(
+            exc.errors(include_url=False, include_input=False, include_context=False)
+        )
+        if model is not None:
+            errors.sort(key=_error_order_key(model))
         parts = [
             f"{'.'.join(str(item) for item in error['loc']) or '<root>'}: {error['msg']}"
-            for error in exc.errors(
-                include_url=False, include_input=False, include_context=False
-            )
+            for error in errors
         ]
         return cls(cap_id, "; ".join(parts))
+
+
+def _error_order_key(model: type[BaseModel]):
+    """A payload-independent sort key over a ``ValidationError``'s entries.
+
+    Declared fields sort first, in the order the model declares them; undeclared
+    fields sort after, by name. ``list.sort`` is stable, so anything the key ties
+    (two errors on one field) keeps pydantic's own order.
+    """
+    declared = {name: index for index, name in enumerate(model.model_fields)}
+
+    def key(error: dict[str, Any]) -> tuple[int, int, str]:
+        head = str(error["loc"][0]) if error.get("loc") else ""
+        if head in declared:
+            return (0, declared[head], "")
+        return (1, 0, head)
+
+    return key

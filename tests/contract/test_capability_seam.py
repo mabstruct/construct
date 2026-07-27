@@ -9,7 +9,7 @@ asserted separately, as one explicit integer a future capability must deliberate
 bump.
 
 The shape is the point. ``tests/contract/test_mcp_contracts.py:53-80`` asserts a
-hand-typed ``expected = {...}`` name set; that is the WR-01 anti-pattern, because a
+hand-typed set of capability names; that is the WR-01 anti-pattern, because a
 membership assertion proves a capability is *listed* and never that nothing was
 *added* unguarded. This file therefore asserts a relationship between two live
 measurements and contains no name set used as an equality assertion.

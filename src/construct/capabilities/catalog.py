@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from construct.capabilities.registry import CapabilityRegistry, CapabilityRecord
 from construct.pipelines.workflow_runner import WorkflowRunner
@@ -87,13 +87,25 @@ from construct.llm.daily_run import (
 # ---------------------------------------------------------------------------
 # Input models
 # ---------------------------------------------------------------------------
+#
+# D-06: every model below sets ``extra="forbid"``. The seam validates a payload
+# against the declared model before dispatch (GOV-01), so a model that forbids
+# nothing is a seam that enforces nothing — it would type-check the declared
+# fields and then hand the handler whatever else the caller sent.
+# ``tests/contract/test_capability_seam.py`` holds this as a cardinality guard:
+# the number of forbidding models must equal the registry size, so a capability
+# cannot be added unguarded.
 
 
 class WorkspacePathInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     path: Path
 
 
 class CardCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     title: str
     epistemic_type: str
@@ -106,6 +118,8 @@ class CardCreateInput(BaseModel):
 
 
 class CardEditInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     card_id: str
     workspace: Path
     title: str | None = None
@@ -117,12 +131,16 @@ class CardEditInput(BaseModel):
 
 
 class CardArchiveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     card_id: str
     workspace: Path
     author: str = "curator"
 
 
 class ConnectionAddInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     from_id: str
     to_id: str
     conn_type: str
@@ -132,6 +150,8 @@ class ConnectionAddInput(BaseModel):
 
 
 class ConnectionRemoveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     from_id: str
     to_id: str
     conn_type: str
@@ -139,6 +159,8 @@ class ConnectionRemoveInput(BaseModel):
 
 
 class ConnectionListInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     card_id: str | None = None
     include_archived: bool = False
@@ -155,10 +177,14 @@ class CardListInput(BaseModel):
 
 
 class GraphStatusInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
 
 
 class ViewsGenerateDataInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # D-05: the contract is install-root scoped, not workspace scoped.
     # ``discover_workspaces`` scans only the *children* of its argument, so
     # handing it a single workspace discovers zero workspaces and silently
@@ -167,12 +193,16 @@ class ViewsGenerateDataInput(BaseModel):
 
 
 class WorkflowRunInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     workflow_name: str = "workflow"
     start_step: int = 0
 
 
 class IngestSourceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
     source: str
     domain_hint: str | None = None
@@ -189,6 +219,8 @@ class IngestSourceInput(BaseModel):
 
 
 class HelpSuggestInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     workspace: Path
 
 

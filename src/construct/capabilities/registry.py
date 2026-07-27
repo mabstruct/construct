@@ -71,7 +71,13 @@ class CapabilityRegistry:
         try:
             model = cap.input_model.model_validate(payload)
         except ValidationError as exc:
-            raise CapabilityInputError.from_validation_error(cap_id, exc) from exc
+            # The model is handed over so the reason string can be ordered by
+            # field declaration rather than by payload key insertion — otherwise
+            # two surfaces sending the same logical payload with keys in
+            # different orders receive two different reasons for one rejection.
+            raise CapabilityInputError.from_validation_error(
+                cap_id, exc, cap.input_model
+            ) from exc
 
         return cap.handler(**model.model_dump())
 
