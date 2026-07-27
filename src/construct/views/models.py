@@ -402,17 +402,50 @@ class ConnectionsFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# D-01/D-20: field names taken from ``lib/parse_digests._parse_one`` via the
+# generator's digests.json adapter — ``domain_id`` was reading ``domain``,
+# ``title`` was reading ``theme``, ``generated_at`` was reading ``date`` and
+# ``summary`` was reading ``summary_text``. The ``card_ids`` field is removed:
+# the adapter hard-coded it to ``[]`` and no parser has ever emitted it, so it
+# was a phantom of exactly the class ``DomainRecord``'s comment documents.
+#
+# This model has two legitimate authors — it validates the views projection and
+# ``llm/research_run.compile_digest`` uses it to *write* a workspace's
+# ``digests/digests.json``. ``Field(alias=...)`` with populate-by-name would let
+# both spellings stand and was weighed for that reason; D-20 fixes it as a
+# rename instead. An alias is a second contract surface, and it changes
+# ``model_json_schema()`` output, which Phase 19's generated adapter consumes.
+# The cost of the rename — existing workspace stores in the old spelling — is
+# paid by ``compile_digest``'s read-side migration, not by a second spelling.
+#
+# The counters and section fields below are declared rather than left to the
+# D-03 relaxation because the scaffold SPA's Digests and DigestDetail pages read
+# every one of them. ``parse_status`` is declared too: ``parse_digests`` adds it
+# only when a section failed to parse, and the SPA renders a partial-parse
+# notice from it. ``top_findings`` and ``search_clusters`` stay open
+# ``list[dict]`` — both are built by regex heuristics whose element shape the
+# parser guards with nothing, so a nested model would be stricter than it
+# promises.
 class DigestRecord(BaseModel):
     """One research-cycle digest."""
 
     model_config = ConfigDict(extra="ignore")
 
     id: str
-    domain_id: str
-    title: str
-    generated_at: str
-    card_ids: list[str] = Field(default_factory=list)
-    summary: str
+    date: str = ""
+    domain: str = ""
+    theme: str = ""
+    summary_text: str = ""
+    papers_found: int = 0
+    papers_ingested: int = 0
+    papers_skipped: int = 0
+    seed_cards_created: int = 0
+    top_findings: list[dict] = Field(default_factory=list)
+    search_clusters: list[dict] = Field(default_factory=list)
+    coverage_notes: str = ""
+    suggested_adjustments: str = ""
+    parse_status: str = "ok"
+    raw_path: str = ""
 
 
 class DigestsFile(BaseModel):

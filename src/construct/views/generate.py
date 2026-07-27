@@ -125,19 +125,7 @@ _PER_WS_FILES: list[tuple[str, type[BaseModel], _Adapter]] = [
     ("connections.json", ConnectionsFile, _as_written),
     ("stats.json", WorkspaceStatsFile, _as_written),
     ("curation-history.json", CurationHistoryFile, _as_written),
-    ("digests.json", DigestsFile, lambda d: {
-        "digests": [
-            {
-                "id": digest.get("id", ""),
-                "domain_id": digest.get("domain", ""),
-                "title": digest.get("theme", ""),
-                "generated_at": digest.get("date", ""),
-                "card_ids": [],
-                "summary": digest.get("summary_text", ""),
-            }
-            for digest in d.get("digests", [])
-        ],
-    }),
+    ("digests.json", DigestsFile, _as_written),
     ("events.json", EventsFile, _as_written),
 ]
 
