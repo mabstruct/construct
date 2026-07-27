@@ -14,7 +14,7 @@
 
 The shared prerequisite named by SEED-001 and SEED-003, and independently by the architecture and pitfalls research. Building browse/wiki/graph on a projection that diverges from its own validator means building twice.
 
-- [ ] **VFIX-01**: `views validate` accepts every file `views generate` writes — the byte contract round-trips, and `test_views_validate_does_not_yet_accept_generated_bytes` is replaced by a non-vacuous round-trip guard rather than deleted.
+- [x] **VFIX-01**: `views validate` accepts every file `views generate` writes — the byte contract round-trips, and `test_views_validate_does_not_yet_accept_generated_bytes` is replaced by a non-vacuous round-trip guard rather than deleted.
 
 ### HTTP API Layer (HTTP)
 
@@ -147,7 +147,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VFIX-01 | Phase 18 | Pending |
+| VFIX-01 | Phase 18 | Complete |
 | GOV-01 | Phase 18 | Pending |
 | GOV-02 | Phase 18 | Pending |
 | GOV-03 | Phase 18 | Pending |
@@ -197,6 +197,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | EVAL-05 | Phase 24 | Pending |
 
 **Coverage:**
+
 - v0.5 requirements: 48 total (VFIX 1 · HTTP 7 · GOV 5 · EXTR 6 · SHELL 3 · GUIDE 4 · WIZ 9 · BRWS 8 · EVAL 5)
 - Mapped to phases: 48 ✓ (roadmap created 2026-07-26, Phases 18–24)
 - Unmapped: 0 · Duplicated: 0
