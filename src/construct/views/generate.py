@@ -21,12 +21,16 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
+
+from construct.views.contracts import (
+    GLOBAL_FILE_CONTRACTS,
+    PER_WORKSPACE_FILE_CONTRACTS,
+)
 
 # D-08: the views source parsers ship inside the package. The distribution
 # packages only ``src/construct``, so the previous deployed-skill-directory
@@ -46,18 +50,6 @@ from construct.views.lib import (
     parse_domains,
     parse_events,
 )
-from construct.views.models import (
-    ArticlesFile,
-    BridgesFile,
-    CardsFile,
-    ConnectionsFile,
-    CurationHistoryFile,
-    DigestsFile,
-    DomainsFile,
-    EventsFile,
-    StatsFile,
-    WorkspaceStatsFile,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -75,59 +67,6 @@ class GenerateReport:
     validation_errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     total_files_written: int = 0
-
-
-# ---------------------------------------------------------------------------
-# Model map — which Pydantic model validates each output file's data field
-# ---------------------------------------------------------------------------
-
-# Each entry: (rel_path_in_data_dir, model_class, adapter from raw parser dict to
-# the model's field names).
-#
-# These two tables are the SINGLE definition of the writer→validator projection:
-# ``_validate_file_data`` iterates them rather than repeating each adapter inline.
-# They used to be dead code duplicated verbatim inside that function, which is
-# exactly the drift hazard the known writer-vs-validator divergence already
-# demonstrates — a fix applied to one copy would not have reached the other.
-_Adapter = Callable[[dict], dict]
-
-
-def _as_written(data: dict) -> dict:
-    """The identity adapter — validate exactly the bytes the writer will write.
-
-    D-01: every adapter that used to sit here renamed writer keys into a model
-    field set that disagreed with them, so ``generate`` validated a projection it
-    then discarded and wrote the raw parser dict instead. ``views validate``
-    applied the same models to those raw bytes with no adapter and rejected them.
-    With the models conformed to the writer, the adapter has nothing left to do,
-    and the two commands finally gate the same object.
-    """
-    return data
-
-
-_FILE_MODEL_MAP: list[tuple[str, type[BaseModel], _Adapter]] = [
-    ("bridges.json", BridgesFile, _as_written),
-    ("domains.json", DomainsFile, _as_written),
-    ("articles.json", ArticlesFile, _as_written),
-    ("stats.json", StatsFile, _as_written),
-]
-
-# Per-workspace files share a common pattern; keyed on the filename, matched
-# against the trailing ``<ws_id>/<filename>`` segment of the relative path.
-#
-# The global ``stats.json`` above and the ``stats.json`` below are different
-# files with different writers and different models. ``_validate_file_data``
-# keeps them apart by matching the global table on an exact path and this one on
-# a trailing ``/<filename>``, so a per-workspace file can never be validated
-# against the global contract or vice versa.
-_PER_WS_FILES: list[tuple[str, type[BaseModel], _Adapter]] = [
-    ("cards.json", CardsFile, _as_written),
-    ("connections.json", ConnectionsFile, _as_written),
-    ("stats.json", WorkspaceStatsFile, _as_written),
-    ("curation-history.json", CurationHistoryFile, _as_written),
-    ("digests.json", DigestsFile, _as_written),
-    ("events.json", EventsFile, _as_written),
-]
 
 
 # ---------------------------------------------------------------------------
@@ -431,6 +370,27 @@ def generate(install_root: Path) -> GenerateReport:
 # ---------------------------------------------------------------------------
 
 
+def contract_for(rel_path: str) -> type[BaseModel] | None:
+    """Return the contract model governing *rel_path*, or ``None`` if ungated.
+
+    A global file matches on its exact relative path and a per-workspace file on
+    a trailing ``/<filename>``, which is what keeps the two different
+    ``stats.json`` files apart: the root one is written by ``compute_global`` and
+    the per-workspace one by ``compute_workspace``, and validating either against
+    the other's model would report a clean build while the SPA read fields that
+    were never written.
+    """
+    model_class = GLOBAL_FILE_CONTRACTS.get(rel_path)
+    if model_class is not None:
+        return model_class
+
+    for name, per_ws_model in PER_WORKSPACE_FILE_CONTRACTS.items():
+        if rel_path.endswith(f"/{name}"):
+            return per_ws_model
+
+    return None
+
+
 def _validate_file_data(
     rel_path: str,
     raw_data: dict,
@@ -441,8 +401,18 @@ def _validate_file_data(
     Appends error messages to *errors* and returns ``True`` if a mismatch
     was found (caller should skip the file).
 
-    Drives off ``_FILE_MODEL_MAP`` / ``_PER_WS_FILES`` so the writer→validator
-    projection is defined in exactly one place (WR-04).
+    *raw_data* is the dict the write loop is about to hand to ``_write_atomic``,
+    validated as written. It used to be passed through a per-file adapter that
+    renamed writer keys into the model's field names, so what ``generate``
+    validated was a projection it then discarded — and ``views validate``, which
+    has no adapter, rejected the bytes that actually landed. Plan 04 conformed
+    the models to the writer, which made every adapter the identity function;
+    this reads the model out of ``views.contracts`` instead, the same table
+    ``views validate`` reads (D-01, research OQ-C).
+
+    Deleting the adapter tables without this replacement would have removed
+    generate-time validation altogether and silently turned a validating writer
+    into a blind one (research Finding V6, T-18-21).
 
     D-18: per-workspace ``stats.json`` and ``curation-history.json`` used to have
     no table entry and fell through to ``False`` — written with no gate at all.
@@ -450,15 +420,10 @@ def _validate_file_data(
     ``_build_meta.json``, the warnings log) is build metadata rather than view
     data and is deliberately not validated here.
     """
-    for name, model_class, adapt in _FILE_MODEL_MAP:
-        if rel_path == name:
-            return _try_validate(model_class, adapt(raw_data), rel_path, errors)
-
-    for name, model_class, adapt in _PER_WS_FILES:
-        if rel_path.endswith(f"/{name}"):
-            return _try_validate(model_class, adapt(raw_data), rel_path, errors)
-
-    return False
+    model_class = contract_for(rel_path)
+    if model_class is None:
+        return False
+    return _try_validate(model_class, raw_data, rel_path, errors)
 
 
 def _try_validate(

@@ -937,43 +937,32 @@ def validate(
     Reads <install-root>/views/build/data/*.json and validates each file
     against its declared contract model. Reports per-file pass/fail.
 
+    The file→model map is not written here. ``construct.views.contracts`` holds
+    the single copy, and ``views generate`` validates against the same tables, so
+    the writer and this command cannot enumerate different files — the failure
+    mode that left ``<ws>/stats.json`` and ``<ws>/curation-history.json`` both
+    unmodelled by the generator and unchecked here. A file added to the tables is
+    gated on both sides at once.
+
     ``--install-root`` is resolved at call time, not import time (WR-09).
     """
     install_root = install_root or Path.cwd()
-    from construct.views.models import (
-        ArticlesFile,
-        BridgesFile,
-        CardsFile,
-        ConnectionsFile,
-        CurationHistoryFile,
-        DigestsFile,
-        DomainsFile,
-        EventsFile,
-        StatsFile,
-        WorkspaceStatsFile,
-        schema_for,
-        unwrap_payload,
-        validate_data,
+    from construct.views.contracts import (
+        GLOBAL_FILE_CONTRACTS,
+        PER_WORKSPACE_FILE_CONTRACTS,
     )
+    from construct.views.models import unwrap_payload, validate_data
 
     build_data_dir = install_root / "views" / "build" / "data"
     if not build_data_dir.is_dir():
         typer.echo(f"ERROR: No views data directory at {build_data_dir}")
         raise typer.Exit(code=1)
 
-    # Map relative paths to their contract models
-    model_map: dict[str, type] = {
-        "bridges.json": BridgesFile,
-        "domains.json": DomainsFile,
-        "articles.json": ArticlesFile,
-        "stats.json": StatsFile,
-    }
-
     results: list[dict] = []
     all_passed = True
 
     # Global files
-    for filename, model_class in model_map.items():
+    for filename, model_class in GLOBAL_FILE_CONTRACTS.items():
         file_path = build_data_dir / filename
         if not file_path.exists():
             # A view file the generator did not emit is reported but is not a
@@ -998,20 +987,15 @@ def validate(
         if not ws_dir.is_dir():
             continue
         # D-18: ``stats.json`` and ``curation-history.json`` used to be absent
-        # here, so the two files with no contract model were also the two files
-        # this command never looked at. A gate the user's check does not invoke
-        # is not a gate. The per-workspace ``stats.json`` takes
-        # ``WorkspaceStatsFile``, never the global ``StatsFile`` above — same
-        # filename, different writer, different contract.
-        ws_files: list[tuple[str, type]] = [
-            ("cards.json", CardsFile),
-            ("connections.json", ConnectionsFile),
-            ("digests.json", DigestsFile),
-            ("events.json", EventsFile),
-            ("stats.json", WorkspaceStatsFile),
-            ("curation-history.json", CurationHistoryFile),
-        ]
-        for fname, mclass in ws_files:
+        # from the list that stood here, so the two files with no contract model
+        # were also the two files this command never looked at. A gate the user's
+        # check does not invoke is not a gate. Iterating the shared table instead
+        # of a second hand-written list is what makes that class of omission
+        # impossible rather than merely fixed once. The per-workspace
+        # ``stats.json`` takes ``WorkspaceStatsFile``, never the global
+        # ``StatsFile`` above — same filename, different writer, different
+        # contract, which is why the two tables are separate.
+        for fname, mclass in PER_WORKSPACE_FILE_CONTRACTS.items():
             fpath = ws_dir / fname
             if not fpath.exists():
                 continue
