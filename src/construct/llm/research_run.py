@@ -45,6 +45,7 @@ from construct.llm.curation_run import (
     IncompleteDecisionMap,
     StaleQueue,
     _check_coverage,
+    _checkpoint_id,
     _decision_map,
     _ensure_proposal_ids,
     _new_proposal_id,
@@ -140,6 +141,11 @@ class ReviewInput(BaseModel):
     model_config = {"extra": "forbid"}
     workspace_path: str
     run_id: str
+    #: GOV-03 / D-11: the checkpoint id the queue was rendered at — an ETag, so
+    #: every resume is a conditional request. REQUIRED, for the reason given on
+    #: ``CurationReviewInput.checkpoint_id``. Read it from ``research.run``'s or
+    #: ``research.inspect``'s result.
+    checkpoint_id: str
     #: GOV-02: an id-keyed map ``{proposal_id: decision}``. This replaces BOTH the
     #: positional list and the content-keyed list the module previously accepted.
     decisions: dict[str, str] | None = None
@@ -192,6 +198,9 @@ class RunResult(BaseModel):
     status: str  # awaiting_review | completed | failed
     run_id: str
     gate_id: str | None = None
+    #: GOV-03 / D-11: the run's checkpoint id at the moment this result was built,
+    #: returned alongside the queue so a caller can submit it back on resume.
+    checkpoint_id: str | None = None
     gate_queue: list[dict] = Field(default_factory=list)
     refs_created: list[str] = Field(default_factory=list)
     cards_created: list[str] = Field(default_factory=list)
@@ -1081,6 +1090,7 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=snap.values.get("gate_id", run_id),
+                checkpoint_id=_checkpoint_id(snap),
                 gate_queue=_ensure_proposal_ids(snap.values.get("gate_queue", []), run_id),
                 degraded=bool(snap.values.get("retrieval", {}).get("degraded", False)),
                 message="Paused for human review; resume with research.review.",
@@ -1102,7 +1112,9 @@ def run_research_run(inp: ResearchRunInput) -> RunResult:
 # ── Review/inspect runners (resume + read-only inspect; cross-process via the DB) ──
 
 
-def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
+def _completion_result(
+    run_id: str, values: dict, completed: bool, checkpoint_id: str | None = None
+) -> RunResult:
     """Assemble the D-12 ``RunResult`` from the final/merged graph state (SC5)."""
     retrieval = values.get("retrieval", {}) or {}
     status = values.get("status") or ("completed" if completed else "awaiting_review")
@@ -1110,6 +1122,7 @@ def _completion_result(run_id: str, values: dict, completed: bool) -> RunResult:
         status=status,
         run_id=run_id,
         gate_id=values.get("gate_id", run_id),
+        checkpoint_id=checkpoint_id,
         gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
         refs_created=values.get("refs_created", []),
         cards_created=values.get("cards_created", []),
@@ -1158,6 +1171,21 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         graph = build_research_run_graph(saver)
         cfg = {"configurable": {"thread_id": inp.run_id}}
         snap = graph.get_state(cfg)
+        current = _checkpoint_id(snap)
+
+        # D-11: STALENESS FIRST — before the coverage check and before
+        # Command(resume=…), by exact string equality. See the equivalent block in
+        # ``curation_run.review_curation_run`` for why the order and the exactness
+        # both matter, and for why a replayed resume necessarily lands here.
+        if current is not None and inp.checkpoint_id != current:
+            return RunResult(
+                status="failed",
+                run_id=inp.run_id,
+                gate_id=(snap.values or {}).get("gate_id", inp.run_id),
+                checkpoint_id=current,
+                message=StaleQueue(supplied=inp.checkpoint_id, current=current).safe_message,
+            )
+
         # WR-05: only resume a run that is actually paused at the gate. Resuming a
         # completed run would re-execute the post-gate write nodes, re-emitting
         # D-11 audit events and re-stamping seed timestamps; a nonexistent run has
@@ -1165,11 +1193,12 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         if snap.next != ("gate_review",):
             values = snap.values or {}
             if values and not snap.next:
-                return _completion_result(inp.run_id, values, True)
+                return _completion_result(inp.run_id, values, True, current)
             return RunResult(
                 status="failed",
                 run_id=inp.run_id,
                 gate_id=values.get("gate_id", inp.run_id) if values else inp.run_id,
+                checkpoint_id=current,
                 message="No paused run awaiting review for this run_id.",
             )
         raw_queue = snap.values.get("gate_queue", []) if snap.values else []
@@ -1184,6 +1213,7 @@ def review_research_run(inp: ReviewInput) -> RunResult:
                 status="failed",
                 run_id=inp.run_id,
                 gate_id=(snap.values or {}).get("gate_id", inp.run_id),
+                checkpoint_id=current,
                 gate_queue=gate_queue,
                 message=exc.safe_message,
             )
@@ -1192,7 +1222,7 @@ def review_research_run(inp: ReviewInput) -> RunResult:
         final = graph.get_state(cfg)
         completed = not final.next
         values = final.values if final.values else result
-        return _completion_result(inp.run_id, values, completed)
+        return _completion_result(inp.run_id, values, completed, _checkpoint_id(final))
     finally:
         conn.close()
 
@@ -1231,6 +1261,7 @@ def inspect_research_run(inp: InspectInput) -> RunResult:
             status=status,
             run_id=inp.run_id,
             gate_id=values.get("gate_id", inp.run_id),
+            checkpoint_id=_checkpoint_id(snap),
             gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
             refs_created=values.get("refs_created", []),
             cards_created=values.get("cards_created", []),

@@ -1190,7 +1190,7 @@ def test_inspect_returns_the_checkpoint_id_etag(curation_workspace, monkeypatch)
     assert curation_run._checkpoint_id(snap) == first.checkpoint_id
 
 
-def test_resume_with_current_checkpoint_id_proceeds(curation_workspace, monkeypatch):
+def test_resume_with_current_etag_proceeds(curation_workspace, monkeypatch):
     """D-11: a resume carrying the run's current checkpoint id proceeds normally."""
     from construct.llm import curation_run
 
@@ -1211,7 +1211,7 @@ def test_resume_with_current_checkpoint_id_proceeds(curation_workspace, monkeypa
     assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
 
 
-def test_stale_checkpoint_id_rejected_with_zero_writes(curation_workspace, monkeypatch):
+def test_stale_etag_rejected_with_zero_writes(curation_workspace, monkeypatch):
     """GOV-03 boundary edge: a checkpoint id differing by a SINGLE character is
     rejected, nothing is written, and the run stays paused."""
     from construct.llm import curation_run
@@ -1246,7 +1246,7 @@ def test_stale_checkpoint_id_rejected_with_zero_writes(curation_workspace, monke
     assert after.checkpoint_id == current, "a rejected resume must not advance the run"
 
 
-def test_checkpoint_id_comparison_is_exact_string_equality(curation_workspace, monkeypatch):
+def test_etag_comparison_is_exact_string_equality(curation_workspace, monkeypatch):
     """GOV-03 precision edge: no trimming, no case folding, no prefix matching.
     Each near-miss below is rejected, and each rejection writes nothing."""
     from construct.llm import curation_run
@@ -1281,7 +1281,7 @@ def test_checkpoint_id_comparison_is_exact_string_equality(curation_workspace, m
         assert _workspace_state(curation_workspace) == before, candidate
 
 
-def test_replayed_resume_is_rejected_as_stale(curation_workspace, monkeypatch):
+def test_replayed_resume_is_rejected_as_stale_etag(curation_workspace, monkeypatch):
     """GOV-03 idempotency edge — the sharpest of them: replaying a SUCCESSFUL
     resume (the same complete map, the same checkpoint id) is rejected, because
     the first resume advanced the checkpoint. This is what actually protects a

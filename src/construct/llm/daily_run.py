@@ -152,7 +152,16 @@ def _run_research_child(workspace_path: str, child_run_id: str) -> DailyChildSta
     try:
         r = run_research_run(ResearchRunInput(workspace_path=workspace_path, run_id=child_run_id))
         if r.status == "awaiting_review":
-            r = review_research_run(ReviewInput(workspace_path=workspace_path, run_id=r.run_id, approve_all=True))
+            # GOV-03: the resume is a conditional request. The ETag comes from the
+            # run result we just read, so the child resumes the queue it saw and
+            # nothing else — if another process moved the run in between, this
+            # resume is refused rather than applied to a queue it never rendered.
+            r = review_research_run(
+                ReviewInput(
+                    workspace_path=workspace_path, run_id=r.run_id,
+                    checkpoint_id=r.checkpoint_id or "", approve_all=True,
+                )
+            )
         return DailyChildStatus(
             capability="research.run", status=r.status, run_id=r.run_id, message=r.message
         )
@@ -179,7 +188,13 @@ def _run_curation_child(workspace_path: str, child_run_id: str) -> tuple[DailyCh
         c = run_curation_run(CurationRunInput(workspace_path=workspace_path, run_id=child_run_id))
         if c.status == "awaiting_review":
             pending = sum(1 for p in c.gate_queue if p.get("kind") == "escalate")
-            c = review_curation_run(CurationReviewInput(workspace_path=workspace_path, run_id=c.run_id, approve_all=True))
+            # GOV-03: as above — resume against the checkpoint this child rendered.
+            c = review_curation_run(
+                CurationReviewInput(
+                    workspace_path=workspace_path, run_id=c.run_id,
+                    checkpoint_id=c.checkpoint_id or "", approve_all=True,
+                )
+            )
         return DailyChildStatus(
             capability="curation.run", status=c.status, run_id=c.run_id,
             pending_escalations=pending, message=c.message,

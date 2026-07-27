@@ -305,6 +305,12 @@ class CurationReviewInput(BaseModel):
     model_config = {"extra": "forbid"}
     workspace_path: str
     run_id: str
+    #: GOV-03 / D-11: the checkpoint id the queue was rendered at — an ETag, so
+    #: every resume is a conditional request. REQUIRED: a resume that cannot say
+    #: which queue it read cannot be checked for staleness, and an unverifiable
+    #: resume is exactly the confused-deputy case this field exists to stop. Read
+    #: it from ``curation.run``'s or ``curation.inspect``'s result.
+    checkpoint_id: str
     #: GOV-02: an id-keyed map ``{proposal_id: decision}``, replacing the positional
     #: list whose alignment with the queue was the defect this phase removes.
     decisions: dict[str, str] | None = None
@@ -366,6 +372,9 @@ class CurationRunResult(BaseModel):
     status: Literal["completed", "degraded", "failed", "awaiting_review"]
     run_id: str
     gate_id: str | None = None
+    #: GOV-03 / D-11: the run's checkpoint id at the moment this result was built.
+    #: Returned alongside the queue so a caller can submit it back on resume.
+    checkpoint_id: str | None = None
     gate_queue: list[dict] = Field(default_factory=list)
     steps: list[CurationStepResult] = Field(default_factory=list)
     events: list[str] = Field(default_factory=list)
@@ -953,6 +962,23 @@ def _decision_map(raw: Any) -> dict[str, str]:
     return {}
 
 
+def _checkpoint_id(snap: Any) -> str | None:
+    """Read the LangGraph checkpoint id from a state snapshot — the D-11 ETag.
+
+    ``StateSnapshot.config["configurable"]["checkpoint_id"]`` is already maintained
+    by LangGraph and has all four properties staleness detection needs, verified
+    empirically against the pinned langgraph / langgraph-checkpoint-sqlite: present
+    while paused, stable across repeated reads, stable across a separate connection
+    or process, and changed by both a state update and a resume.
+
+    Deliberately NOT hand-rolled. A hash of the serialized queue would miss a state
+    advance that leaves the queue textually identical, and a modification time on
+    the database file is weaker still.
+    """
+    config = getattr(snap, "config", None) or {}
+    return (config.get("configurable") or {}).get("checkpoint_id")
+
+
 def _wrap_resume(decisions: dict[str, str]) -> list[dict[str, str]]:
     """Wrap the id-keyed decision map for transport through ``Command(resume=…)``.
 
@@ -1412,6 +1438,7 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
                 status="awaiting_review",
                 run_id=run_id,
                 gate_id=run_id,
+                checkpoint_id=_checkpoint_id(snap),
                 gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), run_id),
                 steps=[CurationStepResult(**s) for s in values.get("steps", [])],
                 events=list(values.get("events", [])),
@@ -1473,6 +1500,25 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
         cfg = {"configurable": {"thread_id": inp.run_id}}
         snap = graph.get_state(cfg)
         values = snap.values or {}
+        current = _checkpoint_id(snap)
+
+        # D-11: STALENESS FIRST, before the coverage check and before
+        # Command(resume=…). Order matters: a stale queue means the coverage check
+        # would be comparing the payload against a queue the caller never saw, so
+        # its verdict would be meaningless. Exact string equality — no trimming,
+        # no case folding, no prefix matching.
+        #
+        # This is also what makes a REPLAY safe: a successful resume advances the
+        # checkpoint, so re-submitting the same decisions with the same id lands
+        # here and is refused. ``current is None`` means there is no checkpoint at
+        # all (an unknown run), which the paused-state guard below reports more
+        # precisely than a staleness message could.
+        if current is not None and inp.checkpoint_id != current:
+            return CurationRunResult(
+                status="failed", run_id=inp.run_id, gate_id=inp.run_id,
+                checkpoint_id=current,
+                message=StaleQueue(supplied=inp.checkpoint_id, current=current).safe_message,
+            )
 
         if snap.next != ("process_inbox",):
             # Not paused: already-completed run → report as-is; unknown → failed.
@@ -1480,12 +1526,12 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
                 steps = [CurationStepResult(**s) for s in values.get("steps", [])]
                 return CurationRunResult(
                     status=_aggregate_status(steps),
-                    run_id=inp.run_id, steps=steps,
+                    run_id=inp.run_id, checkpoint_id=current, steps=steps,
                     events=list(values.get("events", [])),
                     message="Curation run already complete (no re-review).",
                 )
             return CurationRunResult(
-                status="failed", run_id=inp.run_id,
+                status="failed", run_id=inp.run_id, checkpoint_id=current,
                 message="No paused curation run to review.",
             )
 
@@ -1500,7 +1546,7 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
         except IncompleteDecisionMap as exc:
             return CurationRunResult(
                 status="failed", run_id=inp.run_id, gate_id=inp.run_id,
-                gate_queue=gate_queue,
+                checkpoint_id=current, gate_queue=gate_queue,
                 steps=[CurationStepResult(**s) for s in values.get("steps", [])],
                 events=list(values.get("events", [])),
                 message=exc.safe_message,
@@ -1512,6 +1558,7 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
         status = result.get("status") or _aggregate_status(steps)
         return CurationRunResult(
             status=status, run_id=inp.run_id, gate_id=inp.run_id, gate_queue=[],
+            checkpoint_id=_checkpoint_id(graph.get_state(cfg)),
             steps=steps, events=list(result.get("events", [])),
             message=f"Curation review {status}.",
         )
@@ -1545,6 +1592,7 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
             steps = [CurationStepResult(**s) for s in values.get("steps", [])]
             return CurationRunResult(
                 status="awaiting_review", run_id=inp.run_id, gate_id=inp.run_id,
+                checkpoint_id=_checkpoint_id(snap),
                 gate_queue=_ensure_proposal_ids(values.get("gate_queue", []), inp.run_id),
                 steps=steps, events=list(values.get("events", [])),
                 message="Curation run paused awaiting human review.",
@@ -1559,8 +1607,8 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
         steps = [CurationStepResult(**s) for s in values.get("steps", [])]
         status = values.get("status") or _aggregate_status(steps)
         return CurationRunResult(
-            status=status, run_id=inp.run_id, steps=steps,
-            events=list(values.get("events", [])),
+            status=status, run_id=inp.run_id, checkpoint_id=_checkpoint_id(snap),
+            steps=steps, events=list(values.get("events", [])),
             message="Curation run inspected (read-only).",
         )
     finally:
