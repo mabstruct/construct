@@ -89,6 +89,93 @@ def _populated_install_root(
     return root
 
 
+def _seed_canonical_events(root: Path) -> None:
+    """Append real emitter-written events to every workspace log under *root*.
+
+    The v02 fixtures ship *legacy* Claude-native logs, and D-17 refuses every one
+    of their lines because neither ``agent`` nor ``result`` is derivable from
+    them (18-04 measured 30 dropped, 0 kept). So ``events.json`` is written empty
+    on the populated fixtures, and ``EventsFile`` would validate a ``[]`` —
+    Pitfall 1's vacuous pass, on the one model this phase reshaped most.
+
+    These lines come from ``services.event_log.append_event`` rather than being
+    hand-typed, so the guard exercises the real emitter → parser → contract model
+    → ``views validate`` chain; a hand-typed line would only prove the test agrees
+    with itself. One event carries ``escalated`` because Plan 08's escalate action
+    is the case whose whole point is that it wrote nothing.
+    """
+    from construct.schemas.config import EventAgent, EventResult
+    from construct.services.event_log import append_event
+
+    for ws in sorted(p for p in root.iterdir() if p.is_dir() and (p / "cards").is_dir()):
+        append_event(
+            ws,
+            EventAgent.curator,
+            "card_promoted",
+            target="card-round-trip",
+            detail="promoted by the round-trip guard",
+            result=EventResult.success,
+        )
+        append_event(
+            ws,
+            EventAgent.researcher,
+            "promotion_escalated",
+            target="card-round-trip",
+            detail="ambiguous promotion referred to the orchestrator",
+            result=EventResult.escalated,
+        )
+
+
+def _ensure_publish_article(root: Path) -> None:
+    """Guarantee at least one publish article somewhere under *root*.
+
+    ``articles.json`` is a cross-workspace aggregate, and the one-workspace
+    fixture ships no ``publish/*.md`` at all — so ``ArticleRecord`` would be the
+    third model to pass on an empty list. The article is written into a copied
+    tree, never into the shared fixture, and it references a real card id from
+    the workspace so ``source_cards`` expansion is exercised rather than falling
+    through to the ``{"id", "status": "missing"}`` stub.
+    """
+    workspaces = sorted(p for p in root.iterdir() if p.is_dir() and (p / "cards").is_dir())
+    # A list, not the generator: ``Path.glob`` returns a generator object, which
+    # is truthy even when it yields nothing, so ``any(ws.glob(...) for ...)``
+    # reports "an article exists" for every root. The guard's own non-vacuity
+    # assertion is what caught that.
+    existing = [p for ws in workspaces for p in (ws / "publish").glob("*.md")]
+    if existing:
+        return
+
+    ws = workspaces[0]
+    card_ids = sorted(p.stem for p in (ws / "cards").glob("*.md"))
+    assert card_ids, f"{ws} has no cards to cite; the seeded article would be empty"
+
+    publish_dir = ws / "publish"
+    publish_dir.mkdir(parents=True, exist_ok=True)
+    (publish_dir / "round-trip-briefing.md").write_text(
+        "---\n"
+        'title: "Round Trip Briefing"\n'
+        "type: briefing\n"
+        "date: 2026-07-27\n"
+        f'domains: ["{ws.name}"]\n'
+        f'source_cards: ["{card_ids[0]}"]\n'
+        "confidence_floor: 2\n"
+        "status: draft\n"
+        "---\n\n"
+        "# Round Trip Briefing\n\n"
+        "An article written so that the articles.json contract is validated "
+        "against a record rather than against an empty list.\n",
+        encoding="utf-8",
+    )
+
+
+def _round_trip_install_root(tmp_path: Path, fixture: Path) -> Path:
+    """A populated install root on which no contract model can pass vacuously."""
+    root = _populated_install_root(tmp_path, fixture, name=fixture.name)
+    _seed_canonical_events(root)
+    _ensure_publish_article(root)
+    return root
+
+
 def _data_dir(root: Path) -> Path:
     return root / "views" / "build" / "data"
 
@@ -425,6 +512,31 @@ def test_malformed_cache_is_a_cache_miss_not_a_crash(
         assert report.validation_errors == []
 
 
+def test_model_inventory_names_every_model_in_the_views_package() -> None:
+    """WR-01: ``ALL_MODEL_NAMES`` must be an inventory, not a sample.
+
+    The list below drives ``test_models_ignore_unknown_fields``, which walks it
+    and asserts a property of each named model. Walking a hand-typed list proves
+    the property for the models someone remembered to add — never that a new
+    model was added to the list at all. Deriving the expected set from the module
+    turns the omission into a failure here: adding a model without listing it
+    fails, and listing a model that no longer exists fails too.
+    """
+    declared = {
+        name
+        for name, obj in vars(views_models).items()
+        if isinstance(obj, type)
+        and issubclass(obj, pydantic.BaseModel)
+        and obj.__module__ == views_models.__name__
+    }
+
+    assert declared, "no models found in construct.views.models"
+    assert set(ALL_MODEL_NAMES) == declared, {
+        "listed but not declared": sorted(set(ALL_MODEL_NAMES) - declared),
+        "declared but not listed": sorted(declared - set(ALL_MODEL_NAMES)),
+    }
+
+
 def test_models_ignore_unknown_fields() -> None:
     """D-03 supersedes the D-02 prohibition this test used to assert.
 
@@ -527,53 +639,111 @@ def test_views_generate_json_flag_emits_parseable_json(
     assert isinstance(payload["warnings"], list)
 
 
-def test_views_validate_accepts_generated_bytes(
-    scaffolded_install_root: Path,
+@pytest.mark.parametrize(
+    "fixture,expected_workspaces",
+    [(ONE_WORKSPACE_FIXTURE, 1), (TWO_WORKSPACE_FIXTURE, 2)],
+    ids=["one-workspace", "two-workspace"],
+)
+def test_views_generate_output_round_trips_through_views_validate(
+    tmp_path: Path, fixture: Path, expected_workspaces: int
 ) -> None:
     """VFIX-01: ``views validate`` accepts every file ``views generate`` writes.
 
-    This replaces the characterisation test carried from 15-02, which pinned the
-    writer/validator divergence: ``generate()`` validated an *adapted projection*
-    of each file and then wrote the raw parser dict, while ``views validate``
-    applied the same models to those raw bytes with no adapter and rejected
-    three of them. D-01 conformed the models to the writer and reduced the
-    generator's adapters to identity, so both commands now gate the same object.
+    This is the replacement for ``test_views_validate_accepts_generated_bytes``,
+    which itself replaced the 15-02 divergence pin test. That version ran on the
+    *scaffolded* fixture, whose ``demo`` workspace has no cards, no connections
+    and no digests, so most record models validated a ``[]`` and were never
+    instantiated. It is also why the original pin asserted three failing files
+    where a populated root produces five (RESEARCH Pitfall 1).
 
-    **This assertion is deliberately weak and Plan 05 replaces it.** The
-    scaffolded fixture's ``demo`` workspace has no cards, no connections and no
-    digests, so most record models are never instantiated and pass vacuously
-    (RESEARCH Pitfall 1). The non-vacuous guard belongs with the file-contract
-    tables Plan 05 introduces; the populated round-trip above
-    (``test_populated_workspace_generates_clean``) is what carries real weight
-    until then.
+    D-03 gives up the model-level drift detector, so this guard is the only
+    remaining detector of the next writer/validator fork. That is why it takes
+    the strict form:
+
+    * **Cardinality, not set membership** (D-19, correcting D-04's arithmetic).
+      A membership assertion proves a thing is listed, never that nothing was
+      added — the exact rot in ``tests/contract/test_artifact_catalog.py`` that
+      WR-01 names. So the written-file count is checked against
+      ``4 + 6·N_workspaces + 1`` computed from the fixture's real workspace
+      count, and the validated slot set is checked for *equality* with what the
+      shared contract tables enumerate.
+    * **Two values of N.** An expression checked at one N is indistinguishable
+      from a constant fitted to that N, so the same assertions run against a
+      one-workspace and a two-workspace root.
+    * **Non-vacuity.** Every record list is asserted non-empty *before* its
+      contract is asserted to hold, carrying across the discipline from
+      ``test_generated_card_connections_are_id_strings``. Where the fixture
+      cannot supply records the gap is written down rather than hidden — see the
+      ``bridges.json`` assertion at the end.
     """
-    from typer.testing import CliRunner
+    root = _round_trip_install_root(tmp_path, fixture)
 
-    from construct.cli import app
+    report = generate(root)
+    assert report.validation_errors == [], report.validation_errors
 
-    runner = CliRunner()
-    runner.invoke(app, ["views", "generate", "--install-root", str(scaffolded_install_root)])
+    data_dir = _data_dir(root)
+    ws_ids = sorted(d.name for d in data_dir.iterdir() if d.is_dir())
 
-    validated = runner.invoke(
-        app, ["views", "validate", "--install-root", str(scaffolded_install_root)]
+    # Load-bearing: the cardinality assertion below is only meaningful if this
+    # fixture really has the workspace count the parametrisation claims.
+    assert len(ws_ids) == expected_workspaces, ws_ids
+
+    # D-19: four global data files, six per workspace, plus the build-root
+    # version.json. Equality, so one file more or one file fewer fails.
+    expected_files = (
+        len(GLOBAL_FILE_CONTRACTS)
+        + len(PER_WORKSPACE_FILE_CONTRACTS) * len(ws_ids)
+        + 1
+    )
+    assert report.total_files_written == expected_files, (
+        f"{len(ws_ids)} workspace(s) should write "
+        f"{len(GLOBAL_FILE_CONTRACTS)} + {len(PER_WORKSPACE_FILE_CONTRACTS)}*{len(ws_ids)} + 1 "
+        f"= {expected_files} files, got {report.total_files_written}"
     )
 
-    failing = {
-        line.strip().removeprefix("✗ ").strip()
-        for line in validated.stdout.splitlines()
-        if line.strip().startswith("✗")
-    }
-    assert failing == set(), failing
-    assert validated.exit_code == 0, validated.stdout
+    passing, failing, missing, exit_code = _validate_slots(root)
 
-    # D-18: the two previously ungated files are now among the files this
-    # command actually looks at — a model nothing invokes is not a gate.
-    checked = {
-        line.strip().removeprefix("✓ ").strip()
-        for line in validated.stdout.splitlines()
-        if line.strip().startswith("✓")
+    assert failing == set(), failing
+    assert missing == set(), missing
+    assert exit_code == 0
+
+    # Equality, not containment: a slot silently dropped from the contract tables
+    # would make "every slot passes" trivially true for a smaller set.
+    assert passing == _expected_slots(data_dir), passing ^ _expected_slots(data_dir)
+
+    # Anti-vacuity. A contract model applied to an empty collection passes
+    # without instantiating a single record, so assert there is something to
+    # validate before believing that it validated.
+    probes: dict[str, object] = {
+        "domains.json": lambda p: p["domains"],
+        "articles.json": lambda p: p["articles"],
+        "stats.json": lambda p: p["totals"]["cards"],
     }
-    assert {"demo/stats.json", "demo/curation-history.json"} <= checked, checked
+    for ws_id in ws_ids:
+        probes[f"{ws_id}/cards.json"] = lambda p: p["cards"]
+        probes[f"{ws_id}/connections.json"] = lambda p: p["connections"]
+        probes[f"{ws_id}/digests.json"] = lambda p: p["digests"]
+        probes[f"{ws_id}/events.json"] = lambda p: p["events"]
+        probes[f"{ws_id}/curation-history.json"] = lambda p: p["cycles"]
+        probes[f"{ws_id}/stats.json"] = lambda p: p["totals"]["cards"]
+
+    for slot, probe in probes.items():
+        payload = _payload(data_dir / slot)
+        assert probe(payload), (
+            f"{slot} validated an empty collection — its contract model passed "
+            f"vacuously and this guard proved nothing about it"
+        )
+
+    # Every slot except one has a probe. The exception is stated rather than
+    # skipped: even the populated fixtures produce no bridges, so BridgeRecord is
+    # the one contract model this guard does NOT exercise. Asserting the gap
+    # keeps it visible — the day a fixture starts producing bridges, this fails
+    # and the slot moves up into `probes` instead of silently staying unproven.
+    assert set(probes) | {"bridges.json"} == passing, passing ^ (set(probes) | {"bridges.json"})
+    assert _payload(data_dir / "bridges.json")["bridges"] == [], (
+        "bridges.json is no longer empty — move it into `probes` above so "
+        "BridgeRecord is actually exercised"
+    )
 
 
 def test_broken_workspace_domains_yaml_warns_under_its_own_workspace(
