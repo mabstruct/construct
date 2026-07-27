@@ -355,5 +355,31 @@ The user delegated these; planner and researcher have latitude within the stated
 
 ---
 
+## Execution-Time Decisions
+
+Decisions raised by executors during `/gsd-execute-phase 18` and settled by the user. These are
+additive to the planning decisions above; they do not supersede them.
+
+- **D-21 — GOV-01 ships with the MCP schema-discoverability gap (accepted 2026-07-27, wave 1).**
+  Raised by plan 18-01. The pinned FastMCP's `add_tool` exposes no schema-override parameter
+  (`inspect.signature` recorded verbatim in `18-01-SUMMARY.md`), so `input_model` cannot be
+  advertised. Consequence: **GOV-01 is true for behaviour and false for discovery** — the seam
+  validates every payload, but an MCP client reading the advertised schema sees one opaque
+  `kwargs` property instead of the declared fields. Accepted as a known, upstream-blocked
+  limitation rather than pulling a FastMCP upgrade into a contract-governance phase. Pinned by
+  a test that fails loudly when a newer FastMCP makes the fix possible — that test failing is
+  the signal to revisit, and closing the gap is v0.6 work, not v0.5.
+
+- **D-22 — `ui.safety-gate` overridden for Phase 18 (accepted 2026-07-27, wave 1→2 boundary).**
+  The gate blocks on `frontend && hasUiFiles && !hasUiSpec`. Its path rule
+  (`/(components|pages|views|screens|layouts|ui|frontend)/`) matches the Python modules under
+  `src/construct/views/`, so it fires on backend contract work. Phase 18's genuine UI surface is
+  one `.jsx` event-key conformance fix (18-05) and one Streamlit screen deletion (18-07) —
+  behavioural changes a UI-SPEC design contract would not constrain. Overridden for this phase
+  only; `workflow.ui_safety_gate` stays enabled for Phases 21–23, which are browser-facing.
+
+---
+
 *Phase: 18-Contract & Governance Foundations*
 *Context gathered: 2026-07-26*
+*Execution-time decisions appended: 2026-07-27*
