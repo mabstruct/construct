@@ -650,7 +650,11 @@ def test_cross_process_resume(curation_workspace, sqlite_checkpointer, monkeypat
     assert snap.next == ("process_inbox",)
     assert snap.values.get("gate_queue"), "pending consolidated queue persisted across processes"
 
-    decisions = [entry.get("decision", "approve") for entry in snap.values["gate_queue"]]
+    # Phase 18 / GOV-02: the resume payload names each proposal by its opaque id.
+    decisions = {
+        entry["proposal_id"]: entry.get("decision", "approve")
+        for entry in snap.values["gate_queue"]
+    }
     res2 = graph2.invoke(Command(resume=decisions), cfg)
     assert graph2.get_state(cfg).next == ()
     assert res2["status"] == "completed"
@@ -901,3 +905,286 @@ def test_research_gate_entries_carry_the_same_shape():
 
     with pytest.raises(ValidationError):
         research_run.GateQueueEntry(finding={}, decision="skip", proposal_id="../evil")
+
+
+# ── Task 2: decisions are keyed by id; an incomplete map writes NOTHING ──────
+
+
+def _paused_queue(ws: _Path, run_id: str, monkeypatch) -> list:
+    """Drive a run to ``awaiting_review`` and return its id-carrying queue."""
+    from construct.llm import curation_run
+
+    _set_governance(ws, **{"decay.auto_archive_on_decay": True})
+    _install_gate_mocks(monkeypatch, promotion_decision="promote", target_lifecycle="growing")
+    run = curation_run.run_curation_run(
+        curation_run.CurationRunInput(workspace_path=str(ws), run_id=run_id)
+    )
+    assert run.status == "awaiting_review", run.message
+    assert run.gate_queue, "the fixture must queue at least two proposals"
+    return list(run.gate_queue)
+
+
+def _workspace_state(ws: _Path) -> tuple:
+    """Every canonical surface a rejected resume must leave untouched."""
+    return (_snapshot_canonical(ws), _card_lifecycles(ws), _connection_keys(ws))
+
+
+def test_complete_decision_map_is_applied(curation_workspace, monkeypatch):
+    """GOV-02: a map whose key set EXACTLY equals the queued id set is applied."""
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-map-ok", monkeypatch)
+    decisions = {entry["proposal_id"]: entry["decision"] for entry in queue}
+
+    done = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-ok", decisions=decisions
+        )
+    )
+    assert done.status == "completed", done.message
+    assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
+
+
+def test_incomplete_decision_map_rejected_in_full(curation_workspace, monkeypatch):
+    """D-10 / T-18-03: a map omitting ANY queued id is rejected in full — zero
+    canonical writes, the run still paused, and the response naming the uncovered
+    id. This is the defect: the old code substituted the gate's own recommendation."""
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-map-short", monkeypatch)
+    assert len(queue) >= 2, queue
+    uncovered = queue[0]["proposal_id"]
+    decisions = {entry["proposal_id"]: entry["decision"] for entry in queue[1:]}
+
+    before = _workspace_state(curation_workspace)
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-short", decisions=decisions
+        )
+    )
+
+    assert rejected.status == "failed", rejected.message
+    assert uncovered in rejected.message, rejected.message
+    # T-18-10: the rejection names ids only — never a workspace path or card body.
+    assert str(curation_workspace) not in rejected.message
+    # Zero writes, asserted by reading the workspace back.
+    assert _workspace_state(curation_workspace) == before
+
+    # The run stays paused exactly where the user left it.
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-short"
+        )
+    )
+    assert insp.status == "awaiting_review"
+    assert [e["proposal_id"] for e in insp.gate_queue] == [e["proposal_id"] for e in queue]
+
+
+def test_unknown_decision_id_rejected_in_full(curation_workspace, monkeypatch):
+    """GOV-02 adjacency: a key that is not in the queue is a clean rejection
+    naming the unknown id — never a silently ignored extra."""
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-map-extra", monkeypatch)
+    stranger = curation_run._new_proposal_id()
+    decisions = {entry["proposal_id"]: entry["decision"] for entry in queue}
+    decisions[stranger] = "reject"
+
+    before = _workspace_state(curation_workspace)
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-extra", decisions=decisions
+        )
+    )
+    assert rejected.status == "failed", rejected.message
+    assert stranger in rejected.message, rejected.message
+    assert _workspace_state(curation_workspace) == before
+
+
+def test_resume_with_no_decisions_is_rejected(curation_workspace, monkeypatch):
+    """T-18-03 / the prohibition: a resume carrying NO decisions is rejected rather
+    than defaulting to the gate's own recommendation. Nothing may be decided on
+    the user's behalf."""
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-map-none", monkeypatch)
+    before = _workspace_state(curation_workspace)
+
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-none"
+        )
+    )
+    assert rejected.status == "failed", rejected.message
+    for entry in queue:
+        assert entry["proposal_id"] in rejected.message
+    assert _workspace_state(curation_workspace) == before, "no recommendation may be applied"
+
+
+def test_legacy_positional_payload_is_rejected(curation_workspace, monkeypatch):
+    """D-10 and D-12 are one contract: a MIGRATED queue still demands a complete
+    id-keyed map, so no legacy positional payload can ever be applied to it."""
+    from construct.llm import curation_run
+
+    _paused_queue(curation_workspace, "cur-map-pos", monkeypatch)
+    before = _workspace_state(curation_workspace)
+
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-map-pos",
+            decisions=["approve", "approve", "approve"],
+        )
+    )
+    assert rejected.status == "failed", rejected.message
+    assert _workspace_state(curation_workspace) == before
+
+
+def test_migrated_queue_requires_a_complete_map(curation_workspace):
+    """D-12: a run paused before this phase keeps its pending work AND still
+    requires an explicit, complete decision in the new shape."""
+    from construct.llm import curation_run
+
+    _pause_legacy_run(curation_workspace, run_id="cur-legacy-resume")
+    insp = curation_run.inspect_curation_run(
+        curation_run.CurationInspectInput(
+            workspace_path=str(curation_workspace), run_id="cur-legacy-resume"
+        )
+    )
+    migrated_id = insp.gate_queue[0]["proposal_id"]
+
+    before = _workspace_state(curation_workspace)
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-legacy-resume"
+        )
+    )
+    assert rejected.status == "failed", rejected.message
+    assert migrated_id in rejected.message
+    assert _workspace_state(curation_workspace) == before
+
+    # The migrated id is the one a resume accepts — the pending work is not lost.
+    done = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-legacy-resume",
+            decisions={migrated_id: "archive"},
+        )
+    )
+    assert done.status in ("completed", "degraded"), done.message
+    assert _card_lifecycles(curation_workspace)["stale-orphan-card"] == "archived"
+
+
+def test_blanket_flags_expand_into_a_complete_map(curation_workspace, monkeypatch, tmp_path):
+    """T-18-24: approve-all / reject-all still work, by EXPANDING into a complete
+    map over the queued ids — satisfying the coverage check rather than bypassing
+    it. A bypass would be a second path to a write."""
+    import shutil
+
+    from construct.llm import curation_run
+
+    queue = _paused_queue(curation_workspace, "cur-approve-all", monkeypatch)
+    ids = {entry["proposal_id"] for entry in queue}
+    assert curation_run._build_resume_decisions(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-approve-all", approve_all=True
+        ),
+        queue,
+    ).keys() == ids
+    assert curation_run._build_resume_decisions(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-approve-all", reject_all=True
+        ),
+        queue,
+    ).keys() == ids
+
+    done = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-approve-all", approve_all=True
+        )
+    )
+    assert done.status == "completed", done.message
+    assert _card_lifecycles(curation_workspace)["fresh-card"] == "growing"
+
+    # reject-all on an identical, untouched copy writes nothing at all.
+    ws_r = tmp_path / "curation-workspace-reject"
+    shutil.copytree(tmp_path / "curation-workspace", ws_r)
+    shutil.rmtree(ws_r / ".construct", ignore_errors=True)
+    _paused_queue(ws_r, "cur-reject-all", monkeypatch)
+    before = _workspace_state(ws_r)
+    rejected = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(ws_r), run_id="cur-reject-all", reject_all=True
+        )
+    )
+    assert rejected.status == "completed", rejected.message
+    assert _workspace_state(ws_r) == before, "reject-all must write nothing"
+
+
+def test_decision_key_order_does_not_change_the_outcome(curation_workspace, monkeypatch, tmp_path):
+    """GOV-02 ordering edge: the SAME decisions submitted in two different key
+    orders, against two identical fresh runs, produce identical canonical writes
+    and an identical event sequence. The outcome no longer depends on payload
+    order — which is precisely what the positional zip made it depend on."""
+    import shutil
+
+    from construct.llm import curation_run
+
+    ws_b = tmp_path / "curation-workspace-order-b"
+    shutil.copytree(tmp_path / "curation-workspace", ws_b)
+
+    queue_a = _paused_queue(curation_workspace, "cur-order-a", monkeypatch)
+    queue_b = _paused_queue(ws_b, "cur-order-b", monkeypatch)
+    assert [e["kind"] for e in queue_a] == [e["kind"] for e in queue_b], "runs must be identical"
+
+    forward = {e["proposal_id"]: e["decision"] for e in queue_a}
+    reverse = {e["proposal_id"]: e["decision"] for e in reversed(queue_b)}
+    assert list(reverse) != [q["proposal_id"] for q in queue_b] or len(queue_b) == 1
+
+    done_a = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(curation_workspace), run_id="cur-order-a", decisions=forward
+        )
+    )
+    done_b = curation_run.review_curation_run(
+        curation_run.CurationReviewInput(
+            workspace_path=str(ws_b), run_id="cur-order-b", decisions=reverse
+        )
+    )
+
+    assert done_a.status == done_b.status == "completed"
+    assert done_a.events == done_b.events, "event sequence must not depend on key order"
+    assert _card_lifecycles(curation_workspace) == _card_lifecycles(ws_b)
+    assert _connection_keys(curation_workspace) == _connection_keys(ws_b)
+
+
+def test_empty_queue_with_empty_map_resolves_cleanly():
+    """GOV-02 empty edge: an empty queue with an empty map is not an error — it
+    resolves to zero decisions and therefore zero writes."""
+    from construct.llm import curation_run
+
+    state = {"run_id": "cur-empty", "gate_queue": [], "decisions": {}}
+    assert curation_run._resolve_decisions(state) == []
+    assert curation_run._queue_and_decisions(state) == []
+
+
+def test_research_url_keyed_decision_mode_is_gone():
+    """GOV-02: ``research_run`` keyed decisions on a finding ``url`` — content-
+    derived, nullable, not unique. The branch is REMOVED, not kept as a compatible
+    alternative; leaving it would be the parity fork this requirement closes."""
+    import inspect as _i
+
+    import pytest
+
+    from construct.llm import curation_run, research_run
+
+    src = _i.getsource(research_run._resolve_decisions)
+    assert "by_url" not in src, src
+    assert "url" not in src, src
+
+    # A url-keyed payload is now an unknown-key rejection, never a silent apply.
+    state = {
+        "run_id": "run-url",
+        "gate_queue": [{"proposal_id": "a" * 32, "finding": {"url": "u"}, "decision": "skip"}],
+        "decisions": [{"url": "u", "decision": "ref_only"}],
+    }
+    with pytest.raises(curation_run.IncompleteDecisionMap):
+        research_run._resolve_decisions(state)
