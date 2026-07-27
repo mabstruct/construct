@@ -9,6 +9,7 @@ ADV-03 / D-01.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -168,6 +169,24 @@ WRITER_WORKSPACE_STATS: dict = {
     "avg_confidence": 3.25,
     "category_coverage": {"qualia": 6, "theory": 9},
     "search_clusters": [],
+}
+
+#: ``services/event_log.append_event`` — one line of ``log/events.jsonl``.
+#: D-17 makes this the canonical ``events.json`` record shape.
+WRITER_EVENT: dict = {
+    "ts": "2026-03-16T11:00:00+00:00",
+    "agent": "researcher",
+    "action": "create_card",
+    "target": "card-hubble-tension",
+    "detail": "Created card-hubble-tension from ref riess-2024",
+    "result": "success",
+}
+
+#: The legacy Claude-native shape still present in the v02 fixtures.
+LEGACY_EVENT: dict = {
+    "event": "card.created",
+    "timestamp": "2026-03-16T11:00:00Z",
+    "details": "Created card-hubble-tension",
 }
 
 #: ``lib/parse_curation.parse`` — the ``<ws>/curation-history.json`` payload.
@@ -996,3 +1015,350 @@ class TestWriterBytesAreTheContract:
             curation = {"cycles": curation}
 
         CurationHistoryFile.model_validate(curation)
+
+
+# ---------------------------------------------------------------------------
+# 10. D-17 — events.json has one canonical shape instead of four
+# ---------------------------------------------------------------------------
+
+
+class TestCanonicalEventContract:
+    """``events.json`` is pinned to the Python emitter's shape (D-17).
+
+    Four mutually incompatible event shapes existed: the emitter's
+    (``ts``/``agent``/``action``/``target``/``detail``/``result``), the legacy
+    Claude-native fixtures' (``event``/``timestamp``/``details``), this
+    validator's own (``timestamp``/``type``/``actor``/``card_id``/``details``),
+    and the SPA's. ``parse_events`` renamed nothing, so ``events.json``'s on-disk
+    shape was whichever emitter had last written the log — "conform the model to
+    the bytes" had no single referent until one shape was chosen.
+
+    The emitter wins because it is the only *live* author: it is what CONSTRUCT
+    writes today, and it is the one shape a repository change can keep honest.
+    """
+
+    def test_views_event_matches_the_emitter_field_for_field(self) -> None:
+        from construct.schemas.config import EventRecord as EmitterEventRecord
+
+        assert sorted(EventRecord.model_fields) == sorted(
+            EmitterEventRecord.model_fields
+        )
+
+    def test_emitter_line_validates_unchanged(self) -> None:
+        """A line ``append_event`` wrote needs no adaptation to validate."""
+        from construct.schemas.config import (
+            EventAgent,
+            EventRecord as EmitterEventRecord,
+            EventResult,
+        )
+
+        emitted = EmitterEventRecord(
+            ts=datetime(2026, 3, 16, 11, 0, tzinfo=timezone.utc),
+            agent=EventAgent.researcher,
+            action="create_card",
+            target="card-hubble-tension",
+            detail="from ref riess-2024",
+            result=EventResult.success,
+        )
+
+        record = EventRecord.model_validate(json.loads(emitted.model_dump_json()))
+
+        assert record.action == "create_card"
+        assert record.target == "card-hubble-tension"
+
+    def test_events_file_accepts_the_canonical_payload(self) -> None:
+        payload = EventsFile.model_validate({"events": [WRITER_EVENT]})
+
+        assert payload.events[0].agent.value == "researcher"
+
+    def test_unseen_action_string_needs_no_model_change(self) -> None:
+        """``action`` is a free string, so a new event action threads through.
+
+        Plan 08 introduces an escalate action. If ``action`` were an enum, every
+        new event type would be a contract change in this module before it could
+        reach the projection — which is the coupling D-16 needs broken.
+        """
+        record = EventRecord.model_validate(
+            {**WRITER_EVENT, "action": "curation_escalated"}
+        )
+
+        assert record.action == "curation_escalated"
+
+    def test_escalated_result_is_already_a_member(self) -> None:
+        record = EventRecord.model_validate({**WRITER_EVENT, "result": "escalated"})
+
+        assert record.result.value == "escalated"
+
+    def test_event_missing_required_field_rejected(self) -> None:
+        malformed = {k: v for k, v in WRITER_EVENT.items() if k != "result"}
+
+        with pytest.raises(ValidationError):
+            EventRecord.model_validate(malformed)
+
+    def test_event_unknown_agent_rejected(self) -> None:
+        """``agent`` stays an enum — an unrecognised actor is not an event."""
+        with pytest.raises(ValidationError):
+            EventRecord.model_validate({**WRITER_EVENT, "agent": "some-other-tool"})
+
+    def test_legacy_shaped_line_does_not_validate(self) -> None:
+        """The legacy shape is migrated by the reader, never accepted raw."""
+        with pytest.raises(ValidationError):
+            EventRecord.model_validate(LEGACY_EVENT)
+
+
+class TestEventTimestampPrecision:
+    """VFIX-01 precision edge: a timestamp must survive validation intact."""
+
+    def test_microseconds_and_offset_round_trip(self) -> None:
+        record = EventRecord.model_validate(
+            {**WRITER_EVENT, "ts": "2026-03-16T11:00:00.123456+02:00"}
+        )
+
+        assert record.ts.microsecond == 123456
+        assert record.ts.utcoffset() == timedelta(hours=2)
+
+        dumped = EventRecord.model_validate(record.model_dump(mode="json"))
+        assert dumped.ts == record.ts
+        assert dumped.ts.microsecond == 123456
+        assert dumped.ts.utcoffset() == timedelta(hours=2)
+
+    def test_aware_value_is_not_reinterpreted_as_local_time(self) -> None:
+        """An offset-bearing value keeps its instant, whatever TZ the host is in."""
+        record = EventRecord.model_validate(
+            {**WRITER_EVENT, "ts": "2026-03-16T11:00:00+05:30"}
+        )
+
+        assert record.ts.tzinfo is not None
+        assert record.ts.astimezone(timezone.utc) == datetime(
+            2026, 3, 16, 5, 30, tzinfo=timezone.utc
+        )
+
+    def test_z_suffix_is_utc_not_naive(self) -> None:
+        record = EventRecord.model_validate({**WRITER_EVENT, "ts": "2026-03-16T11:00:00Z"})
+
+        assert record.ts.utcoffset() == timedelta(0)
+
+    def test_unparseable_timestamp_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            EventRecord.model_validate({**WRITER_EVENT, "ts": "last thursday"})
+
+
+class TestParseEventsCanonicalisation:
+    """``parse_events.parse`` migrates, drops-and-counts, and sorts (D-17)."""
+
+    @staticmethod
+    def _workspace(tmp_path: Path, lines: list[str]) -> Path:
+        ws = tmp_path / "ws"
+        (ws / "log").mkdir(parents=True)
+        (ws / "log" / "events.jsonl").write_text(
+            "".join(line + "\n" for line in lines), encoding="utf-8"
+        )
+        return ws
+
+    def test_canonical_line_passes_through_and_validates(self, tmp_path: Path) -> None:
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(tmp_path, [json.dumps(WRITER_EVENT)])
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert warnings == []
+        assert len(events) == 1
+        EventsFile.model_validate({"events": events})
+
+    def test_legacy_line_with_derivable_fields_is_migrated(self, tmp_path: Path) -> None:
+        from construct.views.lib import parse_events
+
+        legacy = {
+            **LEGACY_EVENT,
+            "author": "researcher",
+            "result": "success",
+            "card": "card-hubble-tension",
+        }
+        ws = self._workspace(tmp_path, [json.dumps(legacy)])
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert warnings == [], warnings
+        assert len(events) == 1
+        record = EventRecord.model_validate(events[0])
+        assert record.action == "card.created"
+        assert record.agent.value == "researcher"
+        assert record.target == "card-hubble-tension"
+        assert record.detail == "Created card-hubble-tension"
+        assert record.ts == datetime(2026, 3, 16, 11, 0, tzinfo=timezone.utc)
+
+    def test_legacy_line_without_agent_is_dropped_and_counted(
+        self, tmp_path: Path
+    ) -> None:
+        """The v02 fixture shape: no author, no result — not derivable."""
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(tmp_path, [json.dumps(LEGACY_EVENT)])
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert events == []
+        assert len(warnings) == 1, warnings
+        assert "line 1" in warnings[0]["file"]
+        assert "events.jsonl" in warnings[0]["file"]
+
+    def test_dropped_line_warning_does_not_echo_log_content(
+        self, tmp_path: Path
+    ) -> None:
+        """T-18-20: the warning names the location, never the payload."""
+        from construct.views.lib import parse_events
+
+        secret = "api-key-do-not-log-abc123"
+        ws = self._workspace(tmp_path, [json.dumps({**LEGACY_EVENT, "details": secret})])
+        warnings: list[dict] = []
+
+        parse_events.parse(ws, warnings)
+
+        assert warnings
+        blob = json.dumps(warnings)
+        assert secret not in blob, blob
+
+    def test_agent_is_never_fabricated(self, tmp_path: Path) -> None:
+        """An unrecognised legacy author is dropped, not coerced to a default."""
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(
+            tmp_path,
+            [json.dumps({**LEGACY_EVENT, "author": "some-other-tool", "result": "success"})],
+        )
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert events == []
+        assert len(warnings) == 1
+
+    def test_equal_timestamps_keep_file_order(self, tmp_path: Path) -> None:
+        """VFIX-01 ordering edge: the sort must be stable on ties.
+
+        The old sort read the legacy ``timestamp`` key, which no canonical event
+        carries — so after the rename every event would have compared equal and
+        the output order would have been whatever the sort happened to produce.
+        """
+        from construct.views.lib import parse_events
+
+        same_ts = "2026-03-16T11:00:00+00:00"
+        lines = [
+            json.dumps({**WRITER_EVENT, "ts": same_ts, "target": f"card-{i}"})
+            for i in range(5)
+        ]
+        ws = self._workspace(tmp_path, lines)
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert [e["target"] for e in events] == [f"card-{i}" for i in range(5)]
+
+    def test_sorted_newest_first_on_the_canonical_field(self, tmp_path: Path) -> None:
+        from construct.views.lib import parse_events
+
+        lines = [
+            json.dumps({**WRITER_EVENT, "ts": "2026-03-14T09:00:00+00:00", "target": "old"}),
+            json.dumps({**WRITER_EVENT, "ts": "2026-03-18T09:00:00+00:00", "target": "new"}),
+            json.dumps({**WRITER_EVENT, "ts": "2026-03-16T09:00:00+00:00", "target": "mid"}),
+        ]
+        ws = self._workspace(tmp_path, lines)
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert [e["target"] for e in events] == ["new", "mid", "old"]
+
+    def test_mixed_offsets_sort_by_instant_not_by_string(self, tmp_path: Path) -> None:
+        """A naive string sort puts these the wrong way round."""
+        from construct.views.lib import parse_events
+
+        lines = [
+            # 09:00+05:30 == 03:30Z — the earlier instant, the later string.
+            json.dumps(
+                {**WRITER_EVENT, "ts": "2026-03-16T09:00:00+05:30", "target": "earlier"}
+            ),
+            json.dumps(
+                {**WRITER_EVENT, "ts": "2026-03-16T05:00:00+00:00", "target": "later"}
+            ),
+        ]
+        ws = self._workspace(tmp_path, lines)
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert [e["target"] for e in events] == ["later", "earlier"]
+
+    def test_microsecond_precision_survives_the_reader(self, tmp_path: Path) -> None:
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(
+            tmp_path,
+            [json.dumps({**WRITER_EVENT, "ts": "2026-03-16T11:00:00.123456+00:00"})],
+        )
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert EventRecord.model_validate(events[0]).ts.microsecond == 123456
+
+    def test_invalid_timestamp_line_is_dropped_and_counted(self, tmp_path: Path) -> None:
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(
+            tmp_path, [json.dumps({**WRITER_EVENT, "ts": "not a timestamp"})]
+        )
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert events == []
+        assert len(warnings) == 1
+
+    def test_every_surviving_event_validates(self, tmp_path: Path) -> None:
+        """The reader's whole job: nothing reaches events.json un-gated."""
+        from construct.views.lib import parse_events
+
+        ws = self._workspace(
+            tmp_path,
+            [
+                json.dumps(WRITER_EVENT),
+                json.dumps(LEGACY_EVENT),
+                "not json at all",
+                json.dumps({**LEGACY_EVENT, "author": "curator", "result": "success"}),
+                json.dumps(["a list is not an event"]),
+            ],
+        )
+        warnings: list[dict] = []
+
+        events = parse_events.parse(ws, warnings)
+
+        assert len(events) == 2
+        EventsFile.model_validate({"events": events})
+
+    def test_v02_fixture_legacy_lines_are_all_dropped(self) -> None:
+        """The measured consequence of D-17 on the shipped legacy fixtures."""
+        from construct.views.lib import parse_events
+
+        fixture = (
+            Path(__file__).parents[1]
+            / "fixtures"
+            / "v02"
+            / "multi-domain-medium"
+            / "cosmology"
+        )
+        if not (fixture / "log" / "events.jsonl").is_file():
+            pytest.skip("v02 fixture not found")
+
+        warnings: list[dict] = []
+        events = parse_events.parse(fixture, warnings)
+
+        # These lines carry neither an author nor a result, so neither the agent
+        # nor the result is derivable. They are dropped loudly, one warning each.
+        assert events == []
+        assert warnings
+        assert all("events.jsonl line " in w["file"] for w in warnings), warnings
