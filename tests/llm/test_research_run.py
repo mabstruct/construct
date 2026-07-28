@@ -54,8 +54,11 @@ def test_full_run_offline(
         cfg,
     )
     snap = graph.get_state(cfg)
-    defaults = [e["decision"] for e in snap.values["gate_queue"]]
-    result = graph.invoke(Command(resume=defaults), cfg)
+    # GOV-02: the resume payload names each proposal by its opaque id, and MUST
+    # cross Command(resume=…) inside _wrap_resume's envelope — a bare dict is read
+    # by LangGraph as an interrupt-id mapping and silently discarded.
+    defaults = {e["proposal_id"]: e["decision"] for e in snap.values["gate_queue"]}
+    result = graph.invoke(Command(resume=research_run._wrap_resume(defaults)), cfg)
 
     assert result["status"] == "completed"
 
@@ -128,8 +131,8 @@ def test_digest_degraded_notice(
         cfg,
     )
     snap = graph.get_state(cfg)
-    defaults = [e["decision"] for e in snap.values["gate_queue"]]
-    result = graph.invoke(Command(resume=defaults), cfg)
+    defaults = {e["proposal_id"]: e["decision"] for e in snap.values["gate_queue"]}
+    result = graph.invoke(Command(resume=research_run._wrap_resume(defaults)), cfg)
 
     markdown = Path(result["digest_path"]).read_text(encoding="utf-8")
     assert "Degraded notice" in markdown
@@ -363,7 +366,22 @@ def test_per_finding_decisions(
     assert snap.next == ("gate_review",)
 
     # Reject the arxiv finding, approve the blog as ref_only, skip the shop page.
-    result = graph.invoke(Command(resume=["skip", "ref_only", "skip"]), cfg)
+    # The queue was just read above, so this test knows its own render order and
+    # maps those three actions onto the proposals' opaque ids. The CONTRACT is
+    # id-keyed (GOV-02); only this local construction is order-aware.
+    result = graph.invoke(
+        Command(
+            resume=research_run._wrap_resume(
+                {
+                    entry["proposal_id"]: decision
+                    for entry, decision in zip(
+                        snap.values["gate_queue"], ["skip", "ref_only", "skip"]
+                    )
+                }
+            )
+        ),
+        cfg,
+    )
     assert result["status"] == "completed"
 
     refs_dir = test_workspace / "refs"
@@ -412,8 +430,8 @@ def test_reject_all_and_approve_all(sample_search_results, scored_findings_batch
     )
     snap_a = graph.get_state(cfg_a)
     # approve-all == each finding's recommended ingest_action (the default decision)
-    approve_all = [e["decision"] for e in snap_a.values["gate_queue"]]
-    res_a = graph.invoke(Command(resume=approve_all), cfg_a)
+    approve_all = {e["proposal_id"]: e["decision"] for e in snap_a.values["gate_queue"]}
+    res_a = graph.invoke(Command(resume=research_run._wrap_resume(approve_all)), cfg_a)
     # recommended set: arxiv ref+card, blog ref-only, shop skip → 2 refs, 1 card
     assert sorted(res_a["refs_created"]) == sorted(res_a["refs_created"])
     assert len(res_a["refs_created"]) == 2
@@ -429,8 +447,8 @@ def test_reject_all_and_approve_all(sample_search_results, scored_findings_batch
         cfg_r,
     )
     snap_r = graph.get_state(cfg_r)
-    reject_all = ["skip"] * len(snap_r.values["gate_queue"])
-    res_r = graph.invoke(Command(resume=reject_all), cfg_r)
+    reject_all = {e["proposal_id"]: "skip" for e in snap_r.values["gate_queue"]}
+    res_r = graph.invoke(Command(resume=research_run._wrap_resume(reject_all)), cfg_r)
     assert res_r["refs_created"] == []
     assert res_r["cards_created"] == []
     refs_r = test_dir = (ws_r / "refs")
@@ -478,8 +496,8 @@ def test_cross_process_resume(
     assert snap.next == ("gate_review",)
     assert snap.values.get("gate_queue"), "pending per-finding batch persisted across processes"
 
-    decisions = [e["decision"] for e in snap.values["gate_queue"]]
-    res2 = graph2.invoke(Command(resume=decisions), cfg)
+    decisions = {e["proposal_id"]: e["decision"] for e in snap.values["gate_queue"]}
+    res2 = graph2.invoke(Command(resume=research_run._wrap_resume(decisions)), cfg)
     assert graph2.get_state(cfg).next == ()
     assert res2["status"] == "completed"
     assert any((test_workspace / "refs").glob("*.json"))
@@ -545,7 +563,12 @@ def test_run_result_fields(
 
     done = research_run.review_research_run(
         research_run.ReviewInput(
-            workspace_path=str(test_workspace), run_id="run-result", approve_all=True
+            workspace_path=str(test_workspace),
+            run_id="run-result",
+            # GOV-03 / D-11: every resume is a conditional request — the ETag the
+            # queue was rendered at is required, and read off the run result.
+            checkpoint_id=start.checkpoint_id,
+            approve_all=True,
         )
     )
     # D-12 / SC5 surface.
@@ -589,8 +612,8 @@ def test_idempotent_rerun(
             cfg,
         )
         snap = graph.get_state(cfg)
-        defaults = [e["decision"] for e in snap.values["gate_queue"]]
-        return graph.invoke(Command(resume=defaults), cfg)
+        defaults = {e["proposal_id"]: e["decision"] for e in snap.values["gate_queue"]}
+        return graph.invoke(Command(resume=research_run._wrap_resume(defaults)), cfg)
 
     res1 = _run("run-idem-1")
     refs_dir = test_workspace / "refs"
@@ -652,8 +675,23 @@ def test_partial_batch_resume_safe(
     monkeypatch.setattr(ingestion, "_write_ref_file", crashing_write)
 
     # Resume → ingest_batch starts, writes the first ref, then crashes hard.
+    # As in test_per_finding_decisions, the three actions are mapped onto the
+    # queue's opaque proposal ids — the contract is id-keyed, not positional.
+    queue = graph.get_state(cfg).values["gate_queue"]
     with pytest.raises(BaseException):
-        graph.invoke(Command(resume=["ref_and_card", "ref_only", "skip"]), cfg)
+        graph.invoke(
+            Command(
+                resume=research_run._wrap_resume(
+                    {
+                        entry["proposal_id"]: decision
+                        for entry, decision in zip(
+                            queue, ["ref_and_card", "ref_only", "skip"]
+                        )
+                    }
+                )
+            ),
+            cfg,
+        )
 
     refs_dir = test_workspace / "refs"
     after_crash = {p.name for p in refs_dir.glob("*.json")}
@@ -1087,25 +1125,39 @@ def test_review_does_not_resume_completed_run(
         lambda *a, **k: [r.model_dump(mode="json") for r in sample_search_results],
     )
 
-    research_run.run_research_run(
+    start = research_run.run_research_run(
         research_run.ResearchRunInput(workspace_path=str(test_workspace), run_id="run-twice")
     )
     first = research_run.review_research_run(
         research_run.ReviewInput(
-            workspace_path=str(test_workspace), run_id="run-twice", approve_all=True
+            workspace_path=str(test_workspace),
+            run_id="run-twice",
+            checkpoint_id=start.checkpoint_id,
+            approve_all=True,
         )
     )
     assert first.status == "completed"
     first_events = list(first.events)
 
     # Second review of the now-completed run must not re-run the write nodes.
+    #
+    # Phase 18 / GOV-03 re-aims this assertion. Replaying the SAME checkpoint id
+    # is now refused by the ETag as a stale conditional request, BEFORE the
+    # paused-state guard this test originally exercised is reached. That is a
+    # strictly stronger guarantee than the WR-05 behaviour it replaces: the run
+    # is rejected rather than returning its completed result, so a replayed
+    # payload can never be mistaken for a fresh approval.
     second = research_run.review_research_run(
         research_run.ReviewInput(
-            workspace_path=str(test_workspace), run_id="run-twice", approve_all=True
+            workspace_path=str(test_workspace),
+            run_id="run-twice",
+            checkpoint_id=start.checkpoint_id,
+            approve_all=True,
         )
     )
-    assert second.status == "completed"
-    assert second.events == first_events, "completed run must not re-emit events"
+    assert second.status == "failed", "replayed checkpoint id must be refused as stale"
+    assert second.events == [], "a refused replay must not emit events"
+    assert first_events, "the first review did emit events"
 
 
 def test_review_nonexistent_run_reports_failed(tmp_path):
@@ -1113,6 +1165,13 @@ def test_review_nonexistent_run_reports_failed(tmp_path):
     from construct.llm import research_run
 
     res = research_run.review_research_run(
-        research_run.ReviewInput(workspace_path=str(tmp_path), run_id="run-ghost", approve_all=True)
+        # A ghost run has no checkpoint, so the staleness check is skipped and
+        # the missing-paused-state path is what reports failed.
+        research_run.ReviewInput(
+            workspace_path=str(tmp_path),
+            run_id="run-ghost",
+            checkpoint_id="",
+            approve_all=True,
+        )
     )
     assert res.status == "failed"
