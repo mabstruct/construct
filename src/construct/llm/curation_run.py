@@ -1191,6 +1191,28 @@ def _card_lifecycle_map(workspace: str) -> dict[str, str]:
     return out
 
 
+def _connection_key_set(workspace: str) -> set:
+    """Load ``{(from, to, type)}`` for the connection apply node's no-op check.
+
+    The same rebuild-INSIDE-the-node pattern as ``_card_lifecycle_map`` (never
+    stored in state — Pitfall 3), and the connection analogue of the lifecycle
+    comparison the other two apply nodes already make. ``add_connection`` dedups
+    by returning ``success=True, "Connection already exists"``, so its return
+    value cannot distinguish a dedup from a write without matching on a message
+    string; reading the edge set decides it from workspace state instead.
+    """
+    from construct.storage.workspace import WorkspaceLoader
+
+    out: set = set()
+    try:
+        for conn in WorkspaceLoader(Path(workspace)).load_connections().connections:
+            conn_type = getattr(conn.type, "value", conn.type)
+            out.add((conn.from_, conn.to, conn_type))
+    except Exception as exc:  # noqa: BLE001 — read robustness (T-11-02)
+        logger.warning("apply node: could not load connections: %s", _sanitize_error(exc))
+    return out
+
+
 def apply_promotions(state: CurationRunState) -> dict:
     """Write APPROVED promotions via ``edit_card`` (idempotent; only-approved).
 
@@ -1214,6 +1236,8 @@ def apply_promotions(state: CurationRunState) -> dict:
     promoted: list[str] = []
     rejected: list[str] = []
     escalated: list[str] = []
+    no_op: list[str] = []
+    failed_writes: list[str] = []
     events: list[str] = []
 
     for entry, decision in reviewed:
@@ -1241,18 +1265,28 @@ def apply_promotions(state: CurationRunState) -> dict:
             continue
         try:
             if lifecycles.get(card_id) == target:
-                promoted.append(card_id)  # already at target → idempotent no-op
+                # Already at target → NOTHING is written. Not applied, not an
+                # approval, and not a failure either (T-18-06).
+                no_op.append(card_id)
+                continue
+            res = edit_card(workspace, card_id, {"lifecycle": target}, author=CardAuthor.curator)
+            if res.success:
+                promoted.append(card_id)
+                # The approval is emitted HERE, inside the branch where the write
+                # succeeded, and nowhere else.
+                events.append(_emit(workspace, "gate_review_approved", card_id, f"promote → {target}"))
             else:
-                res = edit_card(workspace, card_id, {"lifecycle": target}, author=CardAuthor.curator)
-                if res.success:
-                    promoted.append(card_id)
-                else:
-                    logger.warning("apply_promotions: %s failed: %s", card_id, res.message)
-            events.append(_emit(workspace, "gate_review_approved", card_id, f"promote → {target}"))
+                failed_writes.append(f"{card_id} — {_safe_reason(res.message)}")
+                logger.warning("apply_promotions: %s failed: %s", card_id, res.message)
         except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
-            logger.warning("apply_promotions %s failed: %s", card_id, _sanitize_error(exc))
+            safe = _sanitize_error(exc)
+            failed_writes.append(f"{card_id} — {safe}")
+            logger.warning("apply_promotions %s failed: %s", card_id, safe)
     events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_promotions"))
-    return {"promoted": promoted, "rejected": rejected, "escalated": escalated, "events": events}
+    return {
+        "promoted": promoted, "rejected": rejected, "escalated": escalated,
+        "no_op": no_op, "failed_writes": failed_writes, "events": events,
+    }
 
 
 def apply_connections(state: CurationRunState) -> dict:
@@ -1271,9 +1305,12 @@ def apply_connections(state: CurationRunState) -> dict:
 
     workspace = state["workspace_path"]
     reviewed = _queue_and_decisions(state)
+    existing = _connection_key_set(workspace)
 
     added: list[str] = []
     rejected: list[str] = []
+    no_op: list[str] = []
+    failed_writes: list[str] = []
     events: list[str] = []
 
     for entry, decision in reviewed:
@@ -1289,6 +1326,14 @@ def apply_connections(state: CurationRunState) -> dict:
             continue
         try:
             conn_type = ConnectionType(payload.get("connection_type"))
+            if (from_id, to_id, conn_type.value) in existing:
+                # ``add_connection`` dedups by returning success with "Connection
+                # already exists", which is indistinguishable from a real write in
+                # its return value. The edge set is read here, inside the node, so
+                # "a write happened" is decided from workspace state rather than
+                # from a message string (T-18-06).
+                no_op.append(key)
+                continue
             res = add_connection(
                 workspace, from_id, to_id, conn_type,
                 note=payload.get("reasoning"),
@@ -1296,13 +1341,20 @@ def apply_connections(state: CurationRunState) -> dict:
             )
             if res.success:
                 added.append(f"{key}:{conn_type.value}")
+                existing.add((from_id, to_id, conn_type.value))
+                events.append(_emit(workspace, "gate_review_approved", key, f"connection {conn_type.value}"))
             else:
+                failed_writes.append(f"{key} — {_safe_reason(res.message)}")
                 logger.warning("apply_connections: %s failed: %s", key, res.message)
-            events.append(_emit(workspace, "gate_review_approved", key, f"connection {conn_type.value}"))
         except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
-            logger.warning("apply_connections %s failed: %s", key, _sanitize_error(exc))
+            safe = _sanitize_error(exc)
+            failed_writes.append(f"{key} — {safe}")
+            logger.warning("apply_connections %s failed: %s", key, safe)
     events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_connections"))
-    return {"connections_added": added, "rejected": rejected, "events": events}
+    return {
+        "connections_added": added, "rejected": rejected,
+        "no_op": no_op, "failed_writes": failed_writes, "events": events,
+    }
 
 
 def apply_archives(state: CurationRunState) -> dict:
@@ -1323,6 +1375,8 @@ def apply_archives(state: CurationRunState) -> dict:
 
     archived: list[str] = []
     rejected: list[str] = []
+    no_op: list[str] = []
+    failed_writes: list[str] = []
     events: list[str] = []
 
     for entry, decision in reviewed:
@@ -1335,18 +1389,24 @@ def apply_archives(state: CurationRunState) -> dict:
             continue
         try:
             if lifecycles.get(card_id) == Lifecycle.archived.value:
-                archived.append(card_id)  # already archived → idempotent no-op
+                no_op.append(card_id)  # already archived → nothing written
+                continue
+            res = archive_card(workspace, card_id, author=CardAuthor.curator)
+            if res.success:
+                archived.append(card_id)
+                events.append(_emit(workspace, "gate_review_approved", card_id, "archived"))
             else:
-                res = archive_card(workspace, card_id, author=CardAuthor.curator)
-                if res.success:
-                    archived.append(card_id)
-                else:
-                    logger.warning("apply_archives: %s failed: %s", card_id, res.message)
-            events.append(_emit(workspace, "gate_review_approved", card_id, "archived"))
+                failed_writes.append(f"{card_id} — {_safe_reason(res.message)}")
+                logger.warning("apply_archives: %s failed: %s", card_id, res.message)
         except Exception as exc:  # noqa: BLE001 — per-item isolation (D-08)
-            logger.warning("apply_archives %s failed: %s", card_id, _sanitize_error(exc))
+            safe = _sanitize_error(exc)
+            failed_writes.append(f"{card_id} — {safe}")
+            logger.warning("apply_archives %s failed: %s", card_id, safe)
     events.append(_emit(workspace, "workflow_step_complete", state["run_id"], "apply_archives"))
-    return {"archived": archived, "rejected": rejected, "events": events}
+    return {
+        "archived": archived, "rejected": rejected,
+        "no_op": no_op, "failed_writes": failed_writes, "events": events,
+    }
 
 
 def views_refresh_hook(state: CurationRunState) -> dict:
