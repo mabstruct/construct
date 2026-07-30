@@ -378,8 +378,28 @@ additive to the planning decisions above; they do not supersede them.
   behavioural changes a UI-SPEC design contract would not constrain. Overridden for this phase
   only; `workflow.ui_safety_gate` stays enabled for Phases 21–23, which are browser-facing.
 
+- **D-23 — GOV-04 scopes to *review-decided* canonical writes (accepted 2026-07-30, wave 3→4 boundary).**
+  Raised by plan 18-07, whose source-level guard found `pipelines/ingestion.py:246` calling
+  `create_card` directly from `ingest_source`, with no review interrupt in the module
+  (`grep -c "interrupt(\|StateGraph("` → 0). `ingest_source` is a registered capability
+  (`construct_ingest_source`) reachable over MCP and CLI, so an agent can create canonical
+  cards without human review.
+
+  Success criterion 4 reads "no surface writes canonical truth outside the reviewed workflow's
+  resume path", but its own stated satisfaction condition is removing the gate-review screen
+  (D-13), and the defect it names is a surface that *forges* gates — recording approvals for
+  things nothing applied. Ingestion is a separate path, deliberately ungated under D-04, that
+  never claims review happened. It is therefore not the defect class GOV-04 exists to close,
+  and criterion 4 stands satisfied by 18-07's removal plus the source-level guard.
+
+  The finding is NOT exempted. It is held in `UNRESOLVED_DIRECT_CALLERS` in
+  `tests/contract/test_canonical_write_boundary.py` as a shrink-only baseline: the test fails
+  if a new module joins it, and separately fails if an entry stops being a real caller, so it
+  cannot rot. Whether `ingest_source` should itself sit behind a gate is an explicit v0.6
+  question, not a Phase 18 gap.
+
 ---
 
 *Phase: 18-Contract & Governance Foundations*
 *Context gathered: 2026-07-26*
-*Execution-time decisions appended: 2026-07-27*
+*Execution-time decisions appended: 2026-07-27, 2026-07-30*
