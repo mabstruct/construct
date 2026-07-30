@@ -13,6 +13,10 @@ from typing import Any
 import streamlit as st
 
 from construct.capabilities.catalog import get_registry
+from construct.capabilities.errors import (
+    CapabilityInputError,
+    CapabilityNotFoundError,
+)
 from construct.capabilities.registry import CapabilityRecord
 
 
@@ -118,25 +122,42 @@ def _render_form_fields(schema: dict) -> dict[str, Any]:
 
 
 def _invoke_handler(cap: CapabilityRecord, inputs: dict) -> tuple[bool, Any, float]:
-    """Invoke a capability handler with the provided inputs.
+    """Dispatch a capability through the GOV-01 seam with the form's inputs.
 
     All capability executions go through the capability registry per D-04.
+
+    This used to apply the record's ``handler`` attribute to ``**inputs``
+    directly, which made a browser form the one caller in the repository that
+    could put an unvalidated payload in front of a handler: the widgets are built
+    from the model's JSON Schema, but nothing checked the values coming back.
+    ``registry.invoke`` applies the same
+    ``input_model`` every other surface is held to, so a bad form value is a
+    rejection with the seam's reason string rather than whatever the service
+    happened to raise several frames deeper.
+
+    The old ``TypeError`` branch — "some handlers require positional arguments and
+    cannot accept **kwargs from the form yet" — is gone with the positional
+    passthrough branches it described. Every handler is now keyword-reachable.
 
     Returns:
         Tuple of (success, result_or_error, duration_seconds).
     """
     start = time.time()
     try:
-        result = cap.handler(**inputs)
+        result = get_registry().invoke(cap.id, inputs)
         elapsed = time.time() - start
         return True, result, elapsed
-    except TypeError as exc:
+    except CapabilityInputError as exc:
+        # Rendered inline against the form rather than as a traceback: this is the
+        # user mistyping a field, not the application breaking.
         elapsed = time.time() - start
         return False, {
-            "error": f"Handler signature mismatch: {exc}",
-            "hint": "Some capability handlers require specific positional arguments "
-                    "and cannot accept **kwargs from the form yet.",
+            "error": f"Invalid input: {exc.reason}",
+            "hint": "Correct the highlighted field values and run again.",
         }, elapsed
+    except CapabilityNotFoundError as exc:
+        elapsed = time.time() - start
+        return False, {"error": str(exc)}, elapsed
     except Exception as exc:
         elapsed = time.time() - start
         return False, {"error": str(exc)}, elapsed

@@ -209,11 +209,25 @@ def test_graph_status_returns_health_report(workspace: str) -> None:
     assert {"cards", "connections", "domains"}.issubset(result.data.keys())
 
 
-def test_graph_status_accepts_positional_and_keyword(workspace: str) -> None:
-    """help.py calls graph.status positionally; MCP calls it by keyword."""
+def test_graph_status_is_keyword_only(workspace: str) -> None:
+    """The inverse of what stood here, and the inversion is the point.
+
+    This test used to be ``test_graph_status_accepts_positional_and_keyword`` and
+    asserted that the handler bound *both* call forms, because ``services/help.py``
+    invoked it positionally while MCP invoked it by keyword. That dual binding was
+    an accommodation for one internal caller, and GOV-01 (plan 18-03) removed the
+    caller: ``help.py`` now dispatches through ``registry.invoke``.
+
+    So the accommodation is gone and a positional call is a ``TypeError``. Keeping
+    the old assertion would have kept a second, unvalidated way into
+    ``graph_status`` alive purely because a test demanded it.
+    """
     cap = get_registry().get("graph.status")
-    assert cap.handler(workspace).success
+
     assert cap.handler(workspace=workspace).success
+
+    with pytest.raises(TypeError):
+        cap.handler(workspace)
 
 
 def test_help_suggest_surfaces_graph_health(workspace: str) -> None:
