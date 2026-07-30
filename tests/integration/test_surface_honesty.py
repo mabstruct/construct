@@ -283,6 +283,24 @@ def test_completed_run_still_renders_a_clean_success_verdict(clean_workspace: Pa
 _ESCALATED_ORDER = ["stale-connected-card", "fresh-card", "stale-orphan-card"]
 
 
+def _bucket_counts(text: str) -> dict[str, int]:
+    """Parse the human renderer's ``<bucket label>: <count>`` lines.
+
+    Scoped to the bucket labels the CLI itself declares, so a step summary that
+    happens to contain a number (``4 decay candidate(s)``) is never mistaken for
+    an outcome count.
+    """
+    from construct.cli import _CURATION_BUCKETS
+
+    labels = {label for _key, label in _CURATION_BUCKETS}
+    counts: dict[str, int] = {}
+    for line in text.splitlines():
+        label, _, tail = line.partition(": ")
+        if label in labels and tail.strip().isdigit():
+            counts[label] = int(tail.strip())
+    return counts
+
+
 @pytest.fixture
 def escalated_run(tmp_path: Path, offline: None) -> tuple:
     """A REAL reviewed run carrying three escalated items and one applied item.
@@ -385,9 +403,11 @@ def test_applied_and_escalated_are_two_counts_never_their_sum(
             if isinstance(value, list) and field not in ("steps", "events", "gate_queue"):
                 assert len(value) != 4, f"{name}: {field} holds the sum of applied and escalated"
     else:
-        assert "4" not in re.sub(r"cur-[\w-]+", "", out.text), (
-            f"{name}: a count of 4 — the sum of 1 applied and 3 escalated — reached "
-            f"the human output:\n{out.text}"
+        counts = _bucket_counts(out.text)
+        assert counts.get("applied") == 1, counts
+        assert counts.get(f"escalated ({curation_run.ESCALATED_LABEL})") == 3, counts
+        assert 4 not in counts.values(), (
+            f"{name}: a bucket reported 4 — the sum of 1 applied and 3 escalated:\n{out.text}"
         )
 
 

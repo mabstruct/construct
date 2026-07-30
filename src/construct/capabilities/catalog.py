@@ -916,6 +916,11 @@ def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
         success=result.status != "failed",
         message=result.message or result.status,
         data=result.model_dump(mode="json"),
+        # GOV-05: the run's own status rides on the envelope so a surface can
+        # report HOW IT WENT without re-deriving it from ``data``. The success
+        # flag's computation above is deliberately untouched — it drives the exit
+        # code and D-15 holds it fixed.
+        outcome=result.status,
     )
 
 
@@ -961,6 +966,10 @@ def _curation_result_to_operation(cap_id: str, runner) -> OperationResult:
         success=result.status != "failed",
         message=result.message or result.status,
         data=result.model_dump(mode="json"),
+        # GOV-05 — see ``_run_result_to_operation``. A degraded curation run is a
+        # successful invocation (exit 0, D-15) of a run that did not fully
+        # succeed; ``outcome`` is where the second half of that gets said.
+        outcome=result.status,
     )
 
 
@@ -1043,6 +1052,10 @@ def _daily_result_to_operation(cap_id: str, runner) -> OperationResult:
         success=result.status != "failed",
         message=result.message or result.status,
         data=result.model_dump(mode="json"),
+        # GOV-05 — see ``_run_result_to_operation``. The daily cycle degrades on
+        # any pending escalation, so this is the adapter where a "nothing was
+        # written" outcome most often needs to survive to a surface.
+        outcome=result.status,
     )
 
 

@@ -65,10 +65,29 @@ class OperationError:
 
 @dataclass
 class OperationResult:
+    """The shape every capability returns, across CLI, MCP and (Phase 19) HTTP.
+
+    ``success`` and ``outcome`` answer two different questions and are
+    deliberately not derived from one another (GOV-05):
+
+    * ``success`` means **the command ran**. It is what the CLI turns into an exit
+      code, so the Phase 11 contract that a degraded ``curation.run`` exits 0
+      (D-15) is a statement about this flag, and nothing here may move it.
+    * ``outcome`` means **how it went** — the run's own status
+      (``completed`` / ``degraded`` / ``awaiting_review`` / …). It exists because
+      a degraded run is a successful invocation of a run that did not fully
+      succeed, and collapsing that into one boolean is what let every surface
+      render a degraded outcome as a clean success.
+
+    ``outcome`` is optional: capabilities that are a single atomic operation have
+    no separate "how it went" to report, and leave it ``None``.
+    """
+
     success: bool = True
     message: str = ""
     errors: list[OperationError] = field(default_factory=list)
     data: Any = None
+    outcome: str | None = None
 
 
 # ---------------------------------------------------------------------------
