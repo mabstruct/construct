@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 
 import typer
 
+from construct.llm.curation_run import ESCALATED_LABEL
 from construct.schemas.card import Lifecycle
 from construct.schemas.workspace import ConnectionType
 from construct.services.init import DomainInitInput, WorkspaceInitError, initialize_workspace
@@ -160,6 +161,27 @@ card_app = typer.Typer(no_args_is_help=True, name="card", help="Card CRUD operat
 knowledge_app.add_typer(card_app)
 
 
+#: Outcomes that genuinely warrant an unqualified success verdict. Anything else
+#: — degraded, awaiting_review, or a future member — is rendered qualified, so a
+#: new outcome is honest by default rather than silently claiming success.
+_CLEAN_OUTCOMES = frozenset({"completed", "succeeded"})
+
+
+def _verdict_line(result: OperationResult) -> str:
+    """The terminal verdict for a command that RAN, qualified by its outcome.
+
+    GOV-05: ``result.success`` means "the command ran" and drives the exit code
+    (D-15). It is therefore true for a degraded run, and rendering it as ``✓``
+    produced the defect this replaces — an honest ``status: degraded`` line and
+    an unqualified ``✓ Curation run degraded.`` in the same output block. A
+    capability with no separate outcome to report is unaffected.
+    """
+    outcome = getattr(result, "outcome", None)
+    if outcome and outcome not in _CLEAN_OUTCOMES:
+        return f"⚠ {outcome}: {result.message}"
+    return f"✓ {result.message}"
+
+
 def _display_result(result: OperationResult, json_output: bool) -> None:
     """Render an OperationResult to stdout as either JSON or human-readable text."""
     if json_output:
@@ -167,6 +189,10 @@ def _display_result(result: OperationResult, json_output: bool) -> None:
             json.dumps(
                 {
                     "success": result.success,
+                    # GOV-05: "the command ran" and "how it went" are two
+                    # different answers, and a script reading only ``success``
+                    # was being told a degraded run went fine.
+                    "outcome": result.outcome,
                     "message": result.message,
                     "errors": [
                         {"field": e.field, "reason": e.reason, "suggestion": e.suggestion}
@@ -179,7 +205,7 @@ def _display_result(result: OperationResult, json_output: bool) -> None:
         )
     else:
         if result.success:
-            typer.echo(f"✓ {result.message}")
+            typer.echo(_verdict_line(result))
         else:
             typer.secho(f"✗ {result.message}", fg=typer.colors.RED)
             for error in result.errors:
@@ -664,10 +690,30 @@ def research_inspect_cmd(
 # ---------------------------------------------------------------------------
 
 
+#: The outcome buckets, in the order a reader should meet them, each labelled for
+#: WHAT ACTUALLY HAPPENED. ``applied`` is the only one behind which a canonical
+#: write occurred; the other four exist so "nothing was written" can never again
+#: reach a surface as silence, or worse, folded into the applied count (D-16).
+_CURATION_BUCKETS = (
+    ("applied", "applied"),
+    ("no_op", "unchanged — already in that state"),
+    ("escalated", f"escalated ({ESCALATED_LABEL})"),
+    ("rejected", "rejected — nothing written"),
+    ("failed_writes", "failed — nothing written"),
+)
+
+
 def _render_curation_result(data: dict[str, Any]) -> None:
     """Human-readable CurationRunResult summary: run status, run_id, and a
     per-step line (step name, status, one-line summary) so the user can VISUALLY
-    distinguish completed vs degraded vs skipped steps (criterion #2)."""
+    distinguish completed vs degraded vs skipped steps (criterion #2).
+
+    The outcome buckets are rendered as SEPARATE counts, never summed, and each
+    is listed in queue order so this surface, the ``--json`` payload and the MCP
+    result cannot disagree about which items they mean. An empty bucket prints
+    nothing at all, which is what keeps a clean run's output byte-identical to
+    what it produced before the buckets existed.
+    """
     typer.echo(f"status: {data.get('status', '')}")
     typer.echo(f"run_id: {data.get('run_id', '')}")
     steps = data.get("steps") or []
@@ -679,6 +725,13 @@ def _render_curation_result(data: dict[str, Any]) -> None:
         if summary:
             line += f" — {summary}"
         typer.echo(line)
+    for key, label in _CURATION_BUCKETS:
+        items = data.get(key) or []
+        if not items:
+            continue
+        typer.echo(f"{label}: {len(items)}")
+        for item in items:
+            typer.echo(f"  · {item}")
     events = data.get("events") or []
     if events:
         typer.echo(f"events: {', '.join(events)}")
@@ -686,7 +739,14 @@ def _render_curation_result(data: dict[str, Any]) -> None:
 
 def _emit_curation_result(result: OperationResult, json_output: bool) -> None:
     """Render a curation OperationResult: full-fidelity JSON passthrough, or the
-    curation per-step table on success / the generic error render on failure."""
+    curation per-step table on success / the generic error render on failure.
+
+    The run-level verdict is the qualified one (GOV-05), so the honest
+    ``status:`` line above it and the verdict below it can no longer contradict
+    each other inside one output block. Exit codes are untouched: this function
+    owns the curation commands' exit code and still returns without raising on
+    every branch where the command ran (D-15).
+    """
     if json_output:
         _display_result(result, json_output=True)
         return
@@ -695,7 +755,7 @@ def _emit_curation_result(result: OperationResult, json_output: bool) -> None:
         return
     if result.data:
         _render_curation_result(result.data)
-    typer.echo(f"✓ {result.message}")
+    typer.echo(_verdict_line(result))
 
 
 @curation_app.command(name="run")
