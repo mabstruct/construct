@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from construct.capabilities.registry import CapabilityRegistry, CapabilityRecord
 from construct.pipelines.workflow_runner import WorkflowRunner
@@ -134,16 +134,45 @@ class CardCreateInput(BaseModel):
 
 
 class CardEditInput(BaseModel):
+    """Input for ``knowledge.card.edit`` — a PARTIAL update.
+
+    ``title``, ``lifecycle`` and ``summary`` carry ``min_length=1`` plus the
+    blank-rejecting validator below. Both documented guards against blanking a
+    field the caller never named — the exclude-unset payload builder in
+    ``cli.py`` and ``_build_card_updates``' filter — tested ``is not None`` only,
+    so ``""`` walked through all of them: ``{"summary": ""}`` deleted the card's
+    Summary prose and ``{"title": ""}`` blanked the title, both answering
+    ``success: True``. ``construct_edit_card`` is an MCP tool, so that was
+    agent-reachable (CR-03).
+
+    The constraint is declared HERE rather than fixed in the marshaller because
+    the seam then **rejects with a reason** instead of silently accepting a
+    no-op, and because the model is the one layer CLI, MCP and Phase 19's HTTP
+    adapter all share. Clearing a field is not expressible today and never was —
+    an empty string only ever destroyed data.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     card_id: str
     workspace: Path
-    title: str | None = None
+    title: str | None = Field(None, min_length=1)
     confidence: int | None = Field(None, ge=1, le=5)
     source_tier: int | None = Field(None, ge=1, le=5)
-    lifecycle: str | None = None
-    summary: str | None = None
+    lifecycle: str | None = Field(None, min_length=1)
+    summary: str | None = Field(None, min_length=1)
     author: str = "curator"
+
+    @field_validator("title", "lifecycle", "summary")
+    @classmethod
+    def reject_blank(cls, value: str | None) -> str | None:
+        """``min_length=1`` alone is satisfied by ``"   "``, which blanks just the same."""
+        if value is not None and not value.strip():
+            raise ValueError(
+                "must not be blank — omit the field to leave it unchanged, "
+                "e.g. send {'card_id': 'x', 'title': 'New Title'} with no 'summary' key"
+            )
+        return value
 
 
 class CardArchiveInput(BaseModel):
@@ -1226,14 +1255,23 @@ def _build_card_updates(kwargs: dict) -> dict:
 
     Mirrors the CLI marshalling at cli.py:789-799: only provided non-None
     fields are included; summary maps to the ``_summary`` key.
+
+    The blank check is the *second* guard, not the primary one. ``CardEditInput``
+    rejects a blank ``title``/``lifecycle``/``summary`` at the seam with a reason,
+    which is where a caller should learn about it. This filter exists for a caller
+    that reaches the handler without the model — a direct ``_edit_card_shim``
+    call, or anything Phase 19 wires up before the seam — for which a silent skip
+    is the right failure: it destroys nothing. Testing ``is not None`` alone was
+    the hole ``""`` walked through to delete stored prose (CR-03).
     """
     updates: dict[str, object] = {}
     for field in ("title", "confidence", "source_tier", "lifecycle"):
         value = kwargs.get(field)
-        if value is not None:
-            updates[field] = value
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+        updates[field] = value
     summary = kwargs.get("summary")
-    if summary is not None:
+    if summary is not None and str(summary).strip():
         updates["_summary"] = summary
     return updates
 

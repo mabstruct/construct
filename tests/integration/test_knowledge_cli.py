@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from construct.capabilities.catalog import get_registry
+from construct.capabilities.errors import CapabilityInputError
 from construct.cli import app
 from construct.schemas.card import CardAuthor, Lifecycle, parse_card_markdown
 from construct.storage.workspace import WorkspaceLoader
@@ -218,6 +220,92 @@ def test_card_edit_title_only_leaves_every_unnamed_field_byte_identical(
     # read-back: this is the exact byte range the historical defect destroyed.
     assert body_after == body_before, "a title-only edit rewrote the card body"
     assert body_prose in body_after
+
+
+@pytest.mark.parametrize("field", ["title", "summary", "lifecycle"])
+def test_card_edit_refuses_a_blank_free_text_field_rather_than_blanking_it(
+    init_workspace: Path, cli_runner: CliRunner, field: str
+) -> None:
+    """CR-03: an empty string is a no-op request, never a request to destroy prose.
+
+    The two documented guards — the exclude-unset payload builder in ``cli.py``
+    and ``_build_card_updates``' filter — both tested ``is not None`` only, and
+    ``CardEditInput.title``/``summary`` were ``str | None`` with no length
+    constraint. So ``""`` passed all three layers: ``{"summary": ""}`` deleted the
+    card's Summary prose and ``{"title": ""}`` blanked the title, both reporting
+    ``success: True``. ``construct_edit_card`` is an MCP tool, so this was
+    agent-reachable, and it is the third instance of the class this repository
+    names as data loss.
+
+    The constraint is declared on the model, so the seam **rejects with a reason**
+    rather than accepting a silent no-op — the same choice the rest of this phase
+    makes. Both surfaces are asserted, because the model is the only layer both
+    of them share.
+    """
+    body_prose = "Prose that an empty-string edit must never be able to delete."
+    cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", f"Blank Guard {field}",
+        "--type", "finding", "--domains", "test",
+        "--categories", "test-category",
+        "--confidence", "3", "--source-tier", "2",
+        "--summary", body_prose,
+        "--workspace", str(init_workspace),
+    ])
+    card_path = init_workspace / "cards" / f"blank-guard-{field}.md"
+    before = card_path.read_bytes()
+
+    # ── the CLI surface ──
+    result = cli_runner.invoke(app, [
+        "knowledge", "card", "edit", f"blank-guard-{field}",
+        f"--{field}", "",
+        "--workspace", str(init_workspace),
+    ])
+    assert result.exit_code == 1, result.stdout
+    assert field in result.stdout
+    assert card_path.read_bytes() == before, f"--{field} '' rewrote the card"
+
+    # ── the seam an MCP client reaches ──
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke("knowledge.card.edit", {
+            "workspace": str(init_workspace),
+            "card_id": f"blank-guard-{field}",
+            field: "",
+        })
+    assert field in excinfo.value.reason
+    assert card_path.read_bytes() == before, f"{{'{field}': ''}} rewrote the card"
+
+
+@pytest.mark.parametrize("field", ["title", "summary", "lifecycle"])
+def test_card_edit_refuses_a_whitespace_only_free_text_field(
+    init_workspace: Path, cli_runner: CliRunner, field: str
+) -> None:
+    """A length constraint alone would let ``"   "`` through, which blanks just the same.
+
+    ``min_length=1`` is satisfied by three spaces, and a title of three spaces is
+    a destroyed title. The model therefore rejects on the *stripped* value, so the
+    guard cannot be walked around with whitespace.
+    """
+    cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", f"Whitespace Guard {field}",
+        "--type", "finding", "--domains", "test",
+        "--categories", "test-category",
+        "--confidence", "3", "--source-tier", "2",
+        "--summary", "Prose the whitespace path must not reach.",
+        "--workspace", str(init_workspace),
+    ])
+    card_path = init_workspace / "cards" / f"whitespace-guard-{field}.md"
+    before = card_path.read_bytes()
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke("knowledge.card.edit", {
+            "workspace": str(init_workspace),
+            "card_id": f"whitespace-guard-{field}",
+            field: "   ",
+        })
+    assert field in excinfo.value.reason
+    assert card_path.read_bytes() == before
 
 
 def test_card_edit_cli_updates_summary_without_losing_body(init_workspace: Path, cli_runner: CliRunner) -> None:
