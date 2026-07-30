@@ -1331,3 +1331,205 @@ def test_concurrency_configuration_stays_phase_19s(curation_workspace):
         for forbidden in ("busy_timeout", "journal_mode"):
             assert forbidden not in src, f"{module.__name__} must not configure {forbidden}"
         assert "WAL" not in src, f"{module.__name__} must not configure WAL"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 18 Plan 08 — D-16: escalation is escalation, and an approval event only
+# follows a write that actually happened
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# Two defects are pinned below, both instances of the T-15-14
+# audit-trail-that-lies class this codebase already names:
+#
+#   1. An escalated proposal — which writes NOTHING — was logged as
+#      ``gate_review_rejected``. A rejection is a decision the reviewer made;
+#      an escalation is the absence of one. The audit trail recorded a decision
+#      that was never taken, about an item nothing happened to. Escalated items
+#      also reached no result surface at all, so they could only be read as
+#      "not applied, not rejected, therefore invisible".
+#
+#   2. ``gate_review_approved`` fired on ALL THREE branches of every apply node:
+#      on a real write, on an idempotent no-op where nothing was written, and on
+#      a write that failed. The count of approvals in ``log/events.jsonl`` was
+#      therefore unrelated to the count of writes that happened.
+#
+# Every assertion below reads the event log back FROM DISK. The in-memory
+# ``events`` channel is a convenience; ``log/events.jsonl`` is what the audit
+# trail actually contains, and it is the only thing an auditor ever sees.
+
+
+def _event_records(ws: _Path) -> list:
+    """Every event in the workspace's on-disk audit trail, in written order."""
+    import json
+
+    path = ws / "log" / "events.jsonl"
+    if not path.exists():
+        return []
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _actions(records: list) -> list:
+    return [r["action"] for r in records]
+
+
+def _proposal(kind: str, decision: str, **payload):
+    from construct.llm import curation_run
+
+    return curation_run.CurationProposal(kind=kind, decision=decision, payload=payload)
+
+
+def _pause_with_queue(ws: _Path, run_id: str, proposals: list) -> list:
+    """Pause a REAL run whose consolidated queue is EXACTLY the given proposals.
+
+    Same idiom as ``_pause_legacy_run``: the graph is driven through the module's
+    own ``_open_checkpointer``, so the pause it leaves behind is the one
+    ``review_curation_run`` re-opens. Offline the three producers enqueue nothing,
+    so the persisted queue is exactly what is seeded here — which is what makes a
+    precisely-shaped mix of applied / no-op / failed / escalated items possible
+    without steering an LLM gate into producing one.
+    """
+    from construct.llm import curation_run
+
+    saver, conn = curation_run._open_checkpointer(ws)
+    try:
+        graph = curation_run.build_curation_run_graph(saver)
+        cfg = {"configurable": {"thread_id": run_id}}
+        state = curation_run._initial_state(
+            curation_run.CurationRunInput(workspace_path=str(ws), run_id=run_id)
+        )
+        state["gate_queue"] = [p.model_dump(mode="json") for p in proposals]
+        graph.invoke(state, cfg)
+        snap = graph.get_state(cfg)
+        assert snap.next == ("process_inbox",), snap.next
+        return list(snap.values["gate_queue"])
+    finally:
+        conn.close()
+
+
+def _decide(queue: list, decision: str = "approve") -> dict:
+    """A complete id-keyed decision map over a queue (D-10 coverage)."""
+    return {entry["proposal_id"]: decision for entry in queue}
+
+
+# ── Task 1: escalation gets its own action, its own bucket, its own order ────
+
+
+def test_escalated_emits_its_own_action_not_a_rejection(curation_workspace, monkeypatch):
+    """D-16: an escalated proposal emits a distinct action carrying the
+    ``escalated`` result member, and emits NO rejection for the same item.
+
+    ``EventResult.escalated`` already exists in the emitter enum, so this outcome
+    had a home in the audit vocabulary the whole time — it was simply never used.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    from construct.llm import curation_run
+
+    queue = _pause_with_queue(
+        curation_workspace,
+        "cur-esc-action",
+        [_proposal("escalate", "escalate", card_id="fresh-card")],
+    )
+    before = len(_event_records(curation_workspace))
+
+    done = _review(curation_workspace, "cur-esc-action", decisions=_decide(queue, "escalate"))
+    assert done.status == "completed", done.message
+
+    new = _event_records(curation_workspace)[before:]
+    for_card = [r for r in new if r.get("target") == "fresh-card"]
+    assert [r["action"] for r in for_card] == [curation_run.ESCALATED_EVENT_ACTION]
+    assert for_card[0]["result"] == "escalated"
+    assert "gate_review_rejected" not in _actions(new), (
+        "an escalation is not a reviewer's rejection; logging it as one is an "
+        "audit trail that lies"
+    )
+    assert "gate_review_approved" not in _actions(new), "escalation writes nothing"
+
+
+def test_escalated_bucket_reaches_the_run_result(curation_workspace, monkeypatch):
+    """D-16: the escalated bucket exists on the result surface, not only in the
+    graph state. The gap this closes is between the apply node and anything that
+    renders it."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    from construct.llm import curation_run
+
+    assert "escalated" in curation_run.CurationRunResult.model_fields
+
+    queue = _pause_with_queue(
+        curation_workspace,
+        "cur-esc-bucket",
+        [_proposal("escalate", "escalate", card_id="stale-orphan-card")],
+    )
+    done = _review(curation_workspace, "cur-esc-bucket", decisions=_decide(queue, "escalate"))
+
+    assert done.escalated == ["stale-orphan-card"]
+    assert done.applied == [], "nothing was written, so nothing is applied"
+
+
+def test_escalated_and_applied_are_counted_separately(curation_workspace, monkeypatch):
+    """D-16 / GOV-05 adjacency edge: two escalated + one applied reports 1 and 2,
+    and NO field anywhere on the result holds their sum."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    queue = _pause_with_queue(
+        curation_workspace,
+        "cur-esc-mix",
+        [
+            _proposal("escalate", "escalate", card_id="stale-orphan-card"),
+            _proposal("promotion", "promote", card_id="fresh-card", target_lifecycle="growing"),
+            _proposal("escalate", "escalate", card_id="stale-connected-card"),
+        ],
+    )
+    done = _review(curation_workspace, "cur-esc-mix", decisions=_decide(queue))
+
+    assert len(done.applied) == 1, done.applied
+    assert len(done.escalated) == 2, done.escalated
+    for name in type(done).model_fields:
+        value = getattr(done, name)
+        if isinstance(value, list):
+            assert len(value) != 3, (
+                f"field {name!r} holds 3 items — the sum of applied and escalated. "
+                "No surface may report a single number that folds the two together."
+            )
+
+
+def test_escalated_bucket_preserves_queue_order(curation_workspace, monkeypatch):
+    """GOV-05 ordering edge: the escalated bucket is in queue order, so the CLI,
+    the JSON payload and the MCP result cannot disagree about it."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    order = ["stale-connected-card", "fresh-card", "stale-orphan-card"]
+    queue = _pause_with_queue(
+        curation_workspace,
+        "cur-esc-order",
+        [_proposal("escalate", "escalate", card_id=cid) for cid in order],
+    )
+    done = _review(curation_workspace, "cur-esc-order", decisions=_decide(queue, "escalate"))
+
+    assert done.escalated == order
+
+
+def test_missing_target_lifecycle_escalates_rather_than_rejects(curation_workspace, monkeypatch):
+    """D-16: the no-target-lifecycle branch escalates the item, so it emits the
+    escalate action for exactly the same reason — it wrote nothing and the
+    reviewer rejected nothing."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    from construct.llm import curation_run
+
+    queue = _pause_with_queue(
+        curation_workspace,
+        "cur-esc-notarget",
+        [_proposal("promotion", "promote", card_id="fresh-card")],  # no target_lifecycle
+    )
+    before = len(_event_records(curation_workspace))
+
+    done = _review(curation_workspace, "cur-esc-notarget", decisions=_decide(queue))
+
+    assert done.escalated == ["fresh-card"]
+    new = _event_records(curation_workspace)[before:]
+    for_card = [r for r in new if r.get("target") == "fresh-card"]
+    assert [r["action"] for r in for_card] == [curation_run.ESCALATED_EVENT_ACTION]
+    assert "gate_review_rejected" not in _actions(new)
