@@ -46,7 +46,12 @@ FIXTURE_WS = Path(__file__).resolve().parents[2] / "test-ws" / "my-construct"
 
 # A deliberate tripwire (not a name set): adding a capability must be a conscious
 # edit here, which is what forces the author past the two guards below.
-REGISTRY_SIZE = 28
+#
+# 28 -> 29 in plan 18-03: ``views.validate_data`` joins the registry (D-02), so
+# ``views validate`` stops being the last hand-written command group and becomes
+# reachable from CLI and MCP by the one path every other capability uses. Bumping
+# this integer is the intended act, not a workaround for it.
+REGISTRY_SIZE = 29
 
 
 def _forbids(model: type) -> bool:
@@ -544,6 +549,82 @@ def test_workflow_runner_is_not_a_capability_caller() -> None:
     step_fields = set(WorkflowStep.__dataclass_fields__)
     assert {"handler", "handler_kwargs"} <= step_fields
     assert not hasattr(CapabilityRecord, "handler_kwargs")
+
+
+# ---------------------------------------------------------------------------
+# views.validate_data — the last hand-written command group joins the registry
+# ---------------------------------------------------------------------------
+
+
+def test_views_validate_data_is_registered_on_both_surfaces() -> None:
+    """D-02: registration is what makes ``views validate`` reachable by the one
+    path, and what makes Phase 19's generated HTTP adapter inherit it without a
+    code change. Both names are asserted because a record with no
+    ``mcp_tool_name`` is registered but not reachable."""
+    capability = get_registry().get("views.validate_data")
+
+    assert capability.cli_name
+    assert capability.mcp_tool_name
+    assert capability.input_model.__name__ == "ViewsValidateInput"
+
+
+def test_views_validate_data_shares_the_generate_side_vocabulary() -> None:
+    """The two views capabilities must not name the same thing two ways.
+
+    ``views.generate_data`` declares ``install_root``; a validate model declaring
+    ``root`` or ``path`` would make one group speak two dialects at the boundary
+    an agent reads.
+    """
+    registry = get_registry()
+    generate_fields = set(registry.get("views.generate_data").input_model.model_fields)
+    validate_fields = set(registry.get("views.validate_data").input_model.model_fields)
+
+    assert generate_fields == validate_fields == {"install_root"}
+
+
+def test_views_validate_data_refuses_a_non_install_root_without_naming_a_path(
+    tmp_path: Path,
+) -> None:
+    """T-18-07 / T-18-10, together.
+
+    Registration is what makes ``install_root`` *agent-supplied* over MCP and, in
+    Phase 19, over HTTP — so the marker-file guard stops being an internal
+    convenience and becomes a boundary control. It must run before any file is
+    read, and its reason must not echo a filesystem path back to the caller.
+    """
+    outsider = tmp_path / "not-a-construct-install"
+    (outsider / "views" / "build" / "data").mkdir(parents=True)
+    (outsider / "views" / "build" / "data" / "domains.json").write_text(
+        "this is not json and must never be read", encoding="utf-8"
+    )
+
+    result = get_registry().invoke("views.validate_data", {"install_root": outsider})
+
+    assert result.success is False
+    # The file above is malformed on purpose: if the guard ran late, the report
+    # would carry a parse failure for it instead of an install-root refusal.
+    assert "domains.json" not in result.message
+    assert not (result.data or {}).get("results")
+
+    haystack = result.message + " ".join(e.reason for e in result.errors)
+    for segment in (str(outsider), outsider.name, str(tmp_path)):
+        assert segment not in haystack, (
+            f"the rejection reason echoed a filesystem path segment {segment!r}: "
+            f"{haystack!r}"
+        )
+
+
+def test_views_validate_data_refuses_a_path_that_is_not_a_directory(
+    tmp_path: Path,
+) -> None:
+    """The other half of the guard, which ``install_root_error`` reports first."""
+    a_file = tmp_path / "AGENTS.md"
+    a_file.write_text("# not a directory\n", encoding="utf-8")
+
+    result = get_registry().invoke("views.validate_data", {"install_root": a_file})
+
+    assert result.success is False
+    assert str(a_file) not in result.message
 
 
 def test_no_registry_aware_module_calls_a_handler_directly() -> None:
