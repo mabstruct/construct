@@ -22,6 +22,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -31,17 +32,127 @@ from construct.mcp.server import create_server
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# (capability_id, mcp_tool_name, payload builder, CLI argv builder)
-PARITY_CASES: list[tuple[str, str, Callable[[Path], dict], Callable[[Path], list[str]]]] = [
-    (
-        "knowledge.card.list",
-        "construct_list_cards",
-        lambda ws: {"workspace": str(ws)},
-        lambda ws: ["knowledge", "card", "list", "--workspace", str(ws), "--json"],
+
+class ParityCase(NamedTuple):
+    """One capability, described well enough to drive both real surfaces.
+
+    ``build_env`` takes a *private* directory and returns the environment root the
+    other two builders address. It is called once per arm, so each surface gets an
+    identical but independent tree — which is what lets a **write** capability into
+    the table at all. Sharing one tree would have the second arm collide with the
+    first arm's write, and comparing "created" against "already exists" proves
+    nothing about parity.
+
+    ``read`` projects a surface's raw output onto the value being compared.
+    Capabilities whose CLI prints ``_display_result``'s envelope share
+    ``_envelope_view``; ``views validate`` prints its own report shape and brings
+    its own reader. The projection lives in the row so the test body stays one
+    equality assertion — adding a capability is a row, never new test logic.
+    """
+
+    cap_id: str
+    tool_name: str
+    build_env: Callable[[Path], Path]
+    build_payload: Callable[[Path], dict]
+    build_argv: Callable[[Path], list[str]]
+    read_cli: Callable[[str], object]
+    read_mcp: Callable[[dict], object]
+
+
+def _envelope_view(payload: dict) -> dict:
+    """The comparable core of an ``OperationResult`` rendered as JSON."""
+    return {
+        "success": payload["success"],
+        "message": payload["message"],
+        "errors": payload["errors"],
+        "data": payload["data"],
+    }
+
+
+def _envelope_from_cli(stdout: str) -> dict:
+    return _envelope_view(json.loads(stdout))
+
+
+def _views_report(results: list[dict], all_passed: bool) -> dict:
+    """The per-file verdict table, keyed by file so ordering is not the assertion."""
+    return {
+        "all_passed": all_passed,
+        "files": {entry["file"]: entry["status"] for entry in results},
+    }
+
+
+def _views_view_from_cli(stdout: str) -> dict:
+    payload = json.loads(stdout)
+    return _views_report(payload["results"], payload["all_passed"])
+
+
+def _views_view_from_mcp(payload: dict) -> dict:
+    data = payload["data"]
+    return _views_report(data["results"], data["all_passed"])
+
+
+PARITY_CASES: list[ParityCase] = [
+    # A read.
+    ParityCase(
+        cap_id="knowledge.card.list",
+        tool_name="construct_list_cards",
+        build_env=lambda root: _card_workspace(root),
+        build_payload=lambda ws: {"workspace": str(ws)},
+        build_argv=lambda ws: [
+            "knowledge", "card", "list", "--workspace", str(ws), "--json",
+        ],
+        read_cli=_envelope_from_cli,
+        read_mcp=_envelope_view,
+    ),
+    # A write. D-08 permits trading fixture cost for breadth, and a table proving
+    # only reads agree would leave the capabilities that *change* the workspace —
+    # the ones where a surface fork actually costs the user something — unproven.
+    ParityCase(
+        cap_id="knowledge.card.create",
+        tool_name="construct_create_card",
+        build_env=lambda root: _card_workspace(root),
+        build_payload=lambda ws: {
+            "workspace": str(ws),
+            "title": "Parity Card",
+            "epistemic_type": "finding",
+            "domains": ["test-domain"],
+            "content_categories": ["test-category"],
+            "confidence": 3,
+            "source_tier": 3,
+            "author": "construct",
+            "summary": "Written through both surfaces to prove they agree.",
+        },
+        build_argv=lambda ws: [
+            "knowledge", "card", "create",
+            "--title", "Parity Card",
+            "--type", "finding",
+            "--domains", "test-domain",
+            "--categories", "test-category",
+            "--confidence", "3",
+            "--source-tier", "3",
+            "--author", "construct",
+            "--summary", "Written through both surfaces to prove they agree.",
+            "--workspace", str(ws),
+            "--json",
+        ],
+        read_cli=_envelope_from_cli,
+        read_mcp=_envelope_view,
+    ),
+    # The views capability D-02 registers in this plan.
+    ParityCase(
+        cap_id="views.validate_data",
+        tool_name="construct_views_validate_data",
+        build_env=lambda root: _generated_install_root(root),
+        build_payload=lambda root: {"install_root": str(root)},
+        build_argv=lambda root: [
+            "views", "validate", "--install-root", str(root), "--json",
+        ],
+        read_cli=_views_view_from_cli,
+        read_mcp=_views_view_from_mcp,
     ),
 ]
 
-_CASE_IDS = [case[0] for case in PARITY_CASES]
+_CASE_IDS = [case.cap_id for case in PARITY_CASES]
 
 
 # ── Surface drivers ───────────────────────────────────────────────────────
@@ -136,12 +247,34 @@ def _mcp_reason(payload: dict) -> str:
     return payload["error"]
 
 
-def _card_workspace(tmp_path: Path) -> Path:
+def _generated_install_root(tmp_path: Path) -> Path:
+    """A real CONSTRUCT install root carrying a real ``views/build/data/`` tree.
+
+    Built by running the actual generator rather than by writing fixture JSON, so
+    ``views validate`` is checked against bytes ``views generate`` really emits —
+    the round-trip property VFIX-01 turns on. The ``AGENTS.md`` marker is what
+    makes this a CONSTRUCT installation as far as ``install_root_error`` is
+    concerned; without it the capability refuses the path before reading anything.
+    """
+    from construct.views.generate import generate
+
+    root = tmp_path / "install"
+    root.mkdir(parents=True)
+    (root / "AGENTS.md").write_text("# CONSTRUCT parity install root\n", encoding="utf-8")
+
+    _card_workspace(root, name="demo")
+
+    report = generate(root)
+    assert report.total_files_written, "the parity fixture generated no view data"
+    return root
+
+
+def _card_workspace(tmp_path: Path, name: str = "workspace") -> Path:
     """A scaffolded workspace holding two cards, built through the real services."""
     from construct.services.init import DomainInitInput, initialize_workspace
     from construct.services.knowledge import create_card
 
-    ws = tmp_path / "workspace"
+    ws = tmp_path / name
     initialize_workspace(
         ws,
         DomainInitInput(
@@ -198,33 +331,74 @@ def test_seam_has_no_leniency_knob() -> None:
 # ── Success parity across the two real surfaces ───────────────────────────
 
 
-@pytest.mark.parametrize(
-    ("cap_id", "tool_name", "build_payload", "build_argv"), PARITY_CASES, ids=_CASE_IDS
-)
-def test_success_parity_verdict_message_and_records(
-    tmp_path: Path,
-    cap_id: str,
-    tool_name: str,
-    build_payload: Callable[[Path], dict],
-    build_argv: Callable[[Path], list[str]],
+@pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
+def test_success_parity_across_both_real_surfaces(
+    tmp_path: Path, case: ParityCase
 ) -> None:
-    """One payload, two real surfaces, one answer: same verdict, same message,
-    same record key set."""
-    ws = _card_workspace(tmp_path)
+    """One request, two real surfaces, one answer.
 
-    cli = _cli(build_argv(ws))
+    Each arm gets its own identical environment, so a write capability is
+    comparable: both surfaces act on a fresh tree and must produce the same
+    verdict, the same message, and the same data — not "one created it and the
+    other found it already there".
+    """
+    cli_env = case.build_env(tmp_path / "cli-arm")
+    mcp_env = case.build_env(tmp_path / "mcp-arm")
+
+    cli = _cli(case.build_argv(cli_env))
     assert cli.returncode == 0, cli.stderr or cli.stdout
-    cli_payload = json.loads(cli.stdout)
 
-    mcp_payload = _mcp(tool_name, build_payload(ws))
+    mcp_payload = _mcp(case.tool_name, case.build_payload(mcp_env))
 
-    assert cli_payload["success"] == mcp_payload["success"] is True
-    assert cli_payload["message"] == mcp_payload["message"]
+    cli_view = case.read_cli(cli.stdout)
+    mcp_view = case.read_mcp(mcp_payload)
 
-    assert cli_payload["data"], "fixture produced no records to compare"
-    assert len(cli_payload["data"]) == len(mcp_payload["data"])
-    for cli_record, mcp_record in zip(cli_payload["data"], mcp_payload["data"]):
-        assert set(cli_record.keys()) == set(mcp_record.keys())
+    assert cli_view == mcp_view, (
+        f"{case.cap_id} answered differently on the two surfaces:\n"
+        f"  CLI: {cli_view!r}\n  MCP: {mcp_view!r}"
+    )
+    assert cli_view, f"{case.cap_id} compared an empty projection — the assertion is vacuous"
+
+
+@pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
+def test_undeclared_field_is_rejected_identically_on_both_surfaces(
+    tmp_path: Path, case: ParityCase
+) -> None:
+    """The rejection contract, widened from one capability to the whole table.
+
+    Plan 01 proved this on ``knowledge.card.list``. A contract proven on one
+    capability is a contract proven on one capability — every row here is a
+    payload an agent can send, and each must be refused with the same words
+    whichever surface it arrives on.
+    """
+    env = case.build_env(tmp_path / "env")
+    payload = {**case.build_payload(env), "bogus": 1}
+
+    seam = _seam_in_fresh_process(case.cap_id, payload)
+    assert seam.returncode != 0, seam.stdout
+
+    mcp_payload = _mcp(case.tool_name, payload)
+
+    assert _cli_reason(seam) == _mcp_reason(mcp_payload)
+    assert "bogus" in _mcp_reason(mcp_payload)
+
+
+def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None:
+    """D-08's breadth requirement, asserted so it cannot silently narrow.
+
+    Deliberately *not* an inventory check against the registry: that would prove a
+    capability is listed and never that two surfaces behave the same. This asserts
+    only that the differential table above — every row of which drives a real CLI
+    process against real MCP dispatch — spans the three kinds.
+    """
+    covered = {case.cap_id for case in PARITY_CASES}
+
+    assert {
+        "knowledge.card.list",       # read
+        "knowledge.card.create",     # write
+        "views.validate_data",       # views
+    } <= covered
+    assert len(PARITY_CASES) >= 3
 
 
 # ── The MCP surface stays registry-generated ──────────────────────────────

@@ -208,6 +208,21 @@ class ViewsGenerateDataInput(BaseModel):
     install_root: Path
 
 
+class ViewsValidateInput(BaseModel):
+    """Input for ``views.validate_data`` (D-02).
+
+    ``install_root``, spelled exactly as ``ViewsGenerateDataInput`` spells it, so
+    the two views capabilities present one vocabulary to an agent reading the
+    tool list. Same reason the generate side is install-root scoped rather than
+    workspace scoped: the validator walks the *children* of the data directory
+    the generator wrote.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    install_root: Path
+
+
 class WorkflowRunInput(BaseModel):
     # Retained per plan 18-02. A grep at the time of that change found no
     # remaining consumer: ``workflow.run`` was removed by D-10/CUR-05, and
@@ -396,10 +411,11 @@ def create_registry() -> CapabilityRegistry:
         description="Produce graph health report for a workspace",
         input_model=GraphStatusInput,
         output_model=OperationResult,
-        # ING-05: wire the real graph_status() report. Accepts workspace both
-        # positionally (help.py:126 calls handler(workspace_id)) and by keyword
-        # (GraphStatusInput / MCP pass workspace=...).
-        handler=lambda workspace: graph_status(workspace),
+        # ING-05 wired the real graph_status() report behind a lambda deliberately
+        # shaped to bind BOTH a positional and a keyword caller, because
+        # services/help.py called it positionally. 18-03 put that caller on the
+        # seam, so the accommodation is gone: keyword-only, like every sibling.
+        handler=_graph_status_handler,
         mcp_tool_name="construct_graph_status",
     ))
     registry.register(CapabilityRecord(
@@ -409,12 +425,34 @@ def create_registry() -> CapabilityRegistry:
         input_model=ViewsGenerateDataInput,
         output_model=OperationResult,
         # V41-01 / FIX-01 (D-01): the permanent-failure placeholder is replaced
-        # by a real call into construct.views.generate.generate(). Per D-03 the
-        # `construct views generate` CLI command reaches the same function by an
-        # independent path rather than through this registry, so the two surfaces
-        # can drift — RT-01/RT-02 stays open for the views group deliberately.
+        # by a real call into construct.views.generate.generate().
+        #
+        # The registry-holdout note that stood here is retired by 18-03 / D-02:
+        # the views group is no longer a holdout, because `views validate` is the
+        # record below rather than a hand-written command body. What remains true
+        # of *this* record is narrower and is stated as itself: per D-03 the
+        # `construct views generate` CLI command still reaches generate() by an
+        # independent path, so the generate side keeps two paths where the
+        # validate side now has one. Closing that is a later decision, not an
+        # oversight (adr-0005).
         handler=_views_generate_handler,
         mcp_tool_name="construct_views_generate_data",
+    ))
+    registry.register(CapabilityRecord(
+        id="views.validate_data",
+        name="Validate Views Data",
+        description=(
+            "Validate the generated views JSON data files against their contract "
+            "models and report per-file pass/fail (read-only; writes nothing)"
+        ),
+        input_model=ViewsValidateInput,
+        output_model=OperationResult,
+        # D-02: the last hand-written command group joins the registry. Both
+        # names are set, so CLI and MCP reach it by the one path — and Phase 19's
+        # generated HTTP adapter inherits it without a code change.
+        handler=_views_validate_handler,
+        cli_name="views.validate_data",
+        mcp_tool_name="construct_views_validate_data",
     ))
     # D-10 / CUR-05: the legacy ``workflow.run`` capability existed only to drive
     # the fake-success curation-cycle step placeholder. It is removed here —
@@ -612,8 +650,11 @@ def create_registry() -> CapabilityRegistry:
 def _views_generate_handler(install_root) -> OperationResult:
     """V41-01 / FIX-01 (D-01): run the real views generator and report it.
 
-    A **named single parameter**, so the handler binds both the positional and
-    the keyword call form — the same property the ``graph.status`` lambda has.
+    A **named single parameter**. It used to be described here as binding both
+    the positional and the keyword call form "like the ``graph.status`` lambda";
+    that lambda is gone (18-03 made ``graph.status`` keyword-only once its one
+    positional caller moved onto the seam). No caller reaches this handler
+    positionally either — the seam always dispatches ``handler(**model_dump())``.
 
     D-04 splits the report's two failure channels: validation errors are fatal
     and become ``OperationResult.errors``; content warnings are advisory and
@@ -691,26 +732,125 @@ def _views_generate_handler(install_root) -> OperationResult:
     )
 
 
-def _validate_shim(*args, **kwargs):
-    """RT-03 adapter for workspace.validate. Accepts the MCP keyword form
-    (``path=`` from WorkspacePathInput) and the CLI positional form
-    (cli.py:88 calls ``handler(path)``)."""
-    if args:
-        return validate_workspace(args[0])
-    return validate_workspace(kwargs["path"])
+def _views_validate_handler(*, install_root) -> OperationResult:
+    """D-02: run the views contract validator and report it.
+
+    Keyword-only, like every other handler the seam reaches. The heavy lifting —
+    including the install-root guard — lives in
+    ``construct.views.generate.validate_build_data``; this wraps its report in an
+    ``OperationResult`` exactly as ``_views_generate_handler`` wraps the
+    generator's, so the two views capabilities answer in one shape.
+
+    Like every sibling shim it NEVER raises: the MCP surface must not receive raw
+    exception text (which carries filesystem paths) and the CLI must not
+    traceback. Both failure channels reduce to an ``OperationResult`` naming only
+    a field-and-constraint reason or an exception class.
+
+    The two pre-file failures are kept distinguishable in ``data`` because the
+    CLI renders them differently — the install-root refusal is surfaced verbatim
+    (it carries no path by construction), while the missing-data-directory case
+    lets the *local* caller append the path itself, which is the convention
+    ``install_root_error`` documents.
+    """
+    # Deferred import — matches the convention for heavy views imports.
+    from construct.views.generate import validate_build_data
+
+    try:
+        report = validate_build_data(install_root)
+    except Exception as exc:  # noqa: BLE001 — surface parity with the sibling shims
+        reason = type(exc).__name__
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data failed: {reason}",
+            errors=[OperationError(field="views.validate", reason=reason, suggestion="")],
+            data={"failed": True},
+        )
+
+    if report.guard_error is not None:
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data refused the install root: {report.guard_error}",
+            errors=[
+                OperationError(
+                    field="views.install_root", reason=report.guard_error, suggestion=""
+                )
+            ],
+            data={"failed": True},
+        )
+
+    if report.missing_data_dir:
+        reason = "no views data directory under the install root"
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data found nothing to validate: {reason}",
+            errors=[
+                OperationError(
+                    field="views.data_dir",
+                    reason=reason,
+                    suggestion="Run `construct views generate` first.",
+                )
+            ],
+            data={"results": [], "all_passed": False, "missing_data_dir": True},
+        )
+
+    passed = sum(1 for entry in report.results if entry["status"] == "pass")
+    failed = sum(1 for entry in report.results if entry["status"] == "fail")
+    missing = sum(1 for entry in report.results if entry["status"] == "missing")
+
+    return OperationResult(
+        success=report.all_passed,
+        message=(
+            f"Views data validation: {passed} passed, {failed} failed, "
+            f"{missing} missing"
+        ),
+        errors=[
+            OperationError(field=entry["file"], reason="; ".join(entry["errors"]), suggestion="")
+            for entry in report.results
+            if entry["status"] == "fail"
+        ],
+        data={
+            "results": report.results,
+            "all_passed": report.all_passed,
+            "missing_data_dir": False,
+        },
+    )
 
 
-def _research_search_shim(*args, **kwargs):
-    """RT-03 adapter for research.search."""
-    if args:
-        return research_search(ResearchSearchInput(workspace_path=str(args[0]), query=str(args[1])))
+def _graph_status_handler(*, workspace: str | Path) -> OperationResult:
+    """Handler for graph.status — keyword-only, by design.
+
+    The record used to carry ``lambda workspace: graph_status(workspace)``, whose
+    single named parameter bound a positional caller as readily as a keyword one.
+    That was an accommodation for ``services/help.py``'s positional
+    capability-to-capability call, and it is exactly the second dispatch path
+    GOV-01 exists to remove. Declaring the parameter keyword-only makes a
+    positional call a ``TypeError`` rather than a silent success.
+    """
+    return graph_status(workspace)
+
+
+def _validate_shim(*, path: Path | str) -> ValidationReport:
+    """Marshalling adapter for workspace.validate.
+
+    ``WorkspacePathInput.path`` → ``validate_workspace(root)``. The positional
+    branch that also accepted ``handler(path)`` is retired: plan 18-03 put every
+    ``cli.py`` command on the seam, so no caller passes positionally any more.
+    """
+    return validate_workspace(path)
+
+
+def _research_search_shim(**kwargs):
+    """Marshalling adapter for research.search.
+
+    Re-hydrates ``ResearchSearchInput`` from the seam's ``model_dump()``. The
+    positional branch — which invented a two-argument ``(workspace, query)`` call
+    form no caller in the repository ever used — is retired.
+    """
     return research_search(ResearchSearchInput(**kwargs))
 
 
-def _research_score_shim(*args, **kwargs):
+def _research_score_shim(**kwargs):
     """RT-03 adapter for research.score."""
-    if args:
-        raise TypeError("research.score handler requires keyword arguments")
     input_data = ResearchScoreInput(**kwargs)
     try:
         output = research_score_gate("research.score", input_data)
@@ -779,28 +919,22 @@ def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
     )
 
 
-def _research_run_shim(*args, **kwargs):
+def _research_run_shim(**kwargs):
     """RT-03 adapter for research.run (run-start; pauses at the human gate)."""
-    if args:
-        raise TypeError("research.run handler requires keyword arguments")
     return _run_result_to_operation(
         "research.run", lambda: run_research_run(ResearchRunInput(**kwargs))
     )
 
 
-def _research_review_shim(*args, **kwargs):
+def _research_review_shim(**kwargs):
     """RT-03 adapter for research.review (resume with per-finding decisions)."""
-    if args:
-        raise TypeError("research.review handler requires keyword arguments")
     return _run_result_to_operation(
         "research.review", lambda: review_research_run(ReviewInput(**kwargs))
     )
 
 
-def _research_inspect_shim(*args, **kwargs):
+def _research_inspect_shim(**kwargs):
     """RT-03 adapter for research.inspect (read-only get_state; never resumes)."""
-    if args:
-        raise TypeError("research.inspect handler requires keyword arguments")
     return _run_result_to_operation(
         "research.inspect", lambda: inspect_research_run(InspectInput(**kwargs))
     )
@@ -830,35 +964,29 @@ def _curation_result_to_operation(cap_id: str, runner) -> OperationResult:
     )
 
 
-def _curation_run_shim(*args, **kwargs):
+def _curation_run_shim(**kwargs):
     """RT-03 adapter for curation.run (deterministic findings-only cycle)."""
-    if args:
-        raise TypeError("curation.run handler requires keyword arguments")
     return _curation_result_to_operation(
         "curation.run", lambda: run_curation_run(CurationRunInput(**kwargs))
     )
 
 
-def _curation_inspect_shim(*args, **kwargs):
+def _curation_inspect_shim(**kwargs):
     """RT-03 adapter for curation.inspect (read-only get_state; never re-runs)."""
-    if args:
-        raise TypeError("curation.inspect handler requires keyword arguments")
     return _curation_result_to_operation(
         "curation.inspect", lambda: inspect_curation_run(CurationInspectInput(**kwargs))
     )
 
 
-def _curation_review_shim(*args, **kwargs):
+def _curation_review_shim(**kwargs):
     """RT-03 adapter for curation.review (resume a paused run with per-item
     decisions; applies approved lifecycle/connection/archive writes)."""
-    if args:
-        raise TypeError("curation.review handler requires keyword arguments")
     return _curation_result_to_operation(
         "curation.review", lambda: review_curation_run(CurationReviewInput(**kwargs))
     )
 
 
-def _card_evaluate_shim(*args, **kwargs):
+def _card_evaluate_shim(**kwargs):
     """RT-03 adapter for card.evaluate (L3 promotion gate; read-only, no writes).
 
     Mirrors ``_research_score_shim``'s error discipline (T-12-04 / WR-06): a total
@@ -866,8 +994,6 @@ def _card_evaluate_shim(*args, **kwargs):
     flags (never raw provider text); any other exception → a key-safe sanitized
     message via the gate module's ``_safe_scoring_cause`` (never raw ``str(exc)``).
     """
-    if args:
-        raise TypeError("card.evaluate handler requires keyword arguments")
     input_data = CardEvaluateInput(**kwargs)
     try:
         output = card_evaluate_gate("card.evaluate", input_data)
@@ -920,34 +1046,28 @@ def _daily_result_to_operation(cap_id: str, runner) -> OperationResult:
     )
 
 
-def _daily_run_shim(*args, **kwargs):
+def _daily_run_shim(**kwargs):
     """Keyword-only adapter for daily.run (thin research→curation→graph cycle)."""
-    if args:
-        raise TypeError("daily.run handler requires keyword arguments")
     return _daily_result_to_operation(
         "daily.run", lambda: run_daily_run(DailyRunInput(**kwargs))
     )
 
 
-def _daily_inspect_shim(*args, **kwargs):
+def _daily_inspect_shim(**kwargs):
     """Keyword-only adapter for daily.inspect (read a receipt; never re-runs)."""
-    if args:
-        raise TypeError("daily.inspect handler requires keyword arguments")
     return _daily_result_to_operation(
         "daily.inspect", lambda: inspect_daily_run(DailyInspectInput(**kwargs))
     )
 
 
-def _create_card_shim(*args, **kwargs):
-    """RT-03 adapter for knowledge.card.create.
+def _create_card_shim(**kwargs):
+    """Marshalling adapter for knowledge.card.create.
 
-    - MCP keyword form: schema fields (workspace, title, epistemic_type, …) are
-      marshalled into a card_data dict mirroring cli.py:754-764.
-    - CLI positional form (cli.py:771): ``handler(workspace, card_data, author=…)``
-      is already marshalled — pass straight through to create_card.
+    Schema fields (workspace, title, epistemic_type, …) are marshalled into the
+    ``card_data`` dict ``create_card`` takes. The positional branch, which let a
+    caller hand over an already-marshalled ``card_data``, is retired — ``cli.py``
+    now sends the declared fields and this is the only marshaller.
     """
-    if args:
-        return create_card(*args, **kwargs)
     return create_card(
         kwargs["workspace"],
         _build_card_data(kwargs),
@@ -955,16 +1075,15 @@ def _create_card_shim(*args, **kwargs):
     )
 
 
-def _edit_card_shim(*args, **kwargs):
-    """RT-03 adapter for knowledge.card.edit.
+def _edit_card_shim(**kwargs):
+    """Marshalling adapter for knowledge.card.edit.
 
-    - MCP keyword form: provided non-None schema fields marshalled into an
-      updates dict mirroring cli.py:789-799.
-    - CLI positional form (cli.py:810): ``handler(workspace, card_id, updates,
-      author=…)`` is already marshalled — pass straight through to edit_card.
+    Provided non-None schema fields are marshalled into an ``updates`` dict. The
+    ``is not None`` filter in ``_build_card_updates`` is the T-18-15 guard: the
+    seam dispatches ``handler(**model.model_dump())`` and ``model_dump()``
+    materialises a default for every declared field, so forwarding them verbatim
+    would blank a field the caller never named. The positional branch is retired.
     """
-    if args:
-        return edit_card(*args, **kwargs)
     return edit_card(
         kwargs["workspace"],
         kwargs["card_id"],
@@ -973,18 +1092,13 @@ def _edit_card_shim(*args, **kwargs):
     )
 
 
-def _add_connection_shim(*args, **kwargs):
-    """RT-03 adapter for knowledge.connection.add.
+def _add_connection_shim(**kwargs):
+    """Marshalling adapter for knowledge.connection.add.
 
-    - MCP keyword form: schema fields (workspace, from_id, to_id, conn_type, …);
-      conn_type/created_by are coerced to their enums and workspace maps to
-      workspace_root.
-    - CLI positional form (cli.py:865-868): ``handler(workspace, from_id, to_id,
-      ctype, note=…, created_by=…)`` already passes a ConnectionType — pass
-      straight through to add_connection.
+    ``workspace`` maps to ``add_connection``'s ``workspace_root``; ``conn_type``
+    and ``created_by`` are coerced to their enums. The positional branch, which
+    accepted an already-coerced ``ConnectionType`` from ``cli.py``, is retired.
     """
-    if args:
-        return add_connection(*args, **kwargs)
     return add_connection(
         kwargs["workspace"],
         kwargs["from_id"],
@@ -1014,84 +1128,60 @@ def _workspace_init_shim(root: str | Path, domain: DomainInitInput | dict) -> Pa
 
 
 def _archive_card_shim(
-    *args: object,
-    workspace: str | Path | None = None,
-    card_id: str | None = None,
+    *,
+    workspace: str | Path,
+    card_id: str,
     author: str | CardAuthor = "curator",
 ) -> OperationResult:
-    """18-02 adapter for knowledge.card.archive.
+    """Marshalling adapter for knowledge.card.archive.
 
-    - Seam/keyword form: ``workspace`` maps to ``archive_card``'s
-      ``workspace_root`` and ``author`` is coerced to its enum.
-    - CLI positional form (cli.py:1362): ``handler(workspace, card_id,
-      author=…)`` already passes a ``CardAuthor`` — pass straight through.
-
-    The positional branch is dead once plan 18-03 normalizes ``cli.py`` onto the
-    seam, and only then (research Finding G5's ordering constraint). Unlike the
-    six older shims the keyword parameters are *declared*, so the model-to-handler
-    binding audit is not blinded by a bare ``**kwargs``.
+    ``workspace`` maps to ``archive_card``'s ``workspace_root`` and ``author`` is
+    coerced to its enum. The positional branch plan 18-02 added to keep the CLI
+    alive is retired now that ``cli.py`` dispatches through the seam (research
+    Finding G5's ordering constraint, discharged).
     """
-    if args:
-        return archive_card(*args, author=CardAuthor(author))
     return archive_card(workspace, card_id, author=CardAuthor(author))
 
 
 def _list_connections_shim(
-    *args: object,
-    workspace: str | Path | None = None,
+    *,
+    workspace: str | Path,
     card_id: str | None = None,
     include_archived: bool = False,
 ) -> OperationResult:
-    """18-02 adapter for knowledge.connection.list.
+    """Marshalling adapter for knowledge.connection.list.
 
-    - Seam/keyword form: ``workspace`` maps to ``list_connections``'s
-      ``workspace_root``.
-    - CLI form (cli.py:1503): ``handler(workspace, card_id=…, include_archived=…)``.
-
-    The positional branch is retired by plan 18-03, not before.
+    ``workspace`` maps to ``list_connections``'s ``workspace_root``. The
+    positional branch is retired.
     """
-    if args:
-        return list_connections(
-            *args, card_id=card_id, include_archived=include_archived
-        )
     return list_connections(
         workspace, card_id=card_id, include_archived=include_archived
     )
 
 
 def _remove_connection_shim(
-    *args: object,
-    workspace: str | Path | None = None,
-    from_id: str | None = None,
-    to_id: str | None = None,
-    conn_type: str | ConnectionType | None = None,
+    *,
+    workspace: str | Path,
+    from_id: str,
+    to_id: str,
+    conn_type: str | ConnectionType,
 ) -> OperationResult:
-    """18-02 adapter for knowledge.connection.remove.
+    """Marshalling adapter for knowledge.connection.remove.
 
-    - Seam/keyword form: ``workspace`` maps to ``remove_connection``'s
-      ``workspace_root`` and ``conn_type`` is coerced to its enum, mirroring
-      ``_add_connection_shim``.
-    - CLI positional form (cli.py:1459): ``handler(workspace, from_id, to_id,
-      ctype)`` already passes a ``ConnectionType`` — pass straight through.
-
-    The positional branch is retired by plan 18-03, not before.
+    ``workspace`` maps to ``remove_connection``'s ``workspace_root`` and
+    ``conn_type`` is coerced to its enum, mirroring ``_add_connection_shim``. The
+    positional branch is retired.
     """
-    if args:
-        return remove_connection(*args)
     return remove_connection(workspace, from_id, to_id, ConnectionType(conn_type))
 
 
-def _ingest_source_shim(*args, **kwargs):
-    """RT-03 adapter for ingest.source.
+def _ingest_source_shim(**kwargs):
+    """Marshalling adapter for ingest.source.
 
-    - MCP keyword form: IngestSourceInput.workspace maps to ingest_source's
-      ``workspace_root`` positional; remaining fields already match its keyword
-      params.
-    - CLI positional form (cli.py:306): ``handler(workspace, source, …)`` passes
-      straight through to ingest_source.
+    ``IngestSourceInput.workspace`` maps to ``ingest_source``'s
+    ``workspace_root`` positional; every remaining field already matches one of
+    its keyword parameters by name. The positional branch is retired.
     """
-    if args:
-        return ingest_source(*args, **kwargs)
     rest = dict(kwargs)
     workspace = rest.pop("workspace")
     return ingest_source(workspace, **rest)

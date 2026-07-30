@@ -131,17 +131,31 @@ def suggest(workspace_root: str | Path) -> OperationResult:
     # Sort by priority (ascending index = more urgent)
     domain_priorities.sort(key=lambda x: x[0])
 
-    # Get global status via capability registry
+    # Get global status via capability registry.
+    #
+    # GOV-01 (research OQ-D): this is a capability calling another capability, and
+    # an internal caller is still a caller. It used to reach for the record and
+    # apply its ``handler`` attribute to ``workspace_id`` positionally, which is
+    # why ``graph.status``'s handler was shaped to bind both call forms — an
+    # accommodation for exactly this one line. Dispatching through the seam
+    # validates the payload against ``GraphStatusInput`` like every other surface
+    # and let that dual-binding accommodation be retired.
+    #
+    # The deferred import is load-bearing: ``catalog`` imports ``help_suggest`` at
+    # module scope, so a top-level import here would be circular.
     from construct.capabilities.catalog import get_registry
-    registry_caps = get_registry()
+
     workspace_id = str(root)
     graph_data = None
     try:
-        cap = registry_caps.get("graph.status")
-        graph_result = cap.handler(workspace_id)
+        graph_result = get_registry().invoke("graph.status", {"workspace": workspace_id})
         if graph_result.success:
             graph_data = graph_result.data
-    except (KeyError, Exception):
+    except Exception:
+        # Deliberately broad and deliberately silent: the graph report is an
+        # enrichment of the health summary, so a workspace whose graph cannot be
+        # read still gets its suggestions. A seam rejection lands here too, and it
+        # would be a programming error in this call rather than user input.
         pass
 
     # Check active workflow state

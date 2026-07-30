@@ -62,6 +62,9 @@ def test_mcp_tool_count() -> None:
         "construct_add_connection",
         "construct_graph_status",
         "construct_views_generate_data",
+        # 18-03 / D-02: registration is what puts `views validate` on this
+        # surface at all — it was CLI-only while its body lived in cli.py.
+        "construct_views_validate_data",
         "construct_ingest_source",
         "construct_help_suggest",
         "construct_ask_domain",
@@ -126,6 +129,9 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         # workspace's *parent* — discover_workspaces scans children, and handing
         # it the workspace itself would discover nothing.
         "construct_views_generate_data": {"install_root": str(Path(ws).parent)},
+        # 18-03 / D-02: same scoping and the same field spelling as its generate
+        # sibling — the two views capabilities present one vocabulary.
+        "construct_views_validate_data": {"install_root": str(Path(ws).parent)},
         "construct_ingest_source": {"workspace": ws, "source": "A contract-test note"},
         "construct_help_suggest": {"workspace": ws},
         "construct_ask_domain": {"workspace_path": ws, "domain_id": "cosmology", "question": "What is known?"},
@@ -209,11 +215,25 @@ def test_graph_status_returns_health_report(workspace: str) -> None:
     assert {"cards", "connections", "domains"}.issubset(result.data.keys())
 
 
-def test_graph_status_accepts_positional_and_keyword(workspace: str) -> None:
-    """help.py calls graph.status positionally; MCP calls it by keyword."""
+def test_graph_status_is_keyword_only(workspace: str) -> None:
+    """The inverse of what stood here, and the inversion is the point.
+
+    This test used to be ``test_graph_status_accepts_positional_and_keyword`` and
+    asserted that the handler bound *both* call forms, because ``services/help.py``
+    invoked it positionally while MCP invoked it by keyword. That dual binding was
+    an accommodation for one internal caller, and GOV-01 (plan 18-03) removed the
+    caller: ``help.py`` now dispatches through ``registry.invoke``.
+
+    So the accommodation is gone and a positional call is a ``TypeError``. Keeping
+    the old assertion would have kept a second, unvalidated way into
+    ``graph_status`` alive purely because a test demanded it.
+    """
     cap = get_registry().get("graph.status")
-    assert cap.handler(workspace).success
+
     assert cap.handler(workspace=workspace).success
+
+    with pytest.raises(TypeError):
+        cap.handler(workspace)
 
 
 def test_help_suggest_surfaces_graph_health(workspace: str) -> None:

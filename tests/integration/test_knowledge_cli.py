@@ -9,6 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from construct.cli import app
+from construct.schemas.card import CardAuthor, Lifecycle, parse_card_markdown
 from construct.storage.workspace import WorkspaceLoader
 
 
@@ -139,6 +140,84 @@ def test_card_edit_cli(init_workspace: Path, cli_runner: CliRunner) -> None:
     # Verify
     content = card_files[0].read_text()
     assert "Edited Title" in content
+
+
+def test_card_edit_title_only_leaves_every_unnamed_field_byte_identical(
+    init_workspace: Path, cli_runner: CliRunner
+) -> None:
+    """T-18-15: a partial update must not blank a field the caller never named.
+
+    ``card edit`` dispatches through ``registry.invoke``, and the seam calls
+    ``handler(**model.model_dump())`` — ``model_dump()`` materialises a default for
+    every declared field, so ``CardEditInput``'s ``summary``/``lifecycle``/
+    ``confidence``/``source_tier`` all arrive at the handler even when the user
+    named only ``--title``. If any of those materialised ``None``s reached
+    ``edit_card``'s ``raw.update(updates)`` the stored value would be destroyed.
+
+    So this test does not assert the new title is present (``test_card_edit_cli``
+    already does). It reads the card back and asserts that everything the user did
+    *not* name is byte-identical to what was on disk beforehand — the assertion
+    that would have caught the ``archive_card`` prose destruction of 4e2b909, whose
+    damage was unrecoverable.
+    """
+    body_prose = "Gateways that cache embeddings avoid the repeat-LLM-call tax."
+
+    cli_runner.invoke(app, [
+        "knowledge", "card", "create",
+        "--title", "Partial Update Subject",
+        "--type", "finding", "--domains", "test",
+        "--categories", "test-category",
+        "--confidence", "3", "--source-tier", "2",
+        "--summary", body_prose,
+        "--author", "researcher",
+        "--workspace", str(init_workspace),
+    ])
+
+    card_path = init_workspace / "cards" / "partial-update-subject.md"
+    assert card_path.exists(), sorted(p.name for p in (init_workspace / "cards").glob("*.md"))
+
+    # Promote off the default lifecycle so "unchanged" cannot be satisfied by a
+    # field that happens to already hold the value a blanking bug would write.
+    cli_runner.invoke(app, [
+        "knowledge", "card", "edit", "partial-update-subject",
+        "--lifecycle", "growing",
+        "--workspace", str(init_workspace),
+    ])
+
+    fields_before, body_before = parse_card_markdown(
+        card_path.read_text(encoding="utf-8"), source_path=card_path
+    )
+    fields_before = fields_before.model_dump()
+    assert fields_before["lifecycle"] == Lifecycle.growing
+    assert fields_before["author"] == CardAuthor.researcher
+    assert body_prose in body_before
+
+    result = cli_runner.invoke(app, [
+        "knowledge", "card", "edit", "partial-update-subject",
+        "--title", "Renamed But Otherwise Untouched",
+        "--workspace", str(init_workspace),
+    ])
+    assert result.exit_code == 0, result.stdout
+
+    fields_after, body_after = parse_card_markdown(
+        card_path.read_text(encoding="utf-8"), source_path=card_path
+    )
+    fields_after = fields_after.model_dump()
+
+    assert fields_after["title"] == "Renamed But Otherwise Untouched"
+
+    # Compared field by field rather than as a whole-file diff, so a failure names
+    # the field that was blanked instead of dumping two documents.
+    for field in sorted(set(fields_before) - {"title"}):
+        assert fields_after[field] == fields_before[field], (
+            f"a title-only edit changed {field!r}: "
+            f"{fields_before[field]!r} -> {fields_after[field]!r}"
+        )
+
+    # The prose lives in the markdown body, not the frontmatter, so it needs its own
+    # read-back: this is the exact byte range the historical defect destroyed.
+    assert body_after == body_before, "a title-only edit rewrote the card body"
+    assert body_prose in body_after
 
 
 def test_card_edit_cli_updates_summary_without_losing_body(init_workspace: Path, cli_runner: CliRunner) -> None:
