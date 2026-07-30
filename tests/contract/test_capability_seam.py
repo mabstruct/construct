@@ -232,6 +232,99 @@ def test_multi_error_reason_follows_model_field_declaration_order() -> None:
     assert reason.index("confidence") < reason.index("source_tier"), reason
 
 
+def test_nested_multi_error_reason_does_not_depend_on_payload_key_order() -> None:
+    """CR-05: the ordering guarantee must hold one nesting level down too.
+
+    ``from_validation_error``'s docstring promises "a total order that does not
+    depend on the payload", but ``_error_order_key`` read only ``loc[0]``. Every
+    error under one declared field therefore tied on the same key and fell back to
+    pydantic's own order — which for ``extra_forbidden`` is payload key insertion
+    order. Reproduced against ``workspace.init``, whose ``domain`` is the phase's
+    own example of a typed nested payload (T-18-13):
+
+      {'root': …, 'domain': {…, 'zz': 1, 'aa': 2}}
+        -> '… domain.zz: Unexpected …; domain.aa: Unexpected …'
+      {'root': …, 'domain': {…, 'aa': 2, 'zz': 1}}
+        -> '… domain.aa: Unexpected …; domain.zz: Unexpected …'
+
+    Two callers sending the same logical payload, two different reason strings —
+    the fork GOV-01 exists to close, surviving because
+    ``test_multi_error_reason_does_not_depend_on_payload_key_order`` above only
+    varies TOP-LEVEL keys.
+    """
+    base = {"domain_id": "d", "display_name": "D", "scope": "s",
+            "taxonomy_seeds": ["t"], "source_priorities": ["p"], "research_seeds": ["r"]}
+
+    forward = _reason_for(
+        "workspace.init", {"root": ".", "domain": {**base, "zz_bogus": 1, "aa_bogus": 2}}
+    )
+    reversed_ = _reason_for(
+        "workspace.init", {"root": ".", "domain": {**base, "aa_bogus": 2, "zz_bogus": 1}}
+    )
+
+    assert forward == reversed_, (
+        "the seam's reason string changed with NESTED payload key insertion order: "
+        f"{forward!r} != {reversed_!r}"
+    )
+    # Vacuity guard: both nested keys must actually be in the reason.
+    assert "domain.aa_bogus" in forward and "domain.zz_bogus" in forward, forward
+    # Undeclared nested keys sort by name, the same rule the top level uses.
+    assert forward.index("domain.aa_bogus") < forward.index("domain.zz_bogus"), forward
+
+
+def test_nested_declared_field_errors_follow_declaration_order() -> None:
+    """Sorting on the whole ``loc`` must not sort nested *declared* fields by name.
+
+    The tail is ranked by the sub-model's declaration index, not by the raw key,
+    so a nested declared field reports in declaration order — the same rule the
+    top level follows.
+
+    ``domain_id`` / ``display_name`` is the discriminating pair: the sub-model
+    declares ``domain_id`` first, but ``display_name`` sorts first
+    alphabetically. A naive "sort by the whole loc tuple as strings" — the
+    obvious way to fix CR-05 — passes the nesting test above and silently
+    re-orders these two. This is the test that refuses it.
+    """
+    from construct.services.init import DomainInitInput
+
+    order = list(DomainInitInput.__dataclass_fields__)
+    assert order.index("domain_id") < order.index("display_name"), order
+    assert "display_name" < "domain_id", "the pair no longer discriminates"
+
+    reason = _reason_for("workspace.init", {
+        "root": ".",
+        # Both missing, and every key that IS sent is out of declaration order.
+        "domain": {"research_seeds": ["r"], "source_priorities": ["p"],
+                   "taxonomy_seeds": ["t"], "scope": "s"},
+    })
+
+    assert "domain.domain_id" in reason and "domain.display_name" in reason, reason
+    assert reason.index("domain.domain_id") < reason.index("domain.display_name"), reason
+
+
+def test_error_ordering_is_total_for_mixed_depths() -> None:
+    """A top-level error and a nested one must not tie, whatever the payload order.
+
+    ``list.sort`` is stable, so a tie falls back to pydantic's payload-ordered
+    output — which is exactly how CR-05 hid. This pins that the key separates
+    them by itself rather than by luck.
+    """
+    base = {"domain_id": "d", "display_name": "D", "scope": "s",
+            "taxonomy_seeds": ["t"], "source_priorities": ["p"], "research_seeds": ["r"]}
+
+    forward = _reason_for(
+        "workspace.init",
+        {"root": ".", "top_bogus": 1, "domain": {**base, "nested_bogus": 2}},
+    )
+    reversed_ = _reason_for(
+        "workspace.init",
+        {"domain": {**base, "nested_bogus": 2}, "top_bogus": 1, "root": "."},
+    )
+
+    assert forward == reversed_, f"{forward!r} != {reversed_!r}"
+    assert "domain.nested_bogus" in forward and "top_bogus" in forward, forward
+
+
 # ---------------------------------------------------------------------------
 # The five repaired capabilities, driven through the seam end to end
 #
