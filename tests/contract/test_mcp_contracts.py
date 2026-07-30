@@ -296,6 +296,44 @@ def test_views_contract_payload_does_not_generate_into_the_fixture_tree(
     )
 
 
+def test_mcp_renders_a_capability_s_errors_rather_than_a_serializer_fault(
+    tmp_path: Path,
+) -> None:
+    """CR-01: ``OperationResult.errors`` must survive the MCP JSON boundary.
+
+    ``_serialize_result`` walked ``__dataclass_fields__`` one level deep, so
+    ``errors`` came back as a list of ``OperationError`` *dataclasses*.
+    ``json.dumps`` then raised inside the tool closure's own ``try``, and the
+    handler answered ``{"error": "Object of type OperationError is not JSON
+    serializable"}`` — with no traceback, no non-zero status, and nothing to tell
+    an agent apart a validation failure from an infrastructure fault. The entire
+    structured error channel was dropped, on every tool, for every failure.
+
+    Driven through the closure ``create_server()`` really registers, because that
+    closure is where the serialization happens; calling the handler directly
+    returns the dataclass and proves nothing.
+    """
+    import json as _json
+
+    from construct.mcp.server import create_server
+
+    tool = create_server()._tool_manager.get_tool("construct_views_validate_data")
+    bogus = tmp_path / "not-an-install-root"
+    bogus.mkdir()
+
+    payload = _json.loads(tool.fn(install_root=str(bogus)))
+
+    assert "error" not in payload, f"serializer fault surfaced as the reason: {payload!r}"
+    assert payload["success"] is False
+    assert payload["errors"], "the capability's error list did not cross the boundary"
+    first = payload["errors"][0]
+    assert set(first) == {"field", "reason", "suggestion"}
+    assert first["field"] == "views.install_root"
+    assert first["reason"]
+    # T-18-10 still holds: the reason names no filesystem path.
+    assert str(bogus) not in _json.dumps(payload)
+
+
 def _invalid_path_payload(tool_name: str, bogus: str) -> dict:
     """The advertised payload with every path-shaped field pointed at a bogus path."""
     return {

@@ -404,6 +404,69 @@ def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None
 # ── The MCP surface stays registry-generated ──────────────────────────────
 
 
+def _corrupt_one_data_file(root: Path) -> str:
+    """Break exactly one generated data file so its contract model rejects it.
+
+    A *populated* file rewritten to a shape its model forbids, rather than a
+    deleted one: a missing file reports ``missing`` and never reaches the
+    per-file error channel, which is the channel under test.
+    """
+    from construct.views.generate import BUILD_DATA_RELPATH
+
+    data_dir = root / BUILD_DATA_RELPATH
+    target = data_dir / "domains.json"
+    assert target.is_file(), f"the parity fixture wrote no {target.name}"
+    target.write_text(json.dumps({"domains": "not-a-list"}), encoding="utf-8")
+    return str(target.relative_to(data_dir))
+
+
+def test_failure_parity_puts_the_capability_s_errors_on_both_surfaces(
+    tmp_path: Path,
+) -> None:
+    """CR-01: the failure case — the case GOV-01 is actually about — must agree too.
+
+    Every row in ``PARITY_CASES`` compares a *successful* invocation, and the two
+    rejection tests below compare failures raised by the seam *before* a handler
+    runs. Neither reaches ``_serialize_result``, so nothing asserted that a
+    capability which fails **with ``OperationResult.errors`` populated** renders
+    its reasons over MCP at all.
+
+    It did not. ``_serialize_result`` returned ``errors`` as a list of
+    ``OperationError`` *dataclasses*; ``json.dumps`` then raised inside the
+    handler's own ``try``, and every structured failure answered
+    ``{"error": "Object of type OperationError is not JSON serializable"}`` —
+    a bogus reason an agent cannot distinguish from an infrastructure fault.
+    """
+    cli_root = _generated_install_root(tmp_path / "cli-arm")
+    mcp_root = _generated_install_root(tmp_path / "mcp-arm")
+    broken = _corrupt_one_data_file(cli_root)
+    assert _corrupt_one_data_file(mcp_root) == broken
+
+    cli = _cli(["views", "validate", "--install-root", str(cli_root), "--json"])
+    assert cli.returncode == 1, cli.stdout + cli.stderr
+
+    mcp_payload = _mcp("construct_views_validate_data", {"install_root": str(mcp_root)})
+
+    assert "error" not in mcp_payload, (
+        "MCP answered with a surface-level error instead of the capability's "
+        f"structured failure: {mcp_payload!r}"
+    )
+    assert mcp_payload["success"] is False
+
+    # The per-file verdict tables agree.
+    assert _views_view_from_cli(cli.stdout) == _views_view_from_mcp(mcp_payload)
+
+    # And the reasons themselves cross the MCP boundary, field-by-field.
+    cli_errors = {
+        entry["file"]: entry["errors"]
+        for entry in json.loads(cli.stdout)["results"]
+        if entry["status"] == "fail"
+    }
+    mcp_errors = {err["field"]: err["reason"].split("; ") for err in mcp_payload["errors"]}
+    assert cli_errors == mcp_errors
+    assert broken in mcp_errors, f"the corrupted file is not in {mcp_errors!r}"
+
+
 def test_mcp_server_names_no_capability() -> None:
     """Inserting the seam must not have bought parity with hand-wiring.
 
