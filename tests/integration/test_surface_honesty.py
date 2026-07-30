@@ -277,6 +277,78 @@ def test_completed_run_still_renders_a_clean_success_verdict(clean_workspace: Pa
     assert human.text.strip().splitlines()[-1] == "✓ Curation run completed."
 
 
+# ── GOV-05: the prohibition binds EVERY terminal emitter, not just curation ──
+#
+# Criterion 5 says "every surface that can report it". Phase 18 verification found
+# the qualification had been wired into the curation emitter alone, so a degraded
+# ``daily.run`` still printed ``✓ Daily cycle degraded.`` and a retrieval-degraded
+# ``research.run`` printed ``degraded: True`` and an unqualified ``✓ Run complete.``
+# in the same output block — the identical defect this file exists to pin, surviving
+# in the two emitters nobody re-checked.
+#
+# These rows drive the emitters directly rather than through a workspace fixture:
+# forcing a real degraded ``daily.run`` needs a failing child run, and the defect is
+# a *rendering* one, so the emitter is the honest unit under test. They still read
+# rendered stdout, never the result model — the distinction this file's header draws.
+
+_TERMINAL_EMITTERS = [
+    ("_emit_run_result", "Run complete."),
+    ("_emit_daily_result", "Daily cycle degraded."),
+]
+
+
+@pytest.mark.parametrize("emitter_name,message", _TERMINAL_EMITTERS)
+def test_degraded_verdict_is_qualified_in_every_terminal_emitter(
+    emitter_name: str, message: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No terminal emitter may render a degraded outcome as an unqualified ✓."""
+    from construct import cli
+    from construct.services.knowledge import OperationResult
+
+    emitter = getattr(cli, emitter_name)
+    emitter(OperationResult(success=True, message=message, outcome="degraded"), json_output=False)
+
+    verdict = capsys.readouterr().out.strip().splitlines()[-1]
+    assert not verdict.startswith("✓"), (
+        f"{emitter_name} rendered a degraded outcome as unqualified success: {verdict!r}"
+    )
+    assert "degraded" in verdict, f"the verdict must carry the outcome: {verdict!r}"
+
+
+@pytest.mark.parametrize("emitter_name,message", _TERMINAL_EMITTERS)
+def test_completed_verdict_stays_clean_in_every_terminal_emitter(
+    emitter_name: str, message: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The mirror of the above — the fix qualifies by outcome, it does not blanket
+    every verdict. A genuinely completed run keeps its unqualified ✓."""
+    from construct import cli
+    from construct.services.knowledge import OperationResult
+
+    emitter = getattr(cli, emitter_name)
+    emitter(OperationResult(success=True, message=message, outcome="completed"), json_output=False)
+
+    verdict = capsys.readouterr().out.strip().splitlines()[-1]
+    assert verdict == f"✓ {message}", f"completed run lost its clean verdict: {verdict!r}"
+
+
+def test_no_terminal_emitter_bypasses_the_verdict_renderer() -> None:
+    """The structural guard: a new emitter added later must route through
+    ``_verdict_line``. Pinning the source is what makes this survive a sixth
+    emitter — the two parametrized tests above only cover the emitters that
+    exist today, and this defect reached verification precisely because a new
+    surface was added without the qualification.
+    """
+    from pathlib import Path as _Path
+
+    import construct.cli as cli_module
+
+    source = _Path(cli_module.__file__).read_text(encoding="utf-8")
+    assert 'typer.echo(f"✓ {result.message}")' not in source, (
+        "a terminal verdict bypasses _verdict_line — route it through the renderer "
+        "so a degraded outcome cannot render as unqualified success (GOV-05)"
+    )
+
+
 # ── GOV-05: escalated items surface as flagged, in queue order, everywhere ──
 
 

@@ -553,7 +553,7 @@ def research_score_cmd(
 
     if result.data:
         _render_research_score_table(result.data)
-    typer.echo(f"✓ {result.message}")
+    typer.echo(_verdict_line(result))
 
 
 def _render_run_result(data: dict[str, Any]) -> None:
@@ -587,7 +587,7 @@ def _emit_run_result(result: OperationResult, json_output: bool) -> None:
         return
     if result.data:
         _render_run_result(result.data)
-    typer.echo(f"✓ {result.message}")
+    typer.echo(_verdict_line(result))
 
 
 @research_app.command(name="run")
@@ -898,7 +898,7 @@ def _emit_daily_result(result: OperationResult, json_output: bool) -> None:
         return
     if result.data:
         _render_daily_result(result.data)
-    typer.echo(f"✓ {result.message}")
+    typer.echo(_verdict_line(result))
 
 
 @daily_app.command(name="run")
