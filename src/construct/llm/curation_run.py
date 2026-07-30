@@ -61,6 +61,20 @@ logger = logging.getLogger(__name__)
 # KeyError). All promotion / connection / archive proposals share this one gate.
 _CURATION_GATE_ID = "curation.review"
 
+#: D-16: the audit action for an escalated proposal. Escalation writes NOTHING,
+#: so it is named for that effect — a flag — rather than reusing
+#: ``gate_review_rejected``. A rejection is a decision the reviewer made; an
+#: escalation is the absence of one, and recording one as the other is the
+#: T-15-14 audit-trail-that-lies class this codebase already names. ``action`` is
+#: a free string on the views event model, so this threads into the ``events.json``
+#: projection without a model change (pinned by
+#: ``tests/contract/test_views_contracts.py::TestCanonicalEventContract``).
+ESCALATED_EVENT_ACTION = "curation_escalated"
+
+#: The human-facing label for the escalated bucket. Named for the real effect so
+#: no surface can present a flagged item as something that was acted on.
+ESCALATED_LABEL = "flagged — nothing written"
+
 
 def _validate_run_id(value: str | None) -> str | None:
     """Reject any ``run_id`` that is not kebab-case (CR-01 / T-11-01 guard).
@@ -254,13 +268,21 @@ class CurationRunState(TypedDict):
 
     # Post-gate write outcomes — Plan 04's apply nodes fill these. ``promoted`` /
     # ``connections_added`` / ``archived`` each have a single writer node, but
-    # ``rejected`` / ``escalated`` are contributed by more than one apply node, so
-    # they use ``operator.add`` to accumulate across nodes instead of overwriting.
+    # ``rejected`` / ``escalated`` / ``no_op`` / ``failed_writes`` are contributed
+    # by more than one apply node, so they use ``operator.add`` to accumulate
+    # across nodes instead of overwriting.
+    #
+    # D-16: the three write channels now hold ONLY items a canonical write
+    # actually changed. An idempotent no-op lands in ``no_op`` and a failed write
+    # lands in ``failed_writes`` — neither is applied, and neither has an approval
+    # event behind it.
     promoted: list[str]
     connections_added: list[str]
     archived: list[str]
     rejected: Annotated[list[str], operator.add]
     escalated: Annotated[list[str], operator.add]
+    no_op: Annotated[list[str], operator.add]
+    failed_writes: Annotated[list[str], operator.add]
 
     # Output — ``events`` accumulates one audit-event name per emitting node
     # (``operator.add``) so per-step + gate-review events survive across the
@@ -366,6 +388,13 @@ class CurationRunResult(BaseModel):
     """Run-level result surface for a ``curation.run`` / ``curation.inspect`` call.
 
     ``status`` is the D-09 aggregate over the per-step results.
+
+    The five outcome buckets (D-16 / GOV-05) partition every reviewed proposal by
+    WHAT ACTUALLY HAPPENED TO IT, and ``applied`` is the only one where a
+    canonical write occurred. They exist because a reader could previously not
+    distinguish "changed" from "already in that state" from "flagged and left
+    alone" from "the write failed" — every one of those reached the surface as
+    the same silence. Each list preserves queue order.
     """
 
     model_config = {"extra": "forbid"}
@@ -376,6 +405,20 @@ class CurationRunResult(BaseModel):
     #: Returned alongside the queue so a caller can submit it back on resume.
     checkpoint_id: str | None = None
     gate_queue: list[dict] = Field(default_factory=list)
+    #: A canonical write HAPPENED for these items — and for no others. The
+    #: ``gate_review_approved`` event count equals ``len(applied)`` by construction.
+    applied: list[str] = Field(default_factory=list)
+    #: Already in the requested state: nothing was written, and that is not a
+    #: failure. Kept out of ``applied`` so an idempotent rerun cannot inflate it.
+    no_op: list[str] = Field(default_factory=list)
+    #: Flagged for follow-up with NOTHING written (D-16). Never folded into
+    #: ``applied`` and never reported as a reviewer's rejection.
+    escalated: list[str] = Field(default_factory=list)
+    #: The reviewer declined; nothing was written.
+    rejected: list[str] = Field(default_factory=list)
+    #: ``"<item> — <sanitized reason>"`` per attempted write that failed. No
+    #: approval event exists for any of these.
+    failed_writes: list[str] = Field(default_factory=list)
     steps: list[CurationStepResult] = Field(default_factory=list)
     events: list[str] = Field(default_factory=list)
     message: str = ""
@@ -418,6 +461,8 @@ def _initial_state(inp: CurationRunInput) -> dict:
         "archived": [],
         "rejected": [],
         "escalated": [],
+        "no_op": [],
+        "failed_writes": [],
         "status": "running",
         "events": [],
     }
@@ -478,23 +523,89 @@ def _sanitize_error(exc: Exception) -> str:
     return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
 
 
-def _emit(workspace_path: str, action: str, target: str | None, detail: str | None = None) -> str:
+def _emit(
+    workspace_path: str,
+    action: str,
+    target: str | None,
+    detail: str | None = None,
+    result: Any = None,
+) -> str:
     """Append one audit event (append-only, non-blocking) and return its name.
 
     Every deterministic step + apply/report node emits via this helper so the
     ``log/events.jsonl`` audit trail records the full curation cycle per spec §6.6
-    (``workflow_step_complete`` per step, ``gate_review_approved`` /
-    ``gate_review_rejected`` per reviewed proposal, ``curation_cycle_complete`` at
-    the end). The returned name is appended into the ``events`` state channel. The
-    interrupt-only ``process_inbox`` node NEVER calls this (avoids a double-fire on
-    resume — Pitfall 1). ``append_event`` is non-blocking, so a log-write failure
-    never aborts a node.
+    (``workflow_step_complete`` per step, ``gate_review_approved`` per APPLIED
+    proposal, ``gate_review_rejected`` per rejected one, ``curation_escalated``
+    per escalated one, ``curation_cycle_complete`` at the end). The returned name
+    is appended into the ``events`` state channel. The interrupt-only
+    ``process_inbox`` node NEVER calls this (avoids a double-fire on resume —
+    Pitfall 1). ``append_event`` is non-blocking, so a log-write failure never
+    aborts a node.
+
+    ``result`` carries the ``EventResult`` member for outcomes that are not a
+    plain success — today only ``escalated`` (D-16), which already existed in the
+    emitter enum and simply had no caller. Defaulting to ``None`` keeps the enum
+    import deferred, matching the rest of this helper.
     """
-    from construct.schemas.config import EventAgent
+    from construct.schemas.config import EventAgent, EventResult
     from construct.services.event_log import append_event
 
-    append_event(Path(workspace_path), EventAgent.curator, action, target=target, detail=detail)
+    append_event(
+        Path(workspace_path),
+        EventAgent.curator,
+        action,
+        target=target,
+        detail=detail,
+        result=result or EventResult.success,
+    )
     return action
+
+
+def _escalate_event(workspace_path: str, target: str | None, detail: str) -> str:
+    """Emit the D-16 escalate audit event (its own action, ``escalated`` result).
+
+    Routed through ``_emit`` rather than calling ``append_event`` directly so the
+    new action goes through the same shared event record and the same non-blocking
+    write path as every other event this graph produces.
+    """
+    from construct.schemas.config import EventResult
+
+    return _emit(
+        workspace_path, ESCALATED_EVENT_ACTION, target, detail, result=EventResult.escalated
+    )
+
+
+def _safe_reason(text: str | None) -> str:
+    """First line of a service-supplied failure message, never more.
+
+    ``OperationResult.message`` is already sanitized by the service that built it
+    (T-18-32), so this does not re-sanitize — it truncates to one line so a
+    multi-line message cannot smuggle extra content into the run result or the
+    audit trail, mirroring ``_sanitize_error``'s discipline for exceptions.
+    """
+    lines = (text or "").strip().splitlines()
+    return lines[0] if lines else "write failed"
+
+
+def _outcome_buckets(values: dict) -> dict:
+    """Project the graph's write channels onto the result's outcome buckets.
+
+    ``applied`` is DERIVED from the three single-writer write channels rather than
+    accumulated in a fourth one, so there is exactly one place an item can be
+    recorded as written and no way for the two to disagree. Every bucket keeps the
+    order its apply node produced, which is queue order.
+    """
+    return {
+        "applied": [
+            *values.get("promoted", []),
+            *values.get("connections_added", []),
+            *values.get("archived", []),
+        ],
+        "no_op": list(values.get("no_op", [])),
+        "escalated": list(values.get("escalated", [])),
+        "rejected": list(values.get("rejected", [])),
+        "failed_writes": list(values.get("failed_writes", [])),
+    }
 
 
 def _coerce_date(value: Any) -> date | None:
@@ -1111,9 +1222,11 @@ def apply_promotions(state: CurationRunState) -> dict:
             continue
         card_id = entry.get("payload", {}).get("card_id")
         # escalate is review-only this phase — record outcome, NO write (Open-Q 3).
+        # D-16: its own action carrying the ``escalated`` result member, NOT a
+        # rejection. Nothing was written and the reviewer declined nothing.
         if kind == "escalate" or decision == "escalate":
             escalated.append(card_id)
-            events.append(_emit(workspace, "gate_review_rejected", card_id, "escalated (review-only)"))
+            events.append(_escalate_event(workspace, card_id, ESCALATED_LABEL))
             continue
         if decision != "promote":
             rejected.append(card_id)
@@ -1121,8 +1234,10 @@ def apply_promotions(state: CurationRunState) -> dict:
             continue
         target = entry.get("payload", {}).get("target_lifecycle")
         if not target:
+            # Also an escalation, so it emits the escalate action for the same
+            # reason: nothing was written and no decision was made about it.
             escalated.append(card_id)
-            events.append(_emit(workspace, "gate_review_rejected", card_id, "no target lifecycle"))
+            events.append(_escalate_event(workspace, card_id, f"{ESCALATED_LABEL} (no target lifecycle)"))
             continue
         try:
             if lifecycles.get(card_id) == target:
@@ -1451,6 +1566,7 @@ def run_curation_run(inp: CurationRunInput) -> CurationRunResult:
             status=status, run_id=run_id, gate_id=run_id, gate_queue=[],
             steps=steps, events=list(result.get("events", [])),
             message=f"Curation run {status}.",
+            **_outcome_buckets(result),
         )
     finally:
         conn.close()
@@ -1529,6 +1645,7 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
                     run_id=inp.run_id, checkpoint_id=current, steps=steps,
                     events=list(values.get("events", [])),
                     message="Curation run already complete (no re-review).",
+                    **_outcome_buckets(values),
                 )
             return CurationRunResult(
                 status="failed", run_id=inp.run_id, checkpoint_id=current,
@@ -1561,6 +1678,7 @@ def review_curation_run(inp: CurationReviewInput) -> CurationRunResult:
             checkpoint_id=_checkpoint_id(graph.get_state(cfg)),
             steps=steps, events=list(result.get("events", [])),
             message=f"Curation review {status}.",
+            **_outcome_buckets(result),
         )
     finally:
         conn.close()
@@ -1610,6 +1728,7 @@ def inspect_curation_run(inp: CurationInspectInput) -> CurationRunResult:
             status=status, run_id=inp.run_id, checkpoint_id=_checkpoint_id(snap),
             steps=steps, events=list(values.get("events", [])),
             message="Curation run inspected (read-only).",
+            **_outcome_buckets(values),
         )
     finally:
         conn.close()
