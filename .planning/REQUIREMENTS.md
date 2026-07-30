@@ -35,8 +35,8 @@ Repairs to defects the research found in **live code**, which a browser turns fr
 - [ ] **GOV-01**: CLI, MCP, and HTTP all dispatch through one seam that validates payloads against each capability's declared `input_model`, proven by a differential test (same capability + payload → identical result across all three surfaces).
 - [ ] **GOV-02**: Human-review decisions are keyed by proposal id rather than list position, and a missing decision never defaults to applying a write.
 - [ ] **GOV-03**: A review queue that went stale between render and submit is detected and rejected rather than silently misapplied.
-- [ ] **GOV-04**: The Streamlit gate-review screen routes approvals through the reviewed workflow's resume path instead of writing directly, so no surface writes canonical truth outside that path and no approval event is logged for a decision that was never applied.
-- [ ] **GOV-05**: No surface reports success for a degraded or partially-applied outcome — degraded runs and escalated items render honestly rather than as clean completion.
+- [x] **GOV-04**: The Streamlit gate-review screen routes approvals through the reviewed workflow's resume path instead of writing directly, so no surface writes canonical truth outside that path and no approval event is logged for a decision that was never applied.
+- [x] **GOV-05**: No surface reports success for a degraded or partially-applied outcome — degraded runs and escalated items render honestly rather than as clean completion.
 
 ### Document Extraction (EXTR)
 
@@ -151,8 +151,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | GOV-01 | Phase 18 | Pending |
 | GOV-02 | Phase 18 | Pending |
 | GOV-03 | Phase 18 | Pending |
-| GOV-04 | Phase 18 | Pending |
-| GOV-05 | Phase 18 | Pending |
+| GOV-04 | Phase 18 | Complete |
+| GOV-05 | Phase 18 | Complete |
 | HTTP-01 | Phase 19 | Pending |
 | HTTP-02 | Phase 19 | Pending |
 | HTTP-03 | Phase 19 | Pending |
