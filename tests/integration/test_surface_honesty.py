@@ -331,6 +331,92 @@ def test_completed_verdict_stays_clean_in_every_terminal_emitter(
     assert verdict == f"✓ {message}", f"completed run lost its clean verdict: {verdict!r}"
 
 
+# ── GOV-05: the research family's outcome must fold in RunResult.degraded ───
+#
+# The tests above inject ``outcome="degraded"`` directly, which is a value the real
+# research pipeline NEVER produces — and that is exactly how the first attempt at
+# this fix passed while still broken. ``RunResult.status`` is only ever
+# ``awaiting_review | completed | failed``; retrieval degradation lives in a separate
+# ``RunResult.degraded`` boolean. Passing ``status`` straight through published
+# ``outcome="completed"`` for a degraded run, so the renderer printed an unqualified
+# ✓ one line below an honest ``degraded: True``.
+#
+# These rows therefore start from a real ``RunResult`` — the object the graph
+# actually returns — and go through the real envelope builder, so a fix that only
+# satisfies the synthetic shape cannot pass.
+
+
+def test_research_envelope_reports_degraded_for_a_completed_degraded_run() -> None:
+    """A research run that COMPLETED with degraded retrieval must report degraded."""
+    from construct.capabilities.catalog import _run_result_to_operation
+    from construct.llm.research_run import RunResult
+
+    op = _run_result_to_operation(
+        "research.run",
+        lambda: RunResult(status="completed", run_id="r1", degraded=True, message="Run complete."),
+    )
+
+    assert op.outcome == "degraded", (
+        "RunResult.degraded was dropped on the way to the envelope — every surface "
+        f"that trusts `outcome` will repeat the cheerful half (got {op.outcome!r})"
+    )
+
+
+def test_research_envelope_keeps_failed_over_degraded() -> None:
+    """A failed run is not merely degraded — collapsing the two understates it."""
+    from construct.capabilities.catalog import _run_result_to_operation
+    from construct.llm.research_run import RunResult
+
+    op = _run_result_to_operation(
+        "research.run",
+        lambda: RunResult(status="failed", run_id="r1", degraded=True, message="Run failed."),
+    )
+
+    assert op.outcome == "failed", f"failed must win over degraded, got {op.outcome!r}"
+
+
+def test_research_degraded_run_renders_a_qualified_verdict() -> None:
+    """The whole chain, from the graph's own result object to rendered stdout."""
+    from construct import cli
+    from construct.capabilities.catalog import _run_result_to_operation
+    from construct.llm.research_run import RunResult
+    import io
+    import contextlib
+
+    op = _run_result_to_operation(
+        "research.run",
+        lambda: RunResult(status="completed", run_id="r1", degraded=True, message="Run complete."),
+    )
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        cli._emit_run_result(op, json_output=False)
+
+    text = buf.getvalue()
+    verdict = text.strip().splitlines()[-1]
+    assert not verdict.startswith("✓"), (
+        f"a degraded research run rendered an unqualified success verdict: {verdict!r}"
+    )
+    assert "degraded" in verdict, f"the verdict must carry the outcome: {verdict!r}"
+
+
+def test_run_result_status_still_lacks_a_degraded_member() -> None:
+    """Pins WHY the fold above is needed.
+
+    If ``RunResult.status`` ever gains a ``degraded`` member, the fold in
+    ``_run_outcome`` becomes redundant and this test fails to say so — rather than
+    leaving two mechanisms silently disagreeing about the same fact.
+    """
+    from pathlib import Path as _Path
+
+    import construct.llm.research_run as rr
+
+    source = _Path(rr.__file__).read_text(encoding="utf-8")
+    assert "status: str  # awaiting_review | completed | failed" in source, (
+        "RunResult.status's documented members changed — re-check whether "
+        "_run_outcome's degraded fold is still the right mechanism (GOV-05)"
+    )
+
+
 def test_no_terminal_emitter_bypasses_the_verdict_renderer() -> None:
     """The structural guard: a new emitter added later must route through
     ``_verdict_line``. Pinning the source is what makes this survive a sixth

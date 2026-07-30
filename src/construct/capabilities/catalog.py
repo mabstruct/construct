@@ -914,6 +914,28 @@ def _research_score_shim(**kwargs):
     )
 
 
+def _run_outcome(result) -> str:
+    """The research family's reportable outcome, folding in ``RunResult.degraded``.
+
+    GOV-05: ``curation.run`` and ``daily.run`` carry "degraded" inside their own
+    status enums, so their envelope outcome is honest by construction. The research
+    graph does not — ``RunResult.status`` is only ``awaiting_review | completed |
+    failed``, and retrieval degradation lives in the separate ``degraded`` boolean.
+    A run that completed with degraded retrieval therefore reported
+    ``outcome="completed"`` while ``data.degraded`` said otherwise, and every
+    surface that trusts ``outcome`` — the CLI verdict line, ``--json``, MCP —
+    repeated the cheerful half.
+
+    ``failed`` wins over ``degraded``: a run that failed is not merely degraded,
+    and collapsing the two would understate the worse outcome.
+    """
+    if result.status == "failed":
+        return "failed"
+    if getattr(result, "degraded", False):
+        return "degraded"
+    return result.status
+
+
 def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
     """Run a research-run runner and wrap its ``RunResult`` in a sanitizing
     ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
@@ -949,7 +971,16 @@ def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
         # report HOW IT WENT without re-deriving it from ``data``. The success
         # flag's computation above is deliberately untouched — it drives the exit
         # code and D-15 holds it fixed.
-        outcome=result.status,
+        #
+        # ``RunResult.status`` is only ever awaiting_review | completed | failed —
+        # unlike curation/daily, whose own status enums bake "degraded" in. The
+        # research graph carries retrieval degradation in a SEPARATE boolean, so
+        # passing ``status`` straight through published outcome="completed" for a
+        # degraded run and the renderer printed an unqualified ✓ one line under an
+        # honest ``degraded: True``. Fold the boolean in here, at the one place
+        # that builds the envelope, rather than teaching every surface to check
+        # two fields and remember which family needs it.
+        outcome=_run_outcome(result),
     )
 
 
