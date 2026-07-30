@@ -398,6 +398,26 @@ additive to the planning decisions above; they do not supersede them.
   cannot rot. Whether `ingest_source` should itself sit behind a gate is an explicit v0.6
   question, not a Phase 18 gap.
 
+- **D-24 — criterion 4's event-count invariant scopes to the curation graph (accepted 2026-07-30, wave 4).**
+  Raised by plan 18-08. D-16 enumerates three apply sites, all in the curation graph, and 18-08
+  closed all three: approval events now fire only inside the succeeded-write branch, proven by an
+  event-count invariant read from `log/events.jsonl` on disk. Criterion 4's second half stands
+  satisfied.
+
+  The research graph carries the same defect class and is NOT fixed here:
+  `update_seeds_and_log` (`research_run.py:919-932`) emits `gate_review_approved` from the
+  *decision*, while `ingest_batch` separately tracks `skipped_existing` for refs and cards that
+  already existed and were not written — so an idempotent research re-run records approvals for
+  ingests that did not happen. (`research_run` has no escalate path at all — `grep -c escalat`
+  → 0 — so D-16's escalation half was genuinely inapplicable there.)
+
+  Deferred rather than fixed because it falls outside D-16's three enumerated sites and an honest
+  fix needs assertions in `tests/llm/test_research_run.py`, which plan 18-08 does not own. Tracked
+  in `deferred-items.md` item 3 and `WINDOWS.md` entry 2, and recorded as 18-08 coverage item D7
+  with `human_judgment: true` so it abstains at verify time rather than passing silently.
+  Structurally the same call as [[D-23]]: the phase closes the defect class where the phase
+  scoped it, and names the remaining instance instead of quietly widening or quietly ignoring it.
+
 ---
 
 *Phase: 18-Contract & Governance Foundations*
