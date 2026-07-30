@@ -627,6 +627,104 @@ def test_views_validate_data_refuses_a_path_that_is_not_a_directory(
     assert str(a_file) not in result.message
 
 
+# ── The workspace marker guard on the write capabilities (CR-04) ──────────
+
+#: Every registered capability that writes into an agent-supplied ``workspace``,
+#: with a schema-shaped payload for each. Enumerated rather than discovered so a
+#: new write capability has to be added here deliberately — the guard cannot go
+#: quiet by a capability simply not being found.
+_WRITE_CAPABILITIES: dict[str, dict] = {
+    "knowledge.card.create": {
+        "title": "Guarded", "epistemic_type": "finding", "domains": ["d"],
+        "confidence": 3, "source_tier": 3,
+    },
+    "knowledge.card.edit": {"card_id": "guarded", "title": "Renamed"},
+    "knowledge.card.archive": {"card_id": "guarded"},
+    "knowledge.connection.add": {
+        "from_id": "a", "to_id": "b", "conn_type": "supports",
+    },
+    "knowledge.connection.remove": {
+        "from_id": "a", "to_id": "b", "conn_type": "supports",
+    },
+    "ingest.source": {"source": "a note the guard must never persist"},
+}
+
+
+@pytest.mark.parametrize("cap_id", sorted(_WRITE_CAPABILITIES))
+def test_write_capabilities_refuse_a_workspace_that_carries_no_marker(
+    tmp_path: Path, cap_id: str
+) -> None:
+    """CR-04: the boundary control the views capabilities got, on the write side.
+
+    ``views.generate_data`` / ``views.validate_data`` gained ``install_root_error``
+    precisely because registration is what makes a path *agent-supplied* over MCP.
+    The MCP-exposed **write** capabilities — ``construct_create_card``,
+    ``construct_edit_card``, ``construct_add_connection``,
+    ``construct_ingest_source`` — took no such guard, and ``Path`` accepts any
+    absolute or ``../``-relative value. Verified before the fix:
+    ``knowledge.card.create`` against
+    ``/tmp/definitely-not-a-workspace-9x8/secret-dir`` returned
+    ``success=True, "Card 't' created as t"`` after creating ``cards/`` and
+    ``log/`` and writing into both — an MCP primitive for creating directories
+    and writing attacker-influenced markdown/JSONL anywhere the process can write,
+    with a success receipt.
+
+    The path is a *sibling* of ``tmp_path`` rather than ``tmp_path`` itself, so
+    the assertion is that nothing was created at all, not that a pre-existing
+    directory stayed empty.
+    """
+    outsider = tmp_path / "not-a-construct-workspace" / "secret-dir"
+    assert not outsider.exists()
+
+    result = get_registry().invoke(cap_id, {"workspace": outsider, **_WRITE_CAPABILITIES[cap_id]})
+
+    assert result.success is False, f"{cap_id} accepted a non-workspace path"
+    assert not outsider.exists(), f"{cap_id} created {outsider} before refusing"
+
+    # T-18-10, the ``install_root_error`` convention: the reason names no path.
+    haystack = result.message + " ".join(e.reason for e in result.errors)
+    for segment in (str(outsider), outsider.name, outsider.parent.name, str(tmp_path)):
+        assert segment not in haystack, (
+            f"{cap_id}'s refusal echoed a filesystem path segment {segment!r}: {haystack!r}"
+        )
+
+
+@pytest.mark.parametrize("cap_id", sorted(_WRITE_CAPABILITIES))
+def test_write_capabilities_refuse_a_workspace_that_is_not_a_directory(
+    tmp_path: Path, cap_id: str
+) -> None:
+    """The other half of the guard, which ``workspace_error`` reports first."""
+    a_file = tmp_path / "domains.yaml"
+    a_file.write_text("domains: []\n", encoding="utf-8")
+
+    result = get_registry().invoke(cap_id, {"workspace": a_file, **_WRITE_CAPABILITIES[cap_id]})
+
+    assert result.success is False
+    assert str(a_file) not in result.message
+
+
+def test_a_real_workspace_still_passes_the_write_guard(tmp_path: Path) -> None:
+    """Default-deny is only correct if the door still opens for a real workspace."""
+    from construct.services.init import DomainInitInput, initialize_workspace
+
+    ws = tmp_path / "workspace"
+    initialize_workspace(ws, DomainInitInput(
+        domain_id="test-domain",
+        display_name="Test Domain",
+        scope="A domain for the write-guard test.",
+        taxonomy_seeds=["test-category"],
+        source_priorities=["web"],
+        research_seeds=["seed"],
+    ))
+
+    result = get_registry().invoke("knowledge.card.create", {
+        "workspace": ws, **_WRITE_CAPABILITIES["knowledge.card.create"],
+    })
+
+    assert result.success is True, result.message
+    assert (ws / "cards" / "guarded.md").is_file()
+
+
 def test_no_registry_aware_module_calls_a_handler_directly() -> None:
     """GOV-01's structural claim: exactly one path from a payload to a handler.
 

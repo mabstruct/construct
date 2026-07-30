@@ -35,6 +35,40 @@ class WorkspaceLoadError(ValueError):
     """Raised when a workspace file cannot be parsed into a schema."""
 
 
+#: The file whose presence marks a directory as a CONSTRUCT workspace. It is the
+#: domain registry every canonical read goes through, it is in
+#: ``WorkspaceScaffold.required_paths``, and ``initialize_workspace`` writes it —
+#: so "has this" and "was scaffolded by us" are the same statement.
+WORKSPACE_MARKER = "domains.yaml"
+
+
+def workspace_error(workspace: Path | str) -> str | None:
+    """Return why *workspace* is not a CONSTRUCT workspace, or ``None``.
+
+    The workspace analogue of ``views.generate.install_root_error``, and it exists
+    for the identical reason, one layer down. Registration is what makes a
+    ``workspace`` argument *agent-supplied* over MCP (and, from Phase 19, over
+    HTTP), so the marker check stops being an internal convenience and becomes a
+    boundary control. Every capability that WRITES under an agent-supplied
+    workspace must call this before touching the filesystem: the write services
+    create ``cards/`` and ``log/`` under whatever they are handed, so an unguarded
+    path argument is a primitive for creating directories and writing
+    attacker-influenced markdown/JSONL anywhere the process can write — and it
+    reports ``success: true`` afterwards (CR-04).
+
+    The returned reason deliberately does **not** embed the path, following the
+    ``install_root_error`` convention: a caller that must not echo filesystem
+    locations (the MCP surface) can surface it verbatim, while a local caller
+    (the CLI) appends the path itself.
+    """
+    root = Path(workspace)
+    if not root.is_dir():
+        return "workspace is not an existing directory"
+    if not (root / WORKSPACE_MARKER).is_file():
+        return f"not a CONSTRUCT workspace: missing {WORKSPACE_MARKER}"
+    return None
+
+
 class WorkspaceLoader:
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)

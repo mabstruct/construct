@@ -24,7 +24,7 @@ from construct.services.knowledge import (
     remove_connection,
 )
 from construct.services.validation import ValidationReport, validate_workspace
-from construct.storage.workspace import WorkspaceLoader
+from construct.storage.workspace import WorkspaceLoader, workspace_error
 from construct.schemas.workspace import ConnectionType
 from construct.pipelines.graph_status import graph_status
 
@@ -1102,6 +1102,37 @@ def _daily_inspect_shim(**kwargs):
     )
 
 
+def _workspace_refusal(cap_id: str, workspace) -> OperationResult | None:
+    """The CR-04 boundary control: refuse an agent-supplied non-workspace path.
+
+    The workspace-side twin of the ``install_root_error`` call at the top of
+    ``_views_generate_handler``, and it is here for the identical reason.
+    Registration is what makes ``workspace`` agent-supplied over MCP, so the
+    marker check stopped being an internal convenience and became a boundary
+    control — but only the *views* capabilities got one. The write capabilities
+    (``construct_create_card``, ``construct_edit_card``,
+    ``construct_add_connection``, ``construct_ingest_source``) took none, and
+    ``Path`` accepts any absolute or ``../``-relative value, so an MCP client had
+    a primitive for creating directories and writing attacker-influenced
+    markdown/JSONL anywhere the process can write — with a ``success: true``
+    receipt.
+
+    Returns ``None`` when the path is a real workspace, so a caller reads as
+    ``if (refusal := _workspace_refusal(...)) is not None: return refusal``.
+    The reason names no filesystem path (T-18-10 / the ``install_root_error``
+    convention), which is what lets the MCP surface render it verbatim.
+    """
+    reason = workspace_error(workspace)
+    if reason is None:
+        return None
+    return OperationResult(
+        success=False,
+        message=f"{cap_id} refused the workspace: {reason}",
+        errors=[OperationError(field="workspace", reason=reason, suggestion="")],
+        data={"failed": True},
+    )
+
+
 def _create_card_shim(**kwargs):
     """Marshalling adapter for knowledge.card.create.
 
@@ -1110,6 +1141,9 @@ def _create_card_shim(**kwargs):
     caller hand over an already-marshalled ``card_data``, is retired — ``cli.py``
     now sends the declared fields and this is the only marshaller.
     """
+    refusal = _workspace_refusal("knowledge.card.create", kwargs["workspace"])
+    if refusal is not None:
+        return refusal
     return create_card(
         kwargs["workspace"],
         _build_card_data(kwargs),
@@ -1126,6 +1160,9 @@ def _edit_card_shim(**kwargs):
     materialises a default for every declared field, so forwarding them verbatim
     would blank a field the caller never named. The positional branch is retired.
     """
+    refusal = _workspace_refusal("knowledge.card.edit", kwargs["workspace"])
+    if refusal is not None:
+        return refusal
     return edit_card(
         kwargs["workspace"],
         kwargs["card_id"],
@@ -1141,6 +1178,9 @@ def _add_connection_shim(**kwargs):
     and ``created_by`` are coerced to their enums. The positional branch, which
     accepted an already-coerced ``ConnectionType`` from ``cli.py``, is retired.
     """
+    refusal = _workspace_refusal("knowledge.connection.add", kwargs["workspace"])
+    if refusal is not None:
+        return refusal
     return add_connection(
         kwargs["workspace"],
         kwargs["from_id"],
@@ -1182,6 +1222,9 @@ def _archive_card_shim(
     alive is retired now that ``cli.py`` dispatches through the seam (research
     Finding G5's ordering constraint, discharged).
     """
+    refusal = _workspace_refusal("knowledge.card.archive", workspace)
+    if refusal is not None:
+        return refusal
     return archive_card(workspace, card_id, author=CardAuthor(author))
 
 
@@ -1214,6 +1257,9 @@ def _remove_connection_shim(
     ``conn_type`` is coerced to its enum, mirroring ``_add_connection_shim``. The
     positional branch is retired.
     """
+    refusal = _workspace_refusal("knowledge.connection.remove", workspace)
+    if refusal is not None:
+        return refusal
     return remove_connection(workspace, from_id, to_id, ConnectionType(conn_type))
 
 
@@ -1226,6 +1272,9 @@ def _ingest_source_shim(**kwargs):
     """
     rest = dict(kwargs)
     workspace = rest.pop("workspace")
+    refusal = _workspace_refusal("ingest.source", workspace)
+    if refusal is not None:
+        return refusal
     return ingest_source(workspace, **rest)
 
 
