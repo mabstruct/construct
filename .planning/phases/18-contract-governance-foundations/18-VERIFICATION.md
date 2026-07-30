@@ -1,42 +1,18 @@
 ---
 phase: 18-contract-governance-foundations
-verified: 2026-07-30T19:06:00Z
-status: gaps_found
-score: 4/5 roadmap success criteria verified
+verified: 2026-07-30T22:40:00Z
+status: human_needed
+score: 5/5 roadmap success criteria verified
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
-  - truth: "A degraded or partially-applied run reports degraded on every surface that can report it, and escalated items surface as pending rather than folded into a success count. (ROADMAP Phase 18 success criterion 5 / REQ GOV-05)"
-    status: partial
-    reason: >
-      The GOV-05 honest-verdict renderer (`cli._verdict_line`) is wired into
-      `_emit_curation_result` only. `_emit_run_result` (research.run /
-      research.review / research.inspect) and `_emit_daily_result` (daily.run)
-      still call the old unconditional `typer.echo(f"✓ {result.message}")` on
-      every success path, regardless of `result.outcome`. This is code-review
-      finding WR-02 (18-REVIEW.md), explicitly left unfixed because the fix
-      pass was scoped to the five Critical findings only (18-REVIEW-FIX.md).
-      Live-reproduced against the actual `construct.cli` module (not merely
-      inferred): a `daily.run` whose aggregate status is "degraded" (reachable
-      any time `pending_escalations > 0` or any child is
-      failed/degraded/awaiting_review — `daily_run.py:125-138`, not a rare
-      edge) prints `✓ Daily cycle degraded.` as its final line. A `research.run`
-      that completes with `retrieval.degraded = True` prints `degraded: True`
-      immediately followed by the unqualified `✓ Run complete.` in the same
-      output block — the exact "audit-trail-that-lies" pattern (T-15-14) GOV-05
-      exists to close, on the two surfaces the fix pass did not touch.
-      `test_surface_honesty.py` (the table-driven cross-surface honesty suite
-      18-08 built) covers `curation.run` only; no test exercises
-      `daily.run`'s or `research.run`'s human-readable degraded path, so the
-      suite is green while the defect is live. The CLI `--json` payload and the
-      MCP structured result ARE honest for both surfaces (outcome/degraded ride
-      on the envelope untouched) — only the human-readable text renderer lies.
-    artifacts:
-      - path: "src/construct/cli.py"
-        issue: "_emit_run_result (line ~580-590) and _emit_daily_result (line ~890-901) print an unqualified `✓ {message}` instead of calling `_verdict_line(result)`, unlike _emit_curation_result which was fixed."
-    missing:
-      - "Replace both `typer.echo(f\"✓ {result.message}\")` call sites with `typer.echo(_verdict_line(result))`, mirroring `_emit_curation_result`."
-      - "Extend `tests/integration/test_surface_honesty.py` (or an equivalent table) with a `daily.run` degraded row and a `research.run` completed-but-`data.degraded=True` row, asserting no unqualified `✓` appears alongside a `degraded`/non-clean signal in the same human-readable block."
+re_verification:
+  previous_status: gaps_found
+  previous_score: 4/5
+  gaps_closed:
+    - "research.run / research.review / research.inspect now report the RunResult.degraded signal as the OperationResult.outcome (\"degraded\") on a genuinely completed-but-retrieval-degraded run, closing the gap the previous pass identified: catalog.py::_run_result_to_operation previously set outcome=result.status, and RunResult.status for the research graph never takes the value \"degraded\" (only awaiting_review | completed | failed) — the degraded signal lived only in the separate RunResult.degraded boolean, which the outcome mapping never read. Commit 9ad383e adds _run_outcome(result), which folds degraded into outcome at the single place the research envelope is built (failed wins over degraded), and _run_result_to_operation now calls it."
+  gaps_remaining: []
+  regressions: []
+gaps: []
 deferred: []
 behavior_unverified_items: []
 human_verification:
@@ -48,123 +24,142 @@ human_verification:
 # Phase 18: Contract & Governance Foundations Verification Report
 
 **Phase Goal:** Every contract a browser will depend on tells the truth before a browser exists — the views projection validates against its own validator, all invocation surfaces validate against one seam, and a human-review decision cannot be misapplied.
-**Verified:** 2026-07-30T19:06:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-07-30T22:40:00Z
+**Status:** human_needed
+**Re-verification:** Yes — third pass, after a second gap-closure attempt (commit `9ad383e`)
 
 ## Goal Achievement
 
-This phase went through code review (18-REVIEW.md: 5 critical, 13 warning findings) and a fix
-pass scoped to critical findings only (18-REVIEW-FIX.md: 5/5 fixed, suite 734→765 passed). This
-verification does not trust either document's claims — every fix below was re-reproduced
-independently against the running code (fresh Python process, real registry, real CLI dispatch,
-one live round-trip-guard mutation test), and every one of the 5 ROADMAP success criteria was
-checked against the codebase rather than against the SUMMARYs' self-reports.
+This is the third verification pass on criterion 5. The first pass found 4/5 roadmap success
+criteria verified, with criterion 5 (GOV-05) failing on `daily.run` and `research.run`. The second
+pass (commit `8aea454`) fixed the CLI renderer and `daily.run`/`curation.run`, but found the fix
+incomplete: `research.run`/`research.review`/`research.inspect` still rendered an unqualified `✓`
+on a real, completed-but-retrieval-degraded run, because `catalog.py::_run_result_to_operation` set
+`outcome=result.status`, and `RunResult.status` for the research graph never actually takes the
+value `"degraded"` — that signal lived only in a separate `RunResult.degraded` boolean the outcome
+mapping never read.
+
+**This pass does not trust the commit message or the SUMMARY's "774 passed, 0 failed" claim as
+evidence of closure.** Every claim below was independently re-derived in this session:
+
+- The suite was re-run from scratch (`774 passed, 18 skipped, 0 failed`, confirmed).
+- The new `_run_outcome()` fold in `catalog.py` was read at the current commit and confirmed to
+  be the single site feeding `_run_result_to_operation`'s `outcome=`.
+- The fix was driven through the **REAL** capability pipeline, not just the new unit-level tests:
+  a real `get_registry().invoke("research.run", ...)` → real `build_research_run_graph()` → real
+  gate pause → a second real `get_registry().invoke("research.review", ...)` with
+  `Command(resume=...)`-equivalent decisions → real completion, with `research_score.run_gate`
+  monkeypatched to a degraded batch (the same fixture shape as
+  `tests/llm/test_research_run.py::test_digest_degraded_notice`). This exercised the actual CLI
+  human renderer (`cli._emit_run_result`), the actual `--json` path, and the actual MCP serializer
+  (`mcp/server.py::_serialize_result`) — end to end, not synthetic `OperationResult` construction.
+- The 4 new regression tests in `tests/integration/test_surface_honesty.py` were independently
+  proven RED by temporarily reverting `outcome=_run_outcome(result)` back to `outcome=result.status`
+  and re-running them: 2 of the 4 failed, reproducing the exact `'✓ Run complete.'` defect the
+  second pass caught, byte-for-byte. The fix was then restored and the suite re-confirmed green.
+- `research.inspect` and `research.review` were independently exercised (the second pass's own gap
+  report named all three commands as failing; this pass verifies all three, not just one).
+- A genuinely clean, non-degraded completed run was independently driven through the same
+  real pipeline and confirmed to still render an unqualified `✓ Run complete.` — the fix is
+  outcome-driven, not a blanket qualification (no over-qualification regression).
+- `daily.run`/`curation.run` use their own separate wrap functions
+  (`_curation_run_result_to_operation`, `_daily_run_result_to_operation`), untouched by this
+  commit's diff (`git diff --stat 8aea454 9ad383e` touches only `catalog.py` and the test file);
+  their 28/28 surface-honesty tests still pass, confirming no regression.
+- Criteria 1-4's scoped files are untouched by this commit's diff, and the untouched-scope tests
+  (`test_views_generate_output_round_trips_through_views_validate`,
+  `tests/integration/test_surface_parity.py` 22/22) still pass.
+
+**Result: criterion 5 is now fully closed.** All three research-run-family commands
+(`research.run`, `research.review`, `research.inspect`) render honestly on a real,
+completed-but-degraded run, on every surface checked (CLI human, CLI `--json`, MCP).
 
 ### Observable Truths (ROADMAP Phase 18 Success Criteria)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | `views validate` accepts every one of the 8 (really `4+6·N+1`) files `views generate` writes, proven by a non-vacuous round-trip guard replacing the pin test | ✓ VERIFIED | `tests/integration/test_views_generate.py::test_views_generate_output_round_trips_through_views_validate` passes on 1- and 2-workspace fixtures. Non-vacuity independently confirmed: temporarily renamed `CardRecord.title` → `card_title_renamed` in `views/models.py`; the guard failed with `Field required` on the renamed field; reverted, guard passed again. `test_views_validate_does_not_yet_accept_generated_bytes` was replaced, not deleted (git history: `18-05`). |
-| 2 | Same capability id + payload → identical structured result across CLI and MCP, unknown field rejected on both — including the failure path | ✓ VERIFIED | `tests/integration/test_surface_parity.py` (22/22 pass), including `test_failure_parity_puts_the_capability_s_errors_on_both_surfaces` (CR-01's regression guard, drives the real CLI subprocess and the real MCP tool closure). `mcp/server.py`'s `_serialize_result` now uses `dataclasses.asdict` (recurses into `OperationError`); confirmed no capability-specific code remains in `mcp/server.py`. CLI structurally cannot deliver an undeclared field to a handler (Typer rejects at parse time) — the two halves are proven separately by design (D-08), not a gap. |
-| 3 | A decision names its proposal; a resume against a changed queue is rejected with zero writes; a missing decision never falls back to applying a write | ✓ VERIFIED | `proposal_id`, id-keyed `_decision_map`/`_check_coverage`, and the checkpoint-id ETag are implemented in `curation_run.py` and mirrored in `research_run.py`. Live-reproduced: `apply_connections` (CR-02) is now default-deny — `if decision != "approve"` — confirmed by reading `curation_run.py:1339` (was `if decision == "reject"`). `test_stale_etag_rejected_with_zero_writes`, `test_etag_comparison_is_exact_string_equality`, `test_migrated_queue_requires_a_complete_map` all pass and assert workspace-state byte-identity across the rejection. |
-| 4 | No surface writes canonical truth outside the reviewed workflow's resume path (D-13/D-14), and no approval event exists for a decision that was never applied (D-16) | ✓ VERIFIED | `src/construct/ui/gate_review.py` is deleted (`git log` confirms deletion commit `7c1f3a3`); `streamlit_app.py` has zero references. `test_no_canonical_writer_outside_the_apply_nodes` passes; `UNRESOLVED_DIRECT_CALLERS = {"pipelines/ingestion.py"}` is the sole, explicitly-named D-23 baseline and `test_guard_detects_a_planted_canonical_writer` proves the guard is shrink-only *in both directions* (fails on a newly planted writer, fails if a baseline entry stops being a real caller). Approval-event-implies-a-write is proven non-vacuously by 7 hand-constructed-queue tests (`test_idempotent_*_emits_no_approval_event`, `test_failed_*_write_emits_no_approval_event`) — distinct from the fixture-vacuous `test_reviewed_connection_idempotent` the fix report itself flags as a separate, lower-severity finding. D-24's research-graph deferral is honoured (untouched, tracked in `deferred-items.md`). |
-| 5 | A degraded or partially-applied run reports degraded on every surface that can report it, and escalated items surface as pending rather than folded into a success count | ✗ **FAILED** | Holds for `curation.run` only (`test_surface_honesty.py`, 19/19 pass — but every row is curation-scoped). Live-reproduced failure on the other two run-composition surfaces: `daily.run` prints an unqualified `✓ Daily cycle degraded.`, and a completed-but-retrieval-degraded `research.run` prints `degraded: True` directly followed by an unqualified `✓ Run complete.` in the same block. This is review finding WR-02, deliberately left unfixed by the blockers-only fix pass. See Gaps below. |
+| 1 | `views validate` accepts every one of the 8 (really `4+6·N+1`) files `views generate` writes | ✓ VERIFIED (unchanged, no regression) | Untouched by commit `9ad383e` (diff touches only `catalog.py` + `test_surface_honesty.py`). `test_views_generate_output_round_trips_through_views_validate` still passing in the full 774/774 non-skipped run. |
+| 2 | Same capability id + payload → identical structured result across CLI and MCP, unknown field rejected on both — including the failure path | ✓ VERIFIED (unchanged, no regression) | Untouched by commit `9ad383e`. `tests/integration/test_surface_parity.py` re-run independently: 22/22 pass. |
+| 3 | A decision names its proposal; a resume against a changed queue is rejected with zero writes; a missing decision never falls back to applying a write | ✓ VERIFIED (unchanged, no regression) | Untouched by commit `9ad383e`. Staleness/ETag tests in `curation_run.py`/`research_run.py` scope still pass. |
+| 4 | No surface writes canonical truth outside the reviewed workflow's resume path, and no approval event exists for a decision that was never applied | ✓ VERIFIED (unchanged, no regression) | Untouched by commit `9ad383e`. `test_no_canonical_writer_outside_the_apply_nodes` and the approval-event tests still pass. |
+| 5 | A degraded or partially-applied run reports degraded on every surface that can report it, and escalated items surface as pending rather than folded into a success count | ✓ **VERIFIED — now fully closed** | `curation.run`/`daily.run` (confirmed honest in pass 2) plus `research.run`/`research.review`/`research.inspect` (confirmed honest in this pass) all render `⚠ degraded: ...` on a real degraded run, on CLI human, CLI `--json`, and MCP surfaces. See Behavioral Spot-Checks. |
 
-**Score:** 4/5 roadmap success criteria verified (1 failed)
+**Score:** 5/5 roadmap success criteria verified
 
-### Required Artifacts
+### Required Artifacts (delta from previous pass)
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `src/construct/capabilities/errors.py` | Typed seam errors, payload-order-independent multi-field reasons | ✓ VERIFIED | `CapabilityInputError.from_validation_error` now orders on the whole `loc` tuple (CR-05). Live-reproduced: two `workspace.init` payloads with reversed nested-dict key order now produce byte-identical reason strings. |
-| `src/construct/capabilities/registry.py` | `invoke()` — the single validating seam | ✓ VERIFIED | `CapabilityRegistry.invoke` (`registry.py:47`) validates via `input_model.model_validate` then calls `handler(**model.model_dump())`. |
-| `tests/integration/test_surface_parity.py` | Differential CLI-process vs MCP-dispatch harness | ✓ VERIFIED | 22 tests, real subprocess (`_cli`) + real MCP tool closure (`_mcp`), including the D-21 schema-gap pin and the CR-01 failure-parity regression test. |
-| `src/construct/views/contracts.py` | One canonical path→model table shared by writer and validator | ✓ VERIFIED | `GLOBAL_FILE_CONTRACTS` / `PER_WORKSPACE_FILE_CONTRACTS` exported and consumed by both `generate.py` and the `views validate` capability; `grep` finds no third table. |
-| `src/construct/views/models.py` | Conformed contract models, `extra="ignore"`, two new workspace-file models | ✓ VERIFIED | `WorkspaceStatsFile` present; `CardRecord`/`EventRecord`/etc. carry `extra="ignore"`; mutation test (above) proves the round-trip guard still catches a real drift. |
-| `src/construct/llm/curation_run.py` | `proposal_id`, id-keyed resolution, checkpoint-id ETag, honest escalate/approval bucketing | ✓ VERIFIED | All present; `apply_connections` default-deny fix confirmed at `:1339`; escalation gets its own event action and bucket (`ESCALATED_EVENT_ACTION`, `escalated` list). |
-| `tests/contract/test_canonical_write_boundary.py` | Repo-wide source guard for GOV-04 | ✓ VERIFIED (with carried debt) | Guard passes; shrink-only baseline behaviour proven. WR-05 (unfixed): `exemption_for` grants its `StateGraph(`/`interrupt(`/`CapabilityRecord(` exemptions by raw substring match over the whole source text (including comments), so a hostile module could in principle exempt itself with a comment. Not exploited by any module in the repo today — carried as review debt, not a proven violation. |
-| `tests/integration/test_surface_honesty.py` | Table-driven degraded/escalated reporting across CLI human, CLI JSON, MCP | ⚠️ NARROWER THAN CLAIMED | 19/19 pass, but every row is a `curation.run` fixture. The plan-08 must-have text ("A degraded run reports degraded on the CLI human output...") reads as capability-agnostic; the test table is not. See Gap under criterion 5. |
-| `src/construct/ui/streamlit_app.py` | Page list without the deleted gate-review page | ✓ VERIFIED | No `gate_review` reference remains; module imports cleanly (exercised indirectly by the full test run, 765 passed). |
-| `CONSTRUCT-CLAUDE-impl/.../ActivityList.jsx` | Canonical event-shape reader | ✓ VERIFIED (source-level only) | Destructures `e.ts`/`e.agent`/`e.action`/`e.target`/`e.detail`/`e.result`, matching `parse_events.py`'s canonical output exactly. No JS toolchain available to execute — routed to Human Verification. |
+| `src/construct/capabilities/catalog.py` | `outcome` carries the degraded signal for the research run-composition family | ✓ VERIFIED | `_run_outcome(result)` (new, ~line 917) folds `RunResult.degraded` into the outcome: `failed` if `result.status == "failed"`, else `"degraded"` if `result.degraded`, else `result.status`. `_run_result_to_operation` (research.run/review/inspect's shared builder) now calls `outcome=_run_outcome(result)` instead of `outcome=result.status`. Independently proven load-bearing by reverting the one-line change and re-running the targeted tests: 2/4 fail, reproducing the exact prior defect. |
+| `tests/integration/test_surface_honesty.py` | Regression coverage that exercises the REAL production data shape, not a synthetic `OperationResult` | ✓ VERIFIED | 4 new tests: `test_research_envelope_reports_degraded_for_a_completed_degraded_run` and `test_research_envelope_keeps_failed_over_degraded` construct a real `RunResult` (the object the graph actually returns) and drive it through the real `_run_result_to_operation`; `test_research_degraded_run_renders_a_qualified_verdict` drives the whole chain to rendered stdout; `test_run_result_status_still_lacks_a_degraded_member` pins the precondition that makes the fold necessary (reads live `research_run.py` source). All 4 pass; all 4 independently confirmed RED against the reverted fix. |
 
-### Key Link Verification
-
-| From | To | Via | Status | Details |
-|---|---|---|---|---|
-| `src/construct/mcp/server.py` | `src/construct/capabilities/registry.py` | `make_handler` calls `registry.invoke` | ✓ WIRED | `mcp/server.py:52` calls `registry.invoke(capability.id, kwargs)`; no capability-specific branch anywhere in the 66-line file. |
-| `src/construct/cli.py` | `src/construct/capabilities/registry.py` | every command dispatches through the seam | ✓ WIRED (one named exception) | `get_registry().invoke(...)` is the dominant pattern across `cli.py`. `construct init` (WR-01, carried debt) still calls `initialize_workspace(...)` directly rather than through `registry.invoke("workspace.init", ...)` — its input is still a validated Pydantic model (`DomainInitInput`), just not dispatched through the seam abstraction. Does not trip the AST guard (`X.handler(...)` only), and does not violate the letter of any of the 5 success criteria (the `workspace.init` capability remains invocable and differentially tested via MCP/tests), but is a real parity gap the review correctly flagged. |
-| `src/construct/views/generate.py` | `src/construct/views/contracts.py` | validate-before-write iterates the shared contract table | ✓ WIRED | Confirmed by the round-trip guard's cardinality assertion passing and by the mutation test (renamed field caught at write-validation time, before any file changed). |
-| `tests/contract/test_canonical_write_boundary.py` | `src/construct/` | repo-wide AST scan, not a hand-typed file list | ✓ WIRED | `unexempted_callers` walks the tree; `test_guard_detects_a_planted_canonical_writer` proves it reacts to a planted module rather than a fixed list. |
-
-### Behavioral Spot-Checks
+### Behavioral Spot-Checks (this pass)
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Round-trip guard catches a renamed required field | rename `CardRecord.title`, run round-trip test, revert | `Field required` failure, then clean pass after revert | ✓ PASS |
-| Nested-payload error ordering is payload-independent (CR-05) | `registry.invoke("workspace.init", {...domain with reversed key order...})` ×2 | Identical reason strings both orders | ✓ PASS |
-| Workspace marker guard refuses a non-workspace path (CR-04) | `registry.invoke("knowledge.card.create", {"workspace": "/tmp/definitely-not-a-workspace-9x8/secret-dir", ...})` | `success=False`, "workspace is not an existing directory"; directory never created | ✓ PASS |
-| Blank-field rejection on card edit (CR-03) | `CardEditInput(summary="")`, `CardEditInput(title="")`, `CardEditInput(summary="   ")` | All three raise `ValidationError` | ✓ PASS |
-| `apply_connections` is default-deny (CR-02) | source read at `curation_run.py:1339` | `if decision != "approve": rejected...` | ✓ PASS (source-confirmed; also covered by 7+ passing unit tests) |
-| MCP surface serializes a capability's structured errors, not a `TypeError` (CR-01) | `test_failure_parity_puts_the_capability_s_errors_on_both_surfaces` | Passes; `_serialize_result` uses `dataclasses.asdict` | ✓ PASS |
-| **Degraded `daily.run` human output is honest** | `cli._emit_daily_result(OperationResult(success=True, message="Daily cycle degraded.", outcome="degraded"), json_output=False)` | Printed `✓ Daily cycle degraded.` — unqualified success glyph on a degraded outcome | ✗ **FAIL** |
-| **Degraded (retrieval) `research.run` human output is honest** | `cli._emit_run_result(...data={"degraded": True, "status": "completed", ...}, outcome="completed")`, `json_output=False` | Printed `degraded: True` then unqualified `✓ Run complete.` in the same block | ✗ **FAIL** |
-| Full test suite | `.venv/bin/python -m pytest -q` | `765 passed, 18 skipped, 0 failed` | ✓ PASS (necessary, not sufficient — the two failures above are on paths the suite doesn't exercise) |
+| Full test suite (once) | `.venv/bin/python -m pytest -q` | `774 passed, 18 skipped, 0 failed` | ✓ PASS (necessary, not sufficient) |
+| **`research.run` real graph, degraded batch, paused at gate** | Real `get_registry().invoke("research.run", ...)` with `research_score.run_gate` monkeypatched to a degraded `ResearchScoreGateOutput` (mirrors `test_digest_degraded_notice`); rendered via real `cli._emit_run_result` | `RunResult.status == "awaiting_review"`, `degraded == True` → `OperationResult.outcome == "degraded"` → rendered `"⚠ degraded: Paused for human review; resume with research.review."` | ✓ **PASS — honest** |
+| **`research.review` real graph, resumed to completion, degraded** | Same real graph/DB, second real `get_registry().invoke("research.review", ...)` with the paused gate's decisions, resumed to genuine completion | `RunResult.status == "completed"`, `degraded == True` → `OperationResult.outcome == "degraded"` → rendered `"⚠ degraded: Run complete."` (previously the exact defect: `"...\ndegraded: True\n✓ Run complete."`) | ✓ **PASS — the exact previously-failing case now honest** |
+| **`research.inspect` real graph, after completion, degraded** | Same real DB, real `get_registry().invoke("research.inspect", ...)`, read-only, no resume | `status == "completed"`, `degraded == True` → `outcome == "degraded"` → rendered `"⚠ degraded: Run is complete."` | ✓ **PASS — honest** |
+| `--json` agrees with the human renderer | `cli._emit_run_result(review_op, json_output=True)` on the same degraded `research.review` result | `{"outcome": "degraded", ...}` | ✓ PASS |
+| MCP serializer agrees with `--json` | `mcp_server._serialize_result(review_op)` on the same degraded `research.review` result | `{"outcome": "degraded", ...}` — identical to the `--json` value | ✓ PASS |
+| Genuinely clean, non-degraded completed run stays unqualified (no over-qualification regression) | Real graph, undegraded `scored_findings_batch`, run through `research.run` → `research.review` | `outcome == "completed"`, rendered `"✓ Run complete."` | ✓ PASS |
+| `daily.run`/`curation.run` no regression | `tests/integration/test_surface_honesty.py` full file, 28 tests (includes the pass-2 daily/curation-degraded rows) | `28 passed` | ✓ PASS |
+| New tests independently proven RED against the reverted fix | Reverted `outcome=_run_outcome(result)` → `outcome=result.status`; re-ran the 4 new tests | `2 failed` (`test_research_envelope_reports_degraded_for_a_completed_degraded_run`, `test_research_degraded_run_renders_a_qualified_verdict`), reproducing `'✓ Run complete.'` verbatim; fix restored and suite re-confirmed green | ✓ PASS — non-vacuous regression coverage confirmed |
 
-### Probe Execution
+### Requirements Coverage (delta)
 
-No `scripts/*/tests/probe-*.sh` files exist in this repository and neither the PLANs nor the SUMMARYs reference any probe script. Skipped — no probes declared for this phase.
+| Requirement | Status | Evidence |
+|---|---|---|
+| GOV-05 | ✓ **SATISFIED** | Criterion 5 above, closed on all three research-run-family commands plus the previously-fixed `curation.run`/`daily.run`. |
+| VFIX-01, GOV-01, GOV-02, GOV-03, GOV-04 | ✓ SATISFIED (unchanged) | No files in these requirements' scope were touched by commit `9ad383e`; full suite re-run confirms no regression. |
 
-### Requirements Coverage
+### Carried Debt (by decision — not scored as gaps, not re-litigated this pass)
 
-| Requirement | Source Plan(s) | Description | Status | Evidence |
-|---|---|---|---|---|
-| VFIX-01 | 18-04, 18-05 | `views validate` accepts every file `views generate` writes | ✓ SATISFIED | Criterion 1 above. |
-| GOV-01 | 18-01, 18-02, 18-03 | CLI, MCP (and HTTP, Phase 19) dispatch through one validating seam | ✓ SATISFIED (phase-scoped) | Criterion 2 above. REQUIREMENTS.md's own wording includes "and HTTP" — HTTP does not exist until Phase 19 by explicit ROADMAP design ("HTTP joins the same seam in Phase 19; it is not built here"), so full closure spans two phases; the Phase-18-owned portion (CLI+MCP) is fully verified. |
-| GOV-02 | 18-06 | Decisions keyed by proposal id; missing decision never defaults to a write | ✓ SATISFIED | Criterion 3 above. |
-| GOV-03 | 18-06 | Stale review queue detected and rejected | ✓ SATISFIED | Criterion 3 above (checkpoint-id ETag). |
-| GOV-04 | 18-07, 18-08 | Gate-review screen routes through resume path; no orphan approval events | ✓ SATISFIED | Criterion 4 above. |
-| GOV-05 | 18-08 | No surface reports success for a degraded/partial outcome | ✗ **BLOCKED** | Criterion 5 above — holds for `curation.run` only. |
+Unchanged from the prior pass, per explicit instruction:
 
-No orphaned requirements: all 6 IDs (VFIX-01, GOV-01..05) are claimed by at least one plan's `requirements:` frontmatter and all 6 are mapped to Phase 18 in `REQUIREMENTS.md`'s traceability table.
-
-**Documentation note (not a code gap, flagged for hygiene):** `REQUIREMENTS.md`'s top-level checklist currently shows `GOV-04` and `GOV-05` checked `[x]` and `GOV-01`/`GOV-02`/`GOV-03` unchecked `[ ]` — the inverse of the review's actual findings (GOV-01/02/03 are fully satisfied for their phase-18 scope; GOV-05 is not satisfied). This checklist should be corrected once GOV-05's gap is closed, not left to imply a stronger guarantee than the code currently provides.
+- **D-21** GOV-01's MCP schema-discoverability gap (behaviour true, discovery false — pinned test).
+- **D-22** the `ui.safety-gate` override for this phase.
+- **D-23** GOV-04 scopes to review-decided canonical writes; `pipelines/ingestion.py` sits in `UNRESOLVED_DIRECT_CALLERS` as a shrink-only baseline, not an exemption.
+- **D-24** criterion 4's event-count invariant scopes to the curation graph; the research graph's `update_seeds_and_log` approval-from-decision is a known deferred instance.
+- **12 remaining code-review warnings**, deliberately outside the fix scope — notably WR-03 (`mcp/server.py` returns `str(exc)`; `graph.status` messages carry filesystem paths), WR-05 (canonical-write guard grants exemptions by substring match while using AST rigor elsewhere), WR-06 (review models don't enforce mutual exclusion of `decisions`/`approve_all`/`reject_all`).
+- **`escalate` on a connection proposal emits `gate_review_rejected`** — nothing is written either way, but recording an escalation as a rejection is the audit inconsistency 18-08 closed for the other three apply nodes; `apply_connections` has no `escalated` bucket.
+- **`test_reviewed_connection_idempotent` is vacuous** — the `curation_workspace` fixture produces no bridge candidates, so `connection_maintenance` enqueues no connection proposal.
+- **`ActivityList.jsx` (18-05)** source-verified only — no JS toolchain, forbidden by `T-18-SC`. Routed to human_verification below.
+- **Minor, non-blocking, unchanged by this pass:** `research.score`'s success path (`catalog.py::_research_score_shim`) never sets `OperationResult.outcome` at all — its degraded signal is folded into the message text only (`"Scored N findings (degraded)"`), so the rendered line keeps the `✓` glyph (`"✓ Scored N findings (degraded)"`). This is not silent (the word "degraded" is in the message) and `research.score` was not one of the three commands named in either gap report as part of criterion 5's failing scope (it is a scoring gate, not a `run`/`review`/`inspect` composition command) — consistent with the prior pass's judgment, this is noted as carried, non-blocking debt, not a re-opened gap.
 
 ### Anti-Patterns Found
 
-No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers found in any of the phase's modified files. One dishonesty anti-pattern found and reported above (unqualified `✓` on a degraded outcome in `_emit_run_result`/`_emit_daily_result`) — this is the T-15-14 "audit-trail-that-lies" class the phase exists to eliminate, surviving in exactly the two composition surfaces the blockers-only fix pass did not reach.
+No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers in the files touched by commit
+`9ad383e`. The dishonesty anti-pattern (T-15-14, unqualified `✓` on a non-clean outcome) is now
+resolved on all five terminal-emitter commands and all three research-run-family capability ids —
+confirmed live against the real pipeline, not only against the commit's own synthetic-shape
+regression tests.
 
 ### Human Verification Required
 
-1. **ActivityList.jsx renders live Python-emitted events correctly** — see frontmatter `human_verification`. Source-level conformance to the canonical event shape is confirmed by reading the code; runtime behavior was never exercised (no JS toolchain in this environment, and this was explicitly out of scope per `T-18-SC`).
+1. **ActivityList.jsx renders live Python-emitted events correctly** — unchanged from prior passes;
+   not touched by commit `9ad383e`. See frontmatter `human_verification`.
 
 ### Gaps Summary
 
-Of the phase's 5 ROADMAP success criteria, 4 are genuinely and non-vacuously achieved — including
-the two (criteria 1 and 3) that plausibly could have been vacuous and were specifically stress-tested
-here (a live mutation of the round-trip guard's target model, and reading the actual `apply_connections`
-default-deny fix rather than trusting the fix report's prose).
+None remaining for criterion 5. Commit `9ad383e` closes the exact gap the second verification pass
+named: `catalog.py::_run_result_to_operation` now folds `RunResult.degraded` into the reported
+`outcome` for the research-run family (`_run_outcome`), the same way `curation.run` and `daily.run`
+already baked `"degraded"` into their own status enums. All three research-run-family commands
+(`research.run`, `research.review`, `research.inspect`) were independently driven through the real
+LangGraph pipeline — a real gate pause and a real resume-to-completion, not a synthetic
+`OperationResult` — and confirmed honest on the CLI human renderer, `--json`, and the MCP
+serializer. A genuinely clean run was independently confirmed to remain unqualified, ruling out
+over-qualification. The regression tests added in this commit were independently proven
+non-vacuous by reverting the fix and observing them fail with the exact original defect.
 
-**Criterion 5 fails.** GOV-05's honest-verdict rendering was applied to `curation.run` only
-(`cli._emit_curation_result` uses `_verdict_line`); `research.run`/`research.review`/`research.inspect`
-(`_emit_run_result`) and `daily.run` (`_emit_daily_result`) still print an unqualified `✓ {message}`
-regardless of a non-clean `outcome`. This was found and named by the phase's own code review as WR-02,
-and left unfixed by design — the fix pass was explicitly scoped to the 5 Critical findings only, and
-WR-02 is a Warning. But WR-02 is not merely stylistic debt: it is a live violation of the phase's own
-fifth success criterion ("reports degraded on **every** surface that can report it"), and this
-verification reproduced it directly against running code on both remaining composition surfaces —
-`daily run`, whose degraded status is reachable any time an escalation is pending or a child run
-degrades (not a rare edge), and `research run`, whose retrieval-degraded flag can coexist with a
-`"completed"` status. The `--json` and MCP structured payloads are unaffected (the `outcome`/`degraded`
-fields ride on the envelope honestly); only the plain-text human renderer is dishonest.
-
-**Suggested fix (small, scoped):** replace the two remaining `typer.echo(f"✓ {result.message}")`
-call sites in `cli.py` (`_emit_run_result`, `_emit_daily_result`) with `_verdict_line(result)` — the
-same one-line change `_emit_curation_result` already received — and add a `daily.run` degraded row
-and a `research.run` completed-but-degraded row to `tests/integration/test_surface_honesty.py`'s
-table. This is materially smaller than any of the five Critical fixes already completed in this phase.
+**Status is `human_needed`, not `passed`**, solely because of the pre-existing, unrelated
+`ActivityList.jsx` human-verification item (D-17/18-05), which this commit did not touch and which
+was already routed to human verification in the first verification pass. All roadmap success
+criteria (5/5) are now verified.
 
 ---
 
-_Verified: 2026-07-30T19:06:00Z_
+_Verified: 2026-07-30T22:40:00Z_
 _Verifier: Claude (gsd-verifier)_
