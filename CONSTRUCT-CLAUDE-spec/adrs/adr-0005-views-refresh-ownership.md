@@ -110,6 +110,7 @@ Register `views.refresh` as its own capability and MCP tool, invoked by the thre
 ### Neutral
 
 - The views group remains a **registry holdout**. CLI and MCP reach the generator by two independent paths rather than through one registry record. RT-01/RT-02 stays open, and PROJECT.md's "Python is the deterministic enforcement layer" row keeps its ⚠️ revisit flag, which remains accurate for exactly this reason.
+  - **Superseded by Phase 18 / D-02 (2026-07-30).** The paragraph above no longer holds: `views validate` is now the `views.validate_data` registry capability, reached by CLI and MCP through the one seam. The generate side still keeps the independent CLI path this ADR describes (D-03), so the holdout is retired for validate and narrowed — not closed — for generate.
 - The refresh is not independently addressable. There is no `views.refresh` capability or MCP tool by design; the behaviour exists only as a tail side effect of the three workflow capabilities.
 
 ---

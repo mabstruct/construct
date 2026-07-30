@@ -955,80 +955,50 @@ def validate(
     Reads <install-root>/views/build/data/*.json and validates each file
     against its declared contract model. Reports per-file pass/fail.
 
-    The file→model map is not written here. ``construct.views.contracts`` holds
-    the single copy, and ``views generate`` validates against the same tables, so
-    the writer and this command cannot enumerate different files — the failure
-    mode that left ``<ws>/stats.json`` and ``<ws>/curation-history.json`` both
-    unmodelled by the generator and unchecked here. A file added to the tables is
-    gated on both sides at once.
+    D-02: the validation body no longer lives here. It is the ``views.validate_data``
+    capability, dispatched through the one seam — so an agent over MCP (and, from
+    Phase 19, over HTTP) reaches exactly this behaviour rather than a re-implementation
+    of it. This command's job is now rendering, plus the exit code.
+
+    The file→model map is not written here either. ``construct.views.contracts``
+    holds the single copy, and ``views generate`` validates against the same
+    tables, so the writer and this command cannot enumerate different files — the
+    failure mode that left ``<ws>/stats.json`` and ``<ws>/curation-history.json``
+    both unmodelled by the generator and unchecked here. A file added to the
+    tables is gated on both sides at once.
 
     ``--install-root`` is resolved at call time, not import time (WR-09).
     """
+    from construct.views.generate import BUILD_DATA_RELPATH
+
     install_root = install_root or Path.cwd()
-    from construct.views.contracts import (
-        GLOBAL_FILE_CONTRACTS,
-        PER_WORKSPACE_FILE_CONTRACTS,
-    )
-    from construct.views.models import unwrap_payload, validate_data
 
-    build_data_dir = install_root / "views" / "build" / "data"
-    if not build_data_dir.is_dir():
-        typer.echo(f"ERROR: No views data directory at {build_data_dir}")
+    try:
+        result = get_registry().invoke(
+            "views.validate_data", {"install_root": install_root}
+        )
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
+
+    data = result.data or {}
+    results: list[dict] = data.get("results", [])
+    all_passed: bool = bool(data.get("all_passed", False))
+
+    # The two pre-file refusals. Neither is a per-file verdict, so neither is
+    # rendered through the table below. The reason strings carry no filesystem
+    # path by construction (T-18-10) — this is the *local* caller, so it appends
+    # the path itself, the convention ``install_root_error`` documents and
+    # ``views generate`` above already follows.
+    if not results and not all_passed:
+        if data.get("missing_data_dir"):
+            typer.echo(
+                f"ERROR: No views data directory at {install_root / BUILD_DATA_RELPATH}"
+            )
+            raise typer.Exit(code=1)
+        reason = result.errors[0].reason if result.errors else result.message
+        typer.secho(f"ERROR: {reason} (at {install_root})", fg=typer.colors.RED)
         raise typer.Exit(code=1)
-
-    results: list[dict] = []
-    all_passed = True
-
-    # Global files
-    for filename, model_class in GLOBAL_FILE_CONTRACTS.items():
-        file_path = build_data_dir / filename
-        if not file_path.exists():
-            # A view file the generator did not emit is reported but is not a
-            # validation failure — completeness of the build is the generator's
-            # concern, not the schema gate's.
-            results.append({"file": filename, "status": "missing", "errors": []})
-            continue
-        try:
-            import json
-            raw = json.loads(file_path.read_text(encoding="utf-8"))
-            data = raw if isinstance(raw, dict) else {}
-            # Accept both the flat generator output and the envelope form.
-            payload = unwrap_payload(data)
-            validate_data(model_class, payload)
-            results.append({"file": filename, "status": "pass", "errors": []})
-        except Exception as exc:
-            results.append({"file": filename, "status": "fail", "errors": [str(exc)]})
-            all_passed = False
-
-    # Per-workspace files (walk workspace subdirs)
-    for ws_dir in sorted(build_data_dir.iterdir()):
-        if not ws_dir.is_dir():
-            continue
-        # D-18: ``stats.json`` and ``curation-history.json`` used to be absent
-        # from the list that stood here, so the two files with no contract model
-        # were also the two files this command never looked at. A gate the user's
-        # check does not invoke is not a gate. Iterating the shared table instead
-        # of a second hand-written list is what makes that class of omission
-        # impossible rather than merely fixed once. The per-workspace
-        # ``stats.json`` takes ``WorkspaceStatsFile``, never the global
-        # ``StatsFile`` above — same filename, different writer, different
-        # contract, which is why the two tables are separate.
-        for fname, mclass in PER_WORKSPACE_FILE_CONTRACTS.items():
-            fpath = ws_dir / fname
-            if not fpath.exists():
-                continue
-            try:
-                import json
-                raw = json.loads(fpath.read_text(encoding="utf-8"))
-                data = raw if isinstance(raw, dict) else {}
-                payload = unwrap_payload(data)
-                validate_data(mclass, payload)
-                rel = f"{ws_dir.name}/{fname}"
-                results.append({"file": rel, "status": "pass", "errors": []})
-            except Exception as exc:
-                rel = f"{ws_dir.name}/{fname}"
-                results.append({"file": rel, "status": "fail", "errors": [str(exc)]})
-                all_passed = False
 
     if json_output:
         typer.echo(json.dumps({"results": results, "all_passed": all_passed}, indent=2))

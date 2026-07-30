@@ -208,6 +208,21 @@ class ViewsGenerateDataInput(BaseModel):
     install_root: Path
 
 
+class ViewsValidateInput(BaseModel):
+    """Input for ``views.validate_data`` (D-02).
+
+    ``install_root``, spelled exactly as ``ViewsGenerateDataInput`` spells it, so
+    the two views capabilities present one vocabulary to an agent reading the
+    tool list. Same reason the generate side is install-root scoped rather than
+    workspace scoped: the validator walks the *children* of the data directory
+    the generator wrote.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    install_root: Path
+
+
 class WorkflowRunInput(BaseModel):
     # Retained per plan 18-02. A grep at the time of that change found no
     # remaining consumer: ``workflow.run`` was removed by D-10/CUR-05, and
@@ -410,12 +425,34 @@ def create_registry() -> CapabilityRegistry:
         input_model=ViewsGenerateDataInput,
         output_model=OperationResult,
         # V41-01 / FIX-01 (D-01): the permanent-failure placeholder is replaced
-        # by a real call into construct.views.generate.generate(). Per D-03 the
-        # `construct views generate` CLI command reaches the same function by an
-        # independent path rather than through this registry, so the two surfaces
-        # can drift — RT-01/RT-02 stays open for the views group deliberately.
+        # by a real call into construct.views.generate.generate().
+        #
+        # The registry-holdout note that stood here is retired by 18-03 / D-02:
+        # the views group is no longer a holdout, because `views validate` is the
+        # record below rather than a hand-written command body. What remains true
+        # of *this* record is narrower and is stated as itself: per D-03 the
+        # `construct views generate` CLI command still reaches generate() by an
+        # independent path, so the generate side keeps two paths where the
+        # validate side now has one. Closing that is a later decision, not an
+        # oversight (adr-0005).
         handler=_views_generate_handler,
         mcp_tool_name="construct_views_generate_data",
+    ))
+    registry.register(CapabilityRecord(
+        id="views.validate_data",
+        name="Validate Views Data",
+        description=(
+            "Validate the generated views JSON data files against their contract "
+            "models and report per-file pass/fail (read-only; writes nothing)"
+        ),
+        input_model=ViewsValidateInput,
+        output_model=OperationResult,
+        # D-02: the last hand-written command group joins the registry. Both
+        # names are set, so CLI and MCP reach it by the one path — and Phase 19's
+        # generated HTTP adapter inherits it without a code change.
+        handler=_views_validate_handler,
+        cli_name="views.validate_data",
+        mcp_tool_name="construct_views_validate_data",
     ))
     # D-10 / CUR-05: the legacy ``workflow.run`` capability existed only to drive
     # the fake-success curation-cycle step placeholder. It is removed here —
@@ -691,6 +728,90 @@ def _views_generate_handler(install_root) -> OperationResult:
             "workspace_stats": report.workspace_stats,
             "total_files_written": report.total_files_written,
             "warnings": list(report.warnings),
+        },
+    )
+
+
+def _views_validate_handler(*, install_root) -> OperationResult:
+    """D-02: run the views contract validator and report it.
+
+    Keyword-only, like every other handler the seam reaches. The heavy lifting —
+    including the install-root guard — lives in
+    ``construct.views.generate.validate_build_data``; this wraps its report in an
+    ``OperationResult`` exactly as ``_views_generate_handler`` wraps the
+    generator's, so the two views capabilities answer in one shape.
+
+    Like every sibling shim it NEVER raises: the MCP surface must not receive raw
+    exception text (which carries filesystem paths) and the CLI must not
+    traceback. Both failure channels reduce to an ``OperationResult`` naming only
+    a field-and-constraint reason or an exception class.
+
+    The two pre-file failures are kept distinguishable in ``data`` because the
+    CLI renders them differently — the install-root refusal is surfaced verbatim
+    (it carries no path by construction), while the missing-data-directory case
+    lets the *local* caller append the path itself, which is the convention
+    ``install_root_error`` documents.
+    """
+    # Deferred import — matches the convention for heavy views imports.
+    from construct.views.generate import validate_build_data
+
+    try:
+        report = validate_build_data(install_root)
+    except Exception as exc:  # noqa: BLE001 — surface parity with the sibling shims
+        reason = type(exc).__name__
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data failed: {reason}",
+            errors=[OperationError(field="views.validate", reason=reason, suggestion="")],
+            data={"failed": True},
+        )
+
+    if report.guard_error is not None:
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data refused the install root: {report.guard_error}",
+            errors=[
+                OperationError(
+                    field="views.install_root", reason=report.guard_error, suggestion=""
+                )
+            ],
+            data={"failed": True},
+        )
+
+    if report.missing_data_dir:
+        reason = "no views data directory under the install root"
+        return OperationResult(
+            success=False,
+            message=f"views.validate_data found nothing to validate: {reason}",
+            errors=[
+                OperationError(
+                    field="views.data_dir",
+                    reason=reason,
+                    suggestion="Run `construct views generate` first.",
+                )
+            ],
+            data={"results": [], "all_passed": False, "missing_data_dir": True},
+        )
+
+    passed = sum(1 for entry in report.results if entry["status"] == "pass")
+    failed = sum(1 for entry in report.results if entry["status"] == "fail")
+    missing = sum(1 for entry in report.results if entry["status"] == "missing")
+
+    return OperationResult(
+        success=report.all_passed,
+        message=(
+            f"Views data validation: {passed} passed, {failed} failed, "
+            f"{missing} missing"
+        ),
+        errors=[
+            OperationError(field=entry["file"], reason="; ".join(entry["errors"]), suggestion="")
+            for entry in report.results
+            if entry["status"] == "fail"
+        ],
+        data={
+            "results": report.results,
+            "all_passed": report.all_passed,
+            "missing_data_dir": False,
         },
     )
 

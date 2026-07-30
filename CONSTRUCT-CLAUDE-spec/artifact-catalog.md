@@ -111,6 +111,7 @@ Typer command path that binds to the capability's `cli_name`.
 | `research.score` | `construct research score` | `construct_research_score` |
 | `research.search` | `construct research search` | `construct_research_search` |
 | `views.generate_data` | `construct views generate` *(independent path — see holdout note)* | `construct_views_generate_data` |
+| `views.validate_data` | `construct views validate` | `construct_views_validate_data` |
 | `workflow.status` | `construct workflow status` | — (CLI-only) |
 | `workspace.init` | `construct init` | — (CLI-only) |
 | `workspace.status` | `construct status` | — (CLI-only) |
@@ -119,15 +120,20 @@ Typer command path that binds to the capability's `cli_name`.
 ### Non-registry CLI commands (independent path)
 
 These Typer leaves reach their function by an **independent path — they are NOT
-routed through the capability registry** (the recorded Phase 15 D-03 holdout for
-`views`/`spike`/`tag`, plus the `mcp` server launcher). They carry no capability
-id and no auto-derived MCP tool; the registry (28 caps / 22 MCP tools) and the
+routed through the capability registry** (the residue of the Phase 15 D-03 holdout
+for `views`/`spike`/`tag`, plus the `mcp` server launcher). They carry no capability
+id and no auto-derived MCP tool; the registry (29 caps / 23 MCP tools) and the
 Typer app (34 leaves) are two distinct sources, and this table documents the gap
 between them explicitly so no reader infers a registry route that does not exist.
 
+`construct views validate` **left this table in Phase 18 (D-02)** — it is the
+`views.validate_data` capability now, so it appears in the capability table above.
+`spike` stays out on purpose rather than by omission: `spike run --tool-path` is an
+arbitrary-executable primitive, and exposing it over MCP (and later HTTP) is a
+security decision, not an oversight.
+
 | CLI command | Surface | Notes |
 |-------------|---------|-------|
-| `construct views validate` | cli | Views data validation — independent path, not registry-routed |
 | `construct spike run` | cli | Experiment runner — independent path (SPK); no registry id |
 | `construct spike list` | cli | List recorded spikes — independent path |
 | `construct tag extract` | cli | Tag extraction (hybrid regex) — independent path |
@@ -135,10 +141,12 @@ between them explicitly so no reader infers a registry route that does not exist
 | `construct tag list` | cli | List extracted/approved tags — independent path |
 | `construct mcp` | cli | Launch the stdio MCP server — process entry point, not a capability |
 
-> **Holdout note (Phase 15 D-03):** `construct views generate` reaches the views
-> generator by an independent path rather than through the capability registry, so
-> `views.generate_data` carries no `cli_name`. Do not read the capability table
-> above as implying `views`/`spike`/`tag` route through the registry — they do not.
+> **Holdout note (Phase 15 D-03, narrowed by Phase 18 D-02):** `construct views
+> generate` still reaches the views generator by an independent path rather than
+> through the capability registry, so `views.generate_data` carries no `cli_name`.
+> Its sibling no longer does: `construct views validate` dispatches through the
+> seam. Do not read the capability table above as implying `spike`/`tag` route
+> through the registry — they do not.
 
 ### Search spine & LLM gates (narrative)
 

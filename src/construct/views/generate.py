@@ -77,6 +77,12 @@ class GenerateReport:
 INSTALL_ROOT_MARKER = "AGENTS.md"
 
 
+#: Where a build's data files live, relative to an install root. Named once so
+#: the validator, the ``views validate`` CLI rendering, and anything else that
+#: needs to *say* where it looked cannot disagree about the layout.
+BUILD_DATA_RELPATH = Path("views") / "build" / "data"
+
+
 def install_root_error(install_root: Path | str) -> str | None:
     """Return why *install_root* is not a CONSTRUCT install root, or ``None``.
 
@@ -97,6 +103,102 @@ def install_root_error(install_root: Path | str) -> str | None:
     if not (root / INSTALL_ROOT_MARKER).is_file():
         return f"not a CONSTRUCT installation: missing {INSTALL_ROOT_MARKER}"
     return None
+
+
+# ---------------------------------------------------------------------------
+# Validator
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ValidateReport:
+    """Result of a :func:`validate_build_data` run.
+
+    ``guard_error`` and ``missing_data_dir`` are the two ways a run can end
+    before any file is inspected, kept as distinct fields rather than folded into
+    ``results``: neither is a *file* verdict, and rendering them as one would put
+    a fabricated filename in front of the user.
+    """
+
+    all_passed: bool
+    results: list[dict] = field(default_factory=list)
+    guard_error: str | None = None
+    missing_data_dir: bool = False
+
+
+def _validate_one(file_path: Path, model_class: type[BaseModel], slot: str) -> dict:
+    """Validate one data file against its contract model, never raising."""
+    from construct.views.models import unwrap_payload, validate_data
+
+    try:
+        raw = json.loads(file_path.read_text(encoding="utf-8"))
+        data = raw if isinstance(raw, dict) else {}
+        # Accept both the flat generator output and the envelope form.
+        validate_data(model_class, unwrap_payload(data))
+    except Exception as exc:  # noqa: BLE001 — a bad file is a verdict, not a crash
+        return {"file": slot, "status": "fail", "errors": [str(exc)]}
+    return {"file": slot, "status": "pass", "errors": []}
+
+
+def validate_build_data(install_root: Path | str) -> ValidateReport:
+    """Validate every views data file under *install_root* against its contract.
+
+    This is the body of the ``views validate`` command, lifted out of ``cli.py``
+    so ``views.validate_data`` can register it as a capability (D-02) and CLI,
+    MCP and — from Phase 19 — HTTP all reach it by the one path.
+
+    The install-root guard runs FIRST and unconditionally. Registration is what
+    makes ``install_root`` agent-supplied over MCP, so the marker check stopped
+    being an internal convenience and became a boundary control (T-18-07); its
+    reason names no filesystem path, so a caller that must not echo locations can
+    surface it verbatim (T-18-10).
+
+    The file→model map is not written here either. ``construct.views.contracts``
+    holds the single copy and ``views generate`` validates against the same
+    tables, so the writer and this validator cannot enumerate different files.
+    """
+    guard = install_root_error(install_root)
+    if guard is not None:
+        return ValidateReport(all_passed=False, guard_error=guard)
+
+    data_dir = Path(install_root) / BUILD_DATA_RELPATH
+    if not data_dir.is_dir():
+        return ValidateReport(all_passed=False, missing_data_dir=True)
+
+    results: list[dict] = []
+
+    # Global files. A file the generator did not emit is reported but is not a
+    # failure — completeness of the build is the generator's concern, not the
+    # schema gate's.
+    for filename, model_class in GLOBAL_FILE_CONTRACTS.items():
+        file_path = data_dir / filename
+        if not file_path.exists():
+            results.append({"file": filename, "status": "missing", "errors": []})
+            continue
+        results.append(_validate_one(file_path, model_class, filename))
+
+    # Per-workspace files. D-18: ``stats.json`` and ``curation-history.json`` used
+    # to be absent from the list that stood in cli.py, so the two files with no
+    # contract model were also the two files this command never looked at. A gate
+    # the user's check does not invoke is not a gate. Iterating the shared table
+    # is what makes that class of omission impossible rather than merely fixed
+    # once. The per-workspace ``stats.json`` takes ``WorkspaceStatsFile``, never
+    # the global ``StatsFile`` above — same filename, different writer, different
+    # contract, which is why the two tables are separate.
+    for ws_dir in sorted(data_dir.iterdir()):
+        if not ws_dir.is_dir():
+            continue
+        for filename, model_class in PER_WORKSPACE_FILE_CONTRACTS.items():
+            file_path = ws_dir / filename
+            if not file_path.exists():
+                continue
+            slot = f"{ws_dir.name}/{filename}"
+            results.append(_validate_one(file_path, model_class, slot))
+
+    return ValidateReport(
+        all_passed=not any(entry["status"] == "fail" for entry in results),
+        results=results,
+    )
 
 
 # ---------------------------------------------------------------------------

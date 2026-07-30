@@ -62,6 +62,9 @@ def test_mcp_tool_count() -> None:
         "construct_add_connection",
         "construct_graph_status",
         "construct_views_generate_data",
+        # 18-03 / D-02: registration is what puts `views validate` on this
+        # surface at all — it was CLI-only while its body lived in cli.py.
+        "construct_views_validate_data",
         "construct_ingest_source",
         "construct_help_suggest",
         "construct_ask_domain",
@@ -126,6 +129,9 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         # workspace's *parent* — discover_workspaces scans children, and handing
         # it the workspace itself would discover nothing.
         "construct_views_generate_data": {"install_root": str(Path(ws).parent)},
+        # 18-03 / D-02: same scoping and the same field spelling as its generate
+        # sibling — the two views capabilities present one vocabulary.
+        "construct_views_validate_data": {"install_root": str(Path(ws).parent)},
         "construct_ingest_source": {"workspace": ws, "source": "A contract-test note"},
         "construct_help_suggest": {"workspace": ws},
         "construct_ask_domain": {"workspace_path": ws, "domain_id": "cosmology", "question": "What is known?"},
