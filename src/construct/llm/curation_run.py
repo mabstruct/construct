@@ -1292,8 +1292,8 @@ def apply_promotions(state: CurationRunState) -> dict:
 def apply_connections(state: CurationRunState) -> dict:
     """Write APPROVED connections via ``add_connection`` (idempotent dedup).
 
-    For each proposal of ``kind="connection"`` whose resolved verdict is not a
-    reject, persist a NEW typed edge via
+    For each proposal of ``kind="connection"`` whose resolved verdict is exactly
+    ``"approve"``, persist a NEW typed edge via
     ``add_connection(..., created_by=ConnectionAuthor.construct)``.
     ``add_connection`` already dedups (a duplicate ``(from, to, type)`` returns
     ``success=True, "Connection already exists"`` — knowledge.py:416-423), so a
@@ -1320,7 +1320,24 @@ def apply_connections(state: CurationRunState) -> dict:
         from_id = payload.get("from_card_id")
         to_id = payload.get("to_card_id")
         key = f"{from_id}->{to_id}"
-        if decision == "reject":
+        # DEFAULT-DENY, exactly like both siblings: ``apply_promotions`` requires
+        # the literal ``"promote"`` and ``apply_archives`` the literal
+        # ``"archive"``. This node used to invert that — it refused only a literal
+        # ``"reject"`` and wrote a canonical edge on every other token. Since
+        # ``_normalize_decision`` passes an unrecognised value through verbatim,
+        # ``{"<pid>": "skip"}`` created an edge; and ``"skip"`` is not
+        # hypothetical, it is the *research* review gate's own reject vocabulary,
+        # which an agent or operator reusing that decision map would send here.
+        # That is T-18-03's class ("a payload the user did not intend performed a
+        # canonical write") in the one apply node nobody re-checked (CR-02).
+        #
+        # ``"approve"`` is the approved token because it is the ``decision`` the
+        # connection producer stamps on every proposal it enqueues, and
+        # ``_build_resume_decisions`` expands ``approve_all`` to each proposal's
+        # own recommended decision. ``_normalize_decision("approve", "approve")``
+        # therefore resolves to ``"approve"`` on both the synonym path and the
+        # structured per-item path.
+        if decision != "approve":
             rejected.append(key)
             events.append(_emit(workspace, "gate_review_rejected", key, "connection rejected"))
             continue

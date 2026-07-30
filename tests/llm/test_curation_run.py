@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 # The five steps that must carry concrete findings (deferred nodes excluded).
@@ -997,6 +998,96 @@ def test_resume_with_no_decisions_is_rejected(curation_workspace, monkeypatch):
     for entry in queue:
         assert entry["proposal_id"] in rejected.message
     assert _workspace_state(curation_workspace) == before, "no recommendation may be applied"
+
+
+def _connection_apply_state(ws: _Path, decision: str) -> dict:
+    """A one-proposal connection queue plus the resume that decided it.
+
+    Driven at the apply node rather than through ``run``/``review`` because the
+    ``curation_workspace`` fixture's cards produce no bridge candidates, so
+    ``connection_maintenance`` enqueues no connection proposal and an end-to-end
+    arm would assert nothing. The node still resolves the decision through the
+    real path — ``_decision_map`` → ``_check_coverage`` → ``_normalize_decision``
+    — so the token handling under test is the production one, not a stand-in.
+    """
+    from construct.llm.curation_run import CurationProposal
+
+    proposal = CurationProposal(
+        kind="connection",
+        decision="approve",
+        payload={
+            "from_card_id": "fresh-card",
+            "to_card_id": "stale-orphan-card",
+            "connection_type": "extends",
+            "reasoning": "typed by the connection gate",
+        },
+    ).model_dump(mode="json")
+
+    return {
+        "workspace_path": str(ws),
+        "run_id": "cur-conn-deny",
+        "gate_queue": [proposal],
+        "decisions": {proposal["proposal_id"]: decision},
+    }
+
+
+@pytest.mark.parametrize("token", ["skip", "hold", "no", "promte", "escalate", ""])
+def test_unrecognised_decision_token_writes_no_connection(curation_workspace, token):
+    """CR-02: the connection apply node must be default-DENY like both its siblings.
+
+    ``apply_promotions`` requires the exact token ``"promote"`` and
+    ``apply_archives`` requires the exact token ``"archive"``; the connection node
+    only refused a literal ``"reject"`` and wrote a canonical edge on **every
+    other** token. ``_normalize_decision`` passes an unrecognised value through
+    verbatim, so ``"skip"`` — which is the *research* review gate's own reject
+    vocabulary, and the token an agent or operator reusing that decision map would
+    reasonably send — authorised a write to ``connections.json``.
+
+    That is T-18-03's class ("a payload the user did not intend performed a
+    canonical write") surviving in the one apply node nobody re-checked. The
+    parametrisation is the point: none of these tokens is an approval, so none may
+    write, and a later vocabulary change cannot re-open the hole by adding one
+    more synonym.
+    """
+    from construct.llm import curation_run
+
+    before = (curation_workspace / "connections.json").read_bytes()
+
+    out = curation_run.apply_connections(_connection_apply_state(curation_workspace, token))
+
+    assert (curation_workspace / "connections.json").read_bytes() == before, (
+        f"decision token {token!r} performed a canonical write"
+    )
+    assert out["connections_added"] == []
+    assert out["rejected"] == ["fresh-card->stale-orphan-card"]
+
+
+def test_connection_approval_still_writes(curation_workspace):
+    """The other half of CR-02's default-deny: the approved token must still apply.
+
+    Default-deny is only correct if the door still opens for the vocabulary the
+    gate actually teaches. The connection producer enqueues every proposal with
+    ``decision="approve"`` and ``_build_resume_decisions`` expands ``approve_all``
+    to each proposal's own recommended decision, so ``"approve"`` is the approved
+    token. It is read off the proposal here rather than hardcoded, so a producer
+    that changes its recommendation fails this test instead of silently disarming
+    the gate.
+    """
+    from construct.llm import curation_run
+
+    state = _connection_apply_state(curation_workspace, "approve")
+    assert state["gate_queue"][0]["decision"] == "approve"
+    state["decisions"] = {
+        state["gate_queue"][0]["proposal_id"]: state["gate_queue"][0]["decision"]
+    }
+
+    before = _connection_keys(curation_workspace)
+    out = curation_run.apply_connections(state)
+
+    assert out["connections_added"] == ["fresh-card->stale-orphan-card:extends"]
+    assert _connection_keys(curation_workspace) - before == {
+        ("fresh-card", "stale-orphan-card", "extends")
+    }
 
 
 def test_legacy_positional_payload_is_rejected(curation_workspace, monkeypatch):
