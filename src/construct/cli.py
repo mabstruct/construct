@@ -11,8 +11,8 @@ from typing import Any, List, Optional
 
 import typer
 
-from construct.schemas.card import CardAuthor, Lifecycle
-from construct.schemas.workspace import ConnectionAuthor, ConnectionType
+from construct.schemas.card import Lifecycle
+from construct.schemas.workspace import ConnectionType
 from construct.services.init import DomainInitInput, WorkspaceInitError, initialize_workspace
 from construct.services.knowledge import OperationResult
 from construct.capabilities.catalog import get_registry
@@ -83,11 +83,10 @@ def init(path: Path) -> None:
 def validate(path: Path) -> None:
     """Validate a CONSTRUCT workspace."""
     try:
-        cap = get_registry().get("workspace.validate")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    report = cap.handler(path)
+        report = get_registry().invoke("workspace.validate", {"path": path})
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     for finding in report.errors:
         typer.echo(f"ERROR {finding.path}: {finding.message}")
     for finding in report.warnings:
@@ -101,11 +100,10 @@ def validate(path: Path) -> None:
 def status(path: Path) -> None:
     """Show workspace ownership categories."""
     try:
-        cap = get_registry().get("workspace.status")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    items = cap.handler(path)
+        items = get_registry().invoke("workspace.status", {"path": path})
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     categories = {
         "canonical": "Canonical",
         "support": "Support",
@@ -137,11 +135,10 @@ def help_cmd(
     """Show help information and workspace-aware suggestions."""
     if suggest:
         try:
-            cap = get_registry().get("help.suggest")
-        except KeyError:
-            typer.echo("ERROR: Capability not found.")
-            raise typer.Exit(code=1)
-        result = cap.handler(workspace)
+            result = get_registry().invoke("help.suggest", {"workspace": workspace})
+        except (CapabilityInputError, CapabilityNotFoundError) as exc:
+            typer.echo(f"ERROR {exc}")
+            raise typer.Exit(code=1) from exc
         _display_result(result, json_output)
     else:
         typer.echo("Run `construct help --suggest` for workspace-aware suggestions.")
@@ -218,11 +215,10 @@ def status(
 ) -> None:
     """Check active workflow status."""
     try:
-        cap = get_registry().get("workflow.status")
-    except KeyError:
-        typer.echo("ERROR: Capability not found.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace)
+        result = get_registry().invoke("workflow.status", {"workspace": workspace})
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -260,25 +256,25 @@ def source(
     Metadata flags let the orchestrator persist what it already extracted from a
     source instead of relying on the pipeline's conservative defaults.
     """
+    payload = {
+        "workspace": workspace,
+        "source": source,
+        "domain_hint": domain,
+        "author": author,
+        "title": title,
+        "relevance": relevance,
+        "source_tier": tier,
+        "key_findings": finding or None,
+        "content_categories": category or None,
+        "year": year,
+        "venue": venue,
+        "search_cluster": cluster,
+    }
     try:
-        cap = get_registry().get("ingest.source")
-    except KeyError:
-        typer.echo("ERROR: Capability not found.")
-        raise typer.Exit(code=1)
-    result = cap.handler(
-        workspace,
-        source=source,
-        domain_hint=domain,
-        author=author,
-        title=title,
-        relevance=relevance,
-        source_tier=tier,
-        key_findings=finding or None,
-        content_categories=category or None,
-        year=year,
-        venue=venue,
-        search_cluster=cluster,
-    )
+        result = get_registry().invoke("ingest.source", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -308,17 +304,17 @@ def domain(
     Uses the LangGraph L2 gate to retrieve relevant cards, synthesize
     an answer, and return structured citations with confidence scores.
     """
+    payload = {
+        "workspace_path": str(workspace),
+        "domain_id": domain_id,
+        "question": question,
+        "max_cards": max_cards,
+    }
     try:
-        cap = get_registry().get("ask.domain")
-    except KeyError:
-        typer.echo("ERROR: Capability 'ask.domain' not found. Ensure Phase 5 is complete.")
-        raise typer.Exit(code=1)
-    result = cap.handler(
-        workspace_path=str(workspace),
-        domain_id=domain_id,
-        question=question,
-        max_cards=max_cards,
-    )
+        result = get_registry().invoke("ask.domain", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -347,11 +343,12 @@ def detect(
     Results are written to log/bridge-candidates.json.
     """
     try:
-        cap = get_registry().get("bridge.detect")
-    except KeyError:
-        typer.echo("ERROR: Capability 'bridge.detect' not found. Ensure Phase 5 is complete.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace_path=str(workspace))
+        result = get_registry().invoke(
+            "bridge.detect", {"workspace_path": str(workspace)}
+        )
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -401,24 +398,26 @@ def research_search_cmd(
         typer.echo("ERROR: specify exactly one of --query, --queries, or --cluster-id")
         raise typer.Exit(code=1)
 
-    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    # Only the selected mode's key is placed in the payload. ``ResearchSearchInput``
+    # requires exactly one of query/queries/cluster_id to be non-None, so sending
+    # all three (two of them None) would still validate — but omitting the
+    # unselected keys keeps the payload a description of what the user asked for.
+    payload: dict[str, object] = {"workspace_path": str(workspace)}
     if query is not None:
-        handler_kwargs["query"] = query
+        payload["query"] = query
     elif queries is not None:
-        handler_kwargs["queries"] = _parse_csv(queries)
+        payload["queries"] = _parse_csv(queries)
     else:
-        handler_kwargs["cluster_id"] = cluster_id
+        payload["cluster_id"] = cluster_id
 
     if max_results is not None:
-        handler_kwargs["max_results"] = max_results
+        payload["max_results"] = max_results
 
     try:
-        cap = get_registry().get("research.search")
-    except KeyError:
-        typer.echo("ERROR: Capability 'research.search' not found. Ensure Phase 8 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("research.search", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -507,18 +506,16 @@ def research_score_cmd(
         typer.echo(f"ERROR: invalid results payload: {exc}")
         raise typer.Exit(code=1) from exc
 
-    handler_kwargs = {
+    payload = {
         "workspace_path": str(workspace),
         "results": flattened,
     }
 
     try:
-        cap = get_registry().get("research.score")
-    except KeyError:
-        typer.echo("ERROR: Capability 'research.score' not found. Ensure Phase 9 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("research.score", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
 
     if json_output:
         _display_result(result, json_output=True)
@@ -574,17 +571,15 @@ def research_run_cmd(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Start a durable research run; pauses at the human-review gate (no writes before approval)."""
-    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    payload: dict[str, object] = {"workspace_path": str(workspace)}
     if provider is not None:
-        handler_kwargs["provider_override"] = provider
+        payload["provider_override"] = provider
 
     try:
-        cap = get_registry().get("research.run")
-    except KeyError:
-        typer.echo("ERROR: Capability 'research.run' not found. Ensure Phase 10 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("research.run", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_run_result(result, json_output)
 
 
@@ -616,7 +611,7 @@ def research_review_cmd(
         typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
         raise typer.Exit(code=1)
 
-    handler_kwargs: dict[str, object] = {
+    payload: dict[str, object] = {
         "workspace_path": str(workspace),
         "run_id": run_id,
         "checkpoint_id": checkpoint_id,
@@ -630,22 +625,20 @@ def research_review_cmd(
 
     if raw:
         try:
-            handler_kwargs["decisions"] = json.loads(raw)
+            payload["decisions"] = json.loads(raw)
         except json.JSONDecodeError as exc:
             typer.echo(f"ERROR: invalid decisions payload: {exc}")
             raise typer.Exit(code=1) from exc
     if approve_all:
-        handler_kwargs["approve_all"] = True
+        payload["approve_all"] = True
     if reject_all:
-        handler_kwargs["reject_all"] = True
+        payload["reject_all"] = True
 
     try:
-        cap = get_registry().get("research.review")
-    except KeyError:
-        typer.echo("ERROR: Capability 'research.review' not found. Ensure Phase 10 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("research.review", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_run_result(result, json_output)
 
 
@@ -656,15 +649,13 @@ def research_inspect_cmd(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Report a run's pending review state (read-only; never resumes or writes)."""
-    handler_kwargs = {"workspace_path": str(workspace), "run_id": run_id}
+    payload = {"workspace_path": str(workspace), "run_id": run_id}
 
     try:
-        cap = get_registry().get("research.inspect")
-    except KeyError:
-        typer.echo("ERROR: Capability 'research.inspect' not found. Ensure Phase 10 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("research.inspect", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_run_result(result, json_output)
 
 
@@ -713,13 +704,16 @@ def curation_run_cmd(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Run the deterministic curation cycle (integrity, decay, orphan, connection-health, report)."""
+    # D-15 / the Phase 11 exit-code contract: a *degraded* run still exits 0.
+    # Conversion changes the dispatch path only — ``_emit_curation_result`` is the
+    # sole owner of this command's exit code and is untouched.
     try:
-        cap = get_registry().get("curation.run")
-    except KeyError:
-        typer.echo("ERROR: Capability 'curation.run' not found. Ensure Phase 11 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(workspace_path=str(workspace))
+        result = get_registry().invoke(
+            "curation.run", {"workspace_path": str(workspace)}
+        )
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_curation_result(result, json_output)
 
 
@@ -731,12 +725,12 @@ def curation_inspect_cmd(
 ) -> None:
     """Report a curation run's persisted state (read-only; never re-runs)."""
     try:
-        cap = get_registry().get("curation.inspect")
-    except KeyError:
-        typer.echo("ERROR: Capability 'curation.inspect' not found. Ensure Phase 11 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(workspace_path=str(workspace), run_id=run_id)
+        result = get_registry().invoke(
+            "curation.inspect", {"workspace_path": str(workspace), "run_id": run_id}
+        )
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_curation_result(result, json_output)
 
 
@@ -770,7 +764,7 @@ def curation_review_cmd(
         typer.echo("ERROR: specify at most one of --decisions-file, --approve-all, or --reject-all")
         raise typer.Exit(code=1)
 
-    handler_kwargs: dict[str, object] = {
+    payload: dict[str, object] = {
         "workspace_path": str(workspace),
         "run_id": run_id,
         "checkpoint_id": checkpoint_id,
@@ -784,22 +778,20 @@ def curation_review_cmd(
 
     if raw:
         try:
-            handler_kwargs["decisions"] = json.loads(raw)
+            payload["decisions"] = json.loads(raw)
         except json.JSONDecodeError as exc:
             typer.echo(f"ERROR: invalid decisions payload: {exc}")
             raise typer.Exit(code=1) from exc
     if approve_all:
-        handler_kwargs["approve_all"] = True
+        payload["approve_all"] = True
     if reject_all:
-        handler_kwargs["reject_all"] = True
+        payload["reject_all"] = True
 
     try:
-        cap = get_registry().get("curation.review")
-    except KeyError:
-        typer.echo("ERROR: Capability 'curation.review' not found. Ensure Phase 12 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("curation.review", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_curation_result(result, json_output)
 
 
@@ -856,12 +848,10 @@ def daily_run_cmd(
 ) -> None:
     """Run the non-blocking daily cycle (research.run → curation.run → graph.status)."""
     try:
-        cap = get_registry().get("daily.run")
-    except KeyError:
-        typer.echo("ERROR: Capability 'daily.run' not found. Ensure Phase 13 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(workspace_path=str(workspace))
+        result = get_registry().invoke("daily.run", {"workspace_path": str(workspace)})
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_daily_result(result, json_output)
 
 
@@ -873,12 +863,12 @@ def daily_inspect_cmd(
 ) -> None:
     """Read a persisted daily-run receipt (read-only; never re-runs)."""
     try:
-        cap = get_registry().get("daily.inspect")
-    except KeyError:
-        typer.echo("ERROR: Capability 'daily.inspect' not found. Ensure Phase 13 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(workspace_path=str(workspace), run_id=run_id)
+        result = get_registry().invoke(
+            "daily.inspect", {"workspace_path": str(workspace), "run_id": run_id}
+        )
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _emit_daily_result(result, json_output)
 
 
@@ -1297,7 +1287,11 @@ def create(
     domain_list = [d.strip() for d in domains.split(",") if d.strip()]
     category_list = [c.strip() for c in content_categories.split(",") if c.strip()]
 
-    card_data: dict[str, object] = {
+    # The card_data dict this command used to build by hand is now built by
+    # ``_build_card_data`` inside the capability's marshalling shim, from these
+    # declared field names — one marshaller instead of two copies of it.
+    payload: dict[str, object] = {
+        "workspace": workspace,
         "title": title,
         "epistemic_type": epistemic_type,
         "domains": domain_list,
@@ -1305,16 +1299,13 @@ def create(
         "source_tier": source_tier,
         "content_categories": category_list,
         "author": author,
+        "summary": summary,
     }
-    if summary:
-        card_data["_summary"] = summary
-
     try:
-        cap = get_registry().get("knowledge.card.create")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, card_data, author=CardAuthor(author))
+        result = get_registry().invoke("knowledge.card.create", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1332,28 +1323,50 @@ def edit(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Edit an existing knowledge card."""
-    updates: dict[str, object] = {}
-    if title is not None:
-        updates["title"] = title
-    if confidence is not None:
-        updates["confidence"] = confidence
-    if source_tier is not None:
-        updates["source_tier"] = source_tier
-    if lifecycle is not None:
-        updates["lifecycle"] = lifecycle
-    if summary is not None:
-        updates["_summary"] = summary
+    # T-18-15 — the data-loss edge this plan's prohibition names. ``card edit`` is a
+    # PARTIAL update: a field the user did not name must keep its stored value. The
+    # seam dispatches ``handler(**model.model_dump())``, and ``model_dump()``
+    # materialises a default for every declared field — so a title-only edit would
+    # arrive at the handler carrying ``summary=None``, ``lifecycle=None`` and the
+    # rest, and any marshaller that forwarded them would blank stored prose.
+    #
+    # Two independent guards, deliberately both kept:
+    #   1. HERE — a key the user did not supply is never put in the payload
+    #      (exclude-unset semantics, built at the call site).
+    #   2. In ``catalog._build_card_updates`` — it copies a field into the updates
+    #      dict only ``if value is not None``, so a materialised default cannot
+    #      reach ``edit_card`` even if a future caller sends one.
+    # Guard 2 alone is sufficient today; guard 1 means a caller must go out of its
+    # way to express "blank this". This repository has destroyed user prose twice
+    # through this exact class of defect (the ``archive_card`` body destruction
+    # closed by 4e2b909, unrecoverable), so a blanked field is a data-loss bug.
+    supplied: dict[str, object] = {
+        name: value
+        for name, value in (
+            ("title", title),
+            ("confidence", confidence),
+            ("source_tier", source_tier),
+            ("lifecycle", lifecycle),
+            ("summary", summary),
+        )
+        if value is not None
+    }
 
-    if not updates:
+    if not supplied:
         typer.echo("No updates provided. Use --title, --confidence, etc. to specify changes.")
         raise typer.Exit(code=1)
 
+    payload: dict[str, object] = {
+        "workspace": workspace,
+        "card_id": card_id,
+        "author": author,
+        **supplied,
+    }
     try:
-        cap = get_registry().get("knowledge.card.edit")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, card_id, updates, author=CardAuthor(author))
+        result = get_registry().invoke("knowledge.card.edit", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1366,12 +1379,12 @@ def archive(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Archive a knowledge card. Preserves connections."""
+    payload = {"workspace": workspace, "card_id": card_id, "author": author}
     try:
-        cap = get_registry().get("knowledge.card.archive")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, card_id, author=CardAuthor(author))
+        result = get_registry().invoke("knowledge.card.archive", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1393,17 +1406,15 @@ def card_evaluate_cmd(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Evaluate non-mature cards through the L3 promotion gate (read-only; no writes)."""
-    handler_kwargs: dict[str, object] = {"workspace_path": str(workspace)}
+    payload: dict[str, object] = {"workspace_path": str(workspace)}
     if provider is not None:
-        handler_kwargs["provider_override"] = provider
+        payload["provider_override"] = provider
 
     try:
-        cap = get_registry().get("card.evaluate")
-    except KeyError:
-        typer.echo("ERROR: Capability 'card.evaluate' not found. Ensure Phase 12 is complete.")
-        raise typer.Exit(code=1)
-
-    result = cap.handler(**handler_kwargs)
+        result = get_registry().invoke("card.evaluate", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1435,15 +1446,22 @@ def connection_add(
         typer.echo(f"Invalid connection type: {conn_type}. Valid: {[e.value for e in ConnectionType]}")
         raise typer.Exit(code=1)
 
+    # ``ctype.value`` rather than the enum member: ``ConnectionAddInput.conn_type``
+    # is declared ``str`` and the shim re-coerces it, so handing the seam a plain
+    # string keeps the payload exactly the shape an MCP client would send.
+    payload = {
+        "workspace": workspace,
+        "from_id": from_id,
+        "to_id": to_id,
+        "conn_type": ctype.value,
+        "note": note,
+        "created_by": created_by,
+    }
     try:
-        cap = get_registry().get("knowledge.connection.add")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(
-        workspace, from_id, to_id, ctype,
-        note=note, created_by=ConnectionAuthor(created_by),
-    )
+        result = get_registry().invoke("knowledge.connection.add", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1463,12 +1481,17 @@ def connection_remove(
         typer.echo(f"Invalid connection type: {conn_type}")
         raise typer.Exit(code=1)
 
+    payload = {
+        "workspace": workspace,
+        "from_id": from_id,
+        "to_id": to_id,
+        "conn_type": ctype.value,
+    }
     try:
-        cap = get_registry().get("knowledge.connection.remove")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, from_id, to_id, ctype)
+        result = get_registry().invoke("knowledge.connection.remove", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
@@ -1507,12 +1530,16 @@ def connection_list(
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """List typed connections. Optionally filter by card or include archived."""
+    payload = {
+        "workspace": workspace,
+        "card_id": card_id,
+        "include_archived": include_archived,
+    }
     try:
-        cap = get_registry().get("knowledge.connection.list")
-    except KeyError:
-        typer.echo("ERROR: Capability not found. Ensure the registry is properly initialized.")
-        raise typer.Exit(code=1)
-    result = cap.handler(workspace, card_id=card_id, include_archived=include_archived)
+        result = get_registry().invoke("knowledge.connection.list", payload)
+    except (CapabilityInputError, CapabilityNotFoundError) as exc:
+        typer.echo(f"ERROR {exc}")
+        raise typer.Exit(code=1) from exc
     _display_result(result, json_output)
 
 
