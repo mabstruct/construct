@@ -31,3 +31,32 @@ Out-of-scope discoveries logged during execution. Not fixed by the plan that fou
 - **Scope:** pre-existing and unrelated to this plan — reproduces on the base commit. Fixing it
   means either adding a `.gitkeep` to the fixture directories or relaxing the assertion; both
   touch fixtures another plan may own.
+
+## From 18-08 (surface honesty)
+
+### 3. `research_run.update_seeds_and_log` emits `gate_review_approved` from the DECISION, not from the write
+
+- **Found during:** Task 1, while checking the plan's conditional clause "give the research
+  graph's gate the same treatment **if it has an escalate path**".
+- **What the check found:** research_run has **no** escalate path — `grep -c 'escalat'
+  src/construct/llm/research_run.py` returns **0** — so the escalate half of the clause is
+  genuinely inapplicable and no change was required for it. But the same *approval-without-a-write*
+  defect Task 2 fixed in curation exists in the research graph: `update_seeds_and_log`
+  (`research_run.py:919-932`) emits `gate_review_approved` for every finding whose **decision** is
+  in `_INGEST_ACTIONS`, while `ingest_batch` (`:584-615`) separately tracks `skipped_existing` for
+  refs and cards that **already existed and were therefore not written**. An idempotent research
+  re-run therefore records approvals for ingests that did not happen — the T-18-06 class, in the
+  other graph.
+- **Why it is not fixed here:** Task 2's declared `<files>` are `curation_run.py` and
+  `tests/llm/test_curation_run.py`; its `<action>` says "in all three apply nodes", meaning
+  curation's; and D-16 enumerates exactly three sites, all in `curation_run.py`
+  (`:872`, `:923`, `:968`). Fixing research honestly needs assertions in
+  `tests/llm/test_research_run.py`, which this plan does not own and which plan 18-06 records as
+  recently contended. Fixing it silently — or fixing it without a test — would be worse than
+  naming it.
+- **Bearing on the phase:** criterion 4's second half ("no approval event exists for a decision
+  that was never applied") is **met for the curation graph, proven by the event-count invariant**
+  in `tests/llm/test_curation_run.py::test_approval_event_count_equals_applied_count`. Whether the
+  criterion was meant to span the research graph as well is a verifier's call, not an executor's.
+- **Decision needed from:** phase verification — either accept the curation scoping (as D-23 did
+  for GOV-04's ingestion finding) or open a follow-up for the research gate.
