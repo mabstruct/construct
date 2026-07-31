@@ -418,8 +418,29 @@ additive to the planning decisions above; they do not supersede them.
   Structurally the same call as [[D-23]]: the phase closes the defect class where the phase
   scoped it, and names the remaining instance instead of quietly widening or quietly ignoring it.
 
+- **D-25 — `workflow.api_coverage_gate` disabled as a false positive (accepted 2026-07-31, verify:pre).**
+  The `api-coverage.verify-pre` gate blocked UAT, demanding a COVERAGE.md matrix enumerating
+  every capability as INTEGRATE or OPT-OUT. It matched on a single signal,
+  `{verb: "wiring", noun: "mcp"}`.
+
+  The gate exists for phases that integrate an **external** API, where the risk is silently
+  covering a fraction of the endpoints and calling it done. Phase 18 integrated no external
+  API — it refactored CONSTRUCT's own internal dispatch seam so CLI and MCP route through one
+  validating path. The `mcp` noun the detector matched is CONSTRUCT's own stdio surface.
+
+  Disabled project-wide rather than overridden per-phase, since the same signal would fire on
+  any future phase touching MCP wiring. Recorded here because that is a broader blast radius
+  than [[D-22]]'s phase-scoped `ui.safety-gate` override: if a later phase genuinely integrates
+  a third-party API, re-enable it with
+  `gsd-tools query config-set workflow.api_coverage_gate true`.
+
+  Counter-argument, recorded because it is not weak: Phase 19 generates an HTTP endpoint per
+  capability and wants full-coverage-by-default written down, and 18-03's parity table is
+  already close to the matrix the gate asks for. A COVERAGE.md may be genuinely worth writing —
+  just as Phase 19 planning input, not as a Phase 18 sealing artifact.
+
 ---
 
 *Phase: 18-Contract & Governance Foundations*
 *Context gathered: 2026-07-26*
-*Execution-time decisions appended: 2026-07-27, 2026-07-30*
+*Execution-time decisions appended: 2026-07-27, 2026-07-30, 2026-07-31*
