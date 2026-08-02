@@ -140,7 +140,7 @@ Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Sam
 **Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
 **Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
 **Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
-**Plans**: 3/10 plans executed
+**Plans**: 6/10 plans executed
 
 Plans:
 **Wave 1**
@@ -151,9 +151,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 19-04-PLAN.md — HTTP-03 at the seam: creation mode for `workspace.init`, launch-context `install_root` for `views.*`, classification cardinality, and the str/Path coercion proof over all 26 (wave 2)
-- [ ] 19-05-PLAN.md — HTTP-02: the discovery endpoint, the machine-read COVERAGE ledger, and a non-vacuous cardinality coverage guard (wave 2)
-- [ ] 19-06-PLAN.md — HTTP-05: the full Host/Origin/token matrix in one guard, and the proof that rejection precedes any capability effect (wave 2)
+- [x] 19-04-PLAN.md — HTTP-03 at the seam: creation mode for `workspace.init`, launch-context `install_root` for `views.*`, classification cardinality, and the str/Path coercion proof over all 26 (wave 2)
+- [x] 19-05-PLAN.md — HTTP-02: the discovery endpoint, the machine-read COVERAGE ledger, and a non-vacuous cardinality coverage guard (wave 2)
+- [x] 19-06-PLAN.md — HTTP-05: the full Host/Origin/token matrix in one guard, and the proof that rejection precedes any capability effect (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -418,7 +418,7 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
 | 18. Contract & Governance Foundations | v0.5 | 8/8 | In Progress|  |
-| 19. HTTP API over the Capability Registry | v0.5 | 3/10 | In Progress|  |
+| 19. HTTP API over the Capability Registry | v0.5 | 6/10 | In Progress|  |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
 | 22. Wizard Flows | v0.5 | 0/? | Not started | - |
