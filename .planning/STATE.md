@@ -4,15 +4,15 @@ milestone: v0.5
 milestone_name: UI-Primary Experience (Proof of Concept)
 current_phase: 19
 current_phase_name: HTTP API over the Capability Registry
-status: planning
+status: executing
 stopped_at: Phase 19 context gathered
-last_updated: "2026-08-02T11:57:16.158Z"
+last_updated: "2026-08-02T21:43:05.772Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 18 complete, transitioned to Phase 19
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 8
+  total_plans: 18
   completed_plans: 8
   percent: 14
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 Phase: 19 — HTTP API over the Capability Registry
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Progress: [###-----------------] 14% (1/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
 Last activity: 2026-08-02 — Phase 18 complete, transitioned to Phase 19
