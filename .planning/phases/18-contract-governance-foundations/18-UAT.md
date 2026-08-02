@@ -1,28 +1,34 @@
 ---
-status: testing
+status: complete
 phase: 18-contract-governance-foundations
 source: [18-VERIFICATION.md]
 started: 2026-07-30T23:00:00Z
-updated: 2026-07-30T23:00:00Z
+updated: 2026-08-02T10:00:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: ActivityList.jsx renders live Python-emitted events
-expected: |
-  Load a workspace with Python-emitted events in the CONSTRUCT Views SPA. Each activity
-  row shows a non-blank agent and action (not empty cells), with target, detail and
-  result populated where the source event carries them. An escalated event shows the
-  amber "escalated" badge.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. ActivityList.jsx renders live Python-emitted events
 
 expected: Each row shows a non-blank agent and action; an escalated event shows the amber "escalated" badge. No blank rows for events that carry data.
-result: [pending]
+result: pass
+source: human
+tested: 2026-08-02
+notes: |
+  Verified at runtime by the user, following HOWTO-verify-phase-18.md: a real install
+  root built from `tests/fixtures/v02/single-domain-small` (structure) plus a canonical
+  event log (content), `views generate` → 11 files / 0 content warnings, `views validate`
+  all ✓, SPA built with vite and served, dashboard opened at `/cosmology`.
+
+  User confirmed: renders correctly and looks right. This closes the one Phase 18
+  deliverable no automated check covered — D-17's reader-side conformance
+  (`e.ts`/`e.agent`/`e.action`/`e.target`/`e.detail`/`e.result` matching
+  `parse_events.py`'s canonical output) is now confirmed at runtime, not by source
+  review alone.
 
 why_human: |
   Plan 18-05 conformed the SPA's activity reader to D-17's canonical event shape —
@@ -54,10 +60,12 @@ how_to_test: |
 ## Summary
 
 total: 1
-passed: 0
+passed: 1
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+[none]
