@@ -1,6 +1,6 @@
 """Permanent contract guards for the GOV-01 capability invocation seam (D-05, D-06).
 
-Two layers live here.
+Three layers live here.
 
 **Layer 1 — forbid cardinality (D-06).** The number of registry input models that
 reject undeclared fields must *equal* the registry size. A capability registered
@@ -22,6 +22,26 @@ nobody noticed: they are five of the six capabilities not exposed over MCP, so
 their models had never been used to construct a call. That correlation is the
 strongest argument for D-05's refusal of an allowlist — the allowlist would have
 been exactly these five.
+
+**Layer 3 — workspace-id resolution over the whole registry (HTTP-03, D-11).**
+``resolve_payload_workspace`` is a single code path with a 26-capability blast
+radius, so the three parametrised families at the bottom of this file — coercion,
+traversal, collision — assert **per capability**, never per field name.
+
+That distinction is the whole reason they exist. A resolver test covering only
+``workspace.status`` proves the ``path`` spelling works and says nothing about
+the other three spellings; worse, it says nothing about the str/Path split,
+because a single capability can only ever be on one side of it. 13 of the
+workspace-scoped models declare a ``str`` field and 13 declare a ``Path``, and
+the seam emits ``str(resolved)`` for all of them — pydantic coerces ``str ->
+Path`` but not the reverse, so the direction is load-bearing and covering one
+field name is the documented way it would have been missed (RESEARCH assumption
+A2).
+
+Each family is driven by ``WORKSPACE_FIELD``'s keys rather than by a hand-listed
+table, for the same reason ``_capability_ids()`` carries no exemption set: a
+table here would become one more guard a registration has to trip, and the one
+nobody remembers.
 
 **Known blind spot, stated rather than implied.** A handler declaring ``**kwargs``
 accepts any field name, so the signature audit cannot prove such a shim actually
@@ -1329,3 +1349,209 @@ def test_views_validate_data_still_honours_a_supplied_install_root(
     result = get_registry().invoke("views.validate_data", {"install_root": str(stranger)})
 
     assert "refused the install root" in result.message
+
+
+# ---------------------------------------------------------------------------
+# The three resolver families — per capability, never per field name
+# ---------------------------------------------------------------------------
+
+#: The required fields ``_minimal_payload`` cannot stub, and only those.
+#:
+#: Its heuristic reads ``str(annotation)`` for the substring ``"str"``, which is
+#: right for the 20-odd plain ``str`` fields and wrong for exactly three:
+#: ``list[str]`` and ``DomainInitInput`` both contain ``"str"`` as a substring
+#: (the latter via *con-str-uct*), and ``ResearchSearchInput`` enforces a
+#: one-of-three rule no per-field stub can satisfy.
+#:
+#: Enumerated rather than generalised. Teaching ``_minimal_payload`` to build
+#: valid values for arbitrary annotations would make it a second, weaker copy of
+#: pydantic; three named exceptions stay readable and fail loudly if a model
+#: changes underneath them.
+_COERCION_OVERRIDES: dict[str, dict] = {
+    "knowledge.card.create": {"domains": ["seam-domain"]},
+    "research.search": {"query": "a probe query"},
+    "workspace.init": {"domain": dict(DOMAIN_SEED)},
+}
+
+
+def _workspace_scoped_ids() -> list[str]:
+    """Every workspace-scoped capability, from the map itself.
+
+    No exemption set, deliberately — see this module's docstring. Classifying a
+    capability is what enrols it in all three families.
+    """
+    return sorted(WORKSPACE_FIELD)
+
+
+def _addressable_id(cap_id: str, index: int) -> str:
+    """The workspace id to address ``cap_id`` with.
+
+    ``demo`` for the ordinary case. Create-mode capabilities need an id that
+    resolves to *nothing*, and a distinct one per case so two parametrisations
+    cannot collide with each other's directory.
+    """
+    if cap_id in CREATE_MODE_CAPABILITIES:
+        return f"fresh-workspace-{index}"
+    return "demo"
+
+
+def _id_payload(cap, cap_id: str, workspace_id: str) -> dict:
+    """``_minimal_payload``'s stubs, addressed by id instead of by path."""
+    payload = _minimal_payload(cap, WORKSPACE_FIELD[cap_id], workspace_id)
+    payload.pop(WORKSPACE_FIELD[cap_id])
+    payload[WORKSPACE_ID_KEY] = workspace_id
+    payload.update(_COERCION_OVERRIDES.get(cap_id, {}))
+    return payload
+
+
+# ── Family 1: coercion (RESEARCH assumption A2) ───────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_workspace_id_validates_and_arrives_as_the_declared_type(
+    launch_root: Path, monkeypatch: pytest.MonkeyPatch, cap_id: str
+) -> None:
+    """The resolved value reaches the handler in the field, and the type, the
+    model declares.
+
+    **This asserts at the validation boundary, not at the handler's outcome, and
+    that is deliberate — do not "strengthen" it into a credential-dependent
+    test.** Several of these capabilities cannot run without an ``ANTHROPIC_API_KEY``
+    or network access (``ask.domain``, the ``research`` family), and others open
+    a sqlite checkpointer and execute a real workflow. Asserting on their
+    *results* would make this suite need credentials, a network, and seconds per
+    case to prove a property that is fully decided before the handler is
+    entered: a model that validated is the property under test.
+
+    So the handler is replaced by a spy, which is the *observation point* rather
+    than a bypass — record lookup, id resolution and ``model_validate`` all run
+    for real, and the spy sees exactly what ``handler(**model.model_dump())``
+    would have been called with. That is a stronger claim than "it did not
+    raise": it names the field the value landed in and the type it arrived as,
+    which is the half a type-blind assertion would miss.
+
+    ``tests/contract/test_http_surface.py`` and the create-then-read case above
+    invoke real handlers by id, so the door is separately proven to open.
+    """
+    registry = get_registry()
+    cap = registry.get(cap_id)
+    field = WORKSPACE_FIELD[cap_id]
+    declared = cap.input_model.model_fields[field].annotation
+    workspace_id = _addressable_id(cap_id, 0)
+
+    received: dict = {}
+    monkeypatch.setattr(cap, "handler", lambda **kwargs: received.update(kwargs))
+
+    registry.invoke(cap_id, _id_payload(cap, cap_id, workspace_id))
+
+    assert field in received, (
+        f"{cap_id}: the resolved workspace never reached the handler's {field!r}"
+    )
+    value = received[field]
+    # ``isinstance`` rather than ``type(...) is``: pydantic resolves ``Path`` to
+    # the platform's concrete ``PosixPath``/``WindowsPath``, which an identity
+    # check would reject on every Path-declared capability. It still catches the
+    # split in both directions — ``str`` and ``Path`` are unrelated types, so a
+    # value on the wrong side fails whichever side the model declares.
+    assert isinstance(value, declared), (
+        f"{cap_id}: {field} arrived as {type(value).__name__}, but the model "
+        f"declares {declared}. The seam emits str(resolved); pydantic coerces "
+        f"str -> Path but not the reverse."
+    )
+    assert Path(value) == launch_root / workspace_id, (
+        f"{cap_id}: {field} resolved to {value!r}, not to the addressed workspace"
+    )
+
+
+@pytest.mark.parametrize(
+    "cap_id, payload",
+    [
+        ("knowledge.card.list", {}),
+        ("curation.inspect", {"run_id": "no-such-run"}),
+    ],
+)
+def test_a_real_handler_runs_when_addressed_by_id(
+    launch_root: Path, cap_id: str, payload: dict
+) -> None:
+    """Default-deny is only correct if the door still opens — on both sides of
+    the str/Path split, with no handler patched.
+
+    ``knowledge.card.list`` declares ``workspace: Path``; ``curation.inspect``
+    declares ``workspace_path: str``. Neither needs a credential or a network,
+    so one case from each side of the split can be asserted for real, which is
+    what keeps the spy-based family above honest.
+    """
+    result = get_registry().invoke(cap_id, {WORKSPACE_ID_KEY: "demo", **payload})
+
+    assert result is not None
+    haystack = str(getattr(result, "message", "") or "")
+    assert "refused the workspace" not in haystack, (
+        f"{cap_id}: an id-addressed real workspace was refused at the boundary"
+    )
+
+
+# ── Family 2: traversal (T-19-03) ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_traversal_shaped_workspace_id_touches_nothing(
+    launch_root: Path, monkeypatch: pytest.MonkeyPatch, cap_id: str
+) -> None:
+    """Criterion 2, on every workspace-scoped capability: *rejected with no
+    filesystem effect*.
+
+    Two claims, because an exception type alone proves neither. The spy on
+    ``discover_workspaces`` proves the shape gate ran **first** — a 422 would be
+    produced by either gate ordering, but only one ordering leaves the directory
+    walk unexecuted. The before/after fingerprint hashes file content as well as
+    listing names, so a rejection that created something and then raised would
+    fail here even though it "rejected".
+    """
+    from construct.views.lib import discover as discover_module
+
+    calls: list[Path] = []
+    monkeypatch.setattr(
+        discover_module, "discover_workspaces", lambda root: calls.append(Path(root)) or []
+    )
+    before = _tree_fingerprint(launch_root)
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(cap_id, {WORKSPACE_ID_KEY: "../../etc"})
+
+    reason = excinfo.value.reason
+    assert "kebab-case" in reason, f"{cap_id}: the reason does not state the shape rule"
+    assert "my-construct" in reason, (
+        f"{cap_id}: the reason states a rule but carries no example of a valid id"
+    )
+    assert calls == [], f"{cap_id}: the traversal attempt reached the filesystem scan"
+    assert _tree_fingerprint(launch_root) == before, (
+        f"{cap_id}: the traversal attempt changed the install root"
+    )
+
+
+# ── Family 3: collision ───────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_workspace_id_beside_the_capabilitys_own_field_is_refused(
+    launch_root: Path, cap_id: str
+) -> None:
+    """Two ways of naming one workspace must not silently prefer one.
+
+    Preferring either would make the *other* key a value the caller believes it
+    sent and the system ignored — the class of defect that is only ever found in
+    production. The reason names the conflicting field, because the field
+    spelling differs per capability and a caller cannot otherwise tell which of
+    the two keys to drop.
+    """
+    field = WORKSPACE_FIELD[cap_id]
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(
+            cap_id, {WORKSPACE_ID_KEY: "demo", field: str(launch_root / "demo")}
+        )
+
+    assert field in excinfo.value.reason, (
+        f"{cap_id}: the refusal does not name the conflicting field {field!r}, so "
+        f"the caller cannot tell which key to drop: {excinfo.value.reason!r}"
+    )
