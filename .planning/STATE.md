@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: UI-Primary Experience (Proof of Concept)
-current_phase: 18
-current_phase_name: contract-governance-foundations
-status: executing
-stopped_at: Phase 18 planned — ready to execute
-last_updated: "2026-07-27T07:11:51.621Z"
-last_activity: 2026-07-27
-last_activity_desc: Phase 18 execution started
+current_phase: 19
+current_phase_name: HTTP API over the Capability Registry
+status: planning
+stopped_at: Phase 18 context gathered
+last_updated: "2026-08-02T09:21:52.771Z"
+last_activity: 2026-08-02
+last_activity_desc: Phase 18 complete, transitioned to Phase 19
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 8
+  percent: 14
 ---
 
 # Project State
@@ -28,12 +28,12 @@ See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 ## Current Position
 
-Phase: 18 (contract-governance-foundations) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 18
+Phase: 19 — HTTP API over the Capability Registry
+Plan: Not started
+Status: Ready to plan
 Progress: [--------------------] 0% (0/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
-Last activity: 2026-07-27 — Phase 18 execution started
+Last activity: 2026-08-02 — Phase 18 complete, transitioned to Phase 19
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Last activity: 2026-07-27 — Phase 18 execution started
 | 15 | 5 | - | - |
 | 16 | 7 | - | - |
 | 17 | 4 | - | - |
+| 18 | 8 | - | - |
 
 **Recent Trend:**
 

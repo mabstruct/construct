@@ -32,9 +32,9 @@ The universal hard gate — no browser feature of any kind can exist before this
 
 Repairs to defects the research found in **live code**, which a browser turns from latent debt into user-visible failure. These are not new-build concerns.
 
-- [ ] **GOV-01**: CLI, MCP, and HTTP all dispatch through one seam that validates payloads against each capability's declared `input_model`, proven by a differential test (same capability + payload → identical result across all three surfaces).
-- [ ] **GOV-02**: Human-review decisions are keyed by proposal id rather than list position, and a missing decision never defaults to applying a write.
-- [ ] **GOV-03**: A review queue that went stale between render and submit is detected and rejected rather than silently misapplied.
+- [x] **GOV-01**: CLI, MCP, and HTTP all dispatch through one seam that validates payloads against each capability's declared `input_model`, proven by a differential test (same capability + payload → identical result across all three surfaces).
+- [x] **GOV-02**: Human-review decisions are keyed by proposal id rather than list position, and a missing decision never defaults to applying a write.
+- [x] **GOV-03**: A review queue that went stale between render and submit is detected and rejected rather than silently misapplied.
 - [x] **GOV-04**: The Streamlit gate-review screen routes approvals through the reviewed workflow's resume path instead of writing directly, so no surface writes canonical truth outside that path and no approval event is logged for a decision that was never applied.
 - [x] **GOV-05**: No surface reports success for a degraded or partially-applied outcome — degraded runs and escalated items render honestly rather than as clean completion.
 
@@ -148,9 +148,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | VFIX-01 | Phase 18 | Complete |
-| GOV-01 | Phase 18 | Pending |
-| GOV-02 | Phase 18 | Pending |
-| GOV-03 | Phase 18 | Pending |
+| GOV-01 | Phase 18 | Complete |
+| GOV-02 | Phase 18 | Complete |
+| GOV-03 | Phase 18 | Complete |
 | GOV-04 | Phase 18 | Complete |
 | GOV-05 | Phase 18 | Complete |
 | HTTP-01 | Phase 19 | Pending |

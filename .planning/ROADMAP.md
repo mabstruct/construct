@@ -70,7 +70,7 @@ Full phase detail (goals, success criteria, plans) archived in
 
 **Branch:** all v0.5 work lands on `dev-v05` (off `main`, pushed to origin). `main` stays releasable at v0.4.1. The stale `dev-v04` branch is left untouched.
 
-- [ ] **Phase 18: Contract & Governance Foundations** - Make the byte contract, the invocation seam, and the review-decision model honest before any browser depends on them
+- [x] **Phase 18: Contract & Governance Foundations** - Make the byte contract, the invocation seam, and the review-decision model honest before any browser depends on them (completed 2026-08-02)
 - [ ] **Phase 19: HTTP API over the Capability Registry** - The third registry adapter — generated routes, workspace ids, one error shape, loopback hardening, runs as resources
 - [ ] **Phase 20: Real Document Extraction** - Ingestion reads the file it routes; "no extractable text" becomes a named outcome, not a silent success
 - [ ] **Phase 21: Served App Shell & Guided Action Layer** - The SPA becomes a first-class served app and `help.suggest` becomes an action engine — the earliest UX signal
