@@ -1,7 +1,7 @@
 ---
 phase: 18-contract-governance-foundations
 verified: 2026-07-30T22:40:00Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -9,6 +9,7 @@ re_verification:
   previous_status: gaps_found
   previous_score: 4/5
   gaps_closed:
+
     - "research.run / research.review / research.inspect now report the RunResult.degraded signal as the OperationResult.outcome (\"degraded\") on a genuinely completed-but-retrieval-degraded run, closing the gap the previous pass identified: catalog.py::_run_result_to_operation previously set outcome=result.status, and RunResult.status for the research graph never takes the value \"degraded\" (only awaiting_review | completed | failed) — the degraded signal lived only in the separate RunResult.degraded boolean, which the outcome mapping never read. Commit 9ad383e adds _run_outcome(result), which folds degraded into outcome at the single place the research envelope is built (failed wins over degraded), and _run_result_to_operation now calls it."
   gaps_remaining: []
   regressions: []
@@ -16,6 +17,7 @@ gaps: []
 deferred: []
 behavior_unverified_items: []
 human_verification:
+
   - test: "Load a workspace with Python-emitted events in the CONSTRUCT Views SPA and visually confirm ActivityList.jsx renders agent/action/target/result instead of blank rows."
     expected: "Each row shows a non-blank agent and action; an escalated event shows the amber 'escalated' badge."
     why_human: "18-05's ActivityList.jsx change (D-17's reader-side conformance) has no JS toolchain in this environment to execute or type-check (`T-18-SC` forbids one). Verified by source review only (the component's destructured keys — `e.ts`/`e.agent`/`e.action`/`e.target`/`e.detail`/`e.result` — now match `parse_events.py`'s canonical output exactly), which the 18-05 SUMMARY itself flags with `human_judgment: true`; it was never exercised at runtime."
@@ -45,6 +47,7 @@ evidence of closure.** Every claim below was independently re-derived in this se
 - The suite was re-run from scratch (`774 passed, 18 skipped, 0 failed`, confirmed).
 - The new `_run_outcome()` fold in `catalog.py` was read at the current commit and confirmed to
   be the single site feeding `_run_result_to_operation`'s `outcome=`.
+
 - The fix was driven through the **REAL** capability pipeline, not just the new unit-level tests:
   a real `get_registry().invoke("research.run", ...)` → real `build_research_run_graph()` → real
   gate pause → a second real `get_registry().invoke("research.review", ...)` with
@@ -53,19 +56,24 @@ evidence of closure.** Every claim below was independently re-derived in this se
   `tests/llm/test_research_run.py::test_digest_degraded_notice`). This exercised the actual CLI
   human renderer (`cli._emit_run_result`), the actual `--json` path, and the actual MCP serializer
   (`mcp/server.py::_serialize_result`) — end to end, not synthetic `OperationResult` construction.
+
 - The 4 new regression tests in `tests/integration/test_surface_honesty.py` were independently
   proven RED by temporarily reverting `outcome=_run_outcome(result)` back to `outcome=result.status`
   and re-running them: 2 of the 4 failed, reproducing the exact `'✓ Run complete.'` defect the
   second pass caught, byte-for-byte. The fix was then restored and the suite re-confirmed green.
+
 - `research.inspect` and `research.review` were independently exercised (the second pass's own gap
   report named all three commands as failing; this pass verifies all three, not just one).
+
 - A genuinely clean, non-degraded completed run was independently driven through the same
   real pipeline and confirmed to still render an unqualified `✓ Run complete.` — the fix is
   outcome-driven, not a blanket qualification (no over-qualification regression).
+
 - `daily.run`/`curation.run` use their own separate wrap functions
   (`_curation_run_result_to_operation`, `_daily_run_result_to_operation`), untouched by this
   commit's diff (`git diff --stat 8aea454 9ad383e` touches only `catalog.py` and the test file);
   their 28/28 surface-honesty tests still pass, confirming no regression.
+
 - Criteria 1-4's scoped files are untouched by this commit's diff, and the untouched-scope tests
   (`test_views_generate_output_round_trips_through_views_validate`,
   `tests/integration/test_surface_parity.py` 22/22) still pass.
