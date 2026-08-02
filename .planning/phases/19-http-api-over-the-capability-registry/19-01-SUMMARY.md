@@ -342,6 +342,13 @@ Ready for the rest of Phase 19. The three seams the phase turns on are now wired
 
 **Concerns:** one, and it is environmental — the `test-ws` fixture failures in `deferred-items.md` will show up in any worktree-based execution of the remaining Phase 19 plans. They are not a Phase 19 regression, but a reviewer reading a red suite should know that before assuming otherwise.
 
+## Self-Check: PASSED
+
+- All 8 files listed under `key-files.created` exist on disk.
+- All 3 plan commits present in `git log`: `5379d6f`, `bb971e7`, `ac7e4b1`.
+- Working tree clean after the metadata commit.
+- Plan `<verification>` re-run at close-out: `tests/contract` → 357 passed / 22 skipped; `test_seam_has_no_leniency_knob` → passed; full suite → 826 passed / 22 skipped, with the two out-of-scope `test-ws` fixture failures documented in `deferred-items.md`.
+
 ---
 *Phase: 19-http-api-over-the-capability-registry*
 *Completed: 2026-08-03*
