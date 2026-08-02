@@ -48,7 +48,7 @@ from construct.api import (
     TOKEN_FILE_RELPATH,
     TOKEN_HEADER,
 )
-from construct.api.app import _serialize_result, create_app
+from construct.api.app import DISCOVERY_ROUTE, _serialize_result, create_app
 from construct.capabilities.catalog import get_registry
 from construct.capabilities.workspaces import (
     INSTALL_ROOT_FIELD,
@@ -62,6 +62,261 @@ from tests.contract.conftest import API_TOKEN
 
 def _url(cap_id: str) -> str:
     return CAPABILITY_ROUTE.format(cap_id=cap_id)
+
+
+# ── The exposure ledger, read rather than trusted (D-18) ──────────────────
+#
+# ``src/construct/api/COVERAGE.md`` is a *machine-read* artifact: the coverage
+# guard subtracts its exclusions table from the registry, so an exclusion added
+# as prose does not quietly go undocumented — it fails the arithmetic. Located
+# from the package's own ``__file__`` so a moved package moves the ledger with
+# it, and parsed with string operations rather than a markdown library, because
+# the file is written to a fixed shape declared in its own "How to read it"
+# section.
+
+COVERAGE_LEDGER = Path(
+    sys.modules["construct.api.app"].__file__
+).with_name("COVERAGE.md")
+
+CAPABILITY_TABLE_HEADING = "Capability table"
+EXCLUSIONS_HEADING = "Exclusions"
+NON_CAPABILITY_ROUTES_HEADING = "Non-capability routes"
+
+
+def _ledger_section(heading: str) -> list[str]:
+    """The lines under ``## {heading}``, up to the next ``##``."""
+    lines = COVERAGE_LEDGER.read_text(encoding="utf-8").splitlines()
+    marker = f"## {heading}"
+    assert marker in lines, (
+        f"{COVERAGE_LEDGER.name} has no '{marker}' section — the guard reads the "
+        "ledger by fixed headings, so renaming one silently detaches the test "
+        "from the document it is supposed to constrain"
+    )
+    rest = lines[lines.index(marker) + 1 :]
+    end = next(
+        (index for index, line in enumerate(rest) if line.startswith("## ")),
+        len(rest),
+    )
+    return rest[:end]
+
+
+def _ledger_first_column(heading: str) -> list[str]:
+    """The first cell of every data row of the pipe table under ``heading``.
+
+    Malformed rows are **asserted on, never skipped**. A parser that skipped what
+    it could not read would turn a typo into a silently missing row, which is the
+    same failure as an undocumented exclusion — the thing this ledger exists to
+    make impossible.
+    """
+    rows = [line for line in _ledger_section(heading) if line.lstrip().startswith("|")]
+    assert len(rows) >= 2, (
+        f"the '{heading}' section has no pipe table (found {len(rows)} table "
+        "lines); the guard needs a header row and a separator row even when the "
+        "table carries no data rows"
+    )
+    _header, separator, *data = rows
+    assert set(separator.replace("|", "").strip()) <= set("-: "), (
+        f"the second table line under '{heading}' is not a markdown separator: "
+        f"{separator!r}"
+    )
+
+    values: list[str] = []
+    for row in data:
+        cell = row.strip().strip("|").split("|")[0].strip()
+        assert cell.startswith("`") and cell.endswith("`") and len(cell) > 2, (
+            f"first column of a '{heading}' row is not a backticked value: "
+            f"{row!r}"
+        )
+        values.append(cell.strip("`"))
+    return values
+
+
+# ── D-06: the discovery endpoint ──────────────────────────────────────────
+
+
+def test_the_discovery_endpoint_advertises_every_registered_capability(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """Cardinality *and* identity, against a live registry read.
+
+    Asserted as a relationship between two measurements rather than against a
+    name list: a name list would need editing every time the registry grows, and
+    an editor who is already editing the expectation is no longer being told
+    anything by the test.
+    """
+    response = client.get(DISCOVERY_ROUTE, headers=auth_headers)
+
+    assert response.status_code == 200, response.text
+    advertised = response.json()["capabilities"]
+    registered = get_registry().list()
+
+    assert len(advertised) == len(registered), (
+        "the discovery endpoint advertises a different number of capabilities "
+        f"than the registry holds: {len(advertised)} vs {len(registered)}"
+    )
+    assert {entry["id"] for entry in advertised} == {cap.id for cap in registered}
+    for entry in advertised:
+        assert set(entry) == {"id", "name", "description", "input_schema"}
+        assert entry["name"] and entry["description"]
+
+
+def test_the_discovery_endpoint_is_not_the_mcp_projection(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """The failure this endpoint was one line away from shipping.
+
+    ``list_mcp_tools()`` skips every capability whose ``mcp_tool_name`` is
+    ``None``. Iterating it would have produced a surface missing six real
+    capabilities — and a membership test over what it *did* return would have
+    passed, because every id present would have been correct. So the six are
+    named here explicitly: they are the measurement that makes "iterate
+    ``list()``" a decision rather than a coincidence.
+    """
+    registry = get_registry()
+    unadvertised_over_mcp = {cap.id for cap in registry.list() if cap.mcp_tool_name is None}
+    assert unadvertised_over_mcp, (
+        "every capability now declares an MCP tool name, so this test no longer "
+        "distinguishes list() from list_mcp_tools() — replace it rather than "
+        "letting it pass vacuously"
+    )
+
+    response = client.get(DISCOVERY_ROUTE, headers=auth_headers)
+    advertised = {entry["id"] for entry in response.json()["capabilities"]}
+
+    missing = unadvertised_over_mcp - advertised
+    assert not missing, (
+        "these capabilities have no MCP tool name and are absent from the HTTP "
+        f"discovery endpoint — it is iterating the MCP projection: {sorted(missing)}"
+    )
+    assert len(advertised) > len(registry.list_mcp_tools())
+
+
+def test_the_advertised_schema_is_the_capabilitys_own_declared_model(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """GOV-01's schema-advertising half, recovered on HTTP (D-06 / Phase 18 D-21).
+
+    Equality against ``model_json_schema()`` rather than a spot check on one
+    field: the browser builds its form from this, so a schema that is *nearly*
+    the declared one produces a form that silently omits a field.
+    """
+    response = client.get(DISCOVERY_ROUTE, headers=auth_headers)
+    advertised = {entry["id"]: entry["input_schema"] for entry in response.json()["capabilities"]}
+
+    wrong = [
+        cap.id
+        for cap in get_registry().list()
+        if advertised[cap.id] != cap.input_model.model_json_schema()
+    ]
+    assert wrong == [], f"advertised schema differs from the declared model for: {wrong}"
+
+
+def test_the_discovery_order_is_the_registrys_and_is_stable(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """Id-sorted, and the same on the next call.
+
+    Two claims because either alone is weak: a stable-but-arbitrary order would
+    depend on import sequence, and a sorted-once order says nothing about the
+    second poll a browser makes.
+    """
+    first = client.get(DISCOVERY_ROUTE, headers=auth_headers).json()["capabilities"]
+    second = client.get(DISCOVERY_ROUTE, headers=auth_headers).json()["capabilities"]
+
+    expected = [cap.id for cap in get_registry().list()]
+    assert [entry["id"] for entry in first] == expected
+    assert [entry["id"] for entry in second] == expected
+    assert expected == sorted(expected)
+
+
+def test_the_discovery_endpoint_never_answers_with_an_empty_list(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """The vacuity floor. Every assertion above is a comparison against the
+    registry, and all of them hold trivially if both sides are empty."""
+    assert len(get_registry().list()) > 0
+    body = client.get(DISCOVERY_ROUTE, headers=auth_headers).json()
+    assert body["capabilities"], "the registry is non-empty but discovery returned nothing"
+
+
+def test_the_discovery_endpoint_is_behind_the_same_trust_boundary(
+    client: TestClient,
+) -> None:
+    """A ``GET`` is still a request. Discovery publishes the shape of every write
+    capability this server exposes, so an unauthenticated reader would get a map
+    of the surface for free."""
+    assert client.get(DISCOVERY_ROUTE).status_code == 401
+
+
+# ── D-18: the exposure ledger is a real, parseable document ───────────────
+
+
+def test_the_ledger_has_one_row_per_registered_capability() -> None:
+    """The ledger is only worth parsing if it is complete and unduplicated.
+
+    Both directions are asserted, and the failure message names the offending
+    ids — a diff that says "29 != 30" tells a future reader nothing about which
+    capability they forgot.
+    """
+    listed = _ledger_first_column(CAPABILITY_TABLE_HEADING)
+    registered = {cap.id for cap in get_registry().list()}
+
+    duplicates = sorted({cap_id for cap_id in listed if listed.count(cap_id) > 1})
+    assert duplicates == [], f"{COVERAGE_LEDGER.name} lists these twice: {duplicates}"
+    assert set(listed) == registered, (
+        f"{COVERAGE_LEDGER.name} is out of step with the registry — missing rows "
+        f"for: {sorted(registered - set(listed))}; rows for unregistered "
+        f"capabilities: {sorted(set(listed) - registered)}"
+    )
+
+
+def test_the_ledger_records_no_exclusions_today() -> None:
+    """Zero rows is the current finding, asserted so it cannot drift silently.
+
+    This test failing is not automatically a bug: it means somebody excluded a
+    capability from the HTTP surface. What it forbids is doing so *without*
+    anyone noticing, which is T-19-19.
+    """
+    assert _ledger_first_column(EXCLUSIONS_HEADING) == [], (
+        "the exclusions table is no longer empty; a capability has been made "
+        "unreachable over HTTP and this test is the notification"
+    )
+
+
+def test_every_non_dispatch_api_route_is_documented_in_the_ledger(
+    install_root: Path,
+) -> None:
+    """D-20: no undocumented surface.
+
+    Asserted as a subset in one direction only, and deliberately: the ledger may
+    name a route *before* the plan that adds it (``POST /api/runs`` today), so
+    requiring equality would fail on a correct forward reference. The direction
+    that catches something is the other one — a route the app serves that the
+    ledger has never heard of.
+    """
+    app = create_app(install_root, API_TOKEN)
+    try:
+        documented = {
+            line.strip().strip("|").split("|")[0].strip().strip("`")
+            for line in _ledger_section(NON_CAPABILITY_ROUTES_HEADING)
+            if line.lstrip().startswith("|")
+        }
+        served = {
+            f"{method} {route.path}"
+            for route in app.routes
+            if getattr(route, "path", "").startswith("/api")
+            and "{cap_id}" not in getattr(route, "path", "")
+            for method in getattr(route, "methods", set())
+            if method not in {"HEAD", "OPTIONS"}
+        }
+    finally:
+        set_launch_install_root(None)
+
+    assert served <= documented, (
+        "these non-capability routes are served but absent from "
+        f"{COVERAGE_LEDGER.name}'s non-capability-routes table: "
+        f"{sorted(served - documented)}"
+    )
 
 
 # ── The tracer: one request, end to end ───────────────────────────────────
@@ -380,17 +635,33 @@ def test_the_seam_signature_is_unchanged_by_the_id_resolution() -> None:
 
 def test_the_route_table_is_one_capability_route(install_root: Path) -> None:
     """D-05: no route generator, no loop over the registry. The path parameter
-    is what makes every capability reachable."""
+    is what makes every capability reachable.
+
+    The subject is **dispatch** routes — the ones carrying ``{cap_id}``. Plan
+    19-05 added ``GET /api/capabilities``, which is not one: it advertises the
+    registry rather than dispatching through it, and D-20 puts it in the
+    ledger's non-capability-routes table for exactly this reason. Selecting on
+    the path *prefix* instead would have made this guard count it, and the
+    obvious repair — loosening the count to 2 — would have quietly readmitted
+    per-capability routes one at a time.
+    """
     app = create_app(install_root, API_TOKEN)
     try:
-        capability_routes = [
-            route
-            for route in app.routes
-            if getattr(route, "path", "").startswith("/api/capabilities")
+        dispatch_routes = [
+            route for route in app.routes if "{cap_id}" in getattr(route, "path", "")
         ]
-        assert len(capability_routes) == 1
-        assert capability_routes[0].path == CAPABILITY_ROUTE
-        assert set(capability_routes[0].methods) == {"POST"}
+        assert len(dispatch_routes) == 1
+        assert dispatch_routes[0].path == CAPABILITY_ROUTE
+        assert set(dispatch_routes[0].methods) == {"POST"}
+
+        # And no route names a capability id literally — the property a
+        # generator would break, which the count above cannot see on its own.
+        registered = {cap.id for cap in get_registry().list()}
+        paths = {getattr(route, "path", "") for route in app.routes}
+        named = sorted(
+            cap_id for cap_id in registered if any(cap_id in path for path in paths)
+        )
+        assert named == [], f"the route table names capabilities directly: {named}"
     finally:
         set_launch_install_root(None)
 

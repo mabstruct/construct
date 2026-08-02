@@ -8,6 +8,15 @@ capability added to the catalog is reachable over HTTP the moment it is
 registered, with no edit to this file — the same property
 ``test_mcp_server_names_no_capability`` pins on the MCP side.
 
+**D-06 — ``GET /api/capabilities`` advertises the declared contract.** It
+iterates the registry, which is *not* the loop D-05 forbids: the forbidden loop
+is one that **generates routes**, because that is the thing a new capability
+would have to re-run. Iterating the registry to answer a request is data, not
+wiring — the route table is unchanged by a registration, and the body it returns
+changes by itself. The discovery route is deliberately not a capability route;
+``COVERAGE.md`` records it as such (D-20) so a reader can neither count it as a
+capability nor meet it as an undocumented surface.
+
 The route body does no validation of its own beyond the D-10 key refusal below.
 Validation is the seam's job (GOV-01): ``get_registry().invoke(cap_id, payload)``
 resolves the record, resolves ``workspace_id`` (D-01), validates against the
@@ -54,6 +63,18 @@ from construct.capabilities.workspaces import (
     PATH_SHAPED_KEYS,
     set_launch_install_root,
 )
+
+
+#: Where the discovery endpoint lives (D-06).
+#:
+#: A sibling of ``CAPABILITY_ROUTE``'s prefix rather than a nested path, so no
+#: capability id could ever shadow it: ``/api/capabilities`` carries no path
+#: parameter and answers ``GET`` only, while every dispatch is a ``POST`` to
+#: ``/api/capabilities/{cap_id}``. Named here rather than in ``construct.api``
+#: because, unlike the constants there, nothing outside this module and its
+#: tests needs it — ``cli.py`` in particular must keep importing ``construct.api``
+#: without the ASGI stack.
+DISCOVERY_ROUTE = "/api/capabilities"
 
 
 class Envelope(BaseModel):
@@ -115,6 +136,55 @@ def create_app(install_root: Path, token: str) -> FastAPI:
         ),
     )
     app.add_middleware(LocalhostGuard, token=token, allowed_origins=_allowed_origins())
+
+    @app.get(DISCOVERY_ROUTE)
+    async def list_capabilities() -> dict:
+        """Advertise every registered capability and its declared input schema.
+
+        **Iterated from ``registry.list()``, never from ``list_mcp_tools()``.**
+        The MCP projection skips every capability whose ``mcp_tool_name`` is
+        ``None`` — six of the twenty-nine today (``knowledge.card.archive``,
+        ``knowledge.connection.list``, ``knowledge.connection.remove``,
+        ``workflow.status``, ``workspace.init``, ``workspace.status``). Using it
+        here would produce a twenty-three-capability surface that still passes a
+        set-membership test, because every id it *did* return would be present
+        and correct. That is the WR-01 failure mode this phase is built around,
+        and the reason the guard in ``tests/contract/test_http_surface.py``
+        asserts cardinality against the registry rather than membership.
+
+        **What this recovers.** Phase 18's D-21 had to concede the
+        schema-advertising half of GOV-01 upstream: the pinned MCP library
+        offers no schema-override parameter, so a capability's declared
+        ``input_model`` could not be published to an MCP client. Nothing about
+        that limit is inherent to the *contract*; it was a property of one
+        library. Here the schema is published directly, so the declared contract
+        finally reaches a caller on at least one surface — which is what lets
+        the browser build a form from ``model_json_schema()`` the way
+        ``ui/capability_runner.py`` already does in-process.
+
+        **The accepted consequence, stated rather than discovered later.**
+        Publishing a schema turns it into a *consumed* contract. Changing an
+        input model is now a visible break — a form stops rendering the field it
+        used to — instead of a quiet one that surfaces as a validation error on
+        somebody's next call. That is the trade D-06 accepts on purpose: a break
+        a caller can see is worth more than a schema nobody was told about.
+
+        The ordering is ``registry.list()``'s, which sorts by id. Not
+        incidental: a browser rendering this list must not reshuffle it between
+        two polls, and dict insertion order would make the order depend on
+        import sequence rather than on anything a reader can predict.
+        """
+        return {
+            "capabilities": [
+                {
+                    "id": capability.id,
+                    "name": capability.name,
+                    "description": capability.description,
+                    "input_schema": capability.input_model.model_json_schema(),
+                }
+                for capability in get_registry().list()
+            ]
+        }
 
     @app.post(CAPABILITY_ROUTE)
     async def invoke_capability(cap_id: str, envelope: Envelope) -> dict:
