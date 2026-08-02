@@ -1408,20 +1408,48 @@ def test_replayed_resume_is_rejected_as_stale_etag(curation_workspace, monkeypat
     assert _workspace_state(curation_workspace) == after_first, "a replay must write nothing"
 
 
-def test_concurrency_configuration_stays_phase_19s(curation_workspace):
-    """T-18-26: the checkpoint concurrency contract (write-ahead logging, busy
-    timeouts, locking) is Phase 19's (OQ-4). The ETag stops cross-process
-    MISAPPLICATION; it does not claim to survive lock contention, and this phase
-    must not quietly start claiming otherwise."""
+def test_concurrency_configuration_moved_to_phase_19(curation_workspace):
+    """T-18-26, retired as designed: the concurrency contract is now Phase 19's.
+
+    The original assertion was a deliberate tripwire — while OQ-4 was open, this
+    phase must not quietly start claiming that the ETag survives lock contention,
+    so ``busy_timeout`` / ``journal_mode`` / ``WAL`` were FORBIDDEN in both run
+    modules. Phase 19 D-14 is the event the tripwire was waiting for: both
+    checkpointers now declare WAL and an explicit busy timeout in this repo's own
+    code, so the forbid-list has become the wrong assertion and is inverted here
+    rather than deleted — a tripwire that is removed without a trace cannot be
+    told apart from one that never fired.
+
+    The half of T-18-26 that still holds is unchanged and restated below: the
+    ETag stops cross-process MISAPPLICATION, and *nothing* provides cross-process
+    mutual exclusion. WAL plus a busy timeout makes a writer WAIT rather than
+    error; it is not a lock. See
+    ``CONSTRUCT-CLAUDE-spec/adrs/adr-0004-durable-workflow-checkpoints.md``.
+
+    The contract's real pin lives in ``tests/llm/test_checkpoint_concurrency.py``
+    — that module asserts the PRAGMAs on a LIVE connection, which is the check
+    that a dependency bump cannot pass by accident. This test only records the
+    handover.
+    """
     from pathlib import Path as _P
 
     from construct.llm import curation_run, research_run
 
     for module in (curation_run, research_run):
         src = _P(module.__file__).read_text(encoding="utf-8")
-        for forbidden in ("busy_timeout", "journal_mode"):
-            assert forbidden not in src, f"{module.__name__} must not configure {forbidden}"
-        assert "WAL" not in src, f"{module.__name__} must not configure WAL"
+        assert "journal_mode=WAL" in src, f"{module.__name__} must declare WAL itself (D-14)"
+        assert module.CHECKPOINT_BUSY_TIMEOUT_MS == 30_000
+
+    # Still true, and the reason the ETag exists: no lock is claimed anywhere.
+    for module in (curation_run, research_run):
+        src = _P(module.__file__).read_text(encoding="utf-8")
+        for never in ("lockfile", "flock", "filelock"):
+            assert never not in src.lower(), (
+                f"{module.__name__} must not introduce a cross-process lock (D-14)"
+            )
+
+    pin = _P(__file__).parent / "test_checkpoint_concurrency.py"
+    assert pin.is_file(), "the live-connection PRAGMA pin must exist"
 
 
 # ═════════════════════════════════════════════════════════════════════════════

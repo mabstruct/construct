@@ -490,6 +490,16 @@ def load_config(state: CurationRunState) -> dict:
 
 # ── Persistent checkpointer (NO connection-string footgun — Pitfall 2 / Pattern 3) ──
 
+#: D-14 (Phase 19, OQ-4): how long a checkpoint writer waits on a busy database
+#: before sqlite raises ``database is locked``. 30 000 ms, not the 5 000 ms that
+#: ``sqlite3.connect``'s ``timeout=5.0`` default supplies, because a curation
+#: resume that writes many cards holds the write lock for an interval this
+#: codebase has not bounded — and a too-short timeout surfaces mid-resume as
+#: ``database is locked``, which is the exact failure OQ-4 exists to prevent.
+#: Declared here rather than inherited: see ``_open_checkpointer``'s docstring
+#: and ``CONSTRUCT-CLAUDE-spec/adrs/adr-0004-durable-workflow-checkpoints.md``.
+CHECKPOINT_BUSY_TIMEOUT_MS = 30_000
+
 
 def _open_checkpointer(workspace: Path):
     """Open a persistent ``SqliteSaver`` under ``.construct/`` (caller closes conn).
@@ -499,12 +509,33 @@ def _open_checkpointer(workspace: Path):
     connection-string context manager (Pitfall 2: that closes the connection on
     block exit and breaks cross-process resume). ``check_same_thread=False`` is
     required because LangGraph may touch the checkpointer across threads.
+
+    The concurrency contract — WAL journaling plus an explicit
+    ``CHECKPOINT_BUSY_TIMEOUT_MS`` busy timeout, and no lock of any kind — is
+    declared HERE on purpose (D-14). Both halves were previously in force by
+    accident: ``SqliteSaver.setup()`` runs ``PRAGMA journal_mode=WAL`` as the
+    first statement of its own ``executescript``, and ``sqlite3.connect``
+    defaults to ``timeout=5.0`` i.e. a 5 000 ms busy timeout. An inherited
+    default is not a contract — a dependency bump that drops the library's
+    pragma would silently revert the guarantee with nothing failing. So the repo
+    sets both itself and ``tests/llm/test_checkpoint_concurrency.py`` pins them
+    (OQ-4; ``CONSTRUCT-CLAUDE-spec/adrs/adr-0004-durable-workflow-checkpoints.md``).
+
+    What this does NOT provide: cross-process mutual exclusion.
+    ``SqliteSaver``'s ``threading.Lock`` is per-instance, so a server-spawned run
+    and a CLI resume share no lock. Two racing resumes are arbitrated by the
+    D-11 checkpoint-id ETag instead — the loser is rejected with zero writes.
     """
     from langgraph.checkpoint.sqlite import SqliteSaver
 
     db = Path(workspace) / ".construct" / "workflow" / "curation-run.sqlite"
     db.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db), check_same_thread=False)
+    conn = sqlite3.connect(
+        str(db),
+        check_same_thread=False,
+        timeout=CHECKPOINT_BUSY_TIMEOUT_MS / 1000,
+    )
+    conn.execute("PRAGMA journal_mode=WAL")
     return SqliteSaver(conn), conn
 
 
