@@ -531,8 +531,15 @@ def _persist_candidates(root: Path, bridges: dict) -> None:
         - log/bridge-candidates.json (pipeline log)
         - views/build/data/bridges.json (derived data contract per D-06 #4)
     """
-    # Set workspace path in the output
-    bridges["workspace"] = str(root.resolve())
+    # The workspace *name*, not its resolved absolute path (T-18-32, D-19).
+    # Second instance of the same success-path class as ``graph_status`` — this
+    # dict is both persisted and returned as ``OperationResult.data``, so the
+    # path reached a serialized body with no exception involved. No reader wants
+    # the absolute form: ``views/lib/parse_bridges.py`` reads only the
+    # ``bridges`` array, and ``BridgesFile`` does not declare this key at all.
+    # ``views/lib/parse_*.py`` already emit ``workspace.name`` for the same
+    # field, so this converges on the convention rather than inventing one.
+    bridges["workspace"] = root.resolve().name
 
     serialized = json.dumps(bridges, indent=2, default=str) + "\n"
 

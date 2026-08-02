@@ -28,10 +28,35 @@ text into ``OperationResult.message`` — a site can still write a path into a
 message that the sanitizer never sees, because the sanitizer only sees
 *exceptions*. ``PATH_LEAKING_EXCEPTION_HANDLERS`` below is what covers that, and
 it covers it by cardinality, not by behaviour.
+
+**The baseline's measured population, and how it reconciles with RESEARCH.**
+The scan below was run against the tree as it stands, not copied from the
+research. It finds **14 leaking handlers across 9 enclosing functions** in
+``services/knowledge.py``. RESEARCH M-4 reports **13**, and the difference is
+real rather than a discrepancy: M-4 classified handlers whose body contains
+``str(<bound exception>)``, and one site interpolates the exception into an
+f-string instead — ``_read_card_file`` re-raises
+``OSError(f"Could not read cards/{card_id}.md: {exc}")``. It leaks identically
+and a ``str(exc)``-shaped scan cannot see it, so this scan matches both forms and
+the baseline carries the 14th.
+
+**Why the 29 domain-error handlers are deliberately outside the baseline.**
+M-4's other column — ``WorkspaceLoadError``, ``ArtifactValidationError``,
+``PydanticValidationError``, ``ValueError`` — was classified *by exception type
+rather than executed* (RESEARCH assumption A6). Two were probed live and did not
+leak, because those paths raise domain errors carrying hand-written relative-path
+messages. The remaining 27 are unproven in both directions: a ``WorkspaceLoadError``
+whose message interpolates a path would leak and would not appear here. That
+residue is accepted because the shared sanitizer covers them regardless — only
+the baseline's *size* depends on the classification, never the boundary's
+correctness.
 """
 from __future__ import annotations
 
+import ast
 import json
+import re
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -46,6 +71,10 @@ from construct.capabilities.results import (
 )
 from construct.mcp.server import create_server
 from construct.services.knowledge import OperationError, OperationResult
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SRC_ROOT = REPO_ROOT / "src" / "construct"
+FIXTURE_WS = REPO_ROOT / "test-ws" / "my-construct"
 
 
 # ---------------------------------------------------------------------------
@@ -265,7 +294,11 @@ def _mcp_tool(name: str):
 def test_the_mcp_catch_all_no_longer_renders_raw_exception_text(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """M-4's 14th site: one bare ``str(exc)`` standing behind every capability."""
+    """M-4 counted this arm as a leak site of its own, and rightly.
+
+    One bare ``str(exc)`` stood behind *every* capability, so an OSError escaping
+    any handler put an absolute path into an MCP body.
+    """
     record = get_registry().get("knowledge.card.list")
 
     def _raise(**_kwargs: object) -> object:
@@ -310,3 +343,303 @@ def test_the_mcp_surface_still_renders_the_seams_typed_reason(tmp_path: Path) ->
 
     assert "bogus" in body["error"]
     assert "Invalid input for capability 'knowledge.card.list'" in body["error"]
+
+
+# ---------------------------------------------------------------------------
+# The success path — where an exception-boundary sanitizer never looks (T-18-32)
+# ---------------------------------------------------------------------------
+
+
+# A POSIX absolute path of at least two segments, or a Windows drive prefix.
+# Deliberately shape-based rather than "does the body contain *this* tmp_path":
+# a body can carry somebody else's absolute path, and the tmp_path check would
+# pass while criterion 3 failed.
+_PATH_SHAPED = re.compile(r"(?:/[A-Za-z0-9._-]+){2,}|[A-Za-z]:[\\/]")
+
+
+def _path_shaped_substrings(text: str) -> list[str]:
+    return _PATH_SHAPED.findall(text)
+
+
+@pytest.fixture()
+def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A throwaway copy of the canonical fixture, under an absolute temp path.
+
+    ``ANTHROPIC_API_KEY`` is removed so ``bridge.detect``'s L3 gate skips rather
+    than reaching the network: this is a boundary test, and a body's shape must
+    not depend on whether the machine running it happens to be provisioned.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    dest = tmp_path / "my-construct"
+    shutil.copytree(FIXTURE_WS, dest)
+    return dest
+
+
+def test_a_successful_graph_status_body_carries_no_absolute_path(
+    workspace: Path,
+) -> None:
+    """Criterion 3 asserted against a **success**, which is the whole point.
+
+    ``graph_status`` wrote ``str(root.resolve())`` into ``OperationResult.data``
+    with no exception anywhere in the flow (T-18-32), so a criterion-3 test that
+    only exercises failures — the documented way this leak survives — would have
+    reported green throughout.
+    """
+    result = get_registry().invoke("graph.status", {"workspace": str(workspace)})
+
+    assert result.success, result.message
+    assert result.data["workspace"] == workspace.name
+
+    body = json.dumps(serialize_result(result), indent=2)
+
+    assert str(workspace) not in body
+    assert str(workspace.parent) not in body
+    assert _path_shaped_substrings(body) == []
+
+
+def test_a_successful_bridge_detect_body_carries_no_absolute_path(
+    workspace: Path,
+) -> None:
+    """The second instance of the same class, not recorded in RESEARCH.
+
+    ``_persist_candidates`` set ``bridges["workspace"]`` on the dict it both
+    writes to disk *and* returns as ``OperationResult.data``, so the path reached
+    a serialized body by the same route.
+    """
+    result = get_registry().invoke("bridge.detect", {"workspace_path": str(workspace)})
+
+    assert result.success, result.message
+    assert result.data["workspace"] == workspace.name
+
+    body = json.dumps(serialize_result(result), indent=2)
+
+    assert str(workspace) not in body
+    assert str(workspace.parent) not in body
+    assert _path_shaped_substrings(body) == []
+
+
+# ---------------------------------------------------------------------------
+# The shrink-only baseline over the remaining source sites (D-16b, T-19-15)
+# ---------------------------------------------------------------------------
+
+
+OS_ERROR_FAMILY = frozenset(
+    {
+        "OSError",
+        "IOError",
+        "EnvironmentError",
+        "FileNotFoundError",
+        "FileExistsError",
+        "PermissionError",
+        "NotADirectoryError",
+        "IsADirectoryError",
+    }
+)
+
+
+def _caught_names(handler: ast.ExceptHandler) -> set[str]:
+    """Every exception name a handler catches, tuple or single."""
+    node = handler.type
+    if node is None:
+        return {"BaseException"}
+    parts = node.elts if isinstance(node, ast.Tuple) else [node]
+    names = set()
+    for part in parts:
+        if isinstance(part, ast.Name):
+            names.add(part.id)
+        elif isinstance(part, ast.Attribute):
+            names.add(part.attr)
+    return names
+
+
+def _builds_message_from_bound_exception(handler: ast.ExceptHandler) -> bool:
+    """Whether the handler turns its bound exception into text.
+
+    Both forms count. ``str(exc)`` is the one M-4 scanned for; ``f"...{exc}"``
+    is the one it could not see, and it leaks identically — CPython formats an
+    interpolated exception with the same ``__str__``.
+    """
+    if not handler.name:
+        return False
+    for node in ast.walk(handler):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "str"
+            and node.args
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == handler.name
+        ):
+            return True
+        if (
+            isinstance(node, ast.FormattedValue)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == handler.name
+        ):
+            return True
+    return False
+
+
+def scan_path_leaking_handlers(path: Path) -> tuple[dict[str, int], int]:
+    """``({"<module>::<function>": count}, handlers_examined)``.
+
+    Keyed per **enclosing function**, never per module. A module-level key would
+    let a second leaking handler land inside an already-listed file and change
+    nothing the baseline can see — the count would hide behind the name.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    module = f"{path.parent.name}/{path.name}"
+    offenders: dict[str, int] = {}
+    examined = 0
+
+    def walk(node: ast.AST, enclosing: str) -> None:
+        nonlocal examined
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                walk(child, child.name)
+                continue
+            if isinstance(child, ast.ExceptHandler):
+                examined += 1
+                if _caught_names(child) & OS_ERROR_FAMILY and (
+                    _builds_message_from_bound_exception(child)
+                ):
+                    key = f"{module}::{enclosing}"
+                    offenders[key] = offenders.get(key, 0) + 1
+            walk(child, enclosing)
+
+    walk(tree, "<module>")
+    return offenders, examined
+
+
+# NOT an allowlist — a regression baseline that may only shrink, in the
+# ``UNRESOLVED_DIRECT_CALLERS`` shape this repo already uses (Phase 18 D-23).
+#
+# Each entry is a function in ``services/knowledge.py`` that catches an
+# OSError-family exception and builds a message from it. ``str(OSError)`` embeds
+# the absolute path, and every one of these messages lands in
+# ``OperationResult.message`` or ``OperationError.reason`` — i.e. in a serialized
+# body. The shared sanitizer does not reach them, because they never raise: they
+# *return* the text.
+#
+# Fixing one means deleting its entry here. Leaving a fixed entry in place is a
+# failure, not a courtesy.
+PATH_LEAKING_EXCEPTION_HANDLERS = frozenset(
+    {
+        "services/knowledge.py::_read_card_file",
+        "services/knowledge.py::_write_tag_candidates_file",
+        "services/knowledge.py::add_connection",
+        "services/knowledge.py::approve_tag_candidates",
+        "services/knowledge.py::archive_card",
+        "services/knowledge.py::create_card",
+        "services/knowledge.py::edit_card",
+        "services/knowledge.py::remove_connection",
+        "services/knowledge.py::route_source_to_domain",
+    }
+)
+
+#: Handlers, not functions. Four of the nine functions above carry more than one,
+#: so a per-function baseline alone would let a tenth handler land inside
+#: ``edit_card`` and change nothing the guard can see.
+PATH_LEAKING_HANDLER_COUNT = 14
+
+#: The scan must examine at least this many handlers to be believed. Measured 30
+#: in ``services/knowledge.py``; the floor is set below that so ordinary edits do
+#: not trip it, but far enough above zero that a scan which silently stops
+#: finding anything fails instead of passing.
+MINIMUM_HANDLERS_EXAMINED = 25
+
+
+def test_no_new_path_leaking_exception_handler() -> None:
+    """T-19-15: the leak sites may not regrow after the boundary lands."""
+    offenders, _ = scan_path_leaking_handlers(SRC_ROOT / "services" / "knowledge.py")
+
+    new = sorted(set(offenders) - PATH_LEAKING_EXCEPTION_HANDLERS)
+    assert not new, (
+        "these functions newly build a message from an OSError-family exception, "
+        "which embeds the absolute path; route them through "
+        "construct.capabilities.results.sanitize_exception instead of adding them "
+        f"to the baseline: {new}"
+    )
+
+
+def test_no_stale_entry_in_the_path_leak_baseline() -> None:
+    """The direction that forces the baseline down when a site is fixed."""
+    offenders, _ = scan_path_leaking_handlers(SRC_ROOT / "services" / "knowledge.py")
+
+    stale = sorted(PATH_LEAKING_EXCEPTION_HANDLERS - set(offenders))
+    assert not stale, (
+        "these functions no longer build a message from an OSError-family "
+        "exception — delete them from PATH_LEAKING_EXCEPTION_HANDLERS instead of "
+        f"leaving the baseline to rot: {stale}"
+    )
+
+
+def test_the_path_leak_handler_count_can_only_shrink() -> None:
+    """The dimension a per-function baseline cannot see."""
+    offenders, _ = scan_path_leaking_handlers(SRC_ROOT / "services" / "knowledge.py")
+    measured = sum(offenders.values())
+
+    assert measured == PATH_LEAKING_HANDLER_COUNT, (
+        f"{measured} leaking handlers found, baseline says "
+        f"{PATH_LEAKING_HANDLER_COUNT}. Fewer means a site was fixed — lower the "
+        "number. More means one regrew inside a function already listed, which is "
+        f"exactly what the per-function set cannot see: {dict(sorted(offenders.items()))}"
+    )
+
+
+def test_the_leak_scan_is_not_vacuous() -> None:
+    """A guard that finds nothing passes for the wrong reason.
+
+    Without this, a rename of ``ast.ExceptHandler`` handling — or a module that
+    silently fails to parse into the shape the walk expects — would turn both
+    assertions above into unconditional passes.
+    """
+    _, examined = scan_path_leaking_handlers(SRC_ROOT / "services" / "knowledge.py")
+
+    assert examined >= MINIMUM_HANDLERS_EXAMINED, (
+        f"the scan examined only {examined} exception handlers in "
+        "services/knowledge.py; it is not looking at the module it claims to guard"
+    )
+
+
+def test_the_leak_scan_detects_a_planted_offender(tmp_path: Path) -> None:
+    """A guard never observed failing is not known to be a guard.
+
+    Plants a module in a scratch tree and scans it with the same function the real
+    guard uses: a handler that stringifies its bound OSError is caught, one that
+    stringifies a *domain* error is not (that is the A6 class, deliberately out of
+    scope), and one that logs without touching the exception is not.
+    """
+    planted = tmp_path / "services" / "planted.py"
+    planted.parent.mkdir(parents=True)
+    planted.write_text(
+        "def leaks():\n"
+        "    try:\n"
+        "        pass\n"
+        "    except OSError as exc:\n"
+        "        return str(exc)\n"
+        "def interpolates():\n"
+        "    try:\n"
+        "        pass\n"
+        "    except FileNotFoundError as exc:\n"
+        "        return f'could not read: {exc}'\n"
+        "def domain_error_is_out_of_scope():\n"
+        "    try:\n"
+        "        pass\n"
+        "    except WorkspaceLoadError as exc:\n"
+        "        return str(exc)\n"
+        "def clean():\n"
+        "    try:\n"
+        "        pass\n"
+        "    except OSError:\n"
+        "        return 'could not read the card'\n",
+        encoding="utf-8",
+    )
+
+    offenders, examined = scan_path_leaking_handlers(planted)
+
+    assert set(offenders) == {
+        "services/planted.py::leaks",
+        "services/planted.py::interpolates",
+    }
+    assert examined == 4
