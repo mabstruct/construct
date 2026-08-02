@@ -103,8 +103,12 @@ INSTALL_ROOT_FIELD: dict[str, str] = {
 
 #: Capabilities whose workspace argument names a directory that does **not**
 #: exist yet, so the allowlist gate ("must be a discoverable workspace") cannot
-#: apply to them. This task only classifies them; plan 19-04 Task 1 gives the
-#: set its absence-asserting behaviour.
+#: apply to them — it is *inverted* into a conflict check instead (D-11).
+#:
+#: One member today. It is a set rather than an ``if cap_id == "workspace.init"``
+#: because the rule is a property of the *capability class* ("names a directory
+#: it is about to create"), and Phase 22's creation wizard is expected to add to
+#: it. A hard-coded id would put the second member's behaviour in an ``or``.
 CREATE_MODE_CAPABILITIES = frozenset({"workspace.init"})
 
 #: Every payload key that carries a filesystem path, derived from the values of
@@ -189,10 +193,31 @@ def resolve_workspace_id(
     Per D-02 the valid id set *is* that scan, recomputed per request rather than
     cached at launch: a workspace created during a session must be addressable
     immediately, and a cached set would answer "no such workspace" until restart.
+    That property is what lets creation and use compose: a workspace created by
+    ``workspace.init`` is addressable by the very next request, with no restart
+    and no cache-invalidation step for a caller to forget.
 
-    ``must_exist=False`` skips gate 2 only — the shape gate is unconditional.
-    It exists for the create-mode capabilities (``CREATE_MODE_CAPABILITIES``),
-    whose directory cannot be discoverable yet by definition.
+    **``must_exist=False`` inverts gate 2 rather than dropping it (D-11).** The
+    shape gate is unconditional either way; what changes is what membership in
+    the scan *means*. For the create-mode capabilities
+    (``CREATE_MODE_CAPABILITIES``) an id that already names a discoverable
+    workspace is a **conflict**, not a match — so the same measurement that is an
+    allowlist for every other capability reads as a denylist for these. The
+    function then returns ``install_root / value`` without touching the
+    filesystem beyond that scan; it creates nothing itself.
+
+    This is the direct answer to **T-18-34** ("capabilities creating directories
+    at agent-supplied paths"), not a deferral of it. A caller supplies a *name*
+    and never a *location*: the parent is always ``install_root``, which is
+    launch context no payload can move, and the shape gate has already made
+    ``..`` and ``/`` inexpressible. The most an attacker-controlled
+    ``workspace_id`` can achieve is a new directory as a direct child of the
+    install root — which is what the product's own front door does anyway.
+
+    A missing or non-directory ``install_root`` yields an empty scan rather than
+    an ``OSError``: ``iterdir()`` on a missing directory raises, and letting that
+    escape would turn a mis-configured launch root into an untyped crash on every
+    surface instead of the seam's own typed error.
     """
     if not isinstance(value, str) or WORKSPACE_ID_PATTERN.fullmatch(value) is None:
         raise CapabilityInputError(
@@ -202,26 +227,64 @@ def resolve_workspace_id(
         )
 
     root = Path(install_root)
-    if not must_exist:
-        return root / value
+    known = _discover(root)
 
-    # Deferred, for the two reasons the repo defers an import. (a) ``construct.views``
-    # pulls the whole views contract-model package in, and this module now sits on
-    # ``registry.py``'s import path — i.e. on every CLI startup. (b) The import
-    # happening at call time is what makes ``discover_workspaces`` patchable at its
-    # *source* module, which is how the ordering proof in
-    # ``tests/contract/test_http_surface.py`` shows the shape gate runs first.
-    from construct.views.lib.discover import discover_workspaces
+    if must_exist:
+        if value not in known:
+            available = ", ".join(sorted(known)) or "<none>"
+            raise CapabilityInputError(
+                cap_id,
+                f"{WORKSPACE_ID_KEY} names no workspace under the install root. "
+                f"Known workspace ids: {available}",
+            )
+        return known[value]
 
-    known = {path.name: path for path in discover_workspaces(root)}
-    if value not in known:
-        available = ", ".join(sorted(known)) or "<none>"
+    if value in known:
         raise CapabilityInputError(
             cap_id,
-            f"{WORKSPACE_ID_KEY} names no workspace under the install root. "
-            f"Known workspace ids: {available}",
+            f"{WORKSPACE_ID_KEY} '{value}' already names a workspace under the "
+            "install root, and this capability creates a new one — choose an "
+            "unused id",
         )
-    return known[value]
+
+    target = root / value
+    if target.exists():
+        # "Discoverable as a workspace" is a *narrower* test than "exists": a
+        # half-built tree, or an unrelated directory that happens to share the
+        # name, passes the scan check and would then be written into. Refusing on
+        # existence is what makes the claim ("requires that the directory does
+        # NOT already exist") true rather than nearly true.
+        raise CapabilityInputError(
+            cap_id,
+            f"{WORKSPACE_ID_KEY} '{value}' already exists under the install root "
+            "but is not a CONSTRUCT workspace — this capability will not write "
+            "into an existing directory; choose an unused id",
+        )
+    return target
+
+
+def _discover(root: Path) -> dict[str, Path]:
+    """``{directory name: path}`` for every discoverable workspace under ``root``.
+
+    Deferred import, for the two reasons the repo defers an import. (a)
+    ``construct.views`` pulls the whole views contract-model package in, and this
+    module now sits on ``registry.py``'s import path — i.e. on every CLI startup.
+    (b) The import happening at call time is what makes ``discover_workspaces``
+    patchable at its *source* module, which is how the ordering proofs in
+    ``tests/contract/test_http_surface.py`` and
+    ``tests/contract/test_capability_seam.py`` show the shape gate runs first.
+
+    The ``is_dir`` guard is inside this helper rather than at each call site so
+    both modes inherit it: ``discover_workspaces`` calls ``iterdir()``
+    unguarded, and a launch root that does not exist is a configuration mistake
+    that should surface as the seam's typed error, not as a bare ``OSError``
+    from three frames down.
+    """
+    from construct.views.lib.discover import discover_workspaces
+
+    if not root.is_dir():
+        return {}
+    return {path.name: path for path in discover_workspaces(root)}
 
 
 def resolve_payload_workspace(cap_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -240,23 +303,56 @@ def resolve_payload_workspace(cap_id: str, payload: dict[str, Any]) -> dict[str,
     workspace-scoped models declare a ``str`` field and 13 declare a ``Path``,
     and pydantic coerces ``str -> Path`` but not the reverse. Emitting a
     ``Path`` would therefore validate for half the registry and fail for the
-    other half. (RESEARCH assumption A2 asserts this covers all 26 without
-    having measured it; plan 19-04 Task 2 converts it into a parametrised test
-    over every workspace-scoped capability.)
+    other half. RESEARCH assumption A2 asserted that without measuring it; the
+    coercion family in ``tests/contract/test_capability_seam.py`` measures it,
+    once per workspace-scoped capability rather than once per field name.
 
-    ``INSTALL_ROOT_FIELD`` participates so that the two views capabilities are
-    addressable at all — ``install_root`` is itself a ``PATH_SHAPED_KEYS`` entry
-    and is therefore refused at the HTTP boundary (D-10). Note the scope
-    mismatch this leaves open: an id resolves to one *workspace*, while these
-    two want the root **above** the workspaces, so an id-addressed views call
-    scans the children of a single workspace and finds none. Plan 19-04 owns
-    HTTP-03's completion and this is its business, recorded here rather than
-    quietly patched, because the fix is a scoping decision and not a bug.
+    **Install-root-scoped capabilities take the root from launch context
+    (D-11).** The two ``views.*`` capabilities are scoped to the install root,
+    which is a *different scope* from a workspace, not a different spelling of
+    one: ``discover_workspaces`` scans the children of its argument, so handing
+    either of them a single workspace discovers nothing and silently emits an
+    empty build. So ``workspace_id`` is **refused** for them rather than
+    resolved, and when the payload omits ``install_root`` the seam supplies
+    ``launch_install_root()``.
+
+    Two things follow, and both are the point:
+
+    * The install root is the authorization boundary itself. A caller that could
+      choose it could read and write any tree on the machine, so over HTTP it is
+      never caller-chosen — ``install_root`` is a ``PATH_SHAPED_KEYS`` entry and
+      the envelope refuses it with 422 before dispatch (D-10). Injection is what
+      makes the two capabilities reachable *at all* from a browser: an HTTP
+      caller reaches them by sending nothing path-shaped.
+    * The CLI's ``--install-root`` flag is unchanged. A payload that already
+      carries the field is left exactly as it arrived, and the CLI always sends
+      one — so this is a new behaviour for callers that omit the field, not a
+      change of behaviour for callers that supply it.
+
+    Like the rest of this module it is uniform seam behaviour rather than a
+    per-surface exception (D-09/D-11): CLI, MCP and HTTP all get it, and
+    ``invoke``'s signature is untouched.
     """
-    if WORKSPACE_ID_KEY not in payload:
-        return dict(payload)
+    payload = dict(payload)
 
-    field = WORKSPACE_FIELD.get(cap_id) or INSTALL_ROOT_FIELD.get(cap_id)
+    install_field = INSTALL_ROOT_FIELD.get(cap_id)
+    if install_field is not None:
+        if WORKSPACE_ID_KEY in payload:
+            raise CapabilityInputError(
+                cap_id,
+                f"{WORKSPACE_ID_KEY} does not apply to this capability: it is "
+                f"scoped to the install root (the directory *above* the "
+                f"workspaces), not to one workspace. Omit "
+                f"{WORKSPACE_ID_KEY} and the launch install root is used",
+            )
+        if install_field not in payload:
+            payload[install_field] = str(launch_install_root())
+        return payload
+
+    if WORKSPACE_ID_KEY not in payload:
+        return payload
+
+    field = WORKSPACE_FIELD.get(cap_id)
     if field is None:
         raise CapabilityInputError(
             cap_id,
