@@ -121,10 +121,10 @@ Typer command path that binds to the capability's `cli_name`.
 
 These Typer leaves reach their function by an **independent path — they are NOT
 routed through the capability registry** (the residue of the Phase 15 D-03 holdout
-for `views`/`spike`/`tag`, plus the `mcp` server launcher). They carry no capability
-id and no auto-derived MCP tool; the registry (29 caps / 23 MCP tools) and the
-Typer app (34 leaves) are two distinct sources, and this table documents the gap
-between them explicitly so no reader infers a registry route that does not exist.
+for `views`/`spike`/`tag`, plus the `mcp` and `serve` server launchers). They carry
+no capability id and no auto-derived MCP tool; the registry (29 caps / 23 MCP tools)
+and the Typer app (35 leaves) are two distinct sources, and this table documents the
+gap between them explicitly so no reader infers a registry route that does not exist.
 
 `construct views validate` **left this table in Phase 18 (D-02)** — it is the
 `views.validate_data` capability now, so it appears in the capability table above.
@@ -140,6 +140,7 @@ security decision, not an oversight.
 | `construct tag approve` | cli | Promote extracted tags to search clusters — independent path |
 | `construct tag list` | cli | List extracted/approved tags — independent path |
 | `construct mcp` | cli | Launch the stdio MCP server — process entry point, not a capability |
+| `construct serve` | cli | Launch the loopback HTTP server (Phase 19) — process entry point, not a capability. Every capability it serves is reached through the registry, so `serve` itself has no id, exactly like `mcp` |
 
 > **Holdout note (Phase 15 D-03, narrowed by Phase 18 D-02):** `construct views
 > generate` still reaches the views generator by an independent path rather than

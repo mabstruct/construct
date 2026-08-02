@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 
 import typer
 
+from construct.api import DEFAULT_API_PORT, TOKEN_FILE_RELPATH
 from construct.llm.curation_run import ESCALATED_LABEL
 from construct.schemas.card import Lifecycle
 from construct.schemas.workspace import ConnectionType
@@ -24,6 +25,14 @@ from construct.mcp.server import run_server
 app = typer.Typer(no_args_is_help=True)
 
 KEBAB_CASE_SANITIZE_PATTERN = re.compile(r"[^a-z0-9]+")
+
+#: The one address ``construct serve`` binds. A named constant rather than a
+#: default argument on ``uvicorn.run`` so a test can assert the value directly
+#: (T-19-11): "the default is loopback" is a claim about a function signature
+#: somebody else owns, while this is a claim about this file. A wildcard bind
+#: here would expose every capability — including the write ones — to the local
+#: network, which is the difference between a local tool and an open server.
+LOOPBACK_HOST = "127.0.0.1"
 
 
 def _version_callback(value: bool) -> None:
@@ -124,6 +133,92 @@ def mcp() -> None:
     capability registry — no manual wiring needed.
     """
     run_server()
+
+
+@app.command()
+def serve(
+    port: int = typer.Option(DEFAULT_API_PORT, "--port", help="Port to bind on the loopback interface."),
+    install_root: Path | None = typer.Option(None, "--install-root", help="Root holding the workspaces this server can address."),
+) -> None:
+    """Start the loopback HTTP server for browser and script access.
+
+    Binds ``LOOPBACK_HOST`` only, prints the URL and a freshly minted per-launch
+    token, and serves every registered capability through the one seam the CLI
+    and MCP surfaces use — so this command adds reach, never vocabulary
+    (HTTP-02).
+
+    ``--install-root`` is resolved at call time, not import time (WR-09), and
+    becomes the root every workspace id is resolved against for the life of the
+    process (D-09).
+
+    **Token delivery is stdout and the ``0600`` file below — nothing else**
+    (D-17 / T-19-08). Never a URL query string: a token in a query string lands
+    in shell history, in every server access log that records a request line,
+    and in the ``Referer`` header sent to any third party the page links out to.
+    Injecting it into a server-rendered ``index.html`` would work too, and is
+    deliberately declined here — that would pull Phase 21's static serving
+    forward for a convenience Phase 21 can add on its own schedule. Writing the
+    file is what lets Phase 21 read the token without a protocol change.
+
+    **The port is checked before uvicorn is handed control** (D-04). uvicorn
+    0.50.0+ raises ``SystemExit(3)`` for every startup failure including a
+    socket bind, and 3 is a code no other CONSTRUCT command emits — so a busy
+    port would answer with a foreign exit code and a stack trace instead of the
+    guidance D-04 requires. Owning the probe is what lets this command own both.
+    """
+    # Deferred: the ASGI stack is the heaviest import in the project and every
+    # other CLI command would pay for it at startup (the idiom ``views generate``
+    # already follows for the views package).
+    import os
+    import secrets
+    import socket
+
+    import uvicorn
+
+    from construct.api.app import create_app
+
+    install_root = install_root or Path.cwd()
+
+    # Pre-flight bind probe. There is a small TOCTOU window between closing this
+    # socket and uvicorn opening its own — another process can take the port in
+    # between. Acceptable for a single-user local server, and stated rather than
+    # hidden: the alternative (holding the socket and handing the fd to uvicorn)
+    # buys a rare race for a coupling to uvicorn's internals.
+    probe = socket.socket()
+    try:
+        probe.bind((LOOPBACK_HOST, port))
+    except OSError:
+        typer.secho(
+            f"ERROR: port {port} on {LOOPBACK_HOST} is already in use. "
+            f"Retry with a different port, e.g. `construct serve --port {port + 1}`, "
+            f"or find the process holding it with `lsof -i :{port}`.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=1)
+    finally:
+        probe.close()
+
+    # ``secrets``, never ``random`` — the project idiom for any generated handle
+    # (``_new_run_id``), and here the value is the whole authentication control.
+    token = secrets.token_urlsafe(32)
+
+    token_file = install_root / TOKEN_FILE_RELPATH
+    token_file.parent.mkdir(parents=True, exist_ok=True)
+    token_file.write_text(token, encoding="utf-8")
+    # chmod AFTER the write: the file is created with the process umask, so a
+    # permissive umask would leave the token world-readable for the window
+    # between creation and this call. Narrowing it afterwards is the smallest
+    # correct form available without an os.open dance.
+    os.chmod(token_file, 0o600)
+
+    typer.echo(f"CONSTRUCT API listening on http://{LOOPBACK_HOST}:{port}")
+    typer.echo(f"Token: {token}")
+    typer.echo(f"Token file: {token_file}")
+
+    # The app INSTANCE, not an import string: uvicorn re-imports a module named
+    # by string in a fresh interpreter, where this launch's install root and
+    # token do not exist.
+    uvicorn.run(create_app(install_root, token), host=LOOPBACK_HOST, port=port)
 
 
 @app.command(name="help")
