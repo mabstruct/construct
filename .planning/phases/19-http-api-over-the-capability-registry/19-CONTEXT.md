@@ -36,8 +36,7 @@ not production hardening.
 
 ### Workspace addressing (HTTP-03)
 
-- **D-01: Workspace-id → path resolution lives in the seam (`registry.invoke`), not in the HTTP
-  adapter and not by rewriting all 29 input models.** The seam resolves a `workspace_id` key into
+- **D-01: Workspace-id → path resolution lives in the seam (`registry.invoke`), not in the HTTP adapter and not by rewriting all 29 input models.** The seam resolves a `workspace_id` key into
   whatever path field the target capability declares, before validation. All three surfaces gain
   id-addressing from one implementation, and traversal rejection is one code path rather than a
   per-surface rule. The rejected alternative — resolving in the adapter — is exactly the shape
@@ -59,8 +58,7 @@ not production hardening.
   Five names, two types, and `install_root` is a *different scope* from a workspace — the map is not
   a rename table.
 
-- **D-02: A workspace id is the directory name under the install root; the valid set is the
-  `discover_workspaces(install_root)` scan** (`src/construct/views/lib/discover.py:16`), recomputed
+- **D-02: A workspace id is the directory name under the install root; the valid set is the `discover_workspaces(install_root)` scan** (`src/construct/views/lib/discover.py:16`), recomputed
   per request rather than cached. No new state, no manifest, and the id is the name the user already
   recognises. A name-shaped validator — the `_validate_run_id` kebab-case guard pattern at
   `llm/curation_run.py:64-77` — rejects `..`, `/`, and absolute paths **before** resolution, so
@@ -77,8 +75,7 @@ not production hardening.
   costly — swapping later touches the route generator, the middleware carrying HTTP-05's controls,
   and every test that drives the app.
 
-- **D-04: `construct serve` binds `127.0.0.1` on a fixed default port (`--port` overridable) and
-  prints the URL.** Predictable and bookmarkable, and it keeps criterion 1's "one command" literally
+- **D-04: `construct serve` binds `127.0.0.1` on a fixed default port (`--port` overridable) and prints the URL.** Predictable and bookmarkable, and it keeps criterion 1's "one command" literally
   true. Ephemeral-port-plus-auto-open was rejected as unstable to reference in the Phase 24 UX-verdict
   playbook. **Planner obligation:** a port collision must produce a clear, actionable message — not a
   traceback. This is a first-run failure mode in the phase everything downstream depends on.
@@ -112,8 +109,7 @@ not production hardening.
   Accepted consequence: the schema becomes a consumed contract, so changing an input model is a
   visible break rather than a quiet one.
 
-- **D-07: All 29 capabilities are exposed by default; every exclusion is written down with its
-  reason in a `COVERAGE.md`.** This is the artifact D-25 named as "genuinely worth writing — just as
+- **D-07: All 29 capabilities are exposed by default; every exclusion is written down with its reason in a `COVERAGE.md`.** This is the artifact D-25 named as "genuinely worth writing — just as
   Phase 19 planning input". Full coverage is asserted by the guard, so a capability can never fall
   off the surface by nobody noticing, and criterion 1 stays literally true. Accepted cost: the
   awkward-input capabilities (`views.*` taking `install_root`, `workspace.init` taking `root`) must
@@ -123,8 +119,7 @@ not production hardening.
 
 ### Error shape (HTTP-04, criterion 3)
 
-- **D-08: WR-04 is closed on both sides — `from_validation_error`'s `model` parameter becomes
-  required, AND HTTP joins 18-03's differential parity test as a third column.** Phase 18's own
+- **D-08: WR-04 is closed on both sides — `from_validation_error`'s `model` parameter becomes required, AND HTTP joins 18-03's differential parity test as a third column.** Phase 18's own
   wording is the rationale: "a guarantee a caller can drop is a convention, not a contract" — so the
   footgun is removed at the type level. And criterion 3 must be proven mechanically by the same test
   that already proves CLI↔MCP parity, not by inspection: three of Phase 18's eight green self-reports
