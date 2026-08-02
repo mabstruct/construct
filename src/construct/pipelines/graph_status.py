@@ -63,7 +63,18 @@ def graph_status(workspace: str | Path) -> OperationResult:
                 "total": domain_total,
                 "names": domain_names,
             },
-            "workspace": str(root.resolve()),
+            # T-18-32 / D-19: the workspace *name*, never the resolved absolute
+            # path. This is the success path, where an exception-boundary
+            # sanitizer never looks — ``str(root.resolve())`` here put an
+            # absolute path into a body that no error was involved in producing,
+            # and ``daily.run`` folds this dict wholesale into its own result.
+            #
+            # The convention is the one ``cli.py`` already states for reason
+            # strings: the emitted value carries no filesystem path, and a
+            # *local* caller that wants one appends it itself from its own
+            # install root. The name is also exactly the workspace id HTTP-03
+            # addresses by, so the value gains meaning rather than losing it.
+            "workspace": root.resolve().name,
         }
 
         return OperationResult(

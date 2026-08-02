@@ -36,7 +36,7 @@ from typer.testing import CliRunner
 from construct.capabilities.catalog import get_registry
 from construct.cli import app
 from construct.llm import curation_run
-from construct.mcp.server import _serialize_result
+from construct.capabilities.results import serialize_result
 from tests.llm.conftest import create_test_workspace
 
 runner = CliRunner()
@@ -82,11 +82,12 @@ def _cli_json(cap: str, payload: dict) -> Rendered:
 def _mcp(cap: str, payload: dict) -> Rendered:
     """The real MCP dispatch path — the same handler the stdio tool wraps.
 
-    ``mcp/server.py:_serialize_result`` is the exact function the generated tool
-    calls, so anything that does not survive it does not reach an MCP client.
+    ``capabilities/results.py:serialize_result`` is the exact function the
+    generated tool calls, so anything that does not survive it does not reach an
+    MCP client.
     """
     result = get_registry().invoke(cap, payload)
-    serialized = _serialize_result(result)
+    serialized = serialize_result(result)
     return Rendered(text=json.dumps(serialized, indent=2), payload=serialized, exit_code=0)
 
 

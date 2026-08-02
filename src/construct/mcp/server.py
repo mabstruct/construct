@@ -2,41 +2,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from construct.capabilities.catalog import get_registry
-from construct.services.knowledge import OperationResult
-
-
-def _serialize_result(result: Any) -> dict:
-    """Project a capability's return value onto a JSON-encodable dict.
-
-    The dataclass branch **recurses** (``asdict``), and that is the whole point.
-    A one-level ``{f: getattr(result, f)}`` walk returned ``OperationResult`` with
-    its ``errors`` list still holding ``OperationError`` dataclasses;
-    ``json.dumps`` then raised inside the caller's own ``try`` and every
-    structured failure answered ``{"error": "Object of type OperationError is not
-    JSON serializable"}``. That dropped the entire error channel on the MCP
-    surface — silently, with a well-formed JSON body — so an agent read a bogus
-    reason and could not tell a validation failure from an infrastructure fault.
-    The CLI rendered the same capability's reasons correctly, which is exactly
-    the cross-surface fork GOV-01 exists to close (CR-01).
-
-    ``json.dumps`` is deliberately left without a ``default=`` fallback: coercing
-    an unexpected value with ``str()`` would put filesystem paths into a string
-    rendered straight back to an MCP client (T-18-10), so a value this function
-    cannot project is a bug to fix here, not one to stringify at the boundary.
-    """
-    if hasattr(result, "model_dump"):
-        return result.model_dump(mode="json")
-    if is_dataclass(result) and not isinstance(result, type):
-        return asdict(result)
-    if isinstance(result, (list, tuple)):
-        return {"items": [str(item) for item in result]}
-    return {"result": str(result)}
+from construct.capabilities.errors import CapabilityError
+from construct.capabilities.results import sanitize_exception, serialize_result
 
 
 def create_server() -> FastMCP:
@@ -50,10 +22,24 @@ def create_server() -> FastMCP:
             def handler(**kwargs: Any) -> str:
                 try:
                     result = registry.invoke(capability.id, kwargs)
-                    serialized = _serialize_result(result)
+                    serialized = serialize_result(result)
                     return json.dumps(serialized, indent=2)
-                except Exception as exc:
+                except CapabilityError as exc:
+                    # The seam's typed errors are path-free by construction:
+                    # ``CapabilityNotFoundError`` lists capability ids, and
+                    # ``CapabilityInputError.from_validation_error`` builds its
+                    # reason from field locations and pydantic constraint text
+                    # with ``include_input`` and ``include_context`` off
+                    # (T-18-10). Rendering their own message is what keeps this
+                    # surface's reason identical to the CLI's (GOV-01).
                     return json.dumps({"error": str(exc)})
+                except Exception as exc:
+                    # M-4: this arm was the last unguarded stringifying arm on a
+                    # serialized surface — one bare ``str(exc)`` standing behind
+                    # every capability, so any OSError escaping a handler put an
+                    # absolute path straight into an MCP body (T-18-10).
+                    # ``sanitize_exception`` never reads the message at all.
+                    return json.dumps({"error": sanitize_exception(exc)})
             return handler
 
         app.add_tool(

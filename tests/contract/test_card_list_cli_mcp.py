@@ -20,7 +20,8 @@ from typer.testing import CliRunner
 from construct.capabilities.catalog import get_registry
 from construct.cli import app
 from construct.mcp import server as mcp_server
-from construct.mcp.server import _serialize_result, create_server
+from construct.capabilities.results import serialize_result
+from construct.mcp.server import create_server
 
 runner = CliRunner()
 
@@ -150,7 +151,7 @@ def test_cli_mcp_schema_parity(tmp_path: Path) -> None:
     ws = _card_workspace(tmp_path)
 
     cap = get_registry().get("knowledge.card.list")
-    mcp_serialized = _serialize_result(cap.handler(workspace=ws))
+    mcp_serialized = serialize_result(cap.handler(workspace=ws))
 
     cli = runner.invoke(
         app, ["knowledge", "card", "list", "--workspace", str(ws), "--json"]
