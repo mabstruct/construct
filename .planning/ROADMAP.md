@@ -140,14 +140,14 @@ Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Sam
 **Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
 **Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
 **Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
-**Plans**: 10 plans
+**Plans**: 3/10 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 19-01-PLAN.md — Tracer: one browser-shaped request crosses the trust boundary, resolves a workspace by id in the seam, and reaches a real capability; plus `construct serve`'s failure modes (wave 1)
-- [ ] 19-02-PLAN.md — OQ-4: WAL and `busy_timeout` declared and pinned by test on both checkpointers, with the ADR-0004 concurrency extension (wave 1)
-- [ ] 19-03-PLAN.md — HTTP-04 shared boundary: one serializer and sanitizer for MCP and HTTP, the two success-path path leaks fixed, and a shrink-only baseline (wave 1)
+- [x] 19-01-PLAN.md — Tracer: one browser-shaped request crosses the trust boundary, resolves a workspace by id in the seam, and reaches a real capability; plus `construct serve`'s failure modes (wave 1)
+- [x] 19-02-PLAN.md — OQ-4: WAL and `busy_timeout` declared and pinned by test on both checkpointers, with the ADR-0004 concurrency extension (wave 1)
+- [x] 19-03-PLAN.md — HTTP-04 shared boundary: one serializer and sanitizer for MCP and HTTP, the two success-path path leaks fixed, and a shrink-only baseline (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -418,7 +418,7 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
 | 18. Contract & Governance Foundations | v0.5 | 8/8 | In Progress|  |
-| 19. HTTP API over the Capability Registry | v0.5 | 0/? | Not started | - |
+| 19. HTTP API over the Capability Registry | v0.5 | 3/10 | In Progress|  |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
 | 22. Wizard Flows | v0.5 | 0/? | Not started | - |

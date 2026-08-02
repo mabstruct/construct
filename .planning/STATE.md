@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: UI-Primary Experience (Proof of Concept)
 current_phase: 19
-current_phase_name: HTTP API over the Capability Registry
+current_phase_name: http-api-over-the-capability-registry
 status: executing
 stopped_at: Phase 19 context gathered
-last_updated: "2026-08-02T21:43:05.772Z"
-last_activity: 2026-08-02
-last_activity_desc: Phase 18 complete, transitioned to Phase 19
+last_updated: "2026-08-02T22:23:23.568Z"
+last_activity: 2026-08-03
+last_activity_desc: Phase 19 execution started
 progress:
   total_phases: 7
   completed_phases: 1
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 18 — contract-governance-foundations
+**Current focus:** Phase 19 — http-api-over-the-capability-registry
 
 ## Current Position
 
-Phase: 19 — HTTP API over the Capability Registry
-Plan: Not started
-Status: Ready to execute
+Phase: 19 (http-api-over-the-capability-registry) — EXECUTING
+Plan: 1 of 10
+Status: Executing Phase 19
 Progress: [###-----------------] 14% (1/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
-Last activity: 2026-08-02 — Phase 18 complete, transitioned to Phase 19
+Last activity: 2026-08-03 — Phase 19 execution started
 
 ## Performance Metrics
 
