@@ -140,7 +140,35 @@ Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Sam
 **Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
 **Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
 **Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 19-01-PLAN.md — Tracer: one browser-shaped request crosses the trust boundary, resolves a workspace by id in the seam, and reaches a real capability; plus `construct serve`'s failure modes (wave 1)
+- [ ] 19-02-PLAN.md — OQ-4: WAL and `busy_timeout` declared and pinned by test on both checkpointers, with the ADR-0004 concurrency extension (wave 1)
+- [ ] 19-03-PLAN.md — HTTP-04 shared boundary: one serializer and sanitizer for MCP and HTTP, the two success-path path leaks fixed, and a shrink-only baseline (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 19-04-PLAN.md — HTTP-03 at the seam: creation mode for `workspace.init`, launch-context `install_root` for `views.*`, classification cardinality, and the str/Path coercion proof over all 26 (wave 2)
+- [ ] 19-05-PLAN.md — HTTP-02: the discovery endpoint, the machine-read COVERAGE ledger, and a non-vacuous cardinality coverage guard (wave 2)
+- [ ] 19-06-PLAN.md — HTTP-05: the full Host/Origin/token matrix in one guard, and the proof that rejection precedes any capability effect (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 19-07-PLAN.md — HTTP-04 completion: `model` becomes required, all four HTTP error emitters unified, and the differential parity table gains its third column (wave 3)
+- [ ] 19-08-PLAN.md — HTTP-07: `workflow.list` spanning all three durable stores, registered on CLI, MCP and HTTP at once (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 19-09-PLAN.md — HTTP-06: runs as addressable resources — detached spawn, immediate id, pollable while running, cross-surface resume, visible failed spawn (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 19-10-PLAN.md — The two manual-only verifications: a real browser reaches the running server, and the token-delivery ergonomics verdict for Phase 21 (wave 5, one blocking human-verify checkpoint)
+
+Waves: 1 → {01, 02, 03} · 2 → {04, 05, 06} · 3 → {07, 08} · 4 → {09} · 5 → {10}. Same-wave plans have zero `files_modified` overlap.
 
 ### Phase 20: Real Document Extraction
 
