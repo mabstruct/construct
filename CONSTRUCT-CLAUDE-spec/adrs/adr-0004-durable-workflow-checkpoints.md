@@ -1,6 +1,6 @@
 # ADR-0004: Durable Workflow Checkpoints as Sanctioned Orchestration State
 
-**Status:** Accepted
+**Status:** Accepted — extended 2026-08-03 (Phase 19 / D-14) with the [concurrency contract](#concurrency-contract-extension--phase-19-2026-08-03); the original decision is unchanged
 **Date:** 2026-07-19
 **Deciders:** ;-)mab
 **Context:** The canonical spec documents assert that no database owns part of the truth and that the workspace carries no derived state that is required. Phase 10 (v0.4) shipped LangGraph `SqliteSaver` checkpointers that write `.construct/workflow/research-run.sqlite` and `.construct/workflow/curation-run.sqlite`, and those files hold pending human-review decisions that no layer-1 artifact contains. The spec and the code disagree. This ADR records which one is correct and scopes the rebuild guarantee accordingly, so that v0.5 UI planning can design resumable gate state against a written invariant rather than inferring it from source.
@@ -129,6 +129,57 @@ This section defines the artifact class named by this decision. It is the defini
 `.construct/workflow/` is created lazily at first checkpointer construction, is not in `REQUIRED_PATHS`, and may legitimately be absent from a valid workspace.
 
 **Why it fits neither existing class.** The Support class preamble states that support artifacts *"do not define workspace truth"* — false of a checkpoint holding the only copy of pending decisions. The Derived class asserts that derived artifacts *"must never be treated as canonical graph inputs"* and are generated from source-of-truth files — also false, since the checkpoint is generated from nothing on disk and is the sole input on resume. A third framing was required.
+
+---
+
+## Concurrency contract (extension — Phase 19, 2026-08-03)
+
+This section extends the decision above rather than reversing any part of it. It exists because Phase 19 (HTTP-06) makes a browser-spawned run and a CLI resume act on the **same** checkpoint file. Until that was possible, concurrent access to `.construct/workflow/*.sqlite` was theoretical and the original decision could stay silent on it. It is now operative, so the contract is written down — and, more to the point, the half that is *not* guaranteed is written down too.
+
+### What was found (OQ-4)
+
+The premise the phase opened with was false, and the measurement matters more than the preference.
+
+`SqliteSaver.setup()` already executes `PRAGMA journal_mode=WAL` as the first statement of its own `executescript`. WAL is recorded in the database header, so it persists for the file rather than for the connection that set it. Separately, Python's `sqlite3.connect()` already defaults to `timeout=5.0`, i.e. a 5 000 ms busy timeout.
+
+So the preferred arrangement — WAL, a busy timeout, no locking — was **already in force by library default and stdlib default, not by decision**. That is the worst state a contract can occupy: correct today, silently reversible by a dependency bump, with no test that would notice. A langgraph release that drops its own pragma would have reverted the concurrency guarantee with every test still green.
+
+### The contract (D-14)
+
+Every checkpointer connection in this repo sets both settings **itself**, in `_open_checkpointer` in `src/construct/llm/curation_run.py` and its twin in `src/construct/llm/research_run.py`:
+
+| Setting | Value | Declared by |
+|---|---|---|
+| `journal_mode` | `WAL` | `conn.execute("PRAGMA journal_mode=WAL")` on the connection, before the `SqliteSaver` is constructed |
+| `busy_timeout` | `CHECKPOINT_BUSY_TIMEOUT_MS` — declared as `30_000` ms in both modules | `timeout=CHECKPOINT_BUSY_TIMEOUT_MS / 1000` passed to `sqlite3.connect` |
+| locking | none | no lockfile, no mutex, no single-flight gate |
+
+Under WAL, concurrent readers never block, and a writer that meets a held write lock **waits** rather than erroring.
+
+`CHECKPOINT_BUSY_TIMEOUT_MS` is the single authority for the timeout; this ADR names the constant rather than restating its value in prose, so the document cannot drift from the code. The value was raised from the inherited 5 000 ms because a curation resume that writes many cards holds the write lock for an interval this codebase has not bounded, and a too-short timeout surfaces mid-resume as `database is locked` — the exact failure OQ-4 exists to prevent. **It is a reasoned estimate, not a measurement:** the realistic upper bound of a resume's write transaction was not established, and calling it measured would be the kind of false precision this ADR set is written to avoid.
+
+**The pin.** `tests/llm/test_checkpoint_concurrency.py` reads both PRAGMAs back from a **live** checkpointer connection and asserts `journal_mode` is `wal` and `busy_timeout` equals `CHECKPOINT_BUSY_TIMEOUT_MS` — for exact equality, not as a lower bound, so a silent downgrade to the stdlib default fails rather than passing. It also asserts that a second, independently opened connection to the same file reports `wal`, which is what makes the mode meaningful across processes. Without this file the settings would be indistinguishable from the accident they replaced.
+
+### The limitation: there is no cross-process mutual exclusion
+
+Stated plainly, because implying it away is the failure mode this ADR set exists to prevent.
+
+`SqliteSaver.__init__` holds a `threading.Lock` that is acquired on every `cursor()`. That lock serializes writers **within one process only**. Two processes — a server-spawned run and a CLI resume — construct two `SqliteSaver` instances and therefore share **no lock at all**. There is no cross-process mutual exclusion, and none is being added.
+
+WAL plus a busy timeout is not a substitute for one. It makes a writer wait instead of erroring; it does not make two resumes take turns semantically.
+
+### Arbitration: the checkpoint-id ETag, not a lock
+
+Two racing resumes are already decided correctly by the Phase 18 D-11 checkpoint-id ETag. Every resume is a conditional request carrying the `checkpoint_id` it read; the loser's id no longer matches the persisted checkpoint, so it is **rejected with zero canonical writes**. Rejecting the second resume is the right outcome, not a degradation — the losing caller decided against state that no longer exists.
+
+Two alternatives were rejected:
+
+- **A server-held single-flight lock.** Its guarantee would be one-sided: a CLI resume running outside the server cannot see the lock, so the protection would hold only for callers who did not need it. A guarantee that silently does not apply to half its callers is worse than a stated absence.
+- **A lockfile.** Stale-lock recovery introduces a failure mode whose symptom is a **permanently un-resumable run** — trading a rare, already-arbitrated race for a durable way to lose access to pending review decisions that exist nowhere else (see the blast radius above).
+
+### Scope
+
+This extension is written for the surface Phase 19 opens. HTTP-06 makes a browser-spawned run and a CLI resume write the same checkpoint database, which is what turned OQ-4 from a hypothetical into a contract that has to be stated. Nothing above changes the artifact class, the rebuild guarantee's scope, or the blast radius recorded earlier in this ADR.
 
 ---
 
