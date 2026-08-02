@@ -1,6 +1,6 @@
 """Permanent contract guards for the GOV-01 capability invocation seam (D-05, D-06).
 
-Two layers live here.
+Three layers live here.
 
 **Layer 1 — forbid cardinality (D-06).** The number of registry input models that
 reject undeclared fields must *equal* the registry size. A capability registered
@@ -23,6 +23,26 @@ their models had never been used to construct a call. That correlation is the
 strongest argument for D-05's refusal of an allowlist — the allowlist would have
 been exactly these five.
 
+**Layer 3 — workspace-id resolution over the whole registry (HTTP-03, D-11).**
+``resolve_payload_workspace`` is a single code path with a 26-capability blast
+radius, so the three parametrised families at the bottom of this file — coercion,
+traversal, collision — assert **per capability**, never per field name.
+
+That distinction is the whole reason they exist. A resolver test covering only
+``workspace.status`` proves the ``path`` spelling works and says nothing about
+the other three spellings; worse, it says nothing about the str/Path split,
+because a single capability can only ever be on one side of it. 13 of the
+workspace-scoped models declare a ``str`` field and 13 declare a ``Path``, and
+the seam emits ``str(resolved)`` for all of them — pydantic coerces ``str ->
+Path`` but not the reverse, so the direction is load-bearing and covering one
+field name is the documented way it would have been missed (RESEARCH assumption
+A2).
+
+Each family is driven by ``WORKSPACE_FIELD``'s keys rather than by a hand-listed
+table, for the same reason ``_capability_ids()`` carries no exemption set: a
+table here would become one more guard a registration has to trip, and the one
+nobody remembers.
+
 **Known blind spot, stated rather than implied.** A handler declaring ``**kwargs``
 accepts any field name, so the signature audit cannot prove such a shim actually
 *marshals* what it accepts. The seam-invocation tests at the bottom of this file
@@ -31,9 +51,11 @@ cover the repaired capabilities where the signature audit goes blind.
 from __future__ import annotations
 
 import ast
+import hashlib
 import inspect
 import shutil
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 from pydantic import ValidationError
@@ -41,6 +63,14 @@ from pydantic import ValidationError
 from construct.capabilities import catalog
 from construct.capabilities.catalog import CardArchiveInput, get_registry
 from construct.capabilities.errors import CapabilityInputError
+from construct.capabilities.workspaces import (
+    CREATE_MODE_CAPABILITIES,
+    INSTALL_ROOT_FIELD,
+    WORKSPACE_FIELD,
+    WORKSPACE_ID_KEY,
+    resolve_payload_workspace,
+    set_launch_install_root,
+)
 
 FIXTURE_WS = Path(__file__).resolve().parents[2] / "test-ws" / "my-construct"
 
@@ -981,4 +1011,547 @@ def test_no_registry_aware_module_calls_a_handler_directly() -> None:
     assert not offenders, (
         "these modules reach a capability handler directly instead of dispatching "
         "through registry.invoke:\n  " + "\n  ".join(offenders)
+    )
+
+
+# ---------------------------------------------------------------------------
+# HTTP-03 — workspace-id addressing, classified over the WHOLE registry (D-11)
+# ---------------------------------------------------------------------------
+#
+# ``resolve_payload_workspace`` is one code path with a 26-capability blast
+# radius, so the guards below assert **per capability**, never per field name. A
+# resolver test covering only ``workspace.status`` would prove the ``path``
+# spelling works and say nothing about the other three spellings — and, worse,
+# nothing about the str/Path split, since a single capability can only be on one
+# side of it. That is the documented way RESEARCH assumption A2 ("emitting
+# ``str(resolved)`` satisfies both the str-typed and the Path-typed models")
+# would have been missed.
+#
+# The parametrisation is driven by ``WORKSPACE_FIELD``'s keys rather than by a
+# hand-listed table, for the same reason ``_capability_ids()`` carries no
+# exemption set: a table here would become the sixth guard a registration has to
+# trip, and the one nobody remembers. A newly classified capability is audited
+# the moment it is classified.
+
+
+DOMAIN_SEED = {
+    "domain_id": "seam-domain",
+    "display_name": "Seam Domain",
+    "scope": "A domain for the workspace-id resolution guards.",
+    "taxonomy_seeds": ["seam-category"],
+    "source_priorities": ["web"],
+    "research_seeds": ["seed"],
+}
+
+
+@pytest.fixture
+def launch_root(install_root: Path) -> Iterator[Path]:
+    """The shared contract install root, installed as *launch* context (D-09).
+
+    ``install_root`` (tests/contract/conftest.py) builds two real workspaces,
+    ``demo`` and ``second-demo``. The launch root is process-level state, so it
+    is cleared on teardown — otherwise one test's ``tmp_path`` stays the
+    resolution root for the next, and a workspace-id assertion could pass
+    against a tree the test never built.
+    """
+    set_launch_install_root(install_root)
+    yield install_root
+    set_launch_install_root(None)
+
+
+def _tree_fingerprint(root: Path) -> list[tuple[str, str]]:
+    """``(relative path, sha256 | '<dir>')`` for everything under ``root``.
+
+    A status-code or exception-type assertion alone does not prove "rejected
+    with no filesystem effect" — a rejection that first created a directory and
+    then raised would satisfy it. Hashing file *content* as well as listing
+    names is what makes the claim byte-level rather than name-level.
+    """
+    entries: list[tuple[str, str]] = []
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_dir():
+            entries.append((relative, "<dir>"))
+        else:
+            entries.append(
+                (relative, hashlib.sha256(path.read_bytes()).hexdigest())
+            )
+    return entries
+
+
+# ── The classification is exhaustive and unambiguous (RESEARCH A1) ────────
+
+
+def test_the_classification_maps_cover_every_registered_capability() -> None:
+    """A capability registered without a classification must fail a *test*.
+
+    RESEARCH assumption A1's mitigation. The field maps are a snapshot of the
+    registry as it stands today; without this guard a capability added next
+    month would simply be unaddressable by id, and would announce that only as a
+    request-time ``CapabilityInputError`` to whoever tried it first — the
+    repudiation half of T-19-18.
+
+    Asserted as a relationship between two live measurements, in the shape this
+    file already uses. The message is built from the *unclassified* ids so the
+    failure names the capability the author just added, rather than printing two
+    29-element sets for them to diff by eye.
+    """
+    classified = set(WORKSPACE_FIELD) | set(INSTALL_ROOT_FIELD)
+    registered = {capability.id for capability in get_registry().list()}
+
+    unclassified = sorted(registered - classified)
+    stale = sorted(classified - registered)
+
+    assert classified == registered, (
+        "these capabilities are registered but carry no workspace-id "
+        f"classification: {unclassified}; add each to WORKSPACE_FIELD (scoped to "
+        "one workspace) or to INSTALL_ROOT_FIELD (scoped to the install root). "
+        f"These are classified but no longer registered: {stale}"
+    )
+
+
+def test_the_two_classification_maps_are_disjoint() -> None:
+    """One scope per capability, or the resolver has two answers for one id.
+
+    ``resolve_payload_workspace`` treats install-root scope and workspace scope
+    as mutually exclusive branches — one injects launch context, the other
+    resolves an id — so a capability in both maps would take whichever branch is
+    written first and silently ignore the other classification.
+    """
+    both = sorted(set(WORKSPACE_FIELD) & set(INSTALL_ROOT_FIELD))
+    assert not both, (
+        "these capabilities are classified as BOTH workspace-scoped and "
+        f"install-root-scoped: {both}"
+    )
+
+
+def test_create_mode_capabilities_are_themselves_classified() -> None:
+    """The create-mode set names ids, so it can name one that does not exist.
+
+    ``CREATE_MODE_CAPABILITIES`` is consulted as ``cap_id not in ...``, which is
+    silently true for a typo — the capability would then be resolved in
+    *existence-required* mode and refuse every id it was given.
+    """
+    unknown = sorted(CREATE_MODE_CAPABILITIES - set(WORKSPACE_FIELD))
+    assert not unknown, (
+        "these create-mode capabilities are not workspace-scoped (or are "
+        f"misspelled): {unknown}"
+    )
+
+
+# ── workspace.init: the caller names a directory, never a location (D-11) ──
+
+
+def test_workspace_init_by_id_creates_under_the_launch_install_root_only(
+    tmp_path: Path, launch_root: Path
+) -> None:
+    """T-18-34 answered rather than deferred.
+
+    The whole creation-mode argument in one assertion: the caller supplies a
+    *name* and the seam supplies the *location*. So the test does not merely
+    check that the expected directory appeared — it checks that **nothing else**
+    appeared anywhere under ``tmp_path``, which is the claim that would fail if
+    the id could steer the parent.
+    """
+    before = {path for path in tmp_path.rglob("*") if path.is_dir()}
+    expected = launch_root / "brand-new"
+    assert not expected.exists()
+
+    get_registry().invoke(
+        "workspace.init", {WORKSPACE_ID_KEY: "brand-new", "domain": dict(DOMAIN_SEED)}
+    )
+
+    assert expected.is_dir(), "workspace.init did not create the named workspace"
+
+    created_outside = sorted(
+        str(path)
+        for path in {p for p in tmp_path.rglob("*") if p.is_dir()} - before
+        if expected not in path.parents and path != expected
+    )
+    assert not created_outside, (
+        "workspace.init created directories outside the id it was given: "
+        f"{created_outside}"
+    )
+
+
+def test_a_workspace_created_by_id_is_immediately_addressable_by_id(
+    launch_root: Path,
+) -> None:
+    """D-02's per-request scan is what makes creation and use compose.
+
+    A launch-time cache would answer "no such workspace" for the workspace the
+    previous request just created, until restart. Creating and then reading in
+    two seam calls is the smallest test that would fail if the scan were cached.
+    """
+    registry = get_registry()
+    registry.invoke(
+        "workspace.init", {WORKSPACE_ID_KEY: "just-made", "domain": dict(DOMAIN_SEED)}
+    )
+
+    result = registry.invoke("workspace.validate", {WORKSPACE_ID_KEY: "just-made"})
+
+    assert result is not None
+
+
+def test_workspace_init_refuses_an_id_that_already_names_a_workspace(
+    launch_root: Path,
+) -> None:
+    """The inverted gate. Same scan, read as a conflict instead of a match.
+
+    Creation mode is the one place a resolver could be talked into writing over
+    existing knowledge, so the refusal is asserted together with the tree being
+    byte-identical afterwards — "raised" and "wrote nothing" are two claims.
+    """
+    before = _tree_fingerprint(launch_root)
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(
+            "workspace.init", {WORKSPACE_ID_KEY: "demo", "domain": dict(DOMAIN_SEED)}
+        )
+
+    assert "demo" in excinfo.value.reason
+    assert _tree_fingerprint(launch_root) == before, (
+        "the refused workspace.init still changed the install root"
+    )
+
+
+def test_workspace_init_refuses_an_id_naming_an_existing_non_workspace(
+    launch_root: Path,
+) -> None:
+    """"Discoverable as a workspace" is narrower than "exists".
+
+    An unrelated directory that happens to share the name passes the scan check.
+    Resolving to it would hand ``initialize_workspace`` a tree it did not
+    create, so existence — not workspace-ness — is the condition.
+    """
+    squatter = launch_root / "occupied"
+    (squatter / "important").mkdir(parents=True)
+    (squatter / "important" / "notes.txt").write_text("do not clobber", encoding="utf-8")
+    before = _tree_fingerprint(squatter)
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(
+            "workspace.init", {WORKSPACE_ID_KEY: "occupied", "domain": dict(DOMAIN_SEED)}
+        )
+
+    assert "occupied" in excinfo.value.reason
+    assert _tree_fingerprint(squatter) == before
+
+
+def test_a_traversal_shaped_id_is_refused_in_creation_mode_too(
+    launch_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shape gate is unconditional — ``must_exist`` inverts gate 2 only.
+
+    Creation mode is precisely where a dropped shape gate would be worst: a
+    traversal-shaped id would name a directory the seam then *creates*. Spying on
+    ``discover_workspaces`` proves the shape gate still runs first here, exactly
+    as the read path proves it.
+    """
+    from construct.views.lib import discover as discover_module
+
+    calls: list[Path] = []
+    monkeypatch.setattr(
+        discover_module, "discover_workspaces", lambda root: calls.append(Path(root)) or []
+    )
+    before = _tree_fingerprint(launch_root)
+
+    with pytest.raises(CapabilityInputError):
+        get_registry().invoke(
+            "workspace.init",
+            {WORKSPACE_ID_KEY: "../../etc", "domain": dict(DOMAIN_SEED)},
+        )
+
+    assert calls == [], "a traversal-shaped creation id reached the filesystem scan"
+    assert _tree_fingerprint(launch_root) == before
+
+
+# ── views.*: install-root scope comes from launch context (D-11) ───────────
+
+
+@pytest.mark.parametrize("cap_id", sorted(INSTALL_ROOT_FIELD))
+def test_an_install_root_scoped_capability_takes_the_launch_root_when_absent(
+    launch_root: Path, cap_id: str
+) -> None:
+    """The injection rule, asserted on the seam's own rewrite.
+
+    ``install_root`` is a ``PATH_SHAPED_KEYS`` entry, so the HTTP envelope
+    refuses it with 422 before dispatch (D-10). Without this injection the two
+    views capabilities would be exposed and unreachable from a browser — a
+    documented exclusion, which is exactly what D-07 says this phase must not
+    have.
+    """
+    field = INSTALL_ROOT_FIELD[cap_id]
+
+    assert resolve_payload_workspace(cap_id, {}) == {field: str(launch_root)}
+
+
+@pytest.mark.parametrize("cap_id", sorted(INSTALL_ROOT_FIELD))
+def test_an_explicit_install_root_is_left_exactly_as_it_arrived(cap_id: str) -> None:
+    """The CLI's ``--install-root`` flag is unchanged by the injection.
+
+    This is what makes injection an *addition* rather than a behaviour change:
+    every existing CLI and MCP call site supplies the field, and a supplied
+    field is never touched. Asserted with no launch root set, so a passing
+    result cannot be an accident of the two values coinciding.
+    """
+    field = INSTALL_ROOT_FIELD[cap_id]
+    supplied = {field: "/some/caller/chosen/root"}
+
+    assert resolve_payload_workspace(cap_id, supplied) == supplied
+
+
+@pytest.mark.parametrize("cap_id", sorted(INSTALL_ROOT_FIELD))
+def test_an_install_root_scoped_capability_refuses_a_workspace_id(
+    launch_root: Path, cap_id: str
+) -> None:
+    """A different scope, not a different spelling.
+
+    ``discover_workspaces`` scans the *children* of its argument, so resolving an
+    id here would hand these capabilities a single workspace and silently emit an
+    empty build. Refusing is the honest answer; and since the install root is the
+    authorization boundary itself, it is never caller-chosen over HTTP either.
+    """
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(cap_id, {WORKSPACE_ID_KEY: "demo"})
+
+    assert "install root" in excinfo.value.reason
+
+
+def test_views_validate_data_reaches_the_launch_root_with_an_empty_payload(
+    launch_root: Path,
+) -> None:
+    """End to end, and distinguishable from the explicit-value case below.
+
+    The launch root carries the ``AGENTS.md`` marker, so it passes
+    ``install_root_error`` and the handler gets as far as looking for views data.
+    "Found nothing to validate" is therefore proof it read *this* root — a bare
+    ``success is False`` would be produced by either outcome.
+    """
+    result = get_registry().invoke("views.validate_data", {})
+
+    assert "found nothing to validate" in result.message
+
+
+def test_views_validate_data_still_honours_a_supplied_install_root(
+    tmp_path: Path, launch_root: Path
+) -> None:
+    """The other arm of the same pair, chosen to be *distinguishable*.
+
+    The supplied root deliberately lacks the ``AGENTS.md`` marker, so it is
+    refused by the install-root guard — an outcome the launch root cannot
+    produce. Asserting "success is False" for both would have passed even if the
+    supplied value had been overwritten by the injection.
+    """
+    stranger = tmp_path / "not-an-install"
+    stranger.mkdir()
+
+    result = get_registry().invoke("views.validate_data", {"install_root": str(stranger)})
+
+    assert "refused the install root" in result.message
+
+
+# ---------------------------------------------------------------------------
+# The three resolver families — per capability, never per field name
+# ---------------------------------------------------------------------------
+
+#: The required fields ``_minimal_payload`` cannot stub, and only those.
+#:
+#: Its heuristic reads ``str(annotation)`` for the substring ``"str"``, which is
+#: right for the 20-odd plain ``str`` fields and wrong for exactly three:
+#: ``list[str]`` and ``DomainInitInput`` both contain ``"str"`` as a substring
+#: (the latter via *con-str-uct*), and ``ResearchSearchInput`` enforces a
+#: one-of-three rule no per-field stub can satisfy.
+#:
+#: Enumerated rather than generalised. Teaching ``_minimal_payload`` to build
+#: valid values for arbitrary annotations would make it a second, weaker copy of
+#: pydantic; three named exceptions stay readable and fail loudly if a model
+#: changes underneath them.
+_COERCION_OVERRIDES: dict[str, dict] = {
+    "knowledge.card.create": {"domains": ["seam-domain"]},
+    "research.search": {"query": "a probe query"},
+    "workspace.init": {"domain": dict(DOMAIN_SEED)},
+}
+
+
+def _workspace_scoped_ids() -> list[str]:
+    """Every workspace-scoped capability, from the map itself.
+
+    No exemption set, deliberately — see this module's docstring. Classifying a
+    capability is what enrols it in all three families.
+    """
+    return sorted(WORKSPACE_FIELD)
+
+
+def _addressable_id(cap_id: str, index: int) -> str:
+    """The workspace id to address ``cap_id`` with.
+
+    ``demo`` for the ordinary case. Create-mode capabilities need an id that
+    resolves to *nothing*, and a distinct one per case so two parametrisations
+    cannot collide with each other's directory.
+    """
+    if cap_id in CREATE_MODE_CAPABILITIES:
+        return f"fresh-workspace-{index}"
+    return "demo"
+
+
+def _id_payload(cap, cap_id: str, workspace_id: str) -> dict:
+    """``_minimal_payload``'s stubs, addressed by id instead of by path."""
+    payload = _minimal_payload(cap, WORKSPACE_FIELD[cap_id], workspace_id)
+    payload.pop(WORKSPACE_FIELD[cap_id])
+    payload[WORKSPACE_ID_KEY] = workspace_id
+    payload.update(_COERCION_OVERRIDES.get(cap_id, {}))
+    return payload
+
+
+# ── Family 1: coercion (RESEARCH assumption A2) ───────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_workspace_id_validates_and_arrives_as_the_declared_type(
+    launch_root: Path, monkeypatch: pytest.MonkeyPatch, cap_id: str
+) -> None:
+    """The resolved value reaches the handler in the field, and the type, the
+    model declares.
+
+    **This asserts at the validation boundary, not at the handler's outcome, and
+    that is deliberate — do not "strengthen" it into a credential-dependent
+    test.** Several of these capabilities cannot run without an ``ANTHROPIC_API_KEY``
+    or network access (``ask.domain``, the ``research`` family), and others open
+    a sqlite checkpointer and execute a real workflow. Asserting on their
+    *results* would make this suite need credentials, a network, and seconds per
+    case to prove a property that is fully decided before the handler is
+    entered: a model that validated is the property under test.
+
+    So the handler is replaced by a spy, which is the *observation point* rather
+    than a bypass — record lookup, id resolution and ``model_validate`` all run
+    for real, and the spy sees exactly what ``handler(**model.model_dump())``
+    would have been called with. That is a stronger claim than "it did not
+    raise": it names the field the value landed in and the type it arrived as,
+    which is the half a type-blind assertion would miss.
+
+    ``tests/contract/test_http_surface.py`` and the create-then-read case above
+    invoke real handlers by id, so the door is separately proven to open.
+    """
+    registry = get_registry()
+    cap = registry.get(cap_id)
+    field = WORKSPACE_FIELD[cap_id]
+    declared = cap.input_model.model_fields[field].annotation
+    workspace_id = _addressable_id(cap_id, 0)
+
+    received: dict = {}
+    monkeypatch.setattr(cap, "handler", lambda **kwargs: received.update(kwargs))
+
+    registry.invoke(cap_id, _id_payload(cap, cap_id, workspace_id))
+
+    assert field in received, (
+        f"{cap_id}: the resolved workspace never reached the handler's {field!r}"
+    )
+    value = received[field]
+    # ``isinstance`` rather than ``type(...) is``: pydantic resolves ``Path`` to
+    # the platform's concrete ``PosixPath``/``WindowsPath``, which an identity
+    # check would reject on every Path-declared capability. It still catches the
+    # split in both directions — ``str`` and ``Path`` are unrelated types, so a
+    # value on the wrong side fails whichever side the model declares.
+    assert isinstance(value, declared), (
+        f"{cap_id}: {field} arrived as {type(value).__name__}, but the model "
+        f"declares {declared}. The seam emits str(resolved); pydantic coerces "
+        f"str -> Path but not the reverse."
+    )
+    assert Path(value) == launch_root / workspace_id, (
+        f"{cap_id}: {field} resolved to {value!r}, not to the addressed workspace"
+    )
+
+
+@pytest.mark.parametrize(
+    "cap_id, payload",
+    [
+        ("knowledge.card.list", {}),
+        ("curation.inspect", {"run_id": "no-such-run"}),
+    ],
+)
+def test_a_real_handler_runs_when_addressed_by_id(
+    launch_root: Path, cap_id: str, payload: dict
+) -> None:
+    """Default-deny is only correct if the door still opens — on both sides of
+    the str/Path split, with no handler patched.
+
+    ``knowledge.card.list`` declares ``workspace: Path``; ``curation.inspect``
+    declares ``workspace_path: str``. Neither needs a credential or a network,
+    so one case from each side of the split can be asserted for real, which is
+    what keeps the spy-based family above honest.
+    """
+    result = get_registry().invoke(cap_id, {WORKSPACE_ID_KEY: "demo", **payload})
+
+    assert result is not None
+    haystack = str(getattr(result, "message", "") or "")
+    assert "refused the workspace" not in haystack, (
+        f"{cap_id}: an id-addressed real workspace was refused at the boundary"
+    )
+
+
+# ── Family 2: traversal (T-19-03) ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_traversal_shaped_workspace_id_touches_nothing(
+    launch_root: Path, monkeypatch: pytest.MonkeyPatch, cap_id: str
+) -> None:
+    """Criterion 2, on every workspace-scoped capability: *rejected with no
+    filesystem effect*.
+
+    Two claims, because an exception type alone proves neither. The spy on
+    ``discover_workspaces`` proves the shape gate ran **first** — a 422 would be
+    produced by either gate ordering, but only one ordering leaves the directory
+    walk unexecuted. The before/after fingerprint hashes file content as well as
+    listing names, so a rejection that created something and then raised would
+    fail here even though it "rejected".
+    """
+    from construct.views.lib import discover as discover_module
+
+    calls: list[Path] = []
+    monkeypatch.setattr(
+        discover_module, "discover_workspaces", lambda root: calls.append(Path(root)) or []
+    )
+    before = _tree_fingerprint(launch_root)
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(cap_id, {WORKSPACE_ID_KEY: "../../etc"})
+
+    reason = excinfo.value.reason
+    assert "kebab-case" in reason, f"{cap_id}: the reason does not state the shape rule"
+    assert "my-construct" in reason, (
+        f"{cap_id}: the reason states a rule but carries no example of a valid id"
+    )
+    assert calls == [], f"{cap_id}: the traversal attempt reached the filesystem scan"
+    assert _tree_fingerprint(launch_root) == before, (
+        f"{cap_id}: the traversal attempt changed the install root"
+    )
+
+
+# ── Family 3: collision ───────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("cap_id", _workspace_scoped_ids())
+def test_a_workspace_id_beside_the_capabilitys_own_field_is_refused(
+    launch_root: Path, cap_id: str
+) -> None:
+    """Two ways of naming one workspace must not silently prefer one.
+
+    Preferring either would make the *other* key a value the caller believes it
+    sent and the system ignored — the class of defect that is only ever found in
+    production. The reason names the conflicting field, because the field
+    spelling differs per capability and a caller cannot otherwise tell which of
+    the two keys to drop.
+    """
+    field = WORKSPACE_FIELD[cap_id]
+
+    with pytest.raises(CapabilityInputError) as excinfo:
+        get_registry().invoke(
+            cap_id, {WORKSPACE_ID_KEY: "demo", field: str(launch_root / "demo")}
+        )
+
+    assert field in excinfo.value.reason, (
+        f"{cap_id}: the refusal does not name the conflicting field {field!r}, so "
+        f"the caller cannot tell which key to drop: {excinfo.value.reason!r}"
     )

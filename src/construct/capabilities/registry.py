@@ -75,6 +75,18 @@ class CapabilityRegistry:
         not be the only caller that can address a workspace by id, and an
         adapter-side resolver would make the id an HTTP-only dialect — the
         cross-surface vocabulary fork HTTP-02 forbids.
+
+        Step 1.5 does two symmetric things, not one (D-11). For a
+        workspace-scoped capability it resolves ``workspace_id`` into that
+        capability's own declared field — as an *allowlist* against the install
+        root's scan normally, and as a *conflict* check for the capabilities
+        that create the directory they name. For an install-root-scoped
+        capability it supplies ``launch_install_root()`` when the payload omits
+        the field, so those capabilities are reachable from a caller that may
+        not send a path at all. A payload that already carries the field is
+        untouched, which is why the CLI's ``--install-root`` behaves exactly as
+        it did. Both are uniform behaviour applied to every surface; neither is
+        a parameter, a mode, or a per-surface branch.
         """
         try:
             cap = self.get(cap_id)
