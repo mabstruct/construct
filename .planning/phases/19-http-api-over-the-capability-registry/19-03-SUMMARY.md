@@ -315,6 +315,26 @@ None — no external service configuration required.
   holds it, and it holds it by cardinality rather than by behaviour — stated as this plan's blind spot
   in the test module docstring.
 
+## Self-Check: PASSED
+
+- Files claimed created/modified all present on disk (`results.py`, `test_result_boundary.py`,
+  `19-03-SUMMARY.md`, `mcp/server.py`, `graph_status.py`, `bridge_detect.py`).
+- Commits `c6e62d9`, `975ed37`, `2da8119` all present in `git log`.
+- `.venv/bin/python -m pytest -q` — 819 passed, 22 skipped.
+- `.venv/bin/python -m pytest tests/contract tests/pipelines tests/integration -q` — 483 passed,
+  22 skipped.
+- Acceptance criterion `'default=' not in inspect.getsource(results)` exits 0.
+
+## Known Stubs
+
+None. No placeholder values, empty data sources, or TODO markers were introduced.
+
+## Threat Flags
+
+None. No new network endpoints, auth paths, file access patterns, or trust-boundary schema changes
+were introduced; the plan's `<threat_model>` rows T-19-05, T-19-06 and T-19-15 are all mitigated by
+the assertions listed under `coverage:` above. T-19-16 remains owned by plan 19-07.
+
 ---
 *Phase: 19-http-api-over-the-capability-registry*
 *Completed: 2026-08-02*
