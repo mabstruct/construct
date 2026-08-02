@@ -18,7 +18,8 @@ from construct.capabilities.catalog import get_registry
 from construct.cli import app
 from construct.llm.research_run import RunResult
 from construct.mcp import server as mcp_server
-from construct.mcp.server import _serialize_result, create_server
+from construct.capabilities.results import serialize_result
+from construct.mcp.server import create_server
 from construct.search.models import SearchResult
 from tests.llm.conftest import create_test_workspace, make_scored_findings_batch
 
@@ -166,7 +167,7 @@ def test_cli_mcp_result_schema_parity(
     # Direct handler → MCP serialization path (same handler the MCP tool wraps).
     cap = get_registry().get("research.run")
     handler_result = cap.handler(workspace_path=str(ws))
-    mcp_serialized = _serialize_result(handler_result)
+    mcp_serialized = serialize_result(handler_result)
 
     # CLI path.
     cli = runner.invoke(app, ["research", "run", "--workspace", str(ws), "--json"])

@@ -22,7 +22,8 @@ from typer.testing import CliRunner
 from construct.capabilities.catalog import get_registry
 from construct.cli import app
 from construct.mcp import server as mcp_server
-from construct.mcp.server import _serialize_result, create_server
+from construct.capabilities.results import serialize_result
+from construct.mcp.server import create_server
 from tests.llm.conftest import create_test_workspace
 
 runner = CliRunner()
@@ -129,7 +130,7 @@ def test_cli_mcp_schema_parity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     # Direct handler → MCP serialization path (same handler the MCP tool wraps).
     cap = get_registry().get("curation.run")
     handler_result = cap.handler(workspace_path=str(ws))
-    mcp_serialized = _serialize_result(handler_result)
+    mcp_serialized = serialize_result(handler_result)
 
     # CLI path.
     cli = runner.invoke(app, ["curation", "run", "--workspace", str(ws), "--json"])

@@ -938,7 +938,7 @@ def _run_outcome(result) -> str:
 
 def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
     """Run a research-run runner and wrap its ``RunResult`` in a sanitizing
-    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+    ``OperationResult`` (so ``capabilities/results.py:serialize_result`` works unchanged).
 
     Mirrors ``_research_score_shim``'s error discipline (T-10-15): a total
     provider outage → ``success=False`` carrying only ``degraded``/``total_outage``
@@ -1037,7 +1037,7 @@ def _research_inspect_shim(**kwargs):
 
 def _curation_result_to_operation(cap_id: str, runner) -> OperationResult:
     """Run a curation runner and wrap its ``CurationRunResult`` in a sanitizing
-    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+    ``OperationResult`` (so ``capabilities/results.py:serialize_result`` works unchanged).
 
     Simpler than ``_run_result_to_operation``: curation is deterministic, so there
     is NO ``ResearchScoreOutageError`` provider-outage path. Any exception →
@@ -1129,7 +1129,7 @@ def _card_evaluate_shim(**kwargs):
 
 def _daily_result_to_operation(cap_id: str, runner) -> OperationResult:
     """Run a daily runner and wrap its ``DailyRunResult`` in a sanitizing
-    ``OperationResult`` (so ``mcp/server.py:_serialize_result`` works unchanged).
+    ``OperationResult`` (so ``capabilities/results.py:serialize_result`` works unchanged).
 
     Mirrors ``_curation_result_to_operation``: any exception →
     ``success=False`` with a key-safe class-name message; a normal return is a
