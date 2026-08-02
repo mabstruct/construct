@@ -24,7 +24,7 @@ The universal hard gate — no browser feature of any kind can exist before this
 - [ ] **HTTP-02**: Every registry capability is reachable over HTTP without hand-written per-capability routes — routes are generated from the registry the way `mcp/server.py` already generates MCP tools, guarded by a test so the server file cannot be hand-edited into drift.
 - [ ] **HTTP-03**: HTTP callers address workspaces by id, never by filesystem path; ids resolve server-side against an install-root allowlist.
 - [ ] **HTTP-04**: HTTP errors return the same structured result shape as CLI and MCP — no third error-shape fork.
-- [ ] **HTTP-05**: The API rejects drive-by and DNS-rebinding requests via `Origin`/`Host` validation and a per-launch token.
+- [x] **HTTP-05**: The API rejects drive-by and DNS-rebinding requests via `Origin`/`Host` validation and a per-launch token.
 - [ ] **HTTP-06**: Workflow runs are addressable resources — starting one returns an id, status is pollable, and a run started in the browser is resumable from the CLI and vice versa.
 - [ ] **HTTP-07**: A user can list runs, including paused ones, so no run becomes unreachable after its id is lost.
 
@@ -157,7 +157,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HTTP-02 | Phase 19 | Pending |
 | HTTP-03 | Phase 19 | Pending |
 | HTTP-04 | Phase 19 | Pending |
-| HTTP-05 | Phase 19 | Pending |
+| HTTP-05 | Phase 19 | Complete |
 | HTTP-06 | Phase 19 | Pending |
 | HTTP-07 | Phase 19 | Pending |
 | EXTR-01 | Phase 20 | Pending |
