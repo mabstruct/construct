@@ -212,6 +212,10 @@ None — no external service configuration required.
 - **Carried forward for 19-09:** the 30 000 ms value is a reasoned estimate. If a curation resume's write transaction is ever measured, the constant should be revisited — it is two module constants and a docstring, so D-14 is cheaply reversible by design.
 - **Note for the verifier:** two `test_workspace_contract_migration` failures will appear in any worktree-executed phase until the fixture handles the empty `digests/` directory. See `deferred-items.md`.
 
+## Self-Check: PASSED
+
+All 7 claimed files verified present on disk; all 3 claimed commit hashes verified in `git log`; working tree clean after the metadata commit.
+
 ---
 *Phase: 19-http-api-over-the-capability-registry*
 *Completed: 2026-08-03*
