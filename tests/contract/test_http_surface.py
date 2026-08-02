@@ -587,23 +587,58 @@ def _requires_a_field(cap_id: str) -> bool:
     return any(field.is_required() for field in model.model_fields.values())
 
 
-def test_no_capability_model_is_all_optional_today() -> None:
+def _reaches_its_handler_on_an_empty_payload(cap_id: str) -> bool:
+    """Whether ``{"payload": {}}`` gets past the seam and *runs* the capability.
+
+    Two independent mechanisms put a capability in this set, and checking only
+    the first is how this guard was blind once already (19-04 + 19-05, caught
+    by the post-merge gate rather than by either plan alone):
+
+    1. the model declares no required field at all; or
+    2. every required field is **supplied by the resolver** before
+       ``model_validate`` ever sees the payload. ``INSTALL_ROOT_FIELD`` members
+       are exactly this case — the seam fills ``install_root`` from
+       process-level launch context (D-09), so the model still *declares* a
+       required field while an empty payload sails through it.
+
+    Deriving from ``INSTALL_ROOT_FIELD`` rather than hand-listing the two ids
+    keeps this honest when a third capability joins that map.
+    """
+    if not _requires_a_field(cap_id):
+        return True
+    model = get_registry().get(cap_id).input_model
+    injected = {INSTALL_ROOT_FIELD[cap_id]} if cap_id in INSTALL_ROOT_FIELD else set()
+    return all(
+        name in injected
+        for name, field in model.model_fields.items()
+        if field.is_required()
+    )
+
+
+def test_only_install_root_capabilities_run_on_an_empty_payload() -> None:
     """The measured property the parametrisation below depends on.
 
-    Asserted separately so the dependency is visible: if a capability ever
-    declares an all-optional model, ``{"payload": {}}`` would *run its handler*
-    rather than being rejected, and the case below would silently change from
+    Asserted separately so the dependency is visible: for any capability *not*
+    listed here, ``{"payload": {}}`` must be rejected by the seam rather than
+    *running its handler* — otherwise the case below silently changes from
     "the seam validated" to "the workflow executed". This test is where that
     reader finds out.
+
+    The expected set is the install-root capabilities, whose scope argument is
+    launch context rather than caller input, so an empty payload legitimately
+    means "the root you launched against". A **third** id appearing here is a
+    real finding: some capability became runnable by an empty browser form on
+    its first render.
     """
-    all_optional = [
+    runs_on_empty = sorted(
         capability.id
         for capability in get_registry().list()
-        if not _requires_a_field(capability.id)
-    ]
-    assert all_optional == [], (
-        "these capabilities now accept an empty payload, so the empty-payload "
-        f"case must stop being parametrised over them: {all_optional}"
+        if _reaches_its_handler_on_an_empty_payload(capability.id)
+    )
+    assert runs_on_empty == sorted(INSTALL_ROOT_FIELD), (
+        "the set of capabilities an empty payload can execute has changed; a "
+        "new member is reachable by a browser form's first render: "
+        f"{runs_on_empty}"
     )
 
 
@@ -612,7 +647,7 @@ def test_no_capability_model_is_all_optional_today() -> None:
     [
         capability.id
         for capability in get_registry().list()
-        if _requires_a_field(capability.id)
+        if not _reaches_its_handler_on_an_empty_payload(capability.id)
     ],
 )
 def test_an_empty_payload_gets_the_capabilitys_own_reason_not_a_server_error(
