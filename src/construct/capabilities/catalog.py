@@ -984,8 +984,34 @@ def _run_result_to_operation(cap_id: str, runner) -> OperationResult:
     )
 
 
+def _run_workspace_refusal(cap_id: str, kwargs) -> OperationResult | None:
+    """The T-18-34 boundary control for the run family's ``workspace_path``.
+
+    CR-04 closed this for the six capabilities spelling the field ``workspace``.
+    It did not reach the run family, which spells it ``workspace_path`` — so
+    ``curation.run``, ``research.run``, ``daily.run`` and the curation/research
+    ``review`` and ``inspect`` pairs still created directories at any agent-chosen
+    path: opening the sqlite checkpointer materialises
+    ``<path>/.construct/workflow/<name>.sqlite`` and every parent on the way,
+    *before* the run can discover the workspace is not a workspace and fail.
+
+    Seven capabilities were measured to create, not the three a first reading
+    named. ``inspect`` is in the list precisely because "read-only" describes what
+    it does to the *workspace*, not what opening a checkpointer does to the
+    *filesystem*. `bridge.detect` and `daily.inspect` were measured clean and are
+    deliberately not guarded here.
+
+    Scoping this to the property in ``workspace_error``'s docstring — every
+    capability that writes under an agent-supplied workspace — rather than to the
+    instances someone happened to name is the whole lesson of T-18-33/T-18-34.
+    """
+    return _workspace_refusal(cap_id, kwargs.get("workspace_path"), field="workspace_path")
+
+
 def _research_run_shim(**kwargs):
     """RT-03 adapter for research.run (run-start; pauses at the human gate)."""
+    if (refusal := _run_workspace_refusal("research.run", kwargs)) is not None:
+        return refusal
     return _run_result_to_operation(
         "research.run", lambda: run_research_run(ResearchRunInput(**kwargs))
     )
@@ -993,6 +1019,8 @@ def _research_run_shim(**kwargs):
 
 def _research_review_shim(**kwargs):
     """RT-03 adapter for research.review (resume with per-finding decisions)."""
+    if (refusal := _run_workspace_refusal("research.review", kwargs)) is not None:
+        return refusal
     return _run_result_to_operation(
         "research.review", lambda: review_research_run(ReviewInput(**kwargs))
     )
@@ -1000,6 +1028,8 @@ def _research_review_shim(**kwargs):
 
 def _research_inspect_shim(**kwargs):
     """RT-03 adapter for research.inspect (read-only get_state; never resumes)."""
+    if (refusal := _run_workspace_refusal("research.inspect", kwargs)) is not None:
+        return refusal
     return _run_result_to_operation(
         "research.inspect", lambda: inspect_research_run(InspectInput(**kwargs))
     )
@@ -1035,6 +1065,8 @@ def _curation_result_to_operation(cap_id: str, runner) -> OperationResult:
 
 def _curation_run_shim(**kwargs):
     """RT-03 adapter for curation.run (deterministic findings-only cycle)."""
+    if (refusal := _run_workspace_refusal("curation.run", kwargs)) is not None:
+        return refusal
     return _curation_result_to_operation(
         "curation.run", lambda: run_curation_run(CurationRunInput(**kwargs))
     )
@@ -1042,6 +1074,8 @@ def _curation_run_shim(**kwargs):
 
 def _curation_inspect_shim(**kwargs):
     """RT-03 adapter for curation.inspect (read-only get_state; never re-runs)."""
+    if (refusal := _run_workspace_refusal("curation.inspect", kwargs)) is not None:
+        return refusal
     return _curation_result_to_operation(
         "curation.inspect", lambda: inspect_curation_run(CurationInspectInput(**kwargs))
     )
@@ -1050,6 +1084,8 @@ def _curation_inspect_shim(**kwargs):
 def _curation_review_shim(**kwargs):
     """RT-03 adapter for curation.review (resume a paused run with per-item
     decisions; applies approved lifecycle/connection/archive writes)."""
+    if (refusal := _run_workspace_refusal("curation.review", kwargs)) is not None:
+        return refusal
     return _curation_result_to_operation(
         "curation.review", lambda: review_curation_run(CurationReviewInput(**kwargs))
     )
@@ -1121,6 +1157,8 @@ def _daily_result_to_operation(cap_id: str, runner) -> OperationResult:
 
 def _daily_run_shim(**kwargs):
     """Keyword-only adapter for daily.run (thin research→curation→graph cycle)."""
+    if (refusal := _run_workspace_refusal("daily.run", kwargs)) is not None:
+        return refusal
     return _daily_result_to_operation(
         "daily.run", lambda: run_daily_run(DailyRunInput(**kwargs))
     )
@@ -1133,7 +1171,9 @@ def _daily_inspect_shim(**kwargs):
     )
 
 
-def _workspace_refusal(cap_id: str, workspace) -> OperationResult | None:
+def _workspace_refusal(
+    cap_id: str, workspace, field: str = "workspace"
+) -> OperationResult | None:
     """The CR-04 boundary control: refuse an agent-supplied non-workspace path.
 
     The workspace-side twin of the ``install_root_error`` call at the top of
@@ -1152,6 +1192,10 @@ def _workspace_refusal(cap_id: str, workspace) -> OperationResult | None:
     ``if (refusal := _workspace_refusal(...)) is not None: return refusal``.
     The reason names no filesystem path (T-18-10 / the ``install_root_error``
     convention), which is what lets the MCP surface render it verbatim.
+
+    ``field`` names the *declared* input field so the error points at the one the
+    caller actually sent. The write capabilities spell it ``workspace``; the run
+    family spells it ``workspace_path`` (T-18-34).
     """
     reason = workspace_error(workspace)
     if reason is None:
@@ -1159,7 +1203,7 @@ def _workspace_refusal(cap_id: str, workspace) -> OperationResult | None:
     return OperationResult(
         success=False,
         message=f"{cap_id} refused the workspace: {reason}",
-        errors=[OperationError(field="workspace", reason=reason, suggestion="")],
+        errors=[OperationError(field=field, reason=reason, suggestion="")],
         data={"failed": True},
     )
 

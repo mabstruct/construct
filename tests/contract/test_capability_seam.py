@@ -818,6 +818,139 @@ def test_a_real_workspace_still_passes_the_write_guard(tmp_path: Path) -> None:
     assert (ws / "cards" / "guarded.md").is_file()
 
 
+# ── T-18-34: the same control, on the field CR-04's fix did not reach ────────
+#
+# CR-04 guarded the six capabilities spelling the field `workspace`. The run
+# family spells it `workspace_path`, took no guard, and opening a sqlite
+# checkpointer materialises `<path>/.construct/workflow/<name>.sqlite` and every
+# parent BEFORE the run can discover the workspace is not a workspace and fail.
+#
+# The security audit named three (curation.run / research.run / daily.run).
+# Measuring found SEVEN — the `review` and `inspect` pairs create too, because
+# "read-only" describes what `inspect` does to the WORKSPACE, not what opening a
+# checkpointer does to the FILESYSTEM.
+#
+# So this test does not hard-code a list. Scoping a control to the instances
+# someone happened to name is precisely the defect that produced T-18-34 from
+# CR-04's fix, and a hand-typed list here would rebuild that trap for the next
+# capability. It measures every registered capability that accepts a
+# workspace-shaped path and asserts the property directly.
+
+_WORKSPACE_FIELDS = ("workspace_path", "workspace", "install_root")
+
+
+def _workspace_field(cap) -> str | None:
+    """The workspace-shaped input field this capability declares, if any."""
+    return next((f for f in _WORKSPACE_FIELDS if f in cap.input_model.model_fields), None)
+
+
+def _minimal_payload(cap, field: str, value) -> dict:
+    """`value` for the workspace field plus a stub for every other required one.
+
+    The stubs only need to satisfy the model so dispatch reaches the handler —
+    this test is about the filesystem, not about the handler's own semantics.
+    """
+    payload: dict = {field: value}
+    for name, spec in cap.input_model.model_fields.items():
+        if name == field or not spec.is_required():
+            continue
+        annotation = str(spec.annotation)
+        payload[name] = "probe-id" if "str" in annotation else (1 if "int" in annotation else [])
+    return payload
+
+
+def _capabilities_taking_a_workspace_path() -> list:
+    return [c for c in get_registry().list() if _workspace_field(c) is not None]
+
+
+@pytest.mark.parametrize(
+    "cap_id",
+    sorted(c.id for c in _capabilities_taking_a_workspace_path()),
+)
+def test_no_capability_creates_anything_at_an_agent_supplied_non_workspace(
+    tmp_path: Path, cap_id: str
+) -> None:
+    """T-18-34 / the property `workspace_error`'s docstring states.
+
+    Reproduced before the fix, through the exact closure `mcp/server.py`
+    registers::
+
+        curation.run  workspace_path=/tmp/probe/a/b/inner
+          -> created a, a/b, a/b/inner, a/b/inner/.construct,
+             .construct/workflow, .construct/workflow/curation-run.sqlite
+
+    The target is a nested path under a *sibling* of anything pre-existing, so
+    the assertion is that nothing was created at all — not that a pre-existing
+    directory stayed empty.
+    """
+    registry = get_registry()
+    cap = registry.get(cap_id)
+    field = _workspace_field(cap)
+    outsider = tmp_path / "not-a-workspace" / "deeper" / "inner"
+    assert not outsider.exists()
+
+    try:
+        registry.invoke(cap_id, _minimal_payload(cap, field, str(outsider)))
+    except Exception:
+        # A handler may still raise for its own reasons; the filesystem claim
+        # below is the one this test makes.
+        pass
+
+    assert not outsider.exists(), (
+        f"{cap_id} created {outsider} under an agent-supplied non-workspace path"
+    )
+    assert not outsider.parent.exists(), f"{cap_id} created {outsider.parent}"
+
+
+def test_the_run_family_refusal_names_its_own_field_and_no_path(tmp_path: Path) -> None:
+    """The refusal must point at `workspace_path`, not at `workspace`.
+
+    `_workspace_refusal` hard-coded `field="workspace"`; reusing it verbatim for
+    the run family would have told a caller to fix a field it never sent. The
+    reason still carries no filesystem path (T-18-10 convention).
+    """
+    outsider = tmp_path / "not-a-workspace" / "inner"
+
+    result = get_registry().invoke("curation.run", {"workspace_path": str(outsider)})
+
+    assert result.success is False
+    assert [e.field for e in result.errors] == ["workspace_path"]
+
+    haystack = result.message + " ".join(e.reason for e in result.errors)
+    for segment in (str(outsider), outsider.name, outsider.parent.name, str(tmp_path)):
+        assert segment not in haystack, (
+            f"the run-family refusal echoed a path segment {segment!r}: {haystack!r}"
+        )
+
+
+def test_a_real_workspace_still_reaches_the_run_family_runner(tmp_path: Path) -> None:
+    """Default-deny is only correct if the door still opens.
+
+    A real workspace must get PAST the boundary and fail (or succeed) on the
+    runner's own terms — a guard that refuses everything would pass the test
+    above while breaking the product.
+    """
+    from construct.services.init import DomainInitInput, initialize_workspace
+
+    ws = tmp_path / "workspace"
+    initialize_workspace(ws, DomainInitInput(
+        domain_id="test-domain",
+        display_name="Test Domain",
+        scope="A domain for the run-family guard test.",
+        taxonomy_seeds=["test-category"],
+        source_priorities=["web"],
+        research_seeds=["seed"],
+    ))
+
+    result = get_registry().invoke(
+        "curation.inspect", {"workspace_path": str(ws), "run_id": "no-such-run"}
+    )
+
+    assert "refused the workspace" not in str(result.message), (
+        "a real workspace was refused at the boundary instead of reaching the runner"
+    )
+
+
 def test_no_registry_aware_module_calls_a_handler_directly() -> None:
     """GOV-01's structural claim: exactly one path from a payload to a handler.
 
