@@ -9,6 +9,7 @@ description = "Local-first, agent-powered personal knowledge system"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "fastapi>=0.141,<1",
   "langchain-anthropic>=1.1.0",
   "langchain-core>=0.3",
   "langgraph>=0.2",
@@ -19,6 +20,11 @@ dependencies = [
   "ruamel.yaml>=0.18",
   "streamlit>=1.35",
   "typer>=0.12",
+  # Already present transitively (via ``mcp`` and ``streamlit``), but
+  # ``construct serve`` imports it directly, so it is declared rather than
+  # inherited — an undeclared direct import is a dependency that disappears the
+  # day an indirect provider drops it.
+  "uvicorn>=0.51",
 ]
 
 [project.optional-dependencies]

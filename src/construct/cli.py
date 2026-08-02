@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 
 import typer
 
+from construct.api import DEFAULT_API_PORT
 from construct.llm.curation_run import ESCALATED_LABEL
 from construct.schemas.card import Lifecycle
 from construct.schemas.workspace import ConnectionType
@@ -124,6 +125,42 @@ def mcp() -> None:
     capability registry — no manual wiring needed.
     """
     run_server()
+
+
+@app.command()
+def serve(
+    port: int = typer.Option(DEFAULT_API_PORT, "--port", help="Port to bind on the loopback interface."),
+    install_root: Path | None = typer.Option(None, "--install-root", help="Root holding the workspaces this server can address."),
+) -> None:
+    """Start the loopback HTTP server for browser and script access.
+
+    Binds 127.0.0.1 only, prints the URL and a freshly minted per-launch token,
+    and serves every registered capability through the one seam the CLI and MCP
+    surfaces use — so this command adds reach, never vocabulary (HTTP-02).
+
+    ``--install-root`` is resolved at call time, not import time (WR-09), and
+    becomes the root every workspace id is resolved against for the life of the
+    process (D-09).
+    """
+    # Deferred: the ASGI stack is the heaviest import in the project and every
+    # other CLI command would pay for it at startup (the idiom ``views generate``
+    # already follows for the views package).
+    import secrets
+
+    import uvicorn
+
+    from construct.api.app import create_app
+
+    install_root = install_root or Path.cwd()
+    token = secrets.token_urlsafe(32)
+
+    typer.echo(f"CONSTRUCT API listening on http://127.0.0.1:{port}")
+    typer.echo(f"Token: {token}")
+
+    # The app INSTANCE, not an import string: uvicorn re-imports a module named
+    # by string in a fresh interpreter, where this launch's install root and
+    # token do not exist.
+    uvicorn.run(create_app(install_root, token), host="127.0.0.1", port=port)
 
 
 @app.command(name="help")

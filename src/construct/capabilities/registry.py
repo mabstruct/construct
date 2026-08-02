@@ -11,6 +11,7 @@ from construct.capabilities.errors import (
     CapabilityInputError,
     CapabilityNotFoundError,
 )
+from construct.capabilities.workspaces import resolve_payload_workspace
 
 
 InputModel = type[BaseModel]
@@ -62,11 +63,25 @@ class CapabilityRegistry:
         There is deliberately no strict/lenient flag, no allowlist argument, and no
         per-surface exception (D-05): a knob here would let one surface diverge from
         another, which is the fork this seam exists to prevent.
+
+        Step 1.5 is D-01's ``workspace_id`` resolution, inserted between the
+        record lookup and the model validation. It is **behaviour applied
+        uniformly to every surface**, not a knob: ``invoke``'s signature is
+        untouched (``test_seam_has_no_leniency_knob`` pins it to
+        ``{self, cap_id, payload}``), the install root it resolves against is
+        process-level launch context every surface shares (D-09), and a payload
+        carrying no ``workspace_id`` passes through byte-for-byte. Placing it
+        here rather than in the HTTP adapter is the whole point: a browser must
+        not be the only caller that can address a workspace by id, and an
+        adapter-side resolver would make the id an HTTP-only dialect — the
+        cross-surface vocabulary fork HTTP-02 forbids.
         """
         try:
             cap = self.get(cap_id)
         except KeyError as exc:
             raise CapabilityNotFoundError(cap_id, sorted(self._capabilities)) from exc
+
+        payload = resolve_payload_workspace(cap_id, payload)
 
         try:
             model = cap.input_model.model_validate(payload)
