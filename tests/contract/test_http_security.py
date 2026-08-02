@@ -34,6 +34,7 @@ and nothing about what the operating system routes to the bound port.
 """
 from __future__ import annotations
 
+import hashlib
 import secrets as secrets_module
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -543,3 +544,104 @@ def test_concurrent_good_tokens_all_pass_while_a_bad_one_is_refused(
 
     assert statuses == [200] * 10
     assert refused.result() == 401
+
+
+# ── The claim a status code cannot make ───────────────────────────────────
+#
+# Criterion 4's wording is "refused **before it reaches a capability**". A status
+# code is the guard reporting on itself: a guard that returned 403 *after*
+# dispatching would satisfy every assertion above. The answer below is the
+# workspace tree itself — hashed before and after each refused request, with a
+# positive control proving the payload would otherwise have written.
+
+
+def _tree_hashes(root: Path) -> dict[str, str]:
+    """Every file under ``root`` as ``relative path -> content hash``.
+
+    Paths *and* contents, because either alone misses half the question: a
+    mapping of paths only would not see a card being edited, and a set of
+    hashes only would not see a file being renamed or removed.
+    """
+    return {
+        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _card_payload(title: str) -> dict:
+    """A payload that is valid for ``knowledge.card.create`` in every respect.
+
+    The entire force of the rejection cases is that this request *would* have
+    written something had it reached dispatch — so it addresses the workspace by
+    id (``workspace`` is path-shaped and refused at the boundary by D-10) and
+    fills every required field of ``CardCreateInput``.
+    """
+    return {
+        "payload": {
+            "workspace_id": "demo",
+            "title": title,
+            "epistemic_type": "finding",
+            "domains": ["test-domain"],
+            "content_categories": ["test-category"],
+            "confidence": 3,
+            "source_tier": 3,
+        }
+    }
+
+
+WRITE_CAP = "knowledge.card.create"
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected_status"),
+    [
+        ({"Origin": "http://evil.example.com"}, 403),
+        ({}, 401),
+        ({"Host": "evil.example.com"}, 400),
+    ],
+    ids=["foreign-origin", "no-token", "foreign-host"],
+)
+def test_a_refused_write_leaves_the_tree_byte_identical(
+    client: TestClient,
+    install_root: Path,
+    auth_headers: dict[str, str],
+    headers: dict[str, str],
+    expected_status: int,
+) -> None:
+    """The ordering proof, expressed as bytes on disk rather than as a status."""
+    request_headers = dict(headers)
+    if expected_status != 401:
+        request_headers.update(auth_headers)
+
+    before = _tree_hashes(install_root)
+    response = client.post(
+        _url(WRITE_CAP), json=_card_payload("Refused Card"), headers=request_headers
+    )
+    after = _tree_hashes(install_root)
+
+    assert response.status_code == expected_status
+    assert after == before, "a refused request changed the workspace"
+
+
+def test_the_same_payload_with_correct_headers_does_change_the_tree(
+    client: TestClient, install_root: Path, auth_headers: dict[str, str]
+) -> None:
+    """The positive control the three cases above are worthless without.
+
+    A payload that was invalid for some unrelated reason would leave the tree
+    identical under every rejection case *and* under an accepted one, and all
+    three would still pass — the same vacuity this phase's coverage guard
+    exists to catch. So the identical payload, with correct ``Host``, no
+    ``Origin`` and the right token, must write.
+    """
+    before = _tree_hashes(install_root)
+    response = client.post(
+        _url(WRITE_CAP), json=_card_payload("Accepted Card"), headers=auth_headers
+    )
+    after = _tree_hashes(install_root)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["success"] is True, response.text
+    assert after != before, "the control payload wrote nothing — the proof is vacuous"
+    assert set(after) - set(before), "the control payload created no new file"
