@@ -36,6 +36,7 @@ import socket
 import stat
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,7 @@ from construct.api import (
 )
 from construct.api.app import DISCOVERY_ROUTE, _serialize_result, create_app
 from construct.capabilities.catalog import get_registry
+from construct.capabilities.registry import CapabilityRecord
 from construct.capabilities.workspaces import (
     INSTALL_ROOT_FIELD,
     PATH_SHAPED_KEYS,
@@ -316,6 +318,451 @@ def test_every_non_dispatch_api_route_is_documented_in_the_ledger(
         "these non-capability routes are served but absent from "
         f"{COVERAGE_LEDGER.name}'s non-capability-routes table: "
         f"{sorted(served - documented)}"
+    )
+
+
+# ── HTTP-02: the coverage guard (T-19-19) ─────────────────────────────────
+#
+# Why this section is written the way it is, stated once so the shape below is
+# read as a decision rather than as ceremony.
+#
+# Under D-05 there is a single static route with a path parameter, so "the
+# server module was never hand-edited to add a capability" is true *by
+# construction*. A guard that asserted it would prove nothing. The claim worth
+# guarding is the one that can actually fail: **every registered capability is
+# reachable**. Reachability is a runtime property — a capability can be
+# registered, present in the id set, and still fail to resolve.
+#
+# So the guard asserts CARDINALITY, not membership. This project has been bitten
+# twice by set-membership guards that passed over a subset (WR-01, and the
+# ``list_mcp_tools`` trap the discovery endpoint above sidesteps). A membership
+# assertion answers "is X listed?"; the question here is "is anything missing?",
+# and only counting answers it.
+
+#: The probe key. Declared by no capability, and not a path-shaped key — both
+#: asserted below rather than assumed, because either being false would turn a
+#: refusal into a *different* refusal and the probe would stop discriminating.
+#:
+#: Its 422 is produced by ``extra="forbid"``, which
+#: ``tests/contract/test_capability_seam.py`` pins for the whole registry. That
+#: is what makes this probe registry-derived rather than a hand-written payload
+#: table: the payload works for every capability *because* of a guarded
+#: property, not because somebody enumerated the fields.
+PROBE_KEY = "__coverage_probe_undeclared_field__"
+
+
+def _probe_response(client: TestClient, auth_headers: dict[str, str], cap_id: str):
+    return client.post(
+        _url(cap_id), json={"payload": {PROBE_KEY: "x"}}, headers=auth_headers
+    )
+
+
+def _classify(response, cap_id: str) -> str:
+    """``"reached"``, ``"route-missing"``, or a description of neither.
+
+    The discriminator, spelled out. A **404** means the id never resolved: the
+    seam raised ``CapabilityNotFoundError`` before touching a model. A **422
+    naming this capability** means the opposite — the record resolved, the
+    declared model ran, and it rejected the probe key. So the two outcomes are
+    distinguishable evidence rather than "some status code came back", which is
+    the degenerate form this guard must not collapse into.
+
+    The id is required to be *in the reason*, not merely in the request: a 422
+    that did not name the capability would be the D-10 envelope gate firing
+    ahead of dispatch, which is a refusal that says nothing about reachability.
+    """
+    if response.status_code == 404:
+        return "route-missing"
+    if response.status_code == 422 and cap_id in response.text:
+        return "reached"
+    return f"unclassified ({response.status_code}: {response.text[:120]})"
+
+
+def _measure_reachability(
+    client: TestClient, auth_headers: dict[str, str]
+) -> tuple[set[str], dict[str, str]]:
+    """``(reachable ids, {unreachable id: why})`` — both driven from the registry."""
+    reachable: set[str] = set()
+    unreachable: dict[str, str] = {}
+    for capability in get_registry().list():
+        verdict = _classify(
+            _probe_response(client, auth_headers, capability.id), capability.id
+        )
+        if verdict == "reached":
+            reachable.add(capability.id)
+        else:
+            unreachable[capability.id] = verdict
+    return reachable, unreachable
+
+
+def _assert_full_coverage(
+    reachable: set[str], excluded: set[str], registered: set[str]
+) -> None:
+    """The assertion itself, factored out so the meta-test can run *this* code.
+
+    A meta-test that re-implemented the assertion would prove its own copy
+    fails, which is worth nothing. Three claims in this order, because each
+    catches something the next cannot: cardinality catches a capability that is
+    simply missing; disjointness catches one counted twice (documented as
+    excluded *and* measured reachable, which would let a missing one hide behind
+    an inflated total); the union catches a set that is the right size and the
+    wrong contents.
+    """
+    assert len(reachable) + len(excluded) == len(registered), (
+        "capability coverage does not add up — "
+        f"{len(reachable)} reachable + {len(excluded)} documented exclusions "
+        f"!= {len(registered)} registered. Unaccounted for: "
+        f"{sorted(registered - reachable - excluded)}"
+    )
+    overlap = reachable & excluded
+    assert not overlap, (
+        "these capabilities are documented as excluded from the HTTP surface "
+        f"and are reachable anyway — the ledger is wrong or the exclusion never "
+        f"took effect: {sorted(overlap)}"
+    )
+    assert reachable | excluded == registered, (
+        "the reachable and excluded sets do not exhaust the registry. Registered "
+        f"but accounted for nowhere: {sorted(registered - (reachable | excluded))}; "
+        f"accounted for but not registered: {sorted((reachable | excluded) - registered)}"
+    )
+
+
+def test_the_probe_key_discriminates_before_it_is_trusted() -> None:
+    """The probe's two preconditions, asserted rather than assumed.
+
+    If ``PROBE_KEY`` were declared by some capability, that capability's probe
+    would succeed and run its handler. If it were path-shaped, the D-10 envelope
+    gate would refuse it ahead of dispatch and every id — registered or not —
+    would answer 422, collapsing the discriminator.
+    """
+    assert PROBE_KEY not in PATH_SHAPED_KEYS
+    declaring = [
+        capability.id
+        for capability in get_registry().list()
+        if PROBE_KEY in capability.input_model.model_fields
+    ]
+    assert declaring == [], f"the probe key is a declared field of: {declaring}"
+
+
+def test_an_unregistered_id_is_route_missing_and_a_registered_one_is_not(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """The explicit discriminator case.
+
+    Without this, "every registered id returned something other than 404" would
+    be satisfiable by a server that answered 422 to literally everything.
+    ``does.not.exist`` is the control: it must be classified route-missing while
+    a real id is classified reached, using the same classifier.
+    """
+    missing = client.post(
+        _url("does.not.exist"), json={"payload": {PROBE_KEY: "x"}}, headers=auth_headers
+    )
+    assert missing.status_code == 404, missing.text
+    assert _classify(missing, "does.not.exist") == "route-missing"
+
+    live = get_registry().list()[0].id
+    assert _classify(_probe_response(client, auth_headers, live), live) == "reached"
+
+
+def test_every_registered_capability_is_reachable_over_http(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """HTTP-02's criterion 1, as a claim about all of them.
+
+    The exclusions come from ``COVERAGE.md``'s parsed table, not from a set
+    written in this file: an exclusion that lived here would be invisible to
+    anybody reading the ledger, and one that lived only in the ledger's prose
+    would be invisible to this test. Parsing is what keeps the two honest about
+    each other (D-18).
+    """
+    reachable, unreachable = _measure_reachability(client, auth_headers)
+    registered = {capability.id for capability in get_registry().list()}
+    excluded = set(_ledger_first_column(EXCLUSIONS_HEADING))
+
+    assert unreachable == {}, (
+        "these registered capabilities are not reachable over HTTP: "
+        f"{unreachable}"
+    )
+    _assert_full_coverage(reachable, excluded, registered)
+
+
+def test_the_coverage_guard_fails_when_a_capability_is_unreachable() -> None:
+    """The non-vacuity meta-test — the reason this file exists in this shape.
+
+    A guard nobody has seen fail is a guard nobody knows works. That is not a
+    general anxiety here: under a single-route surface the *naive* version of
+    this guard is genuinely vacuous, so "it passes" carries no information until
+    somebody demonstrates it can stop passing.
+
+    Both failure arms are exercised, against the real ``_assert_full_coverage``:
+
+    1. a capability measured unreachable and not documented as excluded — the
+       cardinality arm, i.e. the regression this guard is for;
+    2. a capability counted twice, reachable *and* excluded — the disjointness
+       arm, which is how an unreachable capability could otherwise hide behind
+       a total that still adds up.
+
+    Each assertion also has to *name* the offending capability, because a
+    coverage regression is read as a diff by somebody who did not write it.
+    """
+    registered = {capability.id for capability in get_registry().list()}
+    victim = sorted(registered)[0]
+
+    with pytest.raises(AssertionError) as cardinality_failure:
+        _assert_full_coverage(registered - {victim}, set(), registered)
+    assert victim in str(cardinality_failure.value)
+
+    with pytest.raises(AssertionError) as disjointness_failure:
+        _assert_full_coverage(registered, {victim}, registered)
+    assert victim in str(disjointness_failure.value)
+
+
+def test_the_guard_would_notice_a_capability_the_app_cannot_reach(
+    client: TestClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same non-vacuity claim, made end to end instead of on the assertion.
+
+    The registry is presented as holding one capability the app cannot resolve,
+    and the *measured* pipeline — probe, classify, count — is run against it.
+    This is the arm that would catch a probe which had quietly stopped
+    discriminating, which the pure-assertion meta-test above cannot see.
+    """
+    registry = get_registry()
+    real = registry.list()
+    phantom = CapabilityRecord(
+        id="phantom.never.registered",
+        name="Phantom",
+        description="Registered in the listing only — the app cannot resolve it.",
+        input_model=real[0].input_model,
+        output_model=real[0].output_model,
+        handler=real[0].handler,
+    )
+    monkeypatch.setattr(type(registry), "list", lambda self: [*real, phantom])
+
+    reachable, unreachable = _measure_reachability(client, auth_headers)
+    assert unreachable == {phantom.id: "route-missing"}
+
+    with pytest.raises(AssertionError) as failure:
+        _assert_full_coverage(
+            reachable,
+            set(_ledger_first_column(EXCLUSIONS_HEADING)),
+            {capability.id for capability in registry.list()},
+        )
+    assert phantom.id in str(failure.value)
+
+
+# ── Dispatch resolves a full id, never a prefix ───────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("curation.run", "curation.review"),
+        ("knowledge.card.list", "knowledge.connection.list"),
+    ],
+)
+def test_two_ids_sharing_a_prefix_route_to_different_capabilities(
+    client: TestClient, auth_headers: dict[str, str], first: str, second: str
+) -> None:
+    """The path parameter matches a whole capability id.
+
+    A prefix match would be silent and severe: ``curation.run`` is a *write*
+    workflow and ``curation.review`` is not, so a caller asking for one and
+    getting the other would be told nothing. The reason string names the
+    capability that actually ran, which is what makes this assertable at all.
+    """
+    for target, other in ((first, second), (second, first)):
+        response = _probe_response(client, auth_headers, target)
+        assert response.status_code == 422, response.text
+        detail = response.json()["detail"]
+        assert target in detail
+        assert other not in detail
+
+
+# ── An empty payload reaches the seam, not a 500 ──────────────────────────
+
+
+def _requires_a_field(cap_id: str) -> bool:
+    model = get_registry().get(cap_id).input_model
+    return any(field.is_required() for field in model.model_fields.values())
+
+
+def test_no_capability_model_is_all_optional_today() -> None:
+    """The measured property the parametrisation below depends on.
+
+    Asserted separately so the dependency is visible: if a capability ever
+    declares an all-optional model, ``{"payload": {}}`` would *run its handler*
+    rather than being rejected, and the case below would silently change from
+    "the seam validated" to "the workflow executed". This test is where that
+    reader finds out.
+    """
+    all_optional = [
+        capability.id
+        for capability in get_registry().list()
+        if not _requires_a_field(capability.id)
+    ]
+    assert all_optional == [], (
+        "these capabilities now accept an empty payload, so the empty-payload "
+        f"case must stop being parametrised over them: {all_optional}"
+    )
+
+
+@pytest.mark.parametrize(
+    "cap_id",
+    [
+        capability.id
+        for capability in get_registry().list()
+        if _requires_a_field(capability.id)
+    ],
+)
+def test_an_empty_payload_gets_the_capabilitys_own_reason_not_a_server_error(
+    client: TestClient, auth_headers: dict[str, str], cap_id: str
+) -> None:
+    """``{}`` is a shape a browser form sends on its first render.
+
+    The failure mode being excluded is a **500**: an adapter that assumed a
+    non-empty payload would turn "you left a field blank" into "the server
+    broke", and the caller would have no way to tell those apart. The reason
+    must be the capability's own, so it names the capability and the missing
+    field.
+    """
+    response = client.post(_url(cap_id), json={"payload": {}}, headers=auth_headers)
+
+    assert response.status_code == 422, response.text
+    assert cap_id in response.json()["detail"]
+
+
+# ── D-10, server-side, for every capability (T-19-03 / T-19-17) ───────────
+
+
+def _declared_path_field(cap_id: str) -> str:
+    field = WORKSPACE_FIELD.get(cap_id) or INSTALL_ROOT_FIELD.get(cap_id)
+    assert field is not None, f"{cap_id} has no declared path field to attack"
+    return field
+
+
+def _tree(root: Path) -> dict[str, int]:
+    """Every path under ``root``, with file sizes. Directories carry ``-1``."""
+    return {
+        path.relative_to(root).as_posix(): (path.stat().st_size if path.is_file() else -1)
+        for path in sorted(root.rglob("*"))
+    }
+
+
+@pytest.mark.parametrize("cap_id", [capability.id for capability in get_registry().list()])
+def test_no_capability_accepts_a_filesystem_path_over_http(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    install_root: Path,
+    cap_id: str,
+    tmp_path: Path,
+) -> None:
+    """The server-side half of D-10, asserted for **every** capability.
+
+    "The HTTP client only ever sends ``workspace_id``" is not a property the
+    adapter's own source can establish: under a single envelope the payload
+    arrives verbatim from an untrusted caller (T-19-03), and ``install_root`` in
+    particular would let a browser move the boundary the whole surface is scoped
+    by (T-19-17). So the refusal is asserted per capability, using **that
+    capability's own declared field name** derived from the maps — the realistic
+    attack, and one that keeps working when a field is renamed.
+
+    The tree is compared before and after because a status code alone would not
+    catch a refusal that fired *after* the handler had already written. The
+    target sits inside the install root so a capability that ran would leave
+    evidence exactly where this looks.
+    """
+    payload = {_declared_path_field(cap_id): str(install_root / "attacker-supplied")}
+    before = _tree(install_root)
+
+    response = client.post(_url(cap_id), json={"payload": payload}, headers=auth_headers)
+
+    assert response.status_code == 422, response.text
+    assert _declared_path_field(cap_id) in response.json()["detail"]
+    assert not (install_root / "attacker-supplied").exists()
+    assert _tree(install_root) == before, (
+        f"the install-root tree changed while refusing a path-shaped key for {cap_id}"
+    )
+
+
+def test_the_path_key_refusal_happens_before_dispatch_for_every_capability(
+    client: TestClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """"Refused" must mean "the seam was never entered", not "the answer was 422".
+
+    The unchanged tree above shows no *write* happened; it cannot show that no
+    handler ran, and a read handler that ran on a caller-supplied path would
+    already be an information disclosure. So the seam is spied on and asserted
+    zero-called across the whole registry.
+
+    Written as one test over every capability rather than parametrised: the
+    claim is about the set ("no capability dispatched"), and the install-root
+    fixture is expensive enough that 29 rebuilds to make the same point would be
+    paying for a nicer failure line.
+    """
+    calls: list[str] = []
+    monkeypatch.setattr(
+        type(get_registry()),
+        "invoke",
+        lambda self, cap_id, payload: calls.append(cap_id),
+    )
+
+    statuses = {}
+    for capability in get_registry().list():
+        payload = {_declared_path_field(capability.id): "/tmp/attacker-supplied"}
+        statuses[capability.id] = client.post(
+            _url(capability.id), json={"payload": payload}, headers=auth_headers
+        ).status_code
+
+    assert calls == [], f"a path-shaped payload reached the seam for: {sorted(set(calls))}"
+    not_refused = {cap_id: code for cap_id, code in statuses.items() if code != 422}
+    assert not_refused == {}, f"a path-shaped key was not refused with 422: {not_refused}"
+
+
+# ── Concurrency (backstop strength — see the docstring) ───────────────────
+
+
+def test_two_concurrent_invocations_each_return_their_own_result(
+    client: TestClient, install_root: Path, auth_headers: dict[str, str]
+) -> None:
+    """Two capabilities in flight at once, each answered with its own result.
+
+    The property under test is that ``install_root`` and ``token`` are bound
+    **once** by ``create_app`` and never mutated per request — if either were
+    stashed on the app and rewritten per call, two overlapping requests could
+    answer each other's question.
+
+    **Backstop strength, stated so a reader does not over-read a green run.**
+    ``TestClient`` drives the ASGI app in-process; it does not exercise the
+    deployed server's socket handling, its event loop under real load, or
+    uvicorn's worker model. A pass here is evidence about the *app object*, not
+    proof about the running server. It is worth having anyway — the failure it
+    would catch is per-request mutable state, which lives in the app object.
+    """
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = {
+            cap_id: pool.submit(
+                client.post,
+                _url(cap_id),
+                json={"payload": {"workspace_id": "demo"}},
+                headers=auth_headers,
+            )
+            for cap_id in ("workspace.status", "workflow.status")
+        }
+        bodies = {cap_id: future.result() for cap_id, future in futures.items()}
+
+    for cap_id, response in bodies.items():
+        assert response.status_code == 200, f"{cap_id}: {response.text}"
+
+    expected_status = _serialize_result(
+        get_registry().invoke("workspace.status", {"path": str(install_root / "demo")})
+    )
+    assert bodies["workspace.status"].json() == expected_status
+
+    workflow_body = bodies["workflow.status"].json()
+    assert "success" in workflow_body and "items" not in workflow_body, (
+        "workflow.status came back with workspace.status's result shape — the "
+        "two responses were crossed"
     )
 
 
