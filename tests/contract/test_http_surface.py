@@ -31,12 +31,23 @@ constant is a weaker claim than a socket test, which is the honest state.
 """
 from __future__ import annotations
 
+import os
+import socket
+import stat
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+import typer
 from fastapi.testclient import TestClient
 
-from construct.api import CAPABILITY_ROUTE, DEFAULT_API_PORT, TOKEN_HEADER
+from construct.api import (
+    CAPABILITY_ROUTE,
+    DEFAULT_API_PORT,
+    TOKEN_FILE_RELPATH,
+    TOKEN_HEADER,
+)
 from construct.api.app import _serialize_result, create_app
 from construct.capabilities.catalog import get_registry
 from construct.capabilities.workspaces import (
@@ -406,3 +417,186 @@ def test_an_undeclared_envelope_key_is_refused(
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+# ── `serve` owns its failure modes (D-04, D-17, T-19-11) ──────────────────
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _serve_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run the real ``construct`` CLI in a real child process.
+
+    Copied from ``tests/integration/test_surface_parity.py::_cli`` for its two
+    load-bearing choices: ``sys.executable`` (not a hardcoded ``.venv/bin/python``,
+    which inside a git worktree imports a *different* checkout than the one under
+    test) and a ``PYTHONPATH`` pinned to this checkout's ``src``. A real process is
+    also the only way to observe a real exit code, which is half of what this
+    section asserts.
+    """
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    return subprocess.run(
+        [sys.executable, "-m", "construct.cli", *args],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        env=env,
+    )
+
+
+def _free_port() -> int:
+    """A port nothing is listening on right now.
+
+    ``serve``'s pre-flight probe really binds, so a test that let it use
+    ``DEFAULT_API_PORT`` would fail on any machine already running the server —
+    an environment-dependent red that says nothing about the code. The declared
+    default is asserted separately, by reading the option rather than by
+    occupying the port.
+    """
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+def _serve_in_process(monkeypatch: pytest.MonkeyPatch, args: list[str]):
+    """Invoke ``construct serve`` with ``uvicorn.run`` stubbed out.
+
+    ``serve``'s last statement blocks until the process is killed, so everything
+    it does *before* that — the probe, the token file, the printed lines — is
+    unobservable in a child process that has to be reaped. Stubbing the one
+    blocking call is what makes those assertions deterministic instead of a
+    poll-and-hope loop. The port-collision case below still uses a real child
+    process, because an exit code cannot be faked in-process.
+
+    Returns ``(result, captured_uvicorn_kwargs)``.
+    """
+    import uvicorn
+    from typer.testing import CliRunner
+
+    from construct import cli as cli_module
+
+    captured: dict[str, object] = {}
+
+    def fake_run(app, **kwargs):
+        captured["app"] = app
+        captured.update(kwargs)
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+    result = CliRunner().invoke(cli_module.app, ["serve", *args])
+    return result, captured
+
+
+def test_the_bind_address_is_the_loopback_constant(
+    monkeypatch: pytest.MonkeyPatch, install_root: Path
+) -> None:
+    """T-19-11 asserted rather than assumed.
+
+    Three claims, because any one alone is weak: the constant is the loopback
+    literal, ``uvicorn.run`` is actually handed *that constant*, and no wildcard
+    address appears anywhere in ``cli.py``. A wildcard bind would put every
+    capability — including the write ones — on the local network.
+    """
+    from construct import cli as cli_module
+
+    assert cli_module.LOOPBACK_HOST == "127.0.0.1"
+
+    port = _free_port()
+    result, captured = _serve_in_process(
+        monkeypatch, ["--install-root", str(install_root), "--port", str(port)]
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["host"] == cli_module.LOOPBACK_HOST
+    assert captured["port"] == port
+
+    source = Path(cli_module.__file__).read_text(encoding="utf-8")
+    for wildcard in ('"0.0.0.0"', "'0.0.0.0'", '"::"', "'::'"):
+        assert wildcard not in source, f"cli.py names a wildcard bind address: {wildcard}"
+
+
+def test_the_declared_port_default_is_the_fixed_bookmarkable_one() -> None:
+    """D-04: fixed, not ephemeral — the URL has to be bookmarkable and stable
+    enough for a playbook to name a literal address. Read off the option rather
+    than proven by binding it, so the assertion does not depend on 8787 being
+    free on the machine running the suite."""
+    from construct import cli as cli_module
+
+    command = typer.main.get_command(cli_module.app).commands["serve"]
+    port_option = next(p for p in command.params if p.name == "port")
+    assert port_option.default == DEFAULT_API_PORT
+    assert DEFAULT_API_PORT == 8787
+
+
+def test_a_busy_port_exits_one_with_actionable_guidance(tmp_path: Path) -> None:
+    """D-04's planner obligation: a collision produces guidance, not a traceback.
+
+    Run in a real child process because the assertion *is* the exit code. uvicorn
+    0.50.0+ raises ``SystemExit(3)`` for any startup failure, and 3 is a code no
+    other CONSTRUCT command emits — so this test failing with 3 means the
+    pre-flight probe was removed and the command stopped owning its own failure.
+    """
+    from construct import cli as cli_module
+
+    holder = socket.socket()
+    holder.bind((cli_module.LOOPBACK_HOST, 0))
+    holder.listen(1)
+    port = holder.getsockname()[1]
+    try:
+        completed = _serve_cli(
+            ["serve", "--port", str(port), "--install-root", str(tmp_path)]
+        )
+    finally:
+        holder.close()
+
+    combined = completed.stdout + completed.stderr
+    assert completed.returncode == 1, f"exit {completed.returncode}: {combined}"
+    assert str(port) in combined
+    assert "--port" in combined
+    assert "Traceback" not in combined
+
+
+def test_the_launch_token_reaches_a_0600_file_and_stdout(
+    monkeypatch: pytest.MonkeyPatch, install_root: Path
+) -> None:
+    """D-17 / T-19-08: stdout and a ``0600`` file, and the two agree.
+
+    The mode is asserted, not the write: a token file anyone on the machine can
+    read is the same disclosure as no token at all, and the process umask decides
+    the creation mode — so the explicit ``chmod`` is the control and this is what
+    proves it ran.
+    """
+    result, _ = _serve_in_process(
+        monkeypatch,
+        ["--install-root", str(install_root), "--port", str(_free_port())],
+    )
+    assert result.exit_code == 0, result.output
+
+    token_file = install_root / TOKEN_FILE_RELPATH
+    assert token_file.is_file()
+    assert stat.S_IMODE(token_file.stat().st_mode) == 0o600
+
+    printed = [
+        line.split("Token:", 1)[1].strip()
+        for line in result.output.splitlines()
+        if line.startswith("Token:")
+    ]
+    assert printed == [token_file.read_text(encoding="utf-8")]
+    assert printed[0], "an empty token was issued"
+
+
+def test_the_token_never_appears_in_a_url(
+    monkeypatch: pytest.MonkeyPatch, install_root: Path
+) -> None:
+    """T-19-08's other half. A query-string token lands in shell history, access
+    logs and the ``Referer`` — so the printed URL must not carry it."""
+    result, _ = _serve_in_process(
+        monkeypatch,
+        ["--install-root", str(install_root), "--port", str(_free_port())],
+    )
+    token = (install_root / TOKEN_FILE_RELPATH).read_text(encoding="utf-8")
+
+    urls = [line for line in result.output.splitlines() if "http://" in line]
+    assert urls, "serve printed no URL"
+    for line in urls:
+        assert token not in line
+        assert "?" not in line

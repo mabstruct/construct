@@ -41,4 +41,18 @@ DEFAULT_API_PORT = 8787
 #: see ``construct.api.app``.
 CAPABILITY_ROUTE = "/api/capabilities/{cap_id}"
 
-__all__ = ["CAPABILITY_ROUTE", "DEFAULT_API_PORT", "TOKEN_HEADER"]
+#: Where ``construct serve`` writes the launch token, relative to the install
+#: root, with mode ``0600`` (D-17).
+#:
+#: A path rather than an ad-hoc string inside ``serve`` because Phase 21 reads
+#: this file: a second literal spelled in a second module is how a reader and a
+#: writer end up pointing at two different files, and the failure looks like
+#: "the UI cannot authenticate" rather than like a typo.
+TOKEN_FILE_RELPATH = ".construct/api-token"
+
+__all__ = [
+    "CAPABILITY_ROUTE",
+    "DEFAULT_API_PORT",
+    "TOKEN_FILE_RELPATH",
+    "TOKEN_HEADER",
+]
