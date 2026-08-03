@@ -125,6 +125,7 @@ def test_catalog_loads() -> None:
         # 18-03 / D-02: `views validate` was the last hand-written command group;
         # it is a registry capability now, so CLI and MCP reach it by one path.
         "views.validate_data",
+        "workflow.list",
         "workflow.status",
         "ingest.source",
         "help.suggest",

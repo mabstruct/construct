@@ -81,6 +81,10 @@ def test_mcp_tool_count() -> None:
         "construct_daily_run",
         "construct_daily_inspect",
         "construct_list_cards",
+        # 19-08 / D-13: run enumeration reaches MCP at the same moment it
+        # reaches CLI and HTTP, because it is a registry capability rather than
+        # a command.
+        "construct_workflow_list",
     }
     assert tool_names == expected
 
@@ -154,6 +158,10 @@ def _payload_for(tool_name: str, ws: str) -> dict:
         "construct_daily_run": {"workspace_path": ws},
         "construct_daily_inspect": {"workspace_path": ws, "run_id": "no-such-run"},
         "construct_list_cards": {"workspace": ws},
+        # Spelled ``workspace`` like its ``workflow.status`` sibling rather than
+        # ``workspace_path`` like the run family — the two ``workflow.*``
+        # capabilities present one vocabulary to a caller reading them together.
+        "construct_workflow_list": {"workspace": ws},
     }
     return payloads[tool_name]
 

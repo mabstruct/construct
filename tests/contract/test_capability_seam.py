@@ -81,7 +81,12 @@ FIXTURE_WS = Path(__file__).resolve().parents[2] / "test-ws" / "my-construct"
 # ``views validate`` stops being the last hand-written command group and becomes
 # reachable from CLI and MCP by the one path every other capability uses. Bumping
 # this integer is the intended act, not a workaround for it.
-REGISTRY_SIZE = 29
+#
+# 29 -> 30 in plan 19-08: ``workflow.list`` joins the registry (D-13). Run
+# enumeration is a capability rather than a CLI command precisely so CLI, MCP and
+# HTTP gain it at the same moment — a browser-only run list would have been a
+# reader for durable state the CLI could not see.
+REGISTRY_SIZE = 30
 
 
 def _forbids(model: type) -> bool:
