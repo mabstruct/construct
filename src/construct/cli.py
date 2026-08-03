@@ -498,6 +498,30 @@ daily_app = typer.Typer(
 )
 app.add_typer(daily_app)
 
+#: Help text for the ``--run-id`` option every run-start command carries (D-12).
+#:
+#: Spelled once, and defined *above* the three commands that use it, because a
+#: Typer option default is evaluated when the ``def`` executes rather than when
+#: the command runs — a constant declared further down the module would be a
+#: ``NameError`` at import time, on every CLI startup.
+#:
+#: The three run-start commands must describe the same contract: a handle minted
+#: by the *caller* before the run exists. That is what lets ``POST /api/runs``
+#: answer with a run id immediately (D-12) — the server mints the id, hands it to
+#: a detached child through this flag, and returns before the workflow has done
+#: anything. Without it the id would only exist once the run had finished, which
+#: is exactly the blocking call D-12 rules out.
+#:
+#: This adds no trust boundary. ``run_id`` is a field all three run input models
+#: already declare and already guard with ``_validate_run_id``'s kebab-case
+#: check (CR-01 / T-11-01); the flag exposes a declared contract on the CLI
+#: rather than widening one.
+_RUN_ID_HELP = (
+    "Reuse a caller-minted run handle instead of generating one (kebab-case). "
+    "It becomes the checkpoint thread id, so a caller holding it can address "
+    "the run before it finishes."
+)
+
 
 @research_app.command(name="search")
 def research_search_cmd(
@@ -688,11 +712,14 @@ def _emit_run_result(result: OperationResult, json_output: bool) -> None:
 @research_app.command(name="run")
 def research_run_cmd(
     workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: Optional[str] = typer.Option(None, "--run-id", help=_RUN_ID_HELP),
     provider: Optional[str] = typer.Option(None, "--provider", help="Override the search/scoring provider"),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Start a durable research run; pauses at the human-review gate (no writes before approval)."""
     payload: dict[str, object] = {"workspace_path": str(workspace)}
+    if run_id is not None:
+        payload["run_id"] = run_id
     if provider is not None:
         payload["provider_override"] = provider
 
@@ -856,16 +883,20 @@ def _emit_curation_result(result: OperationResult, json_output: bool) -> None:
 @curation_app.command(name="run")
 def curation_run_cmd(
     workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: Optional[str] = typer.Option(None, "--run-id", help=_RUN_ID_HELP),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Run the deterministic curation cycle (integrity, decay, orphan, connection-health, report)."""
     # D-15 / the Phase 11 exit-code contract: a *degraded* run still exits 0.
     # Conversion changes the dispatch path only — ``_emit_curation_result`` is the
     # sole owner of this command's exit code and is untouched.
+    payload: dict[str, object] = {"workspace_path": str(workspace)}
+    # Omitted rather than sent as ``None`` so a caller that does not use the flag
+    # submits the exact payload it submitted before this option existed.
+    if run_id is not None:
+        payload["run_id"] = run_id
     try:
-        result = get_registry().invoke(
-            "curation.run", {"workspace_path": str(workspace)}
-        )
+        result = get_registry().invoke("curation.run", payload)
     except (CapabilityInputError, CapabilityNotFoundError) as exc:
         typer.echo(f"ERROR {exc}")
         raise typer.Exit(code=1) from exc
@@ -999,11 +1030,15 @@ def _emit_daily_result(result: OperationResult, json_output: bool) -> None:
 @daily_app.command(name="run")
 def daily_run_cmd(
     workspace: Path = typer.Option(..., "--workspace", "-w", help="CONSTRUCT workspace path"),
+    run_id: Optional[str] = typer.Option(None, "--run-id", help=_RUN_ID_HELP),
     json_output: bool = typer.Option(False, "--json", "-j"),
 ) -> None:
     """Run the non-blocking daily cycle (research.run → curation.run → graph.status)."""
+    payload: dict[str, object] = {"workspace_path": str(workspace)}
+    if run_id is not None:
+        payload["run_id"] = run_id
     try:
-        result = get_registry().invoke("daily.run", {"workspace_path": str(workspace)})
+        result = get_registry().invoke("daily.run", payload)
     except (CapabilityInputError, CapabilityNotFoundError) as exc:
         typer.echo(f"ERROR {exc}")
         raise typer.Exit(code=1) from exc

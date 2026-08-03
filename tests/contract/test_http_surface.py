@@ -50,6 +50,7 @@ from construct.api import (
     TOKEN_HEADER,
 )
 from construct.api.app import DISCOVERY_ROUTE, create_app
+from construct.api.runs import RUNS_ROUTE
 from construct.capabilities.catalog import get_registry
 from construct.capabilities.registry import CapabilityRecord
 from construct.capabilities.results import serialize_result
@@ -286,16 +287,42 @@ def test_the_ledger_records_no_exclusions_today() -> None:
     )
 
 
+def _flatten_routes(routes) -> list:
+    """Every route the app actually serves, including included routers'.
+
+    ``app.routes`` is **not** a flat list. Starlette wraps an
+    ``include_router(...)`` call in a single opaque entry — ``_IncludedRouter``,
+    whose own ``path`` is ``""`` and which exposes its children only through
+    ``original_router`` — so a guard that walked ``app.routes`` directly would
+    see a mounted router as one pathless object and silently skip everything
+    behind it.
+
+    That is not a hypothetical. ``POST /api/runs`` (D-12) is included this way,
+    and before this helper existed the ledger guard below passed while being
+    structurally unable to see it: an undocumented route added through
+    ``include_router`` would have gone unnoticed by the one test whose entire
+    job is to notice. Flattening is what makes "no undocumented surface" a
+    property of the app rather than of how a route happened to be registered.
+    """
+    flat: list = []
+    for route in routes:
+        inner = getattr(route, "original_router", None)
+        if inner is not None:
+            flat.extend(_flatten_routes(inner.routes))
+            continue
+        flat.append(route)
+    return flat
+
+
 def test_every_non_dispatch_api_route_is_documented_in_the_ledger(
     install_root: Path,
 ) -> None:
     """D-20: no undocumented surface.
 
     Asserted as a subset in one direction only, and deliberately: the ledger may
-    name a route *before* the plan that adds it (``POST /api/runs`` today), so
-    requiring equality would fail on a correct forward reference. The direction
-    that catches something is the other one — a route the app serves that the
-    ledger has never heard of.
+    name a route *before* the plan that adds it, so requiring equality would fail
+    on a correct forward reference. The direction that catches something is the
+    other one — a route the app serves that the ledger has never heard of.
     """
     app = create_app(install_root, API_TOKEN)
     try:
@@ -306,19 +333,46 @@ def test_every_non_dispatch_api_route_is_documented_in_the_ledger(
         }
         served = {
             f"{method} {route.path}"
-            for route in app.routes
+            for route in _flatten_routes(app.routes)
             if getattr(route, "path", "").startswith("/api")
             and "{cap_id}" not in getattr(route, "path", "")
-            for method in getattr(route, "methods", set())
+            for method in getattr(route, "methods", None) or set()
             if method not in {"HEAD", "OPTIONS"}
         }
     finally:
         set_launch_install_root(None)
 
+    assert served, (
+        "the flattening walk found no non-dispatch /api routes at all, so this "
+        "guard would pass for an app serving anything — see _flatten_routes"
+    )
     assert served <= documented, (
         "these non-capability routes are served but absent from "
         f"{COVERAGE_LEDGER.name}'s non-capability-routes table: "
         f"{sorted(served - documented)}"
+    )
+
+
+def test_the_ledger_guard_can_see_a_route_added_through_include_router(
+    install_root: Path,
+) -> None:
+    """The guard above is only as good as its route walk. This pins the walk.
+
+    ``POST /api/runs`` is the route that exposed the gap: it is registered with
+    ``include_router``, so it lives behind an opaque wrapper in ``app.routes``.
+    Naming it explicitly here is deliberate — the guard's failure mode is
+    *silence*, and a subset assertion cannot distinguish "nothing undocumented"
+    from "nothing seen".
+    """
+    app = create_app(install_root, API_TOKEN)
+    try:
+        paths = {getattr(route, "path", "") for route in _flatten_routes(app.routes)}
+    finally:
+        set_launch_install_root(None)
+
+    assert RUNS_ROUTE in paths, (
+        "the run-start route is served but invisible to the route walk; every "
+        f"path found was {sorted(paths)}"
     )
 
 
