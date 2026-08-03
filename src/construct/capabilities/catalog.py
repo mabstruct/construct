@@ -83,6 +83,9 @@ from construct.llm.daily_run import (
     run_daily_run,
 )
 
+# ── Run enumeration imports (Phase 19, D-13) ──
+from construct.llm.workflow_list import list_workflow_runs
+
 
 # ---------------------------------------------------------------------------
 # Input models
@@ -271,6 +274,26 @@ class WorkflowStatusInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     workspace: Path
+
+
+class WorkflowListInput(BaseModel):
+    """Input for ``workflow.list`` — one workspace and an optional status filter.
+
+    Spelled ``workspace: Path`` like its ``workflow.status`` sibling rather than
+    ``workspace_path: str`` like the run family, because the two ``workflow.*``
+    capabilities present one vocabulary to a caller who reads them side by side.
+
+    ``status`` is a plain optional string, deliberately not an enum: the three
+    workflow families already carry three status vocabularies, and declaring a
+    fourth closed set here would be exactly the fork D-13 exists to avoid — an
+    unmatched filter is an empty list, not a validation error (see
+    ``list_workflow_runs``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    workspace: Path
+    status: str | None = None
 
 
 class IngestSourceInput(BaseModel):
@@ -496,6 +519,26 @@ def create_registry() -> CapabilityRegistry:
         output_model=OperationResult,
         handler=lambda workspace: WorkflowRunner(workspace).status(),
         cli_name="workflow.status",
+    ))
+    # D-13: run enumeration is a capability, and this record sets BOTH names —
+    # unlike its ``workflow.status`` sibling directly above, which is CLI-only.
+    # That asymmetry is the decision, not an oversight: the reason enumeration is
+    # a registry capability at all is that CLI, MCP and HTTP gain run listing at
+    # the same moment. A browser-side checkpoint reader would have been a
+    # browser-only feature over durable state the CLI cannot see.
+    registry.register(CapabilityRecord(
+        id="workflow.list",
+        name="Workflow List",
+        description=(
+            "List every durable workflow run in a workspace — curation, research "
+            "and daily — with each run's status and review handle, optionally "
+            "filtered by status (read-only; never resumes a run)"
+        ),
+        input_model=WorkflowListInput,
+        output_model=OperationResult,
+        handler=_workflow_list_shim,
+        cli_name="workflow.list",
+        mcp_tool_name="construct_workflow_list",
     ))
     registry.register(CapabilityRecord(
         id="ingest.source",
@@ -1168,6 +1211,31 @@ def _daily_inspect_shim(**kwargs):
     """Keyword-only adapter for daily.inspect (read a receipt; never re-runs)."""
     return _daily_result_to_operation(
         "daily.inspect", lambda: inspect_daily_run(DailyInspectInput(**kwargs))
+    )
+
+
+def _workflow_list_shim(workspace, status=None) -> OperationResult:
+    """Adapter for ``workflow.list`` (enumerate durable runs; never resumes one).
+
+    The CR-04 refusal runs FIRST and is not optional here, even though the
+    primitive itself only reads. Registration is what makes ``workspace``
+    agent-supplied, and enumerating a directory nobody vouched for would answer
+    ``success=True`` with an empty list — a confident "this workspace has no
+    runs" about a path that is not a workspace at all. That is the same class of
+    lie HTTP-07 was written to stop, one frame smaller.
+
+    ``success`` is ``True`` for an empty listing (GOV-05): the command ran, and
+    "no runs yet" is the answer, not a failure. ``outcome`` is left ``None``
+    because enumeration is a single atomic read with no separate "how it went" —
+    the run statuses it reports belong to the runs, not to this call.
+    """
+    if (refusal := _workspace_refusal("workflow.list", workspace)) is not None:
+        return refusal
+    runs = list_workflow_runs(workspace, status)
+    return OperationResult(
+        success=True,
+        message=f"{len(runs)} run(s) found.",
+        data={"runs": [run.model_dump(mode="json") for run in runs]},
     )
 
 

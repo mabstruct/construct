@@ -83,6 +83,7 @@ WORKSPACE_FIELD: dict[str, str] = {
     "knowledge.connection.add": "workspace",
     "knowledge.connection.list": "workspace",
     "knowledge.connection.remove": "workspace",
+    "workflow.list": "workspace",
     "workflow.status": "workspace",
     # ── spelled ``path`` ──
     "workspace.status": "path",

@@ -112,6 +112,7 @@ Typer command path that binds to the capability's `cli_name`.
 | `research.search` | `construct research search` | `construct_research_search` |
 | `views.generate_data` | `construct views generate` *(independent path — see holdout note)* | `construct_views_generate_data` |
 | `views.validate_data` | `construct views validate` | `construct_views_validate_data` |
+| `workflow.list` | `construct workflow list` | `construct_workflow_list` |
 | `workflow.status` | `construct workflow status` | — (CLI-only) |
 | `workspace.init` | `construct init` | — (CLI-only) |
 | `workspace.status` | `construct status` | — (CLI-only) |

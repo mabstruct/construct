@@ -62,6 +62,7 @@ may never send it (D-10) — the caller sends `workspace_id` and the seam rewrit
 | `research.search` | `workspace_id` | `workspace_path` | |
 | `views.generate_data` | launch-supplied `install_root` | `install_root` | Scope mismatch open — see below; plan 19-04 owns it |
 | `views.validate_data` | launch-supplied `install_root` | `install_root` | Scope mismatch open — see below; plan 19-04 owns it |
+| `workflow.list` | `workspace_id` | `workspace` | D-13: registered with BOTH names, so CLI, MCP and HTTP gain run enumeration at the same moment |
 | `workflow.status` | `workspace_id` | `workspace` | No MCP tool name — invisible to `list_mcp_tools()` |
 | `workspace.init` | `workspace_id`, creation mode | `root` | Directory must **not** exist yet, so the allowlist gate is skipped (`CREATE_MODE_CAPABILITIES`) |
 | `workspace.status` | `workspace_id` | `path` | No MCP tool name — invisible to `list_mcp_tools()` |
