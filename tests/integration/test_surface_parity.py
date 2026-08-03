@@ -415,30 +415,46 @@ def test_seam_has_no_leniency_knob() -> None:
 
 
 @pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
-def test_success_parity_across_both_real_surfaces(
+def test_success_parity_across_all_three_real_surfaces(
     tmp_path: Path, case: ParityCase
 ) -> None:
-    """One request, two real surfaces, one answer.
+    """One request, three real surfaces, one answer.
 
     Each arm gets its own identical environment, so a write capability is
-    comparable: both surfaces act on a fresh tree and must produce the same
+    comparable: every surface acts on a fresh tree and must produce the same
     verdict, the same message, and the same data — not "one created it and the
     other found it already there".
+
+    The HTTP arm addresses its workspace by id rather than by path, which is the
+    whole point rather than a concession: if id resolution and path resolution
+    could disagree, this is where it would show, because the projected answer
+    would differ from the two arms that resolved a path.
     """
     cli_env = case.build_env(tmp_path / "cli-arm")
     mcp_env = case.build_env(tmp_path / "mcp-arm")
+    http_env = case.build_env(tmp_path / "http-arm")
 
     cli = _cli(case.build_argv(cli_env))
     assert cli.returncode == 0, cli.stderr or cli.stdout
 
     mcp_payload = _mcp(case.tool_name, case.build_payload(mcp_env))
 
+    status, http_body = _http(
+        case.cap_id, case.build_http_root(http_env), case.build_http_payload(http_env)
+    )
+    assert status == 200, f"{case.cap_id} failed over HTTP: {status} {http_body!r}"
+
     cli_view = case.read_cli(cli.stdout)
     mcp_view = case.read_mcp(mcp_payload)
+    http_view = case.read_http(http_body)
 
     assert cli_view == mcp_view, (
-        f"{case.cap_id} answered differently on the two surfaces:\n"
+        f"{case.cap_id} answered differently on CLI vs MCP:\n"
         f"  CLI: {cli_view!r}\n  MCP: {mcp_view!r}"
+    )
+    assert cli_view == http_view, (
+        f"{case.cap_id} answered differently on CLI vs HTTP:\n"
+        f"  CLI: {cli_view!r}\n  HTTP: {http_view!r}"
     )
     assert cli_view, f"{case.cap_id} compared an empty projection — the assertion is vacuous"
 
