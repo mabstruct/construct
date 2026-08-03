@@ -279,3 +279,211 @@ def _explicit_decisions(gate_queue: list[dict]) -> dict[str, str]:
     even though the capability expands it into the same map.
     """
     return {entry["proposal_id"]: entry.get("decision") or "archive" for entry in gate_queue}
+
+
+# ── Claim 1: starting returns an id and does not block ────────────────────
+
+
+def test_starting_a_run_answers_with_an_id_before_the_workflow_begins(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """The non-blocking claim, asserted twice over and without timing.
+
+    Two independent measurements taken the moment the response is read:
+
+    * the spawned child is still alive — the request did not wait for it;
+    * the run has **no checkpoint at all** — so the workflow had not merely
+      failed to finish, it had not started.
+
+    The second is the stronger one, and it is what a synchronous implementation
+    could not produce: a blocking call returns only once the run is durable.
+    """
+    response = _start(client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == {
+        "run_id",
+        "workflow",
+        "status",
+        "log_path",
+        "pid",
+        "checkpoint_id",
+    }
+    assert body["workflow"] == "curation"
+    assert body["status"] == "starting"
+    assert body["run_id"]
+    assert body["log_path"] == RUN_LOG_RELPATH.format(run_id=body["run_id"])
+
+    assert _alive(body["pid"]), (
+        "the child had already exited by the time the response was read — the "
+        "request blocked on the workflow, which is what D-12 exists to prevent"
+    )
+    envelope = _inspect(client, auth_headers, body["run_id"])
+    assert (envelope.get("data") or {}).get("status") == "failed", (
+        "the run already had persisted state when the start response was read, "
+        f"so the request did not return before the workflow began: {envelope}"
+    )
+
+
+def test_the_start_response_carries_the_checkpoint_handle_field(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """Truth 7: every run response carries the handle a later phase needs.
+
+    Null here, and present. There is genuinely no checkpoint yet — the child has
+    not reached its first node — but a response shape that *grows* a field later
+    is a shape every existing caller has to be told about, and the optimistic
+    concurrency Phase 21 will build on reads this key. Declaring it now costs
+    nothing and forecloses nothing.
+    """
+    body = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    assert "checkpoint_id" in body
+    assert body["checkpoint_id"] is None
+
+
+# ── Claim 2: pollable through the ordinary envelope ───────────────────────
+
+
+def test_a_started_run_is_pollable_through_the_ordinary_envelope(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """No new read path: the poll is ``curation.inspect`` over the capability route.
+
+    Every poll issued while the child is alive is answered with a well-formed
+    200 — a run that has not materialised yet is a *result* saying so, never an
+    error. A surface that answered 500 for "not there yet" would make polling
+    unusable, and it is the shape a naive implementation produces.
+
+    The run is still **unfinished** when polling reaches it: ``awaiting_review``
+    is a live run whose process has already exited, which is exactly the
+    property D-12 was chosen for — a run outlives the process that started it.
+    """
+    body = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+
+    polls_while_alive = 0
+    while _alive(body["pid"]) and polls_while_alive < 3:
+        _inspect(client, auth_headers, body["run_id"])
+        polls_while_alive += 1
+        time.sleep(POLL_SECONDS)
+    assert polls_while_alive, "the child exited before a single poll was issued"
+
+    data = _wait_for_status(client, auth_headers, body["run_id"], "awaiting_review")
+    assert data["run_id"] == body["run_id"]
+    assert data["gate_queue"], "a paused run must surface the queue it is waiting on"
+    assert data["checkpoint_id"], "a poll must carry the resume ETag (GOV-03 / D-11)"
+    assert data["gate_id"] == body["run_id"]
+
+
+def test_the_poll_response_carries_the_checkpoint_handle(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """The other half of truth 7 — and the half that has to be non-null.
+
+    Separated from the start-response test on purpose: a single test asserting
+    "some response carries a handle" would pass while the one a resume actually
+    needs carried ``None``.
+    """
+    body = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    data = _wait_for_status(client, auth_headers, body["run_id"], "awaiting_review")
+    assert isinstance(data["checkpoint_id"], str) and data["checkpoint_id"]
+
+
+# ── The startable set, and the refusals ───────────────────────────────────
+
+
+def test_the_startable_workflows_are_derived_from_the_registry() -> None:
+    """Truth 8: a future run capability becomes startable with no edit here.
+
+    Asserted as a relationship between two live measurements rather than against
+    a name list. A name list would need editing the day a run capability is
+    registered, and an editor who is already editing the expectation is no
+    longer being told anything.
+    """
+    registered = {
+        capability.id for capability in get_registry().list() if capability.id.endswith(".run")
+    }
+    assert registered, "no run capabilities are registered — this test is vacuous"
+    assert set(startable_workflows().values()) == registered
+    assert set(startable_workflows()) == {cap_id[: -len(".run")] for cap_id in registered}
+
+
+def test_an_unknown_workflow_is_refused_and_names_the_startable_set(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """Refused in the project's one error body, with an actionable reason."""
+    response = _start(client, auth_headers, workflow="not-a-workflow", workspace_id=WORKSPACE_ID)
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"detail"}
+    detail = response.json()["detail"]
+    for workflow in startable_workflows():
+        assert workflow in detail, f"the refusal does not name {workflow!r}: {detail}"
+
+
+def test_a_path_shaped_key_is_refused_the_way_the_envelope_refuses_one(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """D-10 at the run boundary, with the envelope's reason rather than pydantic's.
+
+    ``extra="forbid"`` alone would already reject ``workspace_path`` — with a
+    message that says nothing about ``workspace_id`` being how a workspace is
+    addressed. Two refusals of one mistake giving two different explanations is
+    the small fork this project keeps declining to introduce.
+    """
+    response = _start(
+        client, auth_headers, workflow="curation", workspace_path="/etc/passwd"
+    )
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"detail"}
+    detail = response.json()["detail"]
+    assert "workspace_path" in detail
+    assert "workspace_id" in detail
+
+
+def test_an_unknown_workspace_id_is_refused_before_anything_is_spawned(
+    client: TestClient, auth_headers: dict[str, str], paused_install_root: Path
+) -> None:
+    """The seam's allowlist, reached through the same helper the envelope uses."""
+    response = _start(client, auth_headers, workflow="curation", workspace_id="no-such-ws")
+
+    assert response.status_code == 422
+    assert WORKSPACE_ID in response.json()["detail"]
+    assert not list((paused_install_root / WORKSPACE_ID).glob(".construct/workflow/logs/*"))
+
+
+def test_a_traversal_shaped_workspace_id_is_refused(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    """T-19-03: the shape gate, before any path is built."""
+    response = _start(client, auth_headers, workflow="curation", workspace_id="../../etc")
+
+    assert response.status_code == 422
+    assert "kebab-case" in response.json()["detail"]
+
+
+def test_the_spawn_passes_an_argument_list_and_never_a_shell() -> None:
+    """T-19-09, read off the module rather than asserted about it in prose.
+
+    The only structural control that keeps a caller-influenced value out of a
+    shell is that there is no shell. This reads the source because the property
+    is about *how* the process is started, and no black-box request can observe
+    the difference between ``shell=False`` and a shell that happened not to be
+    reached on this input.
+    """
+    import inspect
+
+    import construct.api.runs as module
+
+    source = inspect.getsource(module)
+    assert "shell" not in source or "shell=False" in source
+    assert "shell=True" not in source
+    assert "os.system" not in source
+    assert "subprocess.Popen(" in source
