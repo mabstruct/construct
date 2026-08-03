@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -25,7 +26,9 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pytest
+from fastapi.testclient import TestClient
 
+from construct.api import CAPABILITY_ROUTE
 from construct.capabilities.catalog import get_registry
 from construct.mcp import server as mcp_server
 from construct.mcp.server import create_server
@@ -48,6 +51,15 @@ class ParityCase(NamedTuple):
     ``_envelope_view``; ``views validate`` prints its own report shape and brings
     its own reader. The projection lives in the row so the test body stays one
     equality assertion — adding a capability is a row, never new test logic.
+
+    **The HTTP arm needs its own payload, not a reuse of ``build_payload``.**
+    That is not an inconsistency to be smoothed over: the HTTP boundary refuses
+    path-shaped keys outright (``PATH_SHAPED_KEYS``) and addresses a workspace by
+    *id*, so the payload the other two arms send is one this surface is required
+    to reject. ``build_http_payload`` therefore expresses the same request in the
+    vocabulary HTTP actually speaks, and ``build_http_root`` names the install
+    root the app is launched against — because an id is resolved against launch
+    context (D-09) rather than carried in the request.
     """
 
     cap_id: str
@@ -57,6 +69,9 @@ class ParityCase(NamedTuple):
     build_argv: Callable[[Path], list[str]]
     read_cli: Callable[[str], object]
     read_mcp: Callable[[dict], object]
+    build_http_root: Callable[[Path], Path]
+    build_http_payload: Callable[[Path], dict]
+    read_http: Callable[[dict], object]
 
 
 def _envelope_view(payload: dict) -> dict:
@@ -103,6 +118,9 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_envelope_from_cli,
         read_mcp=_envelope_view,
+        build_http_root=lambda ws: ws.parent,
+        build_http_payload=lambda ws: {"workspace_id": ws.name},
+        read_http=_envelope_view,
     ),
     # A write. D-08 permits trading fixture cost for breadth, and a table proving
     # only reads agree would leave the capabilities that *change* the workspace —
@@ -137,6 +155,19 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_envelope_from_cli,
         read_mcp=_envelope_view,
+        build_http_root=lambda ws: ws.parent,
+        build_http_payload=lambda ws: {
+            "workspace_id": ws.name,
+            "title": "Parity Card",
+            "epistemic_type": "finding",
+            "domains": ["test-domain"],
+            "content_categories": ["test-category"],
+            "confidence": 3,
+            "source_tier": 3,
+            "author": "construct",
+            "summary": "Written through both surfaces to prove they agree.",
+        },
+        read_http=_envelope_view,
     ),
     # The views capability D-02 registers in this plan.
     ParityCase(
@@ -149,6 +180,14 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_views_view_from_cli,
         read_mcp=_views_view_from_mcp,
+        # An install-root capability: the root is launch context, never caller
+        # input, so the HTTP payload is empty and ``workspace_id`` is refused
+        # outright (``INSTALL_ROOT_FIELD``). The empty payload here is the same
+        # shape ``test_only_install_root_capabilities_run_on_an_empty_payload``
+        # pins in the contract suite.
+        build_http_root=lambda root: root,
+        build_http_payload=lambda root: {},
+        read_http=_views_view_from_mcp,
     ),
 ]
 
@@ -193,6 +232,51 @@ def _mcp(tool_name: str, payload: dict) -> dict:
     """
     tool = create_server()._tool_manager.get_tool(tool_name)
     return json.loads(tool.fn(**payload))
+
+
+def _http(cap_id: str, install_root: Path, payload: dict) -> tuple[int, dict]:
+    """Drive the real ASGI app through a ``TestClient``, as a browser would.
+
+    Built through ``create_app`` — the same factory ``construct serve`` hands
+    uvicorn — so the request crosses the real middleware guard and the real
+    dispatch route rather than calling a handler directly. The token and a
+    loopback ``base_url`` are what make this a *passing* request; the guard's
+    rejection paths are pinned in ``tests/contract/test_http_security.py``.
+
+    ``set_launch_install_root`` is process-level state (D-09), so it is cleared
+    on the way out: leaving it set would make the next arm resolve ids against
+    a tree this test built, and an id assertion could then pass for the wrong
+    reason.
+    """
+    from construct.api import TOKEN_HEADER
+    from construct.api.app import create_app
+    from construct.capabilities.workspaces import set_launch_install_root
+
+    token = "parity-token-not-a-real-secret"
+    app = create_app(install_root, token)
+    try:
+        with TestClient(app, base_url="http://127.0.0.1") as client:
+            response = client.post(
+                CAPABILITY_ROUTE.format(cap_id=cap_id),
+                json={"payload": payload},
+                headers={TOKEN_HEADER: token},
+            )
+        return response.status_code, response.json()
+    finally:
+        set_launch_install_root(None)
+
+
+def _http_reason(body: dict) -> str:
+    """The seam's reason with the HTTP surface's own framing stripped.
+
+    Task 1 made every emitter on this surface return exactly ``{"detail": str}``
+    (``api/errors.py``), and the capability-error arm puts ``str(exc)`` in it
+    verbatim — the same string the CLI prints after ``ERROR `` and MCP returns
+    as ``{"error": ...}``. So "strip the framing" is one key lookup, and the
+    fact that it *is* only a key lookup is itself the HTTP-04 claim.
+    """
+    assert "detail" in body, f"expected the one error body, got: {body!r}"
+    return body["detail"]
 
 
 def _seam_in_fresh_process(cap_id: str, payload: dict) -> subprocess.CompletedProcess[str]:
@@ -332,30 +416,46 @@ def test_seam_has_no_leniency_knob() -> None:
 
 
 @pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
-def test_success_parity_across_both_real_surfaces(
+def test_success_parity_across_all_three_real_surfaces(
     tmp_path: Path, case: ParityCase
 ) -> None:
-    """One request, two real surfaces, one answer.
+    """One request, three real surfaces, one answer.
 
     Each arm gets its own identical environment, so a write capability is
-    comparable: both surfaces act on a fresh tree and must produce the same
+    comparable: every surface acts on a fresh tree and must produce the same
     verdict, the same message, and the same data — not "one created it and the
     other found it already there".
+
+    The HTTP arm addresses its workspace by id rather than by path, which is the
+    whole point rather than a concession: if id resolution and path resolution
+    could disagree, this is where it would show, because the projected answer
+    would differ from the two arms that resolved a path.
     """
     cli_env = case.build_env(tmp_path / "cli-arm")
     mcp_env = case.build_env(tmp_path / "mcp-arm")
+    http_env = case.build_env(tmp_path / "http-arm")
 
     cli = _cli(case.build_argv(cli_env))
     assert cli.returncode == 0, cli.stderr or cli.stdout
 
     mcp_payload = _mcp(case.tool_name, case.build_payload(mcp_env))
 
+    status, http_body = _http(
+        case.cap_id, case.build_http_root(http_env), case.build_http_payload(http_env)
+    )
+    assert status == 200, f"{case.cap_id} failed over HTTP: {status} {http_body!r}"
+
     cli_view = case.read_cli(cli.stdout)
     mcp_view = case.read_mcp(mcp_payload)
+    http_view = case.read_http(http_body)
 
     assert cli_view == mcp_view, (
-        f"{case.cap_id} answered differently on the two surfaces:\n"
+        f"{case.cap_id} answered differently on CLI vs MCP:\n"
         f"  CLI: {cli_view!r}\n  MCP: {mcp_view!r}"
+    )
+    assert cli_view == http_view, (
+        f"{case.cap_id} answered differently on CLI vs HTTP:\n"
+        f"  CLI: {cli_view!r}\n  HTTP: {http_view!r}"
     )
     assert cli_view, f"{case.cap_id} compared an empty projection — the assertion is vacuous"
 
@@ -381,6 +481,172 @@ def test_undeclared_field_is_rejected_identically_on_both_surfaces(
 
     assert _cli_reason(seam) == _mcp_reason(mcp_payload)
     assert "bogus" in _mcp_reason(mcp_payload)
+
+
+@pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
+def test_undeclared_field_reason_is_byte_identical_on_all_three_surfaces(
+    tmp_path: Path, case: ParityCase
+) -> None:
+    """HTTP-04: one reason, three surfaces, after each strips its own framing.
+
+    **Why the comparison basis is the fresh-process seam rather than the real
+    CLI.** Typer's option parser rejects an undeclared *flag* before a payload
+    is ever built, so the real CLI cannot express this request at all — a
+    genuine property of that surface, pinned by
+    ``test_cli_process_rejects_an_undeclared_flag_without_a_traceback``. HTTP
+    *can* send an undeclared field, because its payload is a JSON object rather
+    than a parsed flag set. Comparing the HTTP arm against the seam running in
+    an independent process is therefore a strengthening of the harness, not a
+    workaround: it is the same seam the CLI reaches, proven in a process that
+    shares no registry singleton with this one.
+
+    Byte-identical is the assertion, not "both mention the field". A reason that
+    merely contains the field name would let two surfaces phrase the same
+    refusal differently, and an agent reading both would have to learn two
+    dialects — which is the fork HTTP-04 exists to forbid.
+    """
+    env = case.build_env(tmp_path / "seam-arm")
+    http_env = case.build_env(tmp_path / "http-arm")
+
+    seam = _seam_in_fresh_process(case.cap_id, {**case.build_payload(env), "bogus": 1})
+    assert seam.returncode != 0, seam.stdout
+
+    mcp_body = _mcp(case.tool_name, {**case.build_payload(env), "bogus": 1})
+
+    status, http_body = _http(
+        case.cap_id,
+        case.build_http_root(http_env),
+        {**case.build_http_payload(http_env), "bogus": 1},
+    )
+    assert status == 422, f"expected the seam's input refusal, got {status}: {http_body!r}"
+
+    seam_reason = _cli_reason(seam)
+    assert seam_reason == _mcp_reason(mcp_body), "seam and MCP disagree"
+    assert seam_reason == _http_reason(http_body), (
+        f"{case.cap_id} refused the same payload in different words:\n"
+        f"  seam: {seam_reason!r}\n  HTTP: {_http_reason(http_body)!r}"
+    )
+    assert "bogus" in seam_reason
+
+
+_TRACEBACK_MARKERS = ("Traceback (most recent call last)", 'File "', "  at ")
+
+#: An absolute POSIX path with at least one component, anchored so a bare "/"
+#: or a relative fragment does not match. Deliberately not a match against the
+#: fixture root alone: a leak that names *some other* absolute path — the
+#: interpreter's, a temp dir, a home directory — is the same disclosure class.
+_ABSOLUTE_PATH = re.compile(r"(?:^|[\s\"'(\[])/(?:[A-Za-z0-9._-]+/){1,}")
+
+
+def _assert_no_environment_leak(label: str, body: object, install_root: Path) -> None:
+    """No rendered body names the filesystem it ran on, or how it failed.
+
+    Three separate assertions because they fail for three different reasons:
+    the fixture root catches "this exact tree leaked", the absolute-path pattern
+    catches "some other path leaked", and the traceback markers catch "the
+    framework rendered an exception at the caller".
+    """
+    text = json.dumps(body, default=str)
+
+    assert str(install_root) not in text, (
+        f"{label} leaked the install root path into its body: {text[:400]}"
+    )
+    match = _ABSOLUTE_PATH.search(text)
+    assert match is None, (
+        f"{label} leaked an absolute-path-shaped substring "
+        f"({match.group(0)!r}) into its body: {text[:400]}"
+    )
+    for marker in _TRACEBACK_MARKERS:
+        assert marker not in text, (
+            f"{label} leaked a traceback marker ({marker!r}) into its body: {text[:400]}"
+        )
+
+
+def test_no_surface_leaks_the_environment_on_success_or_on_failure(
+    tmp_path: Path,
+) -> None:
+    """T-19-05: the leak assertion runs on **successful** bodies too.
+
+    An exception-boundary sanitizer never sees a success-path value — that is
+    the structural reason the pipeline leaks plan 19-03 fixed survived as long
+    as they did. ``sanitize_exception`` cannot help here: nothing raised. So the
+    success path is checked with the same three assertions as the failure path,
+    on all three surfaces.
+
+    ``views.validate_data`` is the case under test because its result carries
+    per-file entries — the shape most likely to render a path — and because the
+    failing arm produces a *reported* failure (200 with ``success: false``, D-24)
+    rather than a seam refusal, so the success and failure bodies here are both
+    real handler output rather than one of them being a rejection string.
+    """
+    cli_root = _generated_install_root(tmp_path / "cli-arm")
+    mcp_root = _generated_install_root(tmp_path / "mcp-arm")
+    http_root = _generated_install_root(tmp_path / "http-arm")
+
+    # ── The success path ──
+    cli_ok = _cli(["views", "validate", "--install-root", str(cli_root), "--json"])
+    assert cli_ok.returncode == 0, cli_ok.stdout + cli_ok.stderr
+    mcp_ok = _mcp("construct_views_validate_data", {"install_root": str(mcp_root)})
+    status_ok, http_ok = _http("views.validate_data", http_root, {})
+    assert status_ok == 200, f"{status_ok}: {http_ok!r}"
+
+    # The CLI arm is exempt from the path assertions by construction: the user
+    # typed the path, so echoing it back discloses nothing they do not have.
+    # It is still checked for tracebacks.
+    for marker in _TRACEBACK_MARKERS:
+        assert marker not in cli_ok.stdout + cli_ok.stderr
+    _assert_no_environment_leak("MCP success", mcp_ok, mcp_root)
+    _assert_no_environment_leak("HTTP success", http_ok, http_root)
+
+    # ── The failure path ──
+    _corrupt_one_data_file(mcp_root)
+    _corrupt_one_data_file(http_root)
+
+    mcp_bad = _mcp("construct_views_validate_data", {"install_root": str(mcp_root)})
+    assert mcp_bad["success"] is False
+    status_bad, http_bad = _http("views.validate_data", http_root, {})
+    assert status_bad == 200, f"a reported failure is a 200 (D-24), got {status_bad}"
+    assert http_bad["success"] is False
+
+    _assert_no_environment_leak("MCP failure", mcp_bad, mcp_root)
+    _assert_no_environment_leak("HTTP failure", http_bad, http_root)
+
+
+def test_from_validation_error_requires_the_model_it_orders_reasons_by() -> None:
+    """D-08: the ``model`` argument has no default, and that is load-bearing.
+
+    Field ordering in the reason comes from the *model*, not from the caller's
+    key order — which is what makes the three surfaces above agree byte-for-byte
+    when they send the same fields in different orders (a JSON object from HTTP,
+    a kwargs dict from MCP, a flag sequence from the CLI). A default would let a
+    caller silently drop the argument and get a reason ordered by whatever
+    arrived first, and the parity assertions would start failing intermittently
+    on a difference nobody chose.
+
+    Asserted here rather than in a unit file because this is the contract the
+    tests directly above depend on: if this raises where it should not, the
+    reason-parity test is the thing that breaks.
+    """
+    from pydantic import BaseModel, ValidationError
+
+    from construct.capabilities.errors import CapabilityInputError
+
+    class _Model(BaseModel):
+        alpha: int
+        beta: int
+
+    try:
+        _Model(alpha=1)
+    except ValidationError as exc:
+        validation_error = exc
+
+    with pytest.raises(TypeError):
+        CapabilityInputError.from_validation_error("cap.id", validation_error)  # type: ignore[call-arg]
+
+    ordered = CapabilityInputError.from_validation_error(
+        "cap.id", validation_error, _Model
+    )
+    assert "beta" in ordered.reason
 
 
 def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None:

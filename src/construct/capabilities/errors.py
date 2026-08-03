@@ -15,7 +15,7 @@ exists to close. This is a deliberate, documented exception to the
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Optional, get_args
+from typing import Any, get_args
 
 from pydantic import BaseModel, ValidationError
 
@@ -52,18 +52,20 @@ class CapabilityInputError(CapabilityError):
         cls,
         cap_id: str,
         exc: ValidationError,
-        model: Optional[type[BaseModel]] = None,
+        model: type[BaseModel],
     ) -> CapabilityInputError:
-        """Build the seam's reason string from a pydantic ``ValidationError``.
+        """Build the seam's reason string from a validation error.
 
         T-18-10: the reason is assembled from field locations and pydantic's own
-        constraint messages only. ``include_input=False`` and
-        ``include_context=False`` keep the caller's submitted values — which may
-        be filesystem paths or other sensitive payload content — out of a string
-        that is rendered straight back to an MCP client.
+        constraint messages only. Only ``loc`` and ``msg`` are ever read, and
+        ``include_input=False`` / ``include_context=False`` are passed on top of
+        that where the error object accepts them — so the caller's submitted
+        values, which may be filesystem paths or other sensitive payload
+        content, cannot reach a string that is rendered straight back to a
+        client.
 
-        ``model`` is the capability's declared input model. When supplied, the
-        errors are put into a **total order that does not depend on the payload**:
+        ``model`` is the model the payload was validated against. It puts the
+        errors into a **total order that does not depend on the payload**:
         declared fields first in model declaration order, then undeclared fields
         sorted by name. Pydantic is deterministic for a *given* payload, but it
         reports ``extra_forbidden`` errors in payload key-insertion order — so an
@@ -72,17 +74,53 @@ class CapabilityInputError(CapabilityError):
         strings for one identical rejection. That is the contract fork GOV-01
         exists to close, so the ordering is imposed here rather than left to the
         caller's dict literal.
+
+        **D-08 — ``model`` has no default, and that is the contract.** It was
+        optional through Phase 18, which made the payload-independent ordering a
+        *convention*: every caller that remembered to pass a model got it, and a
+        caller that forgot got payload-ordered reasons back with no error, no
+        warning, and no way to notice — the reasons are correct, merely ordered
+        differently, so the fork only shows up as two surfaces disagreeing. A
+        guarantee a caller can silently drop is not a guarantee. Phase 19's HTTP
+        adapter is the caller that made the footgun real: it is a *second*
+        independent call site building this reason for the same seam, which is
+        exactly the shape that would have exercised the default. So the argument
+        is required at the type level rather than protected by vigilance.
+
+        The exception is typed as pydantic's ``ValidationError`` because that is
+        what the seam raises against a capability's own model. FastAPI's
+        ``RequestValidationError`` carries the same error dictionaries with a
+        different ``errors()`` signature; :func:`_reported_errors` absorbs that
+        difference so the HTTP adapter's envelope rejection is built here rather
+        than formatted a second time somewhere else.
         """
-        errors = list(
-            exc.errors(include_url=False, include_input=False, include_context=False)
-        )
-        if model is not None:
-            errors.sort(key=_error_order_key(model))
+        errors = _reported_errors(exc)
+        errors.sort(key=_error_order_key(model))
         parts = [
             f"{'.'.join(str(item) for item in error['loc']) or '<root>'}: {error['msg']}"
             for error in errors
         ]
         return cls(cap_id, "; ".join(parts))
+
+
+def _reported_errors(exc: Any) -> list[dict[str, Any]]:
+    """The error entries of a pydantic or FastAPI validation error.
+
+    Pydantic's ``ValidationError.errors`` takes the three suppression keywords;
+    FastAPI's ``RequestValidationError.errors`` takes none, because it is a
+    plain ``Sequence`` holder rather than a pydantic object. The keywords are
+    passed when they are accepted and their absence is not a disclosure either
+    way: the reason is built from ``loc`` and ``msg`` alone, so an ``input`` or
+    ``ctx`` key left in the dictionary is never read. The keywords stay as
+    defence in depth — a future formatter that reached for another key would
+    find nothing sensitive there on the path that can supply them.
+    """
+    try:
+        return list(
+            exc.errors(include_url=False, include_input=False, include_context=False)
+        )
+    except TypeError:
+        return [dict(error) for error in exc.errors()]
 
 
 def _field_order(container: Any) -> dict[str, int]:

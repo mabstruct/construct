@@ -49,9 +49,10 @@ from construct.api import (
     TOKEN_FILE_RELPATH,
     TOKEN_HEADER,
 )
-from construct.api.app import DISCOVERY_ROUTE, _serialize_result, create_app
+from construct.api.app import DISCOVERY_ROUTE, create_app
 from construct.capabilities.catalog import get_registry
 from construct.capabilities.registry import CapabilityRecord
+from construct.capabilities.results import serialize_result
 from construct.capabilities.workspaces import (
     INSTALL_ROOT_FIELD,
     PATH_SHAPED_KEYS,
@@ -789,7 +790,7 @@ def test_two_concurrent_invocations_each_return_their_own_result(
     for cap_id, response in bodies.items():
         assert response.status_code == 200, f"{cap_id}: {response.text}"
 
-    expected_status = _serialize_result(
+    expected_status = serialize_result(
         get_registry().invoke("workspace.status", {"path": str(install_root / "demo")})
     )
     assert bodies["workspace.status"].json() == expected_status
@@ -813,7 +814,7 @@ def test_a_browser_shaped_request_reaches_a_real_capability_by_workspace_id(
     inside the seam, reaches ``workspace.status``'s real handler, and comes back
     as the same body the other two surfaces get for the same workspace.
 
-    The comparison is against ``_serialize_result`` of a direct seam call rather
+    The comparison is against ``serialize_result`` of a direct seam call rather
     than against a hand-written expected body: a literal would only prove the
     route returns what this test's author *believed* the seam returns, which is
     exactly the cross-surface drift the phase exists to prevent.
@@ -826,7 +827,7 @@ def test_a_browser_shaped_request_reaches_a_real_capability_by_workspace_id(
 
     assert response.status_code == 200, response.text
 
-    expected = _serialize_result(
+    expected = serialize_result(
         get_registry().invoke("workspace.status", {"path": str(install_root / "demo")})
     )
     assert response.json() == expected
@@ -856,7 +857,7 @@ def test_the_shared_operation_result_envelope_survives_the_http_boundary(
         "workflow.status", {"workspace": str(install_root / "demo")}
     )
     assert body["success"] == direct.success
-    assert body["data"] == _serialize_result(direct)["data"]
+    assert body["data"] == serialize_result(direct)["data"]
 
 
 # ── HTTP-05: the trust boundary ───────────────────────────────────────────

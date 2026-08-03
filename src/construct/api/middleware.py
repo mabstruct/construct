@@ -75,6 +75,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from construct.api import TOKEN_HEADER
+from construct.api.errors import error_body
 
 
 #: The only ``Host`` values this server answers to. ``[::1]`` is the bracketed
@@ -159,21 +160,24 @@ def _split_host_port(raw: str) -> tuple[str, str | None]:
 
 
 def _refusal(status_code: int, reason: str) -> JSONResponse:
-    """One error shape for every boundary refusal.
+    """One error shape for every boundary refusal — the shared one.
 
-    ``{"detail": ...}`` — the shape FastAPI's own ``HTTPException`` handler
-    emits, so a caller parses one body shape whether the request was refused by
-    this guard or by the route. That is the concrete content of the
-    "``TrustedHostMiddleware`` would give us two shapes" objection above, and it
-    only means something if this side actually matches. Plan 19-07 replaces both
-    with the shared ``api/errors.py`` body — one function, so there is exactly
-    one place for it to swap.
+    Rendered through ``api/errors.py::error_body``, which is the same builder
+    the route's typed refusals, the envelope's validation rejection and the
+    framework's unknown-route 404 all pass through. That is the concrete
+    content of the "``TrustedHostMiddleware`` would give us two shapes"
+    objection above, and it only means something if this side actually matches.
+
+    This is the emitter an exception handler cannot reach: the guard answers
+    *before* the app, so ``install_error_handlers`` never sees these three
+    refusals. Calling the shared builder is the only way they agree, which is
+    why the dependency points this way rather than the reverse.
 
     The reason names the *check*, never the submitted value — the same rule the
     seam's own reason strings follow (T-18-10). Echoing the rejected ``Host`` or
     ``Origin`` back would reflect attacker-controlled text into a response body.
     """
-    return JSONResponse(status_code=status_code, content={"detail": reason})
+    return JSONResponse(status_code=status_code, content=error_body(reason))
 
 
 class LocalhostGuard(BaseHTTPMiddleware):

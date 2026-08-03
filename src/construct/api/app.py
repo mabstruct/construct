@@ -32,33 +32,32 @@ boundary declining caller-supplied filesystem paths — HTTP-03's literal wordin
 — and it is *not* the rejected adapter-side-resolution alternative: resolution
 still happens only inside the seam.
 
-Known limits, deliberately left to later plans in this phase rather than
-half-solved here:
-
-* ``_serialize_result`` is duplicated from ``mcp/server.py`` for now. Plan 19-03
-  moves the one copy to a shared module and has both surfaces import it; copying
-  it into a third place instead would be the drift this phase is about.
-* The route catches only the two typed seam errors. Anything else propagates
-  rather than being stringified into a body — plan 19-07 installs the sanitizing
-  exception handler, and ``str(exc)`` in the meantime is exactly the unguarded
-  path leak (T-18-10) that would have to be unpicked afterwards.
+**The result and error boundary is not this module's** (HTTP-04). Success bodies
+go through ``capabilities/results.py::serialize_result`` — the same function the
+MCP surface calls, so the two cannot answer one capability in two shapes — and
+every error body goes through ``api/errors.py::error_body``. Neither has a copy
+here; a copy is the drift this phase is about.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.responses import Response
 
 from construct.api import CAPABILITY_ROUTE
+from construct.api.errors import (
+    error_body,
+    install_error_handlers,
+    status_for_seam_error,
+)
 from construct.api.middleware import LocalhostGuard
 from construct.capabilities.catalog import get_registry
-from construct.capabilities.errors import (
-    CapabilityInputError,
-    CapabilityNotFoundError,
-)
+from construct.capabilities.errors import CapabilityError
+from construct.capabilities.results import sanitize_exception, serialize_result
 from construct.capabilities.workspaces import (
     PATH_SHAPED_KEYS,
     set_launch_install_root,
@@ -94,29 +93,6 @@ class Envelope(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
-def _serialize_result(result: Any) -> dict:
-    """Project a capability's return value onto a JSON-encodable dict.
-
-    A copy of ``mcp/server.py::_serialize_result``, carrying its reasoning
-    unchanged so the two surfaces answer in one shape: the dataclass branch
-    **recurses** (``asdict``), because a one-level walk left ``OperationResult``
-    holding ``OperationError`` dataclasses and dropped the whole error channel at
-    the boundary (CR-01). And no ``str()`` fallback is applied to an unexpected
-    value on the way out — coercing one would put filesystem paths into a body
-    rendered straight back to a browser (T-18-10), so a value this cannot project
-    is a bug to fix here rather than one to stringify at the boundary.
-
-    Plan 19-03 moves this to a shared module and deletes both copies.
-    """
-    if hasattr(result, "model_dump"):
-        return result.model_dump(mode="json")
-    if is_dataclass(result) and not isinstance(result, type):
-        return asdict(result)
-    if isinstance(result, (list, tuple)):
-        return {"items": [str(item) for item in result]}
-    return {"result": str(result)}
-
-
 def create_app(install_root: Path, token: str) -> FastAPI:
     """Build the ASGI app for one launch.
 
@@ -135,7 +111,21 @@ def create_app(install_root: Path, token: str) -> FastAPI:
             "CLI and MCP surfaces use."
         ),
     )
-    app.add_middleware(LocalhostGuard, token=token, allowed_origins=_allowed_origins())
+    # No ``allowed_origins`` argument. The guard derives the permitted loopback
+    # origins per request from the already-validated ``Host``, so it follows
+    # whatever ``--port`` this launch used without being told; the argument is
+    # additive and exists for an origin that is genuinely not loopback-derived.
+    # Passing the derived set back in was a redundant second spelling of the
+    # allowlist — the failure mode of an origin allowlist is silence, and two
+    # copies of one is how that silence gets written.
+    app.add_middleware(LocalhostGuard, token=token)
+
+    # All four HTTP error emitters answer in one body (HTTP-04). Two of them are
+    # the framework's — the envelope's validation rejection and the router's
+    # unknown-route 404 — and this is where they stop being the framework's.
+    # The third is the guard, which answers before this app and therefore calls
+    # ``error_body`` itself; the fourth is the route below.
+    install_error_handlers(app, Envelope)
 
     @app.get(DISCOVERY_ROUTE)
     async def list_capabilities() -> dict:
@@ -187,8 +177,21 @@ def create_app(install_root: Path, token: str) -> FastAPI:
         }
 
     @app.post(CAPABILITY_ROUTE)
-    async def invoke_capability(cap_id: str, envelope: Envelope) -> dict:
-        """Dispatch one capability. The path parameter is the capability id."""
+    async def invoke_capability(cap_id: str, envelope: Envelope) -> Any:
+        """Dispatch one capability. The path parameter is the capability id.
+
+        **D-24 — a capability that ran and reported failure is a 200 with its
+        result body.** The result envelope separates *the command ran* from *how
+        it went*: ``success`` is the second of those, and the CLI turns it into
+        an exit code. Phase 11's decision that a degraded curation run exits 0
+        is a statement about that separation, not a quirk of one workflow.
+        Mapping a reported failure onto a 4xx here would re-fork the contract the
+        exit code already encodes — an agent reading this surface would conclude
+        the request was malformed when the request was fine and the *workspace*
+        was not. So only the seam's own typed errors carry a status
+        (``STATUS_FOR_SEAM_ERROR``), and the guard's three pre-dispatch refusals
+        keep 400/403/401.
+        """
         offending = sorted(set(envelope.payload) & PATH_SHAPED_KEYS)
         if offending:
             raise HTTPException(
@@ -202,29 +205,46 @@ def create_app(install_root: Path, token: str) -> FastAPI:
 
         try:
             result = get_registry().invoke(cap_id, envelope.payload)
-        except CapabilityNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except CapabilityInputError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-        return _serialize_result(result)
+            # Serialization is inside the guarded region on purpose. A value
+            # ``serialize_result`` cannot project raises
+            # ``ResultSerializationError``, which is a bug in the boundary
+            # rather than a refusal — but letting it propagate would hand the
+            # framework's default handler a traceback to render, and this
+            # surface answers a browser. A 500 naming the exception class is
+            # loud in the log and silent about the environment.
+            return serialize_result(result)
+        except CapabilityError as exc:
+            status = status_for_seam_error(exc)
+            if status is None:
+                # A seam error class the status map has never been told about.
+                # Rendered as unexpected rather than guessed into a 4xx.
+                return _unexpected(exc, cap_id)
+            # ``str(exc)`` verbatim, and that is the cross-surface contract:
+            # the CLI prints this same string after "ERROR " and MCP returns it
+            # as ``{"error": ...}``. The seam's reasons are path-free by
+            # construction, so no sanitizing step stands between them and the
+            # body — one that did would fork the reason (HTTP-04).
+            return JSONResponse(status_code=status, content=error_body(str(exc)))
+        except Exception as exc:  # noqa: BLE001 — the boundary, deliberately broad
+            return _unexpected(exc, cap_id)
 
     return app
 
 
-def _allowed_origins() -> frozenset[str]:
-    """The origins a browser page may carry when calling this server.
+def _unexpected(exc: Exception, cap_id: str) -> Response:
+    """Render an unexpected exception as the project's body, at 500.
 
-    A closed set of loopback literals, and deliberately a small one. Phase 21
-    serves the UI from this very origin, and a same-origin ``fetch`` sends no
-    ``Origin`` header at all — so the set is consulted almost only by requests
-    that are already suspect.
+    Through ``sanitize_exception``, never ``str(exc)``: ``str(OSError)`` embeds
+    the absolute path it failed on (T-18-10, M-4) and 14 measured handlers in
+    this codebase raise from that family. The sanitizer never reads the
+    message at all, so the class of leak is closed structurally rather than by
+    a filter that has to be right about every message shape ever raised.
 
-    Note what it does **not** contain: a port. ``http://localhost:5173`` (a Vite
-    dev server) is refused today. That is the honest current state rather than a
-    wildcard nobody would notice; widening it is a visible edit, which is the
-    property worth keeping for a check whose failure mode is silent.
+    The capability id is supplied because the sanitized reason is a bare class
+    name; without it a caller with two requests in flight cannot tell which one
+    broke. The id came from the caller's own URL, so it discloses nothing the
+    caller did not already send.
     """
-    return frozenset(
-        f"http://{host}" for host in ("127.0.0.1", "localhost", "[::1]")
+    return JSONResponse(
+        status_code=500, content=error_body(sanitize_exception(exc), cap_id)
     )
