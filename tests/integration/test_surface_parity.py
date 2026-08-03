@@ -612,6 +612,43 @@ def test_no_surface_leaks_the_environment_on_success_or_on_failure(
     _assert_no_environment_leak("HTTP failure", http_bad, http_root)
 
 
+def test_from_validation_error_requires_the_model_it_orders_reasons_by() -> None:
+    """D-08: the ``model`` argument has no default, and that is load-bearing.
+
+    Field ordering in the reason comes from the *model*, not from the caller's
+    key order — which is what makes the three surfaces above agree byte-for-byte
+    when they send the same fields in different orders (a JSON object from HTTP,
+    a kwargs dict from MCP, a flag sequence from the CLI). A default would let a
+    caller silently drop the argument and get a reason ordered by whatever
+    arrived first, and the parity assertions would start failing intermittently
+    on a difference nobody chose.
+
+    Asserted here rather than in a unit file because this is the contract the
+    tests directly above depend on: if this raises where it should not, the
+    reason-parity test is the thing that breaks.
+    """
+    from pydantic import BaseModel, ValidationError
+
+    from construct.capabilities.errors import CapabilityInputError
+
+    class _Model(BaseModel):
+        alpha: int
+        beta: int
+
+    try:
+        _Model(alpha=1)
+    except ValidationError as exc:
+        validation_error = exc
+
+    with pytest.raises(TypeError):
+        CapabilityInputError.from_validation_error("cap.id", validation_error)  # type: ignore[call-arg]
+
+    ordered = CapabilityInputError.from_validation_error(
+        "cap.id", validation_error, _Model
+    )
+    assert "beta" in ordered.reason
+
+
 def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None:
     """D-08's breadth requirement, asserted so it cannot silently narrow.
 
