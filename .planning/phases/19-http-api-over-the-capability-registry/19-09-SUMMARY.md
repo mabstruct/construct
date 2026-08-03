@@ -270,6 +270,23 @@ None.
 - **Carried forward:** RESEARCH assumption A4 (the detached spawn: working directory, interpreter resolution, environment inheritance) is now *exercised* rather than assumed. The one thing it surfaced — that an editable install can resolve `construct` to a different checkout than the server is running from — is fixed here, but it is worth re-checking on a machine where CONSTRUCT is installed non-editably.
 - **A note for the guided layer:** the log file answers "what did this run say", never "did it succeed". Status comes from the inspect capabilities. A UI that colours a run red because its log is non-empty would misreport every healthy run — `test_a_healthy_runs_log_exists_too_so_non_empty_is_not_a_verdict` exists to make that concrete.
 
+## Self-Check: PASSED
+
+Files claimed as created/modified — all present:
+`src/construct/api/runs.py`, `tests/integration/test_http_runs.py`,
+`src/construct/api/app.py`, `src/construct/api/COVERAGE.md`,
+`src/construct/cli.py`, `tests/contract/test_http_surface.py`,
+`.planning/phases/19-http-api-over-the-capability-registry/19-09-SUMMARY.md`.
+
+Commits claimed — all present in `git log`: `2d391ef`, `b336fc3`, `781cd67`,
+`0583684`, `5c7109e`, `fdded7f`, `53394d5`, `03550a4`.
+
+Verification commands from the plan, re-run at completion:
+- `python -m pytest tests/integration/test_http_runs.py -q` → 18 passed
+- `python -m pytest tests/contract -q` → 616 passed, 22 skipped
+- `python -m pytest -q` → 1120 passed, 22 skipped, 0 failed
+- `python -c "import inspect, construct.api.runs as m; src=inspect.getsource(m); assert 'shell' not in src or 'shell=False' in src"` → exit 0
+
 ---
 *Phase: 19-http-api-over-the-capability-registry*
 *Completed: 2026-08-03*
