@@ -140,7 +140,7 @@ Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Sam
 **Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
 **Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
 **Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
-**Plans**: 6/10 plans executed
+**Plans**: 8/10 plans executed
 
 Plans:
 **Wave 1**
@@ -157,8 +157,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 19-07-PLAN.md — HTTP-04 completion: `model` becomes required, all four HTTP error emitters unified, and the differential parity table gains its third column (wave 3)
-- [ ] 19-08-PLAN.md — HTTP-07: `workflow.list` spanning all three durable stores, registered on CLI, MCP and HTTP at once (wave 3)
+- [x] 19-07-PLAN.md — HTTP-04 completion: `model` becomes required, all four HTTP error emitters unified, and the differential parity table gains its third column (wave 3)
+- [x] 19-08-PLAN.md — HTTP-07: `workflow.list` spanning all three durable stores, registered on CLI, MCP and HTTP at once (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -418,7 +418,7 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
 | 18. Contract & Governance Foundations | v0.5 | 8/8 | In Progress|  |
-| 19. HTTP API over the Capability Registry | v0.5 | 6/10 | In Progress|  |
+| 19. HTTP API over the Capability Registry | v0.5 | 8/10 | In Progress|  |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
 | 22. Wizard Flows | v0.5 | 0/? | Not started | - |
