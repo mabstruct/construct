@@ -482,6 +482,52 @@ def test_undeclared_field_is_rejected_identically_on_both_surfaces(
     assert "bogus" in _mcp_reason(mcp_payload)
 
 
+@pytest.mark.parametrize("case", PARITY_CASES, ids=_CASE_IDS)
+def test_undeclared_field_reason_is_byte_identical_on_all_three_surfaces(
+    tmp_path: Path, case: ParityCase
+) -> None:
+    """HTTP-04: one reason, three surfaces, after each strips its own framing.
+
+    **Why the comparison basis is the fresh-process seam rather than the real
+    CLI.** Typer's option parser rejects an undeclared *flag* before a payload
+    is ever built, so the real CLI cannot express this request at all — a
+    genuine property of that surface, pinned by
+    ``test_cli_process_rejects_an_undeclared_flag_without_a_traceback``. HTTP
+    *can* send an undeclared field, because its payload is a JSON object rather
+    than a parsed flag set. Comparing the HTTP arm against the seam running in
+    an independent process is therefore a strengthening of the harness, not a
+    workaround: it is the same seam the CLI reaches, proven in a process that
+    shares no registry singleton with this one.
+
+    Byte-identical is the assertion, not "both mention the field". A reason that
+    merely contains the field name would let two surfaces phrase the same
+    refusal differently, and an agent reading both would have to learn two
+    dialects — which is the fork HTTP-04 exists to forbid.
+    """
+    env = case.build_env(tmp_path / "seam-arm")
+    http_env = case.build_env(tmp_path / "http-arm")
+
+    seam = _seam_in_fresh_process(case.cap_id, {**case.build_payload(env), "bogus": 1})
+    assert seam.returncode != 0, seam.stdout
+
+    mcp_body = _mcp(case.tool_name, {**case.build_payload(env), "bogus": 1})
+
+    status, http_body = _http(
+        case.cap_id,
+        case.build_http_root(http_env),
+        {**case.build_http_payload(http_env), "bogus": 1},
+    )
+    assert status == 422, f"expected the seam's input refusal, got {status}: {http_body!r}"
+
+    seam_reason = _cli_reason(seam)
+    assert seam_reason == _mcp_reason(mcp_body), "seam and MCP disagree"
+    assert seam_reason == _http_reason(http_body), (
+        f"{case.cap_id} refused the same payload in different words:\n"
+        f"  seam: {seam_reason!r}\n  HTTP: {_http_reason(http_body)!r}"
+    )
+    assert "bogus" in seam_reason
+
+
 def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None:
     """D-08's breadth requirement, asserted so it cannot silently narrow.
 
