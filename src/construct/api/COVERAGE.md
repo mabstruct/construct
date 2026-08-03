@@ -112,15 +112,23 @@ undocumented surface. The first column is a route, not a capability id.
 This table is parsed too, in the one direction that can catch something: every
 non-dispatch `/api` route the app actually exposes must appear here. The reverse
 does not hold, because a row may be written *before* the plan that adds the
-route — which is how `POST /api/runs` is listed today.
+route — which is how `POST /api/runs` was listed before plan 19-09 built it.
 
 | Route | Added by | Why it is not a capability route |
 |---|---|---|
 | `GET /api/capabilities` | plan 19-05 (D-06) | Discovery. It advertises the registry rather than dispatching through it, so no `CapabilityRegistry.invoke` call happens and there is no capability id to count. |
-| `POST /api/runs` | plan 19-09 | Run addressability. It starts and addresses a *run*, which is a lifecycle over a capability invocation rather than an invocation itself. Listed here in advance so 19-09 lands against a ledger that already expects it. |
+| `POST /api/runs` | plan 19-09 (D-12) | Run addressability, and the **only** operation the capability envelope structurally cannot express: a capability call is synchronous, while HTTP-06 requires the run id to return immediately with the run pollable while it is still going. Starting is therefore a route; polling and resume stay on the envelope through the existing inspect and review capabilities, which is what keeps this table two rows long rather than growing one row per run operation. |
 
 Both sit behind the same `LocalhostGuard`, so "not a capability route" is a
 statement about the coverage guard's subject and never about the trust boundary.
+
+**What `POST /api/runs` does not do, recorded so a later reader does not have to
+infer it.** It never drives the workflow graph. A resume is submitted through
+`curation.review` / `research.review`, which wrap the decision payload before it
+reaches LangGraph — a bare id-keyed map handed to `Command(resume=…)` is read as
+an *interrupt-id* mapping, silently consumed as an empty resume, and leaves the
+run paused with zero writes and a well-formed success response. That is the one
+failure this route's shape is chosen to make unreachable.
 
 ## Out of scope by construction
 

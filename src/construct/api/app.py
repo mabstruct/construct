@@ -55,6 +55,7 @@ from construct.api.errors import (
     status_for_seam_error,
 )
 from construct.api.middleware import LocalhostGuard
+from construct.api.runs import runs_router
 from construct.capabilities.catalog import get_registry
 from construct.capabilities.errors import CapabilityError
 from construct.capabilities.results import sanitize_exception, serialize_result
@@ -100,6 +101,19 @@ def create_app(install_root: Path, token: str) -> FastAPI:
     a factory and why ``cli.py`` hands uvicorn the returned instance rather than
     an import string: an import string makes uvicorn re-import the module in a
     fresh interpreter, where neither value exists.
+
+    **D-12 — ``POST /api/runs`` is the only non-capability route, and why.**
+    Starting a workflow run is the one operation the capability envelope
+    structurally cannot express: a capability call is synchronous, and HTTP-06
+    requires the run id to come back immediately with the run pollable while it
+    is still going. Those cannot both be true of one synchronous dispatch. So a
+    run is started by a detached subprocess behind a route, and *only starting*
+    is a route — polling and resume stay on the envelope, through the existing
+    inspect and review capabilities. The router is included **after** the guard,
+    so the run route sits behind the same Host, Origin and token checks as every
+    dispatch, and **after** ``install_error_handlers``, so its refusals carry the
+    same body. ``COVERAGE.md``'s non-capability-routes table records it, and a
+    contract guard parses that table.
     """
     set_launch_install_root(install_root)
 
@@ -126,6 +140,9 @@ def create_app(install_root: Path, token: str) -> FastAPI:
     # The third is the guard, which answers before this app and therefore calls
     # ``error_body`` itself; the fourth is the route below.
     install_error_handlers(app, Envelope)
+
+    # Deliberately after both of the above — see this factory's D-12 paragraph.
+    app.include_router(runs_router)
 
     @app.get(DISCOVERY_ROUTE)
     async def list_capabilities() -> dict:
