@@ -676,3 +676,161 @@ def test_a_resume_with_no_decisions_writes_nothing(
         "a resume that named no decision for a queued proposal was accepted"
     )
     assert _lifecycles(workspace) == before
+
+
+# ── Claim 4: a failed start is visible, not a run that never existed ───────
+
+
+def _wait_for_log(log_path: Path) -> str:
+    """Block until the child has written something, then return it."""
+    deadline = time.monotonic() + TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        if log_path.exists() and log_path.stat().st_size:
+            return log_path.read_text(encoding="utf-8", errors="replace")
+        time.sleep(POLL_SECONDS)
+    raise AssertionError(
+        f"nothing was written to {log_path} within {TIMEOUT_SECONDS}s — a spawn "
+        "that fails into silence is the exact failure D-26 exists to prevent"
+    )
+
+
+def test_a_child_that_dies_at_startup_leaves_a_readable_trace(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    workspace: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-26, against the failure mode that motivated it.
+
+    The child is pointed at a package tree that raises on import — the "import
+    error / wrong working directory / bad install" class D-26 names, and the one
+    a pipe would swallow. Everything else is real: a real ``Popen``, the real
+    redirect, the real file at the path the response advertised.
+
+    What makes this the *named* failure is the pair of assertions at the end.
+    The run is indistinguishable from one that was never started — the inspect
+    capability reports no such run, forever — and the **only** thing separating
+    "the start failed" from "you imagined it" is the log the response pointed at
+    before the child had written a byte.
+    """
+    from construct.api import runs as runs_module
+
+    broken = tmp_path / "broken-install"
+    (broken / "construct").mkdir(parents=True)
+    (broken / "construct" / "__init__.py").write_text(
+        "raise ImportError('deliberately broken install for the D-26 proof')\n",
+        encoding="utf-8",
+    )
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(broken)
+    monkeypatch.setattr(runs_module, "_child_environment", lambda: environment)
+
+    response = _start(client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID)
+
+    assert response.status_code == 200, (
+        "a start whose child will die must still return an id — the caller has "
+        "to be told where to look, and the server cannot know yet that it failed"
+    )
+    body = response.json()
+    log_path = workspace / body["log_path"]
+    assert body["log_path"] == RUN_LOG_RELPATH.format(run_id=body["run_id"])
+
+    captured = _wait_for_log(log_path)
+    assert "deliberately broken install" in captured, captured[:800]
+
+    envelope = _inspect(client, auth_headers, body["run_id"])
+    assert (envelope.get("data") or {}).get("status") == "failed"
+    assert "No such curation run" in (envelope.get("data") or {}).get("message", ""), (
+        "fixture precondition: the run must be indistinguishable from one that "
+        "never existed, otherwise this test is not exercising D-26's failure"
+    )
+
+
+def test_the_response_names_the_log_rather_than_echoing_it(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    workspace: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T-19-05: a path a caller can open, never the child's raw text in a body.
+
+    The log is produced *outside* the sanitizer's reach — it is a subprocess's
+    stream, and a traceback in it carries absolute paths and whatever the
+    environment leaked into an exception message. So it stays a file. The
+    response says where, and says nothing else about it.
+    """
+    from construct.api import runs as runs_module
+
+    broken = tmp_path / "broken-install"
+    (broken / "construct").mkdir(parents=True)
+    (broken / "construct" / "__init__.py").write_text(
+        "raise ImportError('secret-marker-that-must-not-be-echoed')\n", encoding="utf-8"
+    )
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(broken)
+    monkeypatch.setattr(runs_module, "_child_environment", lambda: environment)
+
+    response = _start(client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID)
+    body = response.json()
+    captured = _wait_for_log(workspace / body["log_path"])
+
+    assert "secret-marker-that-must-not-be-echoed" in captured
+    assert "secret-marker-that-must-not-be-echoed" not in response.text
+    assert str(workspace) not in response.text, (
+        "the response leaked an absolute path; the log path is relative to the "
+        "workspace precisely so it does not"
+    )
+    assert body["log_path"].startswith(".construct/")
+
+
+def test_an_invalid_workspace_makes_the_run_fail_in_the_log(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    paused_install_root: Path,
+) -> None:
+    """The plan's own example: point the child at a workspace it cannot load.
+
+    A *different* failure stage from the test above, and worth having both. Here
+    the child starts fine and the workflow fails — so this is the case where a
+    stderr-only capture would have been silent, because ``construct.cli``
+    reports a failed capability with ``typer.echo``, on **stdout**. Both streams
+    land in the one file for exactly this reason.
+    """
+    broken = _make_paused_workspace(paused_install_root, "broken-ws")
+    (broken / "governance.yaml").write_text(
+        "promotion: [this is: not: valid: yaml\n", encoding="utf-8"
+    )
+
+    body = _start(client, auth_headers, workflow="curation", workspace_id="broken-ws").json()
+    captured = _wait_for_log(broken / body["log_path"])
+
+    assert "curation.run failed" in captured, captured[:800]
+    # Sanitized on the way out of the capability layer: a class name, not the
+    # path it failed on (T-18-10).
+    assert str(broken) not in captured
+
+
+def test_a_healthy_runs_log_exists_too_so_non_empty_is_not_a_verdict(
+    client: TestClient, auth_headers: dict[str, str], workspace: Path
+) -> None:
+    """The honest limit of the log, asserted rather than left to be discovered.
+
+    A run that pauses cleanly still writes to this file — the offline promotion
+    gate reports its own degradation there. So "the log is non-empty" is **not**
+    a failure signal, and a reader who assumed it was would misreport every
+    healthy run. The run's status is read from the checkpoint by the inspect
+    capabilities; the log answers a different question.
+    """
+    body = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    _wait_for_status(client, auth_headers, body["run_id"], "awaiting_review")
+
+    captured = _wait_for_log(workspace / body["log_path"])
+    assert captured.strip()
+    assert "failed" not in captured.lower(), (
+        "fixture precondition: this run is healthy, so its log must not read as "
+        f"a failure: {captured[:400]}"
+    )
