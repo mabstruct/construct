@@ -487,3 +487,192 @@ def test_the_spawn_passes_an_argument_list_and_never_a_shell() -> None:
     assert "shell=True" not in source
     assert "os.system" not in source
     assert "subprocess.Popen(" in source
+
+
+# ── Claim 3: cross-surface resume, both directions ────────────────────────
+
+
+def test_started_in_the_browser_and_resumed_from_the_cli(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    workspace: Path,
+    tmp_path: Path,
+) -> None:
+    """Direction one, and the resume runs in a genuinely independent process.
+
+    The CLI arm is a real child. A ``CliRunner`` call would share this
+    interpreter — and with it the registry singleton cached in a module global —
+    so it could not show that a process which knows nothing about this server
+    reaches the same run. That is the whole claim.
+
+    The assertion is on the **cards**, not on the response. A resume that
+    LangGraph silently consumed as empty returns a well-formed result and leaves
+    every lifecycle exactly where it was; asserting the response would pass over
+    it.
+    """
+    before = _lifecycles(workspace)
+    assert before and set(before.values()) == {"seed"}, before
+
+    started = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    paused = _wait_for_status(client, auth_headers, started["run_id"], "awaiting_review")
+
+    decisions_file = tmp_path / "decisions.json"
+    decisions_file.write_text(
+        json.dumps(_explicit_decisions(paused["gate_queue"])), encoding="utf-8"
+    )
+    completed = _cli(
+        [
+            "curation",
+            "review",
+            "--workspace",
+            str(workspace),
+            "--run-id",
+            started["run_id"],
+            "--checkpoint-id",
+            paused["checkpoint_id"],
+            "--decisions-file",
+            str(decisions_file),
+            "--json",
+        ]
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+    after = _lifecycles(workspace)
+    assert after != before, (
+        "the CLI resume returned successfully and changed nothing on disk — the "
+        "signature of a resume LangGraph consumed as an empty interrupt map: "
+        f"{after}"
+    )
+    assert set(after.values()) == {"archived"}, after
+
+    settled = _inspect(client, auth_headers, started["run_id"])
+    assert (settled.get("data") or {}).get("status") != "awaiting_review", (
+        "the run is still paused after a resume the CLI reported as successful"
+    )
+
+
+def test_started_from_the_cli_and_resumed_in_the_browser(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    workspace: Path,
+) -> None:
+    """Direction two. Neither side needs to know who started the run.
+
+    The run id is minted by the CLI child here rather than by the server, and
+    the browser addresses it with nothing but that id — no handoff, no shared
+    memory, no server-side run table. Both processes are simply writing and
+    reading one checkpoint file, which is the property D-12 was chosen for.
+
+    The resume goes through ``curation.review`` over the ordinary envelope. This
+    file never touches the workflow graph, for the reason in the module
+    docstring.
+    """
+    before = _lifecycles(workspace)
+    assert set(before.values()) == {"seed"}, before
+
+    run_id = "cli-started-run"
+    started = _cli(
+        ["curation", "run", "--workspace", str(workspace), "--run-id", run_id, "--json"]
+    )
+    assert started.returncode == 0, started.stdout + started.stderr
+
+    paused = _wait_for_status(client, auth_headers, run_id, "awaiting_review")
+    assert paused["gate_queue"], "the CLI-started run did not pause with a queue"
+
+    response = _invoke(
+        client,
+        auth_headers,
+        "curation.review",
+        {
+            "workspace_id": WORKSPACE_ID,
+            "run_id": run_id,
+            "checkpoint_id": paused["checkpoint_id"],
+            "decisions": _explicit_decisions(paused["gate_queue"]),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    envelope = response.json()
+    assert envelope["success"] is True, envelope
+
+    after = _lifecycles(workspace)
+    assert after != before, (
+        "the HTTP resume returned a well-formed success and wrote nothing: "
+        f"{after}"
+    )
+    assert set(after.values()) == {"archived"}, after
+    assert envelope["data"]["applied"], (
+        "no proposal was reported as applied, so the write above cannot be "
+        "attributed to this resume"
+    )
+
+
+def test_a_stale_checkpoint_handle_is_refused_and_writes_nothing(
+    client: TestClient, auth_headers: dict[str, str], workspace: Path
+) -> None:
+    """The ETag is load-bearing across surfaces, not decoration (GOV-03 / D-11).
+
+    Two processes may reach one run — that is the point of the two tests above —
+    so a resume that cannot say which queue it read cannot be checked for
+    staleness. Here the handle is wrong and the cards must be untouched.
+    """
+    before = _lifecycles(workspace)
+    started = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    paused = _wait_for_status(client, auth_headers, started["run_id"], "awaiting_review")
+
+    response = _invoke(
+        client,
+        auth_headers,
+        "curation.review",
+        {
+            "workspace_id": WORKSPACE_ID,
+            "run_id": started["run_id"],
+            "checkpoint_id": "1f000000-0000-0000-0000-000000000000",
+            "decisions": _explicit_decisions(paused["gate_queue"]),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["success"] is False
+    assert _lifecycles(workspace) == before
+
+
+def test_a_resume_with_no_decisions_writes_nothing(
+    client: TestClient, auth_headers: dict[str, str], workspace: Path
+) -> None:
+    """HTTP-06's prohibition, discharged as an assertion.
+
+    *No default, blanket approval, or missing decision may ever result in a
+    canonical write.* The tempting implementation of a review UI is one that
+    resumes with whatever the user did not object to; this pins that a resume
+    naming no decision against a non-empty queue is **refused**, and that the
+    cards on disk are exactly as they were.
+    """
+    before = _lifecycles(workspace)
+    started = _start(
+        client, auth_headers, workflow="curation", workspace_id=WORKSPACE_ID
+    ).json()
+    paused = _wait_for_status(client, auth_headers, started["run_id"], "awaiting_review")
+
+    response = _invoke(
+        client,
+        auth_headers,
+        "curation.review",
+        {
+            "workspace_id": WORKSPACE_ID,
+            "run_id": started["run_id"],
+            "checkpoint_id": paused["checkpoint_id"],
+            "decisions": {},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["success"] is False, (
+        "a resume that named no decision for a queued proposal was accepted"
+    )
+    assert _lifecycles(workspace) == before
