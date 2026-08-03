@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -526,6 +527,89 @@ def test_undeclared_field_reason_is_byte_identical_on_all_three_surfaces(
         f"  seam: {seam_reason!r}\n  HTTP: {_http_reason(http_body)!r}"
     )
     assert "bogus" in seam_reason
+
+
+_TRACEBACK_MARKERS = ("Traceback (most recent call last)", 'File "', "  at ")
+
+#: An absolute POSIX path with at least one component, anchored so a bare "/"
+#: or a relative fragment does not match. Deliberately not a match against the
+#: fixture root alone: a leak that names *some other* absolute path — the
+#: interpreter's, a temp dir, a home directory — is the same disclosure class.
+_ABSOLUTE_PATH = re.compile(r"(?:^|[\s\"'(\[])/(?:[A-Za-z0-9._-]+/){1,}")
+
+
+def _assert_no_environment_leak(label: str, body: object, install_root: Path) -> None:
+    """No rendered body names the filesystem it ran on, or how it failed.
+
+    Three separate assertions because they fail for three different reasons:
+    the fixture root catches "this exact tree leaked", the absolute-path pattern
+    catches "some other path leaked", and the traceback markers catch "the
+    framework rendered an exception at the caller".
+    """
+    text = json.dumps(body, default=str)
+
+    assert str(install_root) not in text, (
+        f"{label} leaked the install root path into its body: {text[:400]}"
+    )
+    match = _ABSOLUTE_PATH.search(text)
+    assert match is None, (
+        f"{label} leaked an absolute-path-shaped substring "
+        f"({match.group(0)!r}) into its body: {text[:400]}"
+    )
+    for marker in _TRACEBACK_MARKERS:
+        assert marker not in text, (
+            f"{label} leaked a traceback marker ({marker!r}) into its body: {text[:400]}"
+        )
+
+
+def test_no_surface_leaks_the_environment_on_success_or_on_failure(
+    tmp_path: Path,
+) -> None:
+    """T-19-05: the leak assertion runs on **successful** bodies too.
+
+    An exception-boundary sanitizer never sees a success-path value — that is
+    the structural reason the pipeline leaks plan 19-03 fixed survived as long
+    as they did. ``sanitize_exception`` cannot help here: nothing raised. So the
+    success path is checked with the same three assertions as the failure path,
+    on all three surfaces.
+
+    ``views.validate_data`` is the case under test because its result carries
+    per-file entries — the shape most likely to render a path — and because the
+    failing arm produces a *reported* failure (200 with ``success: false``, D-24)
+    rather than a seam refusal, so the success and failure bodies here are both
+    real handler output rather than one of them being a rejection string.
+    """
+    cli_root = _generated_install_root(tmp_path / "cli-arm")
+    mcp_root = _generated_install_root(tmp_path / "mcp-arm")
+    http_root = _generated_install_root(tmp_path / "http-arm")
+
+    # ── The success path ──
+    cli_ok = _cli(["views", "validate", "--install-root", str(cli_root), "--json"])
+    assert cli_ok.returncode == 0, cli_ok.stdout + cli_ok.stderr
+    mcp_ok = _mcp("construct_views_validate_data", {"install_root": str(mcp_root)})
+    status_ok, http_ok = _http("views.validate_data", http_root, {})
+    assert status_ok == 200, f"{status_ok}: {http_ok!r}"
+
+    # The CLI arm is exempt from the path assertions by construction: the user
+    # typed the path, so echoing it back discloses nothing they do not have.
+    # It is still checked for tracebacks.
+    for marker in _TRACEBACK_MARKERS:
+        assert marker not in cli_ok.stdout + cli_ok.stderr
+    _assert_no_environment_leak("MCP success", mcp_ok, mcp_root)
+    _assert_no_environment_leak("HTTP success", http_ok, http_root)
+
+    # ── The failure path ──
+    _corrupt_one_data_file(mcp_root)
+    _corrupt_one_data_file(http_root)
+
+    mcp_bad = _mcp("construct_views_validate_data", {"install_root": str(mcp_root)})
+    assert mcp_bad["success"] is False
+    status_bad, http_bad = _http("views.validate_data", http_root, {})
+    assert status_bad == 200, f"a reported failure is a 200 (D-24), got {status_bad}"
+    assert http_bad["success"] is False
+
+    _assert_no_environment_leak("MCP failure", mcp_bad, mcp_root)
+    _assert_no_environment_leak("HTTP failure", http_bad, http_root)
 
 
 def test_the_parity_table_covers_a_read_a_write_and_a_views_capability() -> None:
