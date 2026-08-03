@@ -140,7 +140,7 @@ Waves: 1 → {01, 04} · 2 → {02, 05, 06, 07} · 3 → {03} · 4 → {08}. Sam
 **Why this is the hard gate**: CONSTRUCT has no HTTP surface today (Typer CLI + stdio MCP only). Nothing browser-side in Phases 21–24 can exist before this lands.
 **Open decision (OQ-4)**: the checkpoint concurrency contract — WAL / `busy_timeout` and single-flight locking for the sqlite checkpointer once a browser and a CLI can both resume the same run. Extends adr-0004.
 **Research flag**: the localhost threat model (`Origin`/`Host` validation, per-launch token) and the `registry.invoke()` seam design carry real security consequences — worth a research pass during phase planning.
-**Plans**: 8/10 plans executed
+**Plans**: 9/10 plans executed
 
 Plans:
 **Wave 1**
@@ -162,7 +162,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 19-09-PLAN.md — HTTP-06: runs as addressable resources — detached spawn, immediate id, pollable while running, cross-surface resume, visible failed spawn (wave 4)
+- [x] 19-09-PLAN.md — HTTP-06: runs as addressable resources — detached spawn, immediate id, pollable while running, cross-surface resume, visible failed spawn (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -418,7 +418,7 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
 | 18. Contract & Governance Foundations | v0.5 | 8/8 | In Progress|  |
-| 19. HTTP API over the Capability Registry | v0.5 | 8/10 | In Progress|  |
+| 19. HTTP API over the Capability Registry | v0.5 | 9/10 | In Progress|  |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |
 | 22. Wizard Flows | v0.5 | 0/? | Not started | - |
