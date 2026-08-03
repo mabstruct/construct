@@ -25,7 +25,9 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pytest
+from fastapi.testclient import TestClient
 
+from construct.api import CAPABILITY_ROUTE
 from construct.capabilities.catalog import get_registry
 from construct.mcp import server as mcp_server
 from construct.mcp.server import create_server
@@ -48,6 +50,15 @@ class ParityCase(NamedTuple):
     ``_envelope_view``; ``views validate`` prints its own report shape and brings
     its own reader. The projection lives in the row so the test body stays one
     equality assertion — adding a capability is a row, never new test logic.
+
+    **The HTTP arm needs its own payload, not a reuse of ``build_payload``.**
+    That is not an inconsistency to be smoothed over: the HTTP boundary refuses
+    path-shaped keys outright (``PATH_SHAPED_KEYS``) and addresses a workspace by
+    *id*, so the payload the other two arms send is one this surface is required
+    to reject. ``build_http_payload`` therefore expresses the same request in the
+    vocabulary HTTP actually speaks, and ``build_http_root`` names the install
+    root the app is launched against — because an id is resolved against launch
+    context (D-09) rather than carried in the request.
     """
 
     cap_id: str
@@ -57,6 +68,9 @@ class ParityCase(NamedTuple):
     build_argv: Callable[[Path], list[str]]
     read_cli: Callable[[str], object]
     read_mcp: Callable[[dict], object]
+    build_http_root: Callable[[Path], Path]
+    build_http_payload: Callable[[Path], dict]
+    read_http: Callable[[dict], object]
 
 
 def _envelope_view(payload: dict) -> dict:
@@ -103,6 +117,9 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_envelope_from_cli,
         read_mcp=_envelope_view,
+        build_http_root=lambda ws: ws.parent,
+        build_http_payload=lambda ws: {"workspace_id": ws.name},
+        read_http=_envelope_view,
     ),
     # A write. D-08 permits trading fixture cost for breadth, and a table proving
     # only reads agree would leave the capabilities that *change* the workspace —
@@ -137,6 +154,19 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_envelope_from_cli,
         read_mcp=_envelope_view,
+        build_http_root=lambda ws: ws.parent,
+        build_http_payload=lambda ws: {
+            "workspace_id": ws.name,
+            "title": "Parity Card",
+            "epistemic_type": "finding",
+            "domains": ["test-domain"],
+            "content_categories": ["test-category"],
+            "confidence": 3,
+            "source_tier": 3,
+            "author": "construct",
+            "summary": "Written through both surfaces to prove they agree.",
+        },
+        read_http=_envelope_view,
     ),
     # The views capability D-02 registers in this plan.
     ParityCase(
@@ -149,6 +179,14 @@ PARITY_CASES: list[ParityCase] = [
         ],
         read_cli=_views_view_from_cli,
         read_mcp=_views_view_from_mcp,
+        # An install-root capability: the root is launch context, never caller
+        # input, so the HTTP payload is empty and ``workspace_id`` is refused
+        # outright (``INSTALL_ROOT_FIELD``). The empty payload here is the same
+        # shape ``test_only_install_root_capabilities_run_on_an_empty_payload``
+        # pins in the contract suite.
+        build_http_root=lambda root: root,
+        build_http_payload=lambda root: {},
+        read_http=_views_view_from_mcp,
     ),
 ]
 
@@ -193,6 +231,51 @@ def _mcp(tool_name: str, payload: dict) -> dict:
     """
     tool = create_server()._tool_manager.get_tool(tool_name)
     return json.loads(tool.fn(**payload))
+
+
+def _http(cap_id: str, install_root: Path, payload: dict) -> tuple[int, dict]:
+    """Drive the real ASGI app through a ``TestClient``, as a browser would.
+
+    Built through ``create_app`` — the same factory ``construct serve`` hands
+    uvicorn — so the request crosses the real middleware guard and the real
+    dispatch route rather than calling a handler directly. The token and a
+    loopback ``base_url`` are what make this a *passing* request; the guard's
+    rejection paths are pinned in ``tests/contract/test_http_security.py``.
+
+    ``set_launch_install_root`` is process-level state (D-09), so it is cleared
+    on the way out: leaving it set would make the next arm resolve ids against
+    a tree this test built, and an id assertion could then pass for the wrong
+    reason.
+    """
+    from construct.api import TOKEN_HEADER
+    from construct.api.app import create_app
+    from construct.capabilities.workspaces import set_launch_install_root
+
+    token = "parity-token-not-a-real-secret"
+    app = create_app(install_root, token)
+    try:
+        with TestClient(app, base_url="http://127.0.0.1") as client:
+            response = client.post(
+                CAPABILITY_ROUTE.format(cap_id=cap_id),
+                json={"payload": payload},
+                headers={TOKEN_HEADER: token},
+            )
+        return response.status_code, response.json()
+    finally:
+        set_launch_install_root(None)
+
+
+def _http_reason(body: dict) -> str:
+    """The seam's reason with the HTTP surface's own framing stripped.
+
+    Task 1 made every emitter on this surface return exactly ``{"detail": str}``
+    (``api/errors.py``), and the capability-error arm puts ``str(exc)`` in it
+    verbatim — the same string the CLI prints after ``ERROR `` and MCP returns
+    as ``{"error": ...}``. So "strip the framing" is one key lookup, and the
+    fact that it *is* only a key lookup is itself the HTTP-04 claim.
+    """
+    assert "detail" in body, f"expected the one error body, got: {body!r}"
+    return body["detail"]
 
 
 def _seam_in_fresh_process(cap_id: str, payload: dict) -> subprocess.CompletedProcess[str]:
