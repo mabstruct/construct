@@ -85,10 +85,22 @@ block (security capability active — ASVS L1, block on `high`).
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Real browser reaches the served surface | HTTP-01 | `TestClient` bypasses the network stack — it never proves a real socket is bound to 127.0.0.1 and reachable from a browser process | Start the server with the one-command launcher, open `http://127.0.0.1:<port>` in a browser with the launch token, confirm a capability responds |
-| Token delivery ergonomics | HTTP-05 | Whether the operator can actually get the per-launch token into the browser is a UX judgement, not an assertion (research Open Question 1) | Launch, read the token from stdout / the `0600` file, use it from a browser request, confirm no token appears in shell history or a `Referer` |
+| Behavior | Requirement | Why Manual | Test Instructions | Result |
+|----------|-------------|------------|-------------------|--------|
+| Real browser reaches the served surface | HTTP-01 | `TestClient` bypasses the network stack — it never proves a real socket is bound to 127.0.0.1 and reachable from a browser process | Start the server with the one-command launcher, open `http://127.0.0.1:<port>` in a browser with the launch token, confirm a capability responds | ✅ **pass** (2026-08-06, 19-10) — loopback URL confirmed, 30 capabilities read from a browser console with `input_schema` populated, `workspace.status` invoked with the token and refused 401 without it |
+| Token delivery ergonomics | HTTP-05 | Whether the operator can actually get the per-launch token into the browser is a UX judgement, not an assertion (research Open Question 1) | Launch, read the token from stdout / the `0600` file, use it from a browser request, confirm no token appears in shell history or a `Referer` | ✅ **pass** (2026-08-06, 19-10) — verdict recorded: **needs redesign**. Token file is `0600` and matches stdout, and no token reached a URL or shell history, but manual terminal→console transfer is not a basis for the served shell. Phase 21 must own delivery |
+
+### ⚠️ Not exercised — assumption A3 remains open
+
+The **cross-origin refusal** (`HOWTO-verify-phase-19.md` step 6) was not run. It is a third
+manual-only behaviour that this table did not originally list, and nothing else can substitute for
+it: `X-Construct-Token` is not CORS-safelisted, so the design relies on a browser preflighting a
+drive-by request and no `CORSMiddleware` answering it. `TestClient` sends no `Origin` of its own and
+`curl` does not implement CORS at all.
+
+Consequence: **T-19-02 (drive-by CSRF, high) is mitigated by design and unproven as deployed.**
+Carried into Phase 21 as an open item rather than counted in the pass above. One fetch from a browser
+console on a foreign origin closes it.
 
 ---
 
@@ -101,4 +113,11 @@ block (security capability active — ASVS L1, block on `high`).
 - [ ] Feedback latency < 90s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** ✅ **passed 2026-08-06** — both manual-only rows resolved by the 19-10 human-verify
+checkpoint (see `19-10-SUMMARY.md`), with the A3 cross-origin gap named above rather than folded into
+the pass. Automated side: full suite **1126 passed, 18 skipped, 0 failed**.
+
+> The frontmatter `status` / `nyquist_compliant` fields and the 16 `TBD` task IDs in the Per-Task
+> Verification Map are deliberately untouched. `/gsd-validate-phase` §6 owns them and resolves the
+> ids against the executed PLAN.md files; setting them by hand here would record a pass that nothing
+> performed. This approval covers the manual rows only.

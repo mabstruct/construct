@@ -71,7 +71,7 @@ Full phase detail (goals, success criteria, plans) archived in
 **Branch:** all v0.5 work lands on `dev-v05` (off `main`, pushed to origin). `main` stays releasable at v0.4.1. The stale `dev-v04` branch is left untouched.
 
 - [x] **Phase 18: Contract & Governance Foundations** - Make the byte contract, the invocation seam, and the review-decision model honest before any browser depends on them (completed 2026-08-02)
-- [ ] **Phase 19: HTTP API over the Capability Registry** - The third registry adapter — generated routes, workspace ids, one error shape, loopback hardening, runs as resources
+- [x] **Phase 19: HTTP API over the Capability Registry** - The third registry adapter — generated routes, workspace ids, one error shape, loopback hardening, runs as resources (completed 2026-08-06)
 - [ ] **Phase 20: Real Document Extraction** - Ingestion reads the file it routes; "no extractable text" becomes a named outcome, not a silent success
 - [ ] **Phase 21: Served App Shell & Guided Action Layer** - The SPA becomes a first-class served app and `help.suggest` becomes an action engine — the earliest UX signal
 - [ ] **Phase 22: Wizard Flows** - Workspace creation, document ingestion, and the two HITL review gates completable entirely in the browser
@@ -166,7 +166,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 19-10-PLAN.md — The two manual-only verifications: a real browser reaches the running server, and the token-delivery ergonomics verdict for Phase 21 (wave 5, one blocking human-verify checkpoint)
+- [x] 19-10-PLAN.md — The two manual-only verifications: a real browser reaches the running server, and the token-delivery ergonomics verdict for Phase 21 (wave 5, one blocking human-verify checkpoint) — **passed 2026-08-06**; token delivery judged *needs redesign* (Phase 21 input), and the cross-origin refusal (assumption A3 / T-19-02) was **not exercised** and stays open
 
 Waves: 1 → {01, 02, 03} · 2 → {04, 05, 06} · 3 → {07, 08} · 4 → {09} · 5 → {10}. Same-wave plans have zero `files_modified` overlap.
 
@@ -267,13 +267,13 @@ Waves: 1 → {01, 02, 03} · 2 → {04, 05, 06} · 3 → {07, 08} · 4 → {09} 
 | GOV-03 | Phase 18 | Pending |
 | GOV-04 | Phase 18 | Pending |
 | GOV-05 | Phase 18 | Pending |
-| HTTP-01 | Phase 19 | Pending |
-| HTTP-02 | Phase 19 | Pending |
-| HTTP-03 | Phase 19 | Pending |
-| HTTP-04 | Phase 19 | Pending |
-| HTTP-05 | Phase 19 | Pending |
-| HTTP-06 | Phase 19 | Pending |
-| HTTP-07 | Phase 19 | Pending |
+| HTTP-01 | Phase 19 | Complete |
+| HTTP-02 | Phase 19 | Complete |
+| HTTP-03 | Phase 19 | Complete |
+| HTTP-04 | Phase 19 | Complete |
+| HTTP-05 | Phase 19 | Complete |
+| HTTP-06 | Phase 19 | Complete |
+| HTTP-07 | Phase 19 | Complete |
 | EXTR-01 | Phase 20 | Pending |
 | EXTR-02 | Phase 20 | Pending |
 | EXTR-03 | Phase 20 | Pending |
@@ -359,7 +359,7 @@ Recorded in `REQUIREMENTS.md`, assigned here so none is silently defaulted.
 | OQ-1 | Where do uploaded bytes live? An upload has no path; none of the three options is clearly right | Phase 20 |
 | OQ-2 | Graph data source at scale — views JSON projection or live API traversal | Phase 23 |
 | OQ-3 | Extraction failure taxonomy and the fixture set that proves each reason | Phase 20 |
-| OQ-4 | Checkpoint concurrency contract — WAL / `busy_timeout` / single-flight locking (extends adr-0004) | Phase 19 |
+| OQ-4 | Checkpoint concurrency contract — WAL / `busy_timeout` / single-flight locking (extends adr-0004) | Phase 19 — **settled** by 19-02 (WAL + explicit `busy_timeout` pinned by assertion on both checkpointers; adr-0004 extended) |
 | OQ-5 | Does the PoC demo run on a fresh workspace or a fixture? `test-ws/` carries pre-`4e2b909` damage | Phase 24 |
 
 Two further decisions surfaced by research and assigned the same way: `gate_review.py`'s disposition
@@ -417,7 +417,8 @@ ownership is already resolved to the backend by GUIDE-01's wording (**Phase 21**
 | 15. views.generate_data Resolution | v0.4.1 | 5/5 | Complete | 2026-07-20 |
 | 16. Invocation & User-Doc Truth | v0.4.1 | 7/7 | Complete | 2026-07-25 |
 | 17. Architecture Doc Set & daily.run Discoverability | v0.4.1 | 4/4 | Complete | 2026-07-25 |
-| 18. Contract & Governance Foundations | v0.5 | 8/8 | In Progress|  |
+| 18. Contract & Governance Foundations | v0.5 | 8/8 | Complete | 2026-08-02 |
+| 19. HTTP API over the Capability Registry | v0.5 | 10/10 | Complete | 2026-08-06 |
 | 19. HTTP API over the Capability Registry | v0.5 | 9/10 | In Progress|  |
 | 20. Real Document Extraction | v0.5 | 0/? | Not started | - |
 | 21. Served App Shell & Guided Action Layer | v0.5 | 0/? | Not started | - |

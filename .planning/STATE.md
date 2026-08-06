@@ -4,17 +4,17 @@ milestone: v0.5
 milestone_name: UI-Primary Experience (Proof of Concept)
 current_phase: 19
 current_phase_name: http-api-over-the-capability-registry
-status: executing
-stopped_at: Phase 19 context gathered
-last_updated: "2026-08-02T22:23:23.568Z"
-last_activity: 2026-08-03
-last_activity_desc: Phase 19 execution started
+status: phase-complete
+stopped_at: Phase 19 complete — 19-10 human-verify passed
+last_updated: "2026-08-06T00:00:00.000Z"
+last_activity: 2026-08-06
+last_activity_desc: Phase 19 closed — manual browser verification passed; A3 cross-origin check still open
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 18
-  completed_plans: 8
-  percent: 14
+  completed_plans: 18
+  percent: 29
 ---
 
 # Project State
@@ -24,16 +24,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-25 after v0.4.1 milestone)
 
 **Core value:** The system must reliably turn source material into connected, explorable knowledge while making the next sensible action clear to the user.  
-**Current focus:** Phase 19 — http-api-over-the-capability-registry
+**Current focus:** Phase 20 — real-document-extraction (Phase 19 closed 2026-08-06)
 
 ## Current Position
 
-Phase: 19 (http-api-over-the-capability-registry) — EXECUTING
-Plan: 1 of 10
-Status: Executing Phase 19
-Progress: [###-----------------] 14% (1/7 v0.5 phases)
+Phase: 19 (http-api-over-the-capability-registry) — COMPLETE
+Plan: 10 of 10
+Status: Phase 19 closed; next is Phase 20 (Real Document Extraction) or Phase 21 (which depends on 19)
+Progress: [######--------------] 29% (2/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
-Last activity: 2026-08-03 — Phase 19 execution started
+Last activity: 2026-08-06 — 19-10 human-verify passed; suite 1126 passed, 18 skipped
+
+**Carried out of Phase 19 (both are Phase 21 inputs, neither is a regression):**
+
+- **Assumption A3 unverified.** The cross-origin refusal was not exercised, so T-19-02 (drive-by
+  CSRF) is mitigated by design and unproven as deployed. Only a browser can test it. See
+  `19-10-SUMMARY.md`.
+- **Token delivery needs redesign.** stdout + a `0600` file is not a basis for the served shell, and
+  the token file path does not vary by port — a second `serve` overwrites the running server's
+  on-disk token, silently.
 
 ## Performance Metrics
 
@@ -295,9 +304,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-02T11:57:16.146Z
-Stopped at: Phase 19 context gathered
-Resume file: .planning/phases/19-http-api-over-the-capability-registry/19-CONTEXT.md
+Last session: 2026-08-06
+Stopped at: Phase 19 complete (19-10 human-verify passed)
+Resume file: .planning/phases/19-http-api-over-the-capability-registry/19-10-SUMMARY.md
 
 ## Operator Next Steps
 
