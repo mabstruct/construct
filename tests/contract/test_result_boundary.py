@@ -419,6 +419,160 @@ def test_a_successful_bridge_detect_body_carries_no_absolute_path(
 
 
 # ---------------------------------------------------------------------------
+# The same claim, swept rather than named (T-18-32, third instance)
+# ---------------------------------------------------------------------------
+#
+# The two assertions above name ``graph.status`` and ``bridge.detect`` because
+# those are the two instances Phase 18 measured. Naming them individually is what
+# let a THIRD one through: ``help.suggest`` wrote ``str(root)`` into
+# ``health["workspace"]`` — and into three ``_result`` arms that also return
+# ``success=True`` — and it was found by a human opening a browser during the
+# 19-10 manual checkpoint, not by this suite.
+#
+# So this sweep does not hard-code a list. It measures every registered
+# capability that accepts a workspace-shaped path, invokes it against a real
+# workspace, and asserts criterion 3 over whatever body comes back successfully.
+# A fourth instance lands as a failure here rather than as a fourth named test
+# somebody has to think to write.
+
+#: The seam module's three workspace-shaped fields (test_capability_seam.py's
+#: ``_WORKSPACE_FIELDS``) plus ``path``, which is how ``workspace.status`` and
+#: ``workspace.validate`` name theirs — both return bodies full of workspace
+#: layout and are exactly the shape that leaks.
+_SWEEP_FIELDS = ("workspace_path", "workspace", "install_root", "path")
+
+#: NOT an allowlist of forgiven leaks — a declared exclusion of capabilities a
+#: contract test must not invoke, each with the reason. The companion assertion
+#: below fails if an id here leaves the registry, so these cannot rot into
+#: silence: a renamed capability drops out of the sweep otherwise.
+NOT_SWEPT = {
+    "ask.domain": "reaches an LLM",
+    "card.evaluate": "reaches an LLM",
+    "research.score": "reaches an LLM",
+    "research.search": "reaches the network",
+    "curation.run": "launches a durable workflow",
+    "daily.run": "launches a durable workflow",
+    "research.run": "launches a durable workflow",
+    "workspace.init": "creates a workspace rather than reading one",
+}
+
+#: Successful bodies the sweep must actually reach. Measured 12; the floor sits
+#: below that so fixture drift does not trip it, and far enough above zero that a
+#: sweep which silently stops invoking anything fails instead of passing green.
+#: Without this the sweep is loudest exactly when it is examining nothing.
+MINIMUM_BODIES_SWEPT = 10
+
+
+def _sweep_field(cap) -> str | None:
+    return next((f for f in _SWEEP_FIELDS if f in cap.input_model.model_fields), None)
+
+
+def _stub_payload(cap, field: str, value: str) -> dict:
+    """``value`` for the workspace field, plus a stub for every other required one.
+
+    Borrowed from ``test_capability_seam.py::_minimal_payload``: the stubs only
+    have to satisfy the model so dispatch reaches the handler. A handler that
+    refuses ``"probe-id"`` on its own terms is fine — this test asserts nothing
+    about handlers that do not succeed.
+    """
+    payload: dict = {field: value}
+    for name, spec in cap.input_model.model_fields.items():
+        if name == field or not spec.is_required():
+            continue
+        annotation = str(spec.annotation)
+        payload[name] = "probe-id" if "str" in annotation else (1 if "int" in annotation else [])
+    return payload
+
+
+def test_no_successful_capability_body_carries_an_absolute_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Criterion 3 over the success path of every capability, not two of them.
+
+    One function rather than a parametrized family, so a single pass yields both
+    properties that matter: no leak, and the sweep genuinely reached bodies.
+
+    Each capability gets its own copy of the fixture workspace — ``ingest.source``,
+    ``knowledge.card.edit`` and ``knowledge.card.archive`` all mutate, and sharing
+    one copy would make the sweep order-dependent.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    registry = get_registry()
+
+    swept: list[str] = []
+    offenders: dict[str, list[str]] = {}
+    unprojectable: list[str] = []
+
+    candidates = sorted(
+        (c for c in registry.list() if _sweep_field(c) is not None and c.id not in NOT_SWEPT),
+        key=lambda c: c.id,
+    )
+
+    for index, cap in enumerate(candidates):
+        field = _sweep_field(cap)
+        assert field is not None  # narrowed by the comprehension above
+        install_root = tmp_path / f"root-{index}"
+        install_root.mkdir()
+        workspace = install_root / FIXTURE_WS.name
+        shutil.copytree(FIXTURE_WS, workspace)
+        target = install_root if field == "install_root" else workspace
+
+        try:
+            result = registry.invoke(cap.id, _stub_payload(cap, field, str(target)))
+        except Exception:
+            # A handler may refuse the stub payload for its own reasons; this
+            # test's claim is only about bodies that came back.
+            continue
+
+        # ``success`` is an OperationResult concept. ``workspace.status`` returns a
+        # list and ``workspace.validate`` a report — both reached a body without
+        # raising, which is the condition this test cares about.
+        if getattr(result, "success", True) is False:
+            continue
+
+        try:
+            body = json.dumps(serialize_result(result), indent=2)
+        except ResultSerializationError:
+            unprojectable.append(cap.id)
+            continue
+
+        swept.append(cap.id)
+        leaked = sorted(set(_path_shaped_substrings(body)))
+        if leaked or "Traceback" in body:
+            offenders[cap.id] = leaked or ["Traceback"]
+
+    assert not offenders, (
+        "these capabilities wrote a filesystem path (or a traceback) into a "
+        "SUCCESSFUL body, where the shared exception sanitizer structurally "
+        "cannot see it — carry the workspace's name rather than its path, as "
+        f"graph.status and bridge.detect do: {dict(sorted(offenders.items()))}"
+    )
+    assert not unprojectable, (
+        "these capabilities returned a value serialize_result cannot project, so "
+        f"every surface would answer them with a 500: {unprojectable}"
+    )
+    assert len(swept) >= MINIMUM_BODIES_SWEPT, (
+        f"the sweep only reached {len(swept)} successful bodies "
+        f"({swept}); it is not examining the surface it claims to guard"
+    )
+
+
+def test_every_capability_excluded_from_the_sweep_still_exists() -> None:
+    """The direction that keeps ``NOT_SWEPT`` from rotting.
+
+    An id that leaves the registry — renamed, split, removed — would otherwise sit
+    here forever, and its replacement would quietly never be swept.
+    """
+    registered = {cap.id for cap in get_registry().list()}
+
+    stale = sorted(set(NOT_SWEPT) - registered)
+    assert not stale, (
+        "these ids are excluded from the success-body sweep but are no longer "
+        f"registered; drop them from NOT_SWEPT and sweep their replacements: {stale}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # The shrink-only baseline over the remaining source sites (D-16b, T-19-15)
 # ---------------------------------------------------------------------------
 

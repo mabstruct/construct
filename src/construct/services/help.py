@@ -41,18 +41,24 @@ def suggest(workspace_root: str | Path) -> OperationResult:
     """
     root = Path(workspace_root).resolve()
 
-    # Load base namespace
+    # Load base namespace.
+    #
+    # T-18-32: ``workspace`` carries the directory *name*, never ``str(root)``.
+    # These are success-path bodies (``_result`` returns ``success=True`` on every
+    # arm), so the shared exception sanitizer structurally never sees them — the
+    # same shape that put an absolute path into ``graph.status`` and
+    # ``bridge.detect``, fixed the same way.
     if not root.exists():
-        return _result("no_workspace", workspace=str(root))
+        return _result("no_workspace", workspace=root.name)
 
     try:
         loader = WorkspaceLoader(root)
         registry = loader.load_domains_registry()
     except (WorkspaceLoadError, OSError):
-        return _result("workspace_error", workspace=str(root))
+        return _result("workspace_error", workspace=root.name)
 
     if not registry.domains:
-        return _result("no_workspace", workspace=str(root))
+        return _result("no_workspace", workspace=root.name)
 
     # Check each domain — find the one that needs the most attention
     all_domains = list(registry.domains.keys())
@@ -185,7 +191,8 @@ def suggest(workspace_root: str | Path) -> OperationResult:
     total_connections = sum(ds["connection_count"] for ds in domains_state)
 
     health: dict[str, Any] = {
-        "workspace": str(root),
+        # The workspace's name, not its path — see the note above ``root.exists()``.
+        "workspace": root.name,
         "domain_count": len(all_domains),
         "total_cards": total_cards,
         "total_connections": total_connections,
