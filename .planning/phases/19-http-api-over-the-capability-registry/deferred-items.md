@@ -46,31 +46,25 @@ Treat them as a known-red baseline, not a regression signal.
 
 ---
 
-## Assumption A3 (the cross-origin refusal) was never exercised
+## ✅ CLOSED — assumption A3 (the cross-origin refusal) is verified as deployed
 
 **Found during:** plan 19-10 (the blocking human-verify checkpoint), 2026-08-06.
+**Closed:** 2026-08-06, same checkpoint, by a real browser.
 
-**What is open:** the design's CSRF story is that `X-Construct-Token` is **not** a
-CORS-safelisted header, so a cross-origin page carrying it is preflighted and
-blocked — and no `CORSMiddleware` is installed to answer that preflight.
-`middleware.py` states the blind spot itself: *a test client sends no `Origin` of
-its own*. `curl` does not implement CORS at all. **Only a real browser enforces
-it**, and step 6 of `HOWTO-verify-phase-19.md` — the one step that tests it — was
-not run.
+The design's CSRF story is that `X-Construct-Token` is **not** a CORS-safelisted
+header, so a cross-origin page carrying it is preflighted and blocked — and no
+`CORSMiddleware` is installed to answer that preflight. `middleware.py` states the
+blind spot itself: *a test client sends no `Origin` of its own*. `curl` does not
+implement CORS at all. **Only a real browser enforces it.**
 
-**Consequence:** T-19-02 (drive-by CSRF, severity high) is mitigated *by design*
-and unproven *as deployed*. It is not a known defect; it is an unmeasured
-mitigation, recorded so the phase's pass is not read as covering it.
+A fetch from a foreign origin carrying a valid token was refused by the browser
+with no response body, so **T-19-02 (drive-by CSRF, high) is mitigated by
+measurement** rather than by design argument.
 
-**Why it is not closed here:** it needs a browser process and about a minute.
-Phase 21 is the natural owner, because it serves the first page from this API and
-because the regression to watch for lives there: a `CORSMiddleware` added for
-convenience turns this refusal into a capability list.
-
-**How to close it:** from a console on any foreign origin (`https://example.com`),
-`fetch("http://127.0.0.1:<port>/api/capabilities", {headers: {"X-Construct-Token":
-"<token>"}})`. Pass = the browser blocks it, with no `access-control-allow-origin`
-on the preflight and no response body.
+**What stays open, and cannot be tested:** adding a `CORSMiddleware` to the stack
+would turn this refusal into a capability list, and no automated check can notice —
+nothing in the suite implements CORS. It is a Phase 21 threat-model line, not a
+missing test.
 
 ## The API token file path does not vary by port
 

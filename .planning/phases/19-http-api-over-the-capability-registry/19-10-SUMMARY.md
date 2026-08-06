@@ -14,7 +14,8 @@ requires:
 provides:
   - "A human verdict on the two rows 19-VALIDATION.md marks manual-only: a real browser process reached the running server, and the token reached it"
   - "The token-delivery verdict Phase 21 needs: stdout plus a 0600 file NEEDS REDESIGN for the served shell"
-  - "Two carried-forward findings no test covers: assumption A3 is still unverified, and the token file path does not vary by port"
+  - "Assumption A3 verified as deployed: a real browser refuses a cross-origin request carrying the token, so T-19-02's mitigation is measured rather than assumed"
+  - "One carried-forward finding no test covers: the token file path does not vary by port"
   - "HOWTO-verify-phase-19.md — the executable walkthrough, kept as the record of how the check was run"
   - "A closed third instance of T-18-32 (help.suggest) plus the generic success-body sweep that replaces naming instances one at a time"
 affects: [phase-21, phase-22, token-delivery, served-shell, csrf]
@@ -37,7 +38,7 @@ key-files:
     - tests/contract/test_result_boundary.py
 
 key-decisions:
-  - "Step 6 (the cross-origin refusal) was not exercised, and is recorded as a GAP rather than folded into the pass. It is the only test of assumption A3 that exists — curl cannot make it — so T-19-02's mitigation is unproven as deployed and Phase 21 inherits that."
+  - "Assumption A3 is verified rather than assumed: a real browser refused the cross-origin fetch carrying the token. This is the only test of A3 that can exist — a TestClient sends no Origin of its own and curl does not implement CORS — so T-19-02 (drive-by CSRF, high) is now mitigated by measurement. The regression to guard: a CORSMiddleware added to the stack for convenience would turn this refusal into a capability list."
   - "Token delivery is judged NEEDS REDESIGN, not 'workable'. Moving a token from a terminal into a browser by hand is not a flow the served shell can be built on; Phase 21 must own a delivery mechanism before it builds forms against the API."
   - "The help.suggest leak found during the dry run was fixed inline rather than deferred, because the fix is one field and the remedy is the sweep — deferring would have left criterion 3 knowingly violated at the phase boundary."
   - "19-VALIDATION.md's frontmatter (status: draft, nyquist_compliant) and its 16 TBD task IDs are deliberately left for /gsd-validate-phase §6, which resolves them against the executed plans. Hand-flipping them here would fake that pass."
@@ -85,14 +86,14 @@ coverage:
     human_judgment: true
     rationale: "A UX judgement, which is the deliverable; research open question 1 was resolved by preference and needed measuring"
   - id: D5
-    description: "The drive-by CSRF refusal as a real browser enforces it (assumption A3) — NOT EXERCISED"
+    description: "A cross-origin page carrying the token is refused by the browser (assumption A3 / T-19-02), as deployed"
     requirement: HTTP-05
     verification:
       - kind: manual_procedural
-        ref: "HOWTO-verify-phase-19.md step 6 — not run"
-        status: unknown
+        ref: "HOWTO-verify-phase-19.md step 6 — fetch from a foreign origin blocked by the browser, no response body"
+        status: pass
     human_judgment: true
-    rationale: "Only a browser implements CORS, so no automated or curl-based check can substitute. Carried forward as an open gap, not a pass."
+    rationale: "Only a browser implements CORS — a TestClient sends no Origin of its own and curl ignores it entirely, so no automated check can substitute"
   - id: D6
     description: "The third T-18-32 success-path path leak (help.suggest) is closed, and the class is guarded by a sweep over every invocable capability rather than a third named test"
     verification:
@@ -111,7 +112,7 @@ status: complete
 
 # Phase 19 Plan 10: Manual Verification Summary
 
-**A real browser reached the running server on loopback, read all 30 capabilities with their input schemas, invoked one with the launch token and was refused without it — and the two things the walkthrough could not close are recorded as open: the cross-origin refusal was never exercised, so assumption A3 remains unverified, and token delivery is judged not good enough for Phase 21 to build on.**
+**A real browser reached the running server on loopback, read all 30 capabilities with their input schemas, invoked one with the launch token, was refused without it, and — from a foreign origin, carrying the token — was refused by the browser itself, which is the only way assumption A3 could ever be tested. The open item the checkpoint produced is not a defect but a verdict: token delivery is not good enough for Phase 21 to build on.**
 
 ## Performance
 
@@ -130,24 +131,26 @@ status: complete
 | 4 | Discovery from a real browser | **30** capabilities, `input_schema` populated |
 | 5 | Capability call with the token | 200, real `workspace.status` body |
 | 6 | Same call, token header removed | 401, refused before the capability ran |
+| 7 | Cross-origin fetch carrying the token | **Blocked by the browser** — no response body |
 | 8 | Token-delivery verdict | Recorded below |
 
-Check 7 — the cross-origin fetch — is the one that did not happen. See the gap below.
+All eight checks pass.
 
-## Gap: assumption A3 is still unverified
+## Assumption A3, verified as deployed
 
-The cross-origin step was not exercised, and nothing else in the project can substitute for it.
-`middleware.py` states the blind spot itself: *a test client sends no `Origin` of its own*. The CSRF
-story is that `X-Construct-Token` is **not** CORS-safelisted, so a drive-by page carrying it gets
-preflighted, and no `CORSMiddleware` is installed to answer that preflight. **Only a real browser
-enforces CORS** — `curl` sends whatever it is told, and the suite drives an application object.
+Check 7 is the one no other part of this project can make. `middleware.py` states the blind spot
+itself: *a test client sends no `Origin` of its own*. The CSRF story is that `X-Construct-Token` is
+**not** CORS-safelisted, so a drive-by page carrying it gets preflighted, and no `CORSMiddleware` is
+installed to answer that preflight. **Only a real browser enforces CORS** — `curl` sends whatever it
+is told, and the suite drives an application object.
 
-So T-19-02 (drive-by CSRF, severity high) is mitigated *by design* and unproven *as deployed*. This
-plan's own instructions warned that "a silent pass here is a gap that reaches Phase 21", so it is
-recorded as a gap: one browser console on a foreign origin closes it in about a minute, and Phase 21
-should close it before it serves a page from this API. The failure mode to watch for is the one that
-looks like a convenience: a `CORSMiddleware` added to the stack would turn this refusal into a
-capability list.
+A fetch from a foreign origin carrying a valid token was refused by the browser, with no response
+body. So T-19-02 (drive-by CSRF, severity high) is mitigated by *measurement* rather than by design
+argument — the phase's three high-severity threats are now all exercised as deployed.
+
+The regression this leaves for Phase 21 to guard is the one that looks like a convenience: adding a
+`CORSMiddleware` to answer that preflight would turn this refusal into a capability list. Nothing in
+the suite can catch it, because nothing in the suite implements CORS.
 
 ## Verdict: token delivery needs redesign
 
@@ -197,6 +200,8 @@ executed PLAN.md files, and flipping them by hand would report a pass nothing pe
 
 ## Follow-ups
 
-- **Close A3** — one cross-origin fetch from a browser console, before or during Phase 21.
 - **Port-independent token file** — decide in Phase 21 whether the file is per-port, per-server, or
   replaced by a delivery mechanism that does not use a file at all.
+- **Keep `CORSMiddleware` out of the stack** — A3 is verified for the code as it stands, and no
+  automated check can notice if that changes. Worth a line in Phase 21's threat model rather than a
+  test that cannot exist.

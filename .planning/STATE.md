@@ -8,7 +8,7 @@ status: phase-complete
 stopped_at: Phase 19 complete — 19-10 human-verify passed
 last_updated: "2026-08-06T00:00:00.000Z"
 last_activity: 2026-08-06
-last_activity_desc: Phase 19 closed — manual browser verification passed; A3 cross-origin check still open
+last_activity_desc: Phase 19 closed — manual browser verification passed in full, including the cross-origin refusal
 progress:
   total_phases: 7
   completed_phases: 2
@@ -33,16 +33,16 @@ Plan: 10 of 10
 Status: Phase 19 closed; next is Phase 20 (Real Document Extraction) or Phase 21 (which depends on 19)
 Progress: [######--------------] 29% (2/7 v0.5 phases)
 Branch: `dev-v05` (off `main`, pushed to origin) — `main` stays releasable at v0.4.1
-Last activity: 2026-08-06 — 19-10 human-verify passed; suite 1126 passed, 18 skipped
+Last activity: 2026-08-06 — 19-10 human-verify passed in full; suite 1126 passed, 18 skipped
 
-**Carried out of Phase 19 (both are Phase 21 inputs, neither is a regression):**
+**Carried out of Phase 19 (Phase 21 inputs, neither is a regression):**
 
-- **Assumption A3 unverified.** The cross-origin refusal was not exercised, so T-19-02 (drive-by
-  CSRF) is mitigated by design and unproven as deployed. Only a browser can test it. See
-  `19-10-SUMMARY.md`.
 - **Token delivery needs redesign.** stdout + a `0600` file is not a basis for the served shell, and
   the token file path does not vary by port — a second `serve` overwrites the running server's
-  on-disk token, silently.
+  on-disk token, silently. See `19-10-SUMMARY.md`.
+- **Keep `CORSMiddleware` out of the API stack.** Assumption A3 is verified as deployed (a real
+  browser refuses a cross-origin request carrying the token), but nothing in the suite can notice if
+  that changes, because nothing in the suite implements CORS. Belongs in Phase 21's threat model.
 
 ## Performance Metrics
 

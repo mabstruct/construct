@@ -166,7 +166,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [x] 19-10-PLAN.md — The two manual-only verifications: a real browser reaches the running server, and the token-delivery ergonomics verdict for Phase 21 (wave 5, one blocking human-verify checkpoint) — **passed 2026-08-06**; token delivery judged *needs redesign* (Phase 21 input), and the cross-origin refusal (assumption A3 / T-19-02) was **not exercised** and stays open
+- [x] 19-10-PLAN.md — The two manual-only verifications: a real browser reaches the running server, and the token-delivery ergonomics verdict for Phase 21 (wave 5, one blocking human-verify checkpoint) — **passed 2026-08-06**, all 8 checks including the cross-origin refusal that verifies assumption A3 (T-19-02 mitigated by measurement); token delivery judged *needs redesign* — a Phase 21 input
 
 Waves: 1 → {01, 02, 03} · 2 → {04, 05, 06} · 3 → {07, 08} · 4 → {09} · 5 → {10}. Same-wave plans have zero `files_modified` overlap.
 
